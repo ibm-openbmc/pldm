@@ -3,6 +3,7 @@
 #include "libpldmresponder/base.hpp"
 #include "libpldmresponder/bios.hpp"
 #include "libpldmresponder/platform.hpp"
+#include "libpldmresponder/fru.hpp"
 #include "libpldmresponder/utils.hpp"
 
 #include <err.h>
