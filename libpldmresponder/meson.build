@@ -16,7 +16,6 @@ sources = [
   'platform.cpp',
   'fru_parser.cpp',
   'fru.cpp',
->>>>>>> 8dd9f63... WIP GetFRURecordTableMetadata
 ]
 
 if get_option('oem-ibm').enabled()
