@@ -1,35 +1,23 @@
 #include "fru.hpp"
 
-#include "registration.hpp"
-
 #include <cstring>
 
 namespace pldm
 {
-
 namespace responder
 {
+namespace internal
+{
+
+FruImpl table;
+FruIntf<FruImpl> intf(table);
+
+} // namespace internal
 
 namespace fru
 {
 
-void registerHandlers()
-{
-    registerHandler(PLDM_FRU, PLDM_GET_FRU_RECORD_TABLE_METADATA,
-                    std::move(getFRURecordTableMetadata));
-    registerHandler(PLDM_FRU, PLDM_GET_FRU_RECORD_TABLE,
-                    std::move(getFRURecordTable));
-}
-
-} // namespace fru
-
-namespace internal
-{
-FruImpl table;
-FruIntf<FruImpl> intf(table);
-} // namespace internal
-
-Response getFRURecordTableMetadata(const pldm_msg* request,
+Response Handler::getFRURecordTableMetadata(const pldm_msg* request,
                                    size_t /*payloadLength*/)
 {
     using namespace internal;
@@ -49,7 +37,7 @@ Response getFRURecordTableMetadata(const pldm_msg* request,
     return response;
 }
 
-Response getFRURecordTable(const pldm_msg* request, size_t payloadLength)
+Response Handler::getFRURecordTable(const pldm_msg* request, size_t payloadLength)
 {
     using namespace internal;
     Response response(
@@ -70,6 +58,7 @@ Response getFRURecordTable(const pldm_msg* request, size_t payloadLength)
     return response;
 }
 
+} // namespace fru
 } // namespace responder
 
 inline uint32_t FruImpl::size() const

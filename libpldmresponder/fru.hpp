@@ -1,6 +1,7 @@
 #pragma once
 
 #include "config.h"
+#include "handler.hpp"
 
 #include <vector>
 
@@ -8,33 +9,42 @@
 
 namespace pldm
 {
-
-using Response = std::vector<uint8_t>;
-
 namespace responder
 {
-
 namespace fru
 {
 
-/** @brief Register handlers for commands from the FRU spec
- */
-void registerHandlers();
+class Handler : public CmdHandler
+{
+  public:
+    Handler()
+    {
+        handlers.emplace(PLDM_GET_FRU_RECORD_TABLE_METADATA,
+                         [this](const pldm_msg* request, size_t payloadLength) {
+                             return this->getFRURecordTableMetadata(request, payloadLength);
+                         });
+        handlers.emplace(PLDM_GET_FRU_RECORD_TABLE,
+                         [this](const pldm_msg* request, size_t payloadLength) {
+                             return this->getFRURecordTable(request, payloadLength);
+                         });
+    }
+
+    /** @brief Handler for GetFRURecordTableMetadata
+     *
+     *  @param[in] request - Request message payload
+     *  @param[in] payloadLength - Request payload length
+     *  @param[out] Response - Response message written here
+     */
+    Response getFRURecordTableMetadata(const pldm_msg* request,
+                                       size_t payloadLength);
+
+    Response getFRURecordTable(const pldm_msg* request, size_t payloadLength);
+};
 
 } // namespace fru
-
-/** @brief Handler for GetFRURecordTableMetadata
- *
- *  @param[in] request - Request message payload
- *  @param[in] payloadLength - Request payload length
- *  @param[out] Response - Response message written here
- */
-Response getFRURecordTableMetadata(const pldm_msg* request,
-                                   size_t payloadLength);
-
-Response getFRURecordTable(const pldm_msg* request, size_t payloadLength);
-
 } // namespace responder
+
+using namespace responder;
 
 template <typename T>
 struct FruIntf
