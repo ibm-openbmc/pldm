@@ -21,6 +21,7 @@ if get_option('oem-ibm').enabled()
   conf_data.set_quoted('FILE_TABLE_JSON', '/usr/share/pldm/fileTable.json')
   conf_data.set_quoted('LID_PERM_DIR', '/usr/share/host-fw')
   conf_data.set_quoted('LID_TEMP_DIR', '/usr/share/host-fw')
+  conf_data.set_quoted('LID_PATCH_DIR', '/usr/local/share/host-fw')
   add_global_arguments('-DOEM_IBM', language : 'c')
   add_global_arguments('-DOEM_IBM', language : 'cpp')
 endif
