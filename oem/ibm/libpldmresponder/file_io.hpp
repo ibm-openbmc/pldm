@@ -81,7 +81,6 @@ Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
                      uint32_t offset, uint32_t length, uint64_t address,
                      bool upstream, uint8_t instanceId)
 {
-    using namespace phosphor::logging;
     uint32_t origLength = length;
     Response response(sizeof(pldm_msg_hdr) + PLDM_RW_FILE_MEM_RESP_BYTES, 0);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
@@ -103,7 +102,7 @@ Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
     int file = open(path.string().c_str(), flags);
     if (file == -1)
     {
-        log<level::ERR>("File does not exist", entry("PATH=%s", filePath));
+        std::cerr << "File does not exist, path = " << filePath;
         encode_rw_file_memory_resp(instanceId, command, PLDM_ERROR, 0,
                                    responsePtr);
         return response;

@@ -6,8 +6,6 @@
 #include <cstring>
 #include <sdbusplus/bus.hpp>
 #include <iostream>
-#include <phosphor-logging/log.hpp>
-#include <phosphor-logging/elog-errors.hpp>
 
 namespace pldm
 {
@@ -36,8 +34,6 @@ Response Handler::getFRURecordTableMetadata(const pldm_msg* request, size_t /*pa
                       0);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
 
-    sd_journal_print(LOG_INFO, "RSI = %d, Recs = %d, Size = %d", intf.numRSI(), intf.numRecords(), intf.size());
-
     encode_get_fru_record_table_metadata_resp(
         request->hdr.instance_id, PLDM_SUCCESS, major, minor, maxSize,
         intf.size(), intf.numRSI(), intf.numRecords(), intf.checkSum(),
@@ -49,7 +45,6 @@ Response Handler::getFRURecordTableMetadata(const pldm_msg* request, size_t /*pa
 Response Handler::getFRURecordTable(const pldm_msg* request, size_t payloadLength)
 {
     using namespace internal;
-    sd_journal_print(LOG_INFO, "getFRURecordTable >>");
     Response response(sizeof(pldm_msg_hdr) + PLDM_GET_FRU_RECORD_TABLE_MIN_RESP_BYTES, 0);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
 
@@ -129,8 +124,6 @@ FruImpl::FruImpl(const std::string& configPath)
         }
     }
 
-    sd_journal_print(LOG_INFO, "Table Size = %ld", table.size());
-
     if (table.size())
     {
         padBytes = utils::getNumPadBytes(table.size());
@@ -206,11 +199,6 @@ void FruImpl::populateRecord(
 
 void FruImpl::getFRUTable(Response& response)
 {
-    using namespace phosphor::logging;
-
-
-    sd_journal_print(LOG_INFO, "getFRUTable >>");
-
     std::ostringstream tempStream;
     tempStream << "Table Data: ";
     if (!table.empty())
@@ -221,7 +209,7 @@ void FruImpl::getFRUTable(Response& response)
                        << " ";
         }
     }
-    log<level::INFO>(tempStream.str().c_str());
+    std::cerr << tempStream.str().c_str();
 
 
     auto hdrSize = response.size();
@@ -233,7 +221,6 @@ void FruImpl::getFRUTable(Response& response)
     auto iter = response.begin() + hdrSize + table.size();
     std::copy_n(reinterpret_cast<const uint8_t*>(&checksum), sizeof(checksum),
                 iter);
-    sd_journal_print(LOG_INFO, "getFRUTable <<");
 }
 
 } // namespace pldm

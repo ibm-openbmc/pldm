@@ -11,6 +11,7 @@
 
 #include <exception>
 #include <filesystem>
+#include <iostream>
 #include <sdbusplus/server.hpp>
 #include <vector>
 #include <xyz/openbmc_project/Logging/Entry/server.hpp>
@@ -22,8 +23,6 @@ namespace pldm
 {
 namespace responder
 {
-
-using namespace phosphor::logging;
 
 int PelHandler::readIntoMemory(uint32_t offset, uint32_t& length,
                                uint64_t address)
@@ -42,15 +41,13 @@ int PelHandler::readIntoMemory(uint32_t offset, uint32_t& length,
         auto reply = bus.call(method);
         sdbusplus::message::unix_fd fd{};
         reply.read(fd);
-        log<level::ERR>("GetPEL D-Bus call done");
+        std::cerr << "GetPEL D-Bus call done\n";
         auto rc = transferFileData(fd, true, offset, length, address);
         return rc;
     }
     catch (const std::exception& e)
     {
-        log<level::ERR>("GetPEL D-Bus call failed",
-                        entry("PELID=%d", fileHandle),
-                        entry("ERROR=%s", e.what()));
+        std::cerr << "GetPEL D-Bus call failed";
         return PLDM_ERROR;
     }
 
@@ -70,8 +67,8 @@ int PelHandler::writeFromMemory(uint32_t offset, uint32_t length,
     int fd = mkstemp(tmpFile);
     if (fd == -1)
     {
-        log<level::ERR>("failed to create a temporary pel",
-                        entry("ERROR=%d", errno));
+        std::cerr << "failed to create a temporary pel, ERROR=" << errno
+                  << std::endl;
         return PLDM_ERROR;
     }
     close(fd);
@@ -112,8 +109,8 @@ int PelHandler::storePel(std::string&& pelFileName)
     }
     catch (const std::exception& e)
     {
-        log<level::ERR>("failed to make a d-bus call to PEL daemon",
-                        entry("ERROR=%s", e.what()));
+        std::cerr << "failed to make a d-bus call to PEL daemon, ERROR="
+                  << e.what() << std::endl;
         return PLDM_ERROR;
     }
 

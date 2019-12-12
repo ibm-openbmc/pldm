@@ -2,16 +2,14 @@
 
 #include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <nlohmann/json.hpp>
-#include <phosphor-logging/elog-errors.hpp>
-#include <phosphor-logging/log.hpp>
 #include <xyz/openbmc_project/Common/error.hpp>
 
 namespace fru_parser
 {
 
 using Json = nlohmann::json;
-using namespace phosphor::logging;
 using InternalFailure =
     sdbusplus::xyz::openbmc_project::Common::Error::InternalFailure;
 
@@ -38,17 +36,15 @@ void FruParser::setupFRUInfo(const std::string& dirPath)
     fs::path dir(dirPath);
     if (!fs::exists(dir) || fs::is_empty(dir))
     {
-        log<level::ERR>("FRU config directory does not exist or empty",
-                        entry("DIR=%s", dirPath.c_str()));
-        elog<InternalFailure>();
+        std::cerr << "FRU config directory does not exist or empty";
+        throw InternalFailure();
     }
 
     fs::path masterFilePath = dir / fruMasterJson;
     if (!fs::exists(masterFilePath))
     {
-        log<level::ERR>("FRU D-Bus lookup JSON does not exist",
-                        entry("PATH=%s", masterFilePath.c_str()));
-        elog<InternalFailure>();
+        std::cerr << "FRU D-Bus lookup JSON does not exist";
+        throw InternalFailure();
     }
 
     setupDBusLookup(masterFilePath);
@@ -62,9 +58,8 @@ void FruParser::setupDBusLookup(const fs::path& filePath)
     auto data = Json::parse(jsonFile, nullptr, false);
     if (data.is_discarded())
     {
-        log<level::ERR>("Parsing FRU master config file failed",
-                        entry("FILE=%s", filePath.c_str()));
-        elog<InternalFailure>();
+        std::cerr << "Parsing FRU master config file failed";
+        throw InternalFailure();
     }
 
     Service service = data.value("service", "");
@@ -90,9 +85,8 @@ void FruParser::setupFruRecordMap(const std::string& dirPath)
         if (data.is_discarded())
         {
 
-            log<level::ERR>("Parsing FRU config file failed",
-                            entry("FILE=%s", file.path().c_str()));
-            elog<InternalFailure>();
+            std::cerr << "Parsing FRU config file failed";
+            throw InternalFailure();
         }
 
         auto record = data.value("record_details", emptyJson);
