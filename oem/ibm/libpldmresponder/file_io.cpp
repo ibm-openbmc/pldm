@@ -687,6 +687,7 @@ Response Handler::fileAck(const pldm_msg* request, size_t payloadLength)
     {
         handler = getHandlerByType(fileType, fileHandle);
     }
+
     catch (const InternalFailure& e)
     {
         encode_file_ack_resp(request->hdr.instance_id, PLDM_INVALID_FILE_TYPE,
