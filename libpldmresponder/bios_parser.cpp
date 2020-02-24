@@ -500,7 +500,7 @@ uint64_t getAttrValue(const AttrName& attrName)
         return std::get<AttrDefaultValue>(valueEntry);
     }
 
-    return pldm::utils::DBusHandler().getDbusProperty<uint64_t>(
+    return pldm::utils::DBusHandler().getDbusProperty<uint8_t>(
         dBusMap->objectPath.c_str(), dBusMap->propertyName.c_str(),
         dBusMap->interface.c_str());
 }
