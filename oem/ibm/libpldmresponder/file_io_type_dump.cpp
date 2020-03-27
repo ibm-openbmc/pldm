@@ -16,6 +16,8 @@
 #include "libpldm/base.h"
 #include "oem/ibm/libpldm/file_io.h"
 
+using namespace pldm::utils;
+
 namespace pldm
 {
 namespace responder
@@ -112,9 +114,11 @@ int DumpHandler::fileAck(uint8_t /*fileStatus*/)
                 if (dumpId == fileHandle)
                 {
                     std::cout << "found dump id " << dumpId << std::endl;
-                    std::variant<bool> value{true};
-                    pldm::utils::DBusHandler().setDbusProperty(
-                        path.c_str(), "Offloaded", dumpEntry, value);
+                    PropertyValue value{true};
+                    DBusMapping dbusMapping{path, dumpEntry, "Offloaded",
+                                            "bool"};
+                    pldm::utils::DBusHandler().setDbusProperty(dbusMapping,
+                                                               value);
                     close(DumpHandler::fd);
                     DumpHandler::fd = -1;
                     return PLDM_SUCCESS;
