@@ -786,6 +786,44 @@ Response Handler::getAlertStatus(const pldm_msg* request, size_t payloadLength)
     return response;
 }
 
+Response Handler::newFileAvailable(const pldm_msg* request,
+                                   size_t payloadLength)
+{
+    Response response(sizeof(pldm_msg_hdr) + PLDM_NEW_FILE_RESP_BYTES);
+
+    if (payloadLength != PLDM_NEW_FILE_REQ_BYTES)
+    {
+        return CmdHandler::ccOnlyResponse(request, PLDM_ERROR_INVALID_LENGTH);
+    }
+    uint16_t fileType{};
+    uint32_t fileHandle{};
+    uint64_t length{};
+
+    auto rc = decode_new_file_req(request, payloadLength, &fileType,
+                                  &fileHandle, &length);
+
+    if (rc != PLDM_SUCCESS)
+    {
+        return CmdHandler::ccOnlyResponse(request, rc);
+    }
+
+    std::unique_ptr<FileHandler> handler{};
+    try
+    {
+        handler = getHandlerByType(fileType, fileHandle);
+    }
+    catch (const InternalFailure& e)
+    {
+        std::cerr << "unknown file type, TYPE=" << fileType << "\n";
+        return CmdHandler::ccOnlyResponse(request, PLDM_INVALID_FILE_TYPE);
+    }
+
+    rc = handler->newFileAvailable(length);
+    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    encode_new_file_resp(request->hdr.instance_id, rc, responsePtr);
+    return response;
+}
+
 } // namespace oem_ibm
 } // namespace responder
 } // namespace pldm
