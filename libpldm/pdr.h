@@ -64,11 +64,12 @@ uint32_t pldm_pdr_get_repo_size(const pldm_pdr *repo);
  *  @param[in] size - size of input PDR record in bytes
  *  @param[in] record_handle - record handle of input PDR record; if this is set
  *  to 0, then a record handle is computed and assigned to this PDR record
+ *  @param[in] is_remote - if true, then the PDR is not from this terminus
  *
  *  @return uint32_t - record handle assigned to PDR record
  */
 uint32_t pldm_pdr_add(pldm_pdr *repo, const uint8_t *data, uint32_t size,
-		      uint32_t record_handle);
+		      uint32_t record_handle, bool is_remote);
 
 /** @brief Get record handle of a PDR record
  *
@@ -124,8 +125,8 @@ pldm_pdr_get_next_record(const pldm_pdr *repo,
  *  @param[in] curr_record - opaque pointer acting as a PDR record handle; if
  *  not NULL, then search will begin from this record's next record
  *  @param[in/out] data - will point to PDR record data (as per DSP0248) on
- *                        return
- *  @param[out] size - *size will be size of PDR record
+ *                        return, if input is not NULL
+ *  @param[out] size - *size will be size of PDR record, if input is not NULL
  *
  *  @return opaque pointer acting as PDR record handle, will be NULL if record
  *  was not found
@@ -134,6 +135,14 @@ const pldm_pdr_record *
 pldm_pdr_find_record_by_type(const pldm_pdr *repo, uint8_t pdr_type,
 			     const pldm_pdr_record *curr_record, uint8_t **data,
 			     uint32_t *size);
+
+bool pldm_pdr_record_is_remote(const pldm_pdr_record *record);
+
+/** @brief Remove all PDR records that belong to a remote terminus
+ *
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ */
+void pldm_pdr_remove_remote_pdrs(pldm_pdr *repo);
 
 /* ======================= */
 /* FRU Record Set PDR APIs */
@@ -253,9 +262,10 @@ bool pldm_entity_is_node_parent(pldm_entity_node *node);
  *
  *  @param[in] tree - opaque pointer to entity association tree
  *  @param[in] repo - PDR repo where entity association records should be added
+ *  @param[in] is_remote - if true, then the PDR is not from this terminus
  */
 void pldm_entity_association_pdr_add(pldm_entity_association_tree *tree,
-				     pldm_pdr *repo);
+				     pldm_pdr *repo, bool is_remote);
 
 /** @brief Get number of children of entity
  *

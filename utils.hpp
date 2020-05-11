@@ -131,6 +131,8 @@ struct DBusMapping
 using PropertyValue =
     std::variant<bool, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t,
                  uint64_t, double, std::string>;
+using DbusProp = std::string;
+using DbusChangedProps = std::map<DbusProp, PropertyValue>;
 
 /**
  * @brief The interface for DBusHandler
@@ -240,6 +242,12 @@ inline std::string findParent(const std::string& dbusObj)
     fs::path p(dbusObj);
     return p.parent_path().string();
 }
+
+/** @brief Read (static) MCTP EID of host firmware from a file
+ *
+ *  @return uint8_t - MCTP EID
+ */
+uint8_t readHostEID();
 
 } // namespace utils
 } // namespace pldm
