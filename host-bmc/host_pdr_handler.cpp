@@ -79,8 +79,7 @@ HostPDRHandler::HostPDRHandler(int mctp_fd, uint8_t mctp_eid,
             {
                 PropertyValue value = itr->second;
                 auto propVal = std::get<std::string>(value);
-                if (propVal == "xyz.openbmc_project.State.Host.HostState."
-                               "TransitioningToOff")
+                if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
                 {
                     pldm_pdr_remove_remote_pdrs(repo);
                     pldm_entity_association_tree_destroy_root(entityTree);
