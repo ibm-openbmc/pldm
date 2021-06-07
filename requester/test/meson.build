@@ -1,13 +1,11 @@
-host_bmc_test_src = declare_dependency(
+test_src = declare_dependency(
           sources: [
-            '../dbus_to_host_effecters.cpp',
             '../../pldmd/dbus_impl_requester.cpp',
-            '../../pldmd/instance_id.cpp',
-            '../../requester/handler.hpp',
-            '../../requester/request.hpp' ])
+            '../../pldmd/instance_id.cpp'])
 
 tests = [
-  'dbus_to_host_effecter_test',
+  'handler_test',
+  'request_test',
 ]
 
 foreach t : tests
@@ -18,11 +16,10 @@ foreach t : tests
                      dependencies: [
                          gtest,
                          gmock,
-                         host_bmc_test_src,
                          libpldm_dep,
-                         libpldmutils,
                          phosphor_dbus_interfaces,
                          sdbusplus,
-                         sdeventplus]),
+                         sdeventplus,
+                         test_src]),
        workdir: meson.current_source_dir())
 endforeach
