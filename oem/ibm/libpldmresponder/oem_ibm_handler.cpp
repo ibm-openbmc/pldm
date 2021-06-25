@@ -484,6 +484,95 @@ void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
             }
         });
 }
+
+void pldm::responder::oem_ibm_platform::Handler::checkAndDisableWatchDog()
+{
+    if (!hostOff && setEventReceiverCnt == 2)
+    {
+        disableWatchDogTimer();
+    }
+
+    return;
+}
+
+bool pldm::responder::oem_ibm_platform::Handler::checkIfWatchDogRunning()
+{
+    static constexpr auto watchDogObjectPath =
+        "/xyz/openbmc_project/watchdog/host0";
+    static constexpr auto watchDogEnablePropName = "Enabled";
+    static constexpr auto watchDogInterface =
+        "xyz.openbmc_project.State.Watchdog";
+    bool isWatchDogRunning = false;
+    try
+    {
+        isWatchDogRunning = pldm::utils::DBusHandler().getDbusProperty<bool>(
+            watchDogObjectPath, watchDogEnablePropName, watchDogInterface);
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Failed to check if Watchdog is running"
+                  << "ERROR=" << e.what() << std::endl;
+        return false;
+    }
+    return isWatchDogRunning;
+}
+
+void pldm::responder::oem_ibm_platform::Handler::resetWatchDogTimer()
+{
+    static constexpr auto watchDogService = "xyz.openbmc_project.Watchdog";
+    static constexpr auto watchDogObjectPath =
+        "/xyz/openbmc_project/watchdog/host0";
+    static constexpr auto watchDogInterface =
+        "xyz.openbmc_project.State.Watchdog";
+    static constexpr auto watchDogResetPropName = "ResetTimeRemaining";
+
+    bool wdStatus = checkIfWatchDogRunning();
+    if (wdStatus == false)
+    {
+        return;
+    }
+    try
+    {
+        auto& bus = pldm::utils::DBusHandler::getBus();
+        auto resetMethod =
+            bus.new_method_call(watchDogService, watchDogObjectPath,
+                                watchDogInterface, watchDogResetPropName);
+        resetMethod.append(true);
+        bus.call_noreply(resetMethod);
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Failed To reset watchdog timer"
+                  << "ERROR=" << e.what() << std::endl;
+        return;
+    }
+}
+
+void pldm::responder::oem_ibm_platform::Handler::disableWatchDogTimer()
+{
+    setEventReceiverCnt = 0;
+    bool val = false;
+    pldm::utils::PropertyValue value = static_cast<bool>(val);
+    pldm::utils::DBusMapping dbusMapping{"/xyz/openbmc_project/watchdog/host0",
+                                         "xyz.openbmc_project.State.Watchdog",
+                                         "Enabled", "bool"};
+    bool wdStatus = checkIfWatchDogRunning();
+
+    if (wdStatus == false)
+    {
+        return;
+    }
+    try
+    {
+        pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Failed To disable watchdog timer"
+                  << "ERROR=" << e.what() << std::endl;
+        return;
+    }
+}
 } // namespace oem_ibm_platform
 } // namespace responder
 } // namespace pldm
