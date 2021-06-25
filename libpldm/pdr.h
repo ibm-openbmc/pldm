@@ -297,7 +297,10 @@ void pldm_entity_association_pdr_add(pldm_entity_association_tree *tree,
  *  @param[in] is_remote  - if true, then the PDR is not from this terminus
  */
 void pldm_entity_association_pdr_add_from_node(pldm_entity_node *node,
-					       pldm_pdr *repo, bool is_remote);
+					       pldm_pdr *repo,
+					       pldm_entity **entities,
+					       size_t num_entities,
+					       bool is_remote);
 
 /** @brief Find entity reference in tree
  *

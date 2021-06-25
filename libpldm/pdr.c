@@ -332,8 +332,8 @@ void pldm_pdr_updateTlPDR(const pldm_pdr *repo)
 			    (struct pldm_terminus_locator_type_mctp_eid *)
 				pdr->terminus_locator_value;
 			// check if its the host EID
-			if (value->eid == 9) {
-				pdr->validity = 0;
+			if (value->eid == HOST_EID) {
+				pdr->validity = PLDM_TL_PDR_NOT_VALID;
 				break;
 			}
 		}
@@ -625,15 +625,37 @@ static void entity_association_pdr_add_entry(pldm_entity_node *curr,
 	}
 }
 
+bool is_present(pldm_entity entity, pldm_entity **entities, size_t num_entities)
+{
+	if (entities == NULL || num_entities == 0) {
+		return true;
+	}
+	size_t i = 0;
+	while (i < num_entities) {
+		if ((*entities + i)->entity_type == entity.entity_type) {
+			return true;
+		}
+		i++;
+	}
+	return false;
+}
+
 static void entity_association_pdr_add(pldm_entity_node *curr, pldm_pdr *repo,
-				       bool is_remote)
+				       pldm_entity **entities,
+				       size_t num_entities, bool is_remote)
 {
 	if (curr == NULL) {
 		return;
 	}
-	entity_association_pdr_add_entry(curr, repo, is_remote);
-	entity_association_pdr_add(curr->next_sibling, repo, is_remote);
-	entity_association_pdr_add(curr->first_child, repo, is_remote);
+	bool to_add = true;
+	to_add = is_present(curr->entity, entities, num_entities);
+	if (to_add) {
+		entity_association_pdr_add_entry(curr, repo, is_remote);
+	}
+	entity_association_pdr_add(curr->next_sibling, repo, entities,
+				   num_entities, is_remote);
+	entity_association_pdr_add(curr->first_child, repo, entities,
+				   num_entities, is_remote);
 }
 
 void pldm_entity_association_pdr_add(pldm_entity_association_tree *tree,
@@ -642,15 +664,19 @@ void pldm_entity_association_pdr_add(pldm_entity_association_tree *tree,
 	assert(tree != NULL);
 	assert(repo != NULL);
 
-	entity_association_pdr_add(tree->root, repo, is_remote);
+	entity_association_pdr_add(tree->root, repo, NULL, 0, is_remote);
 }
 
 void pldm_entity_association_pdr_add_from_node(pldm_entity_node *node,
-					       pldm_pdr *repo, bool is_remote)
+					       pldm_pdr *repo,
+					       pldm_entity **entities,
+					       size_t num_entities,
+					       bool is_remote)
 {
 	assert(repo != NULL);
 
-	entity_association_pdr_add(node, repo, is_remote);
+	entity_association_pdr_add(node, repo, entities, num_entities,
+				   is_remote);
 }
 
 void find_entity_ref_in_tree(pldm_entity_node *tree_node, pldm_entity entity,
