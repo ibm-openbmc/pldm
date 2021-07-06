@@ -249,7 +249,6 @@ class CodeUpdate
     uint16_t markerLidSensorId;
     uint16_t firmwareUpdateSensorId;
     uint16_t bootSideRenameStateSensorId;
-
     /** @brief D-Bus property changed signal match for image activation */
     std::unique_ptr<sdbusplus::bus::match::match> imageActivationMatch;
 
