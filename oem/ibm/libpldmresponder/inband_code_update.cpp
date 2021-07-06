@@ -331,6 +331,13 @@ void CodeUpdate::setVersions()
                         }
                         break;
                     }
+                    else if (imageProp == "xyz.openbmc_project.Software."
+                                          "Activation.Activations.Ready" &&
+                             !isOutOfBandCodeUpdateInProgress())
+                    {
+                        outOfBandCodeUpdateInProgress = true;
+                        processRenameEvent();
+                    }
                 }
                 catch (const sdbusplus::exception_t& e)
                 {
@@ -342,6 +349,15 @@ void CodeUpdate::setVersions()
             }
         }
     }));
+}
+
+void CodeUpdate::processRenameEvent()
+{
+    currBootSide = Pside;
+    auto sensorId = getBootSideRenameStateSensor();
+    sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
+                         PLDM_BOOT_SIDE_HAS_BEEN_RENAMED,
+                         PLDM_BOOT_SIDE_NOT_RENAMED);
 }
 
 void CodeUpdate::processPriorityChangeNotification(
