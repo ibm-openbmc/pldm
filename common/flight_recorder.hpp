@@ -2,6 +2,8 @@
 
 #include <config.h>
 
+#include <common/utils.hpp>
+
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -14,7 +16,9 @@ namespace flightrecorder
 
 using ReqOrResponse = bool;
 using FlightRecorderData = std::vector<uint8_t>;
-using FlightRecorderRecord = std::pair<ReqOrResponse, FlightRecorderData>;
+using FlightRecorderTimeStamp = std::string;
+using FlightRecorderRecord =
+    std::tuple<FlightRecorderTimeStamp, ReqOrResponse, FlightRecorderData>;
 using FlightRecorderCassette = std::vector<FlightRecorderRecord>;
 
 /** @class FlightRecorder
@@ -59,8 +63,8 @@ class FlightRecorder
      */
     void saveRecord(const FlightRecorderData& buffer, ReqOrResponse isRequest)
     {
-        tapeRecorder[index++ % FLIGHT_RECORDER_MAX_SIZE] =
-            std::make_pair(isRequest, buffer);
+        tapeRecorder[index++ % FLIGHT_RECORDER_MAX_SIZE] = std::make_tuple(
+            pldm::utils::getCurrentSystemTime(), isRequest, buffer);
     }
 
     /** @brief play flight recorder
@@ -76,7 +80,9 @@ class FlightRecorder
 
         for (const auto& message : tapeRecorder)
         {
-            if (message.first)
+            recorderOutputFile << std::get<FlightRecorderTimeStamp>(message)
+                               << " : ";
+            if (std::get<ReqOrResponse>(message))
             {
                 recorderOutputFile << "Tx : \n";
             }
@@ -84,7 +90,7 @@ class FlightRecorder
             {
                 recorderOutputFile << "Rx : \n";
             }
-            for (const auto& word : message.second)
+            for (const auto& word : std::get<FlightRecorderData>(message))
             {
                 recorderOutputFile << std::setfill('0') << std::setw(2)
                                    << std::hex << (unsigned)word << " ";
