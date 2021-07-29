@@ -32,6 +32,21 @@ using AssociatedEntityMap = std::map<ObjectPath, pldm_entity>;
 
 namespace oem_ibm_fileio
 {
+using AttributeName = std::string;
+using AttributeType = std::string;
+using ReadonlyStatus = bool;
+using DisplayName = std::string;
+using Description = std::string;
+using MenuPath = std::string;
+using CurrentValue = std::variant<int64_t, std::string>;
+using DefaultValue = std::variant<int64_t, std::string>;
+using OptionString = std::string;
+using OptionValue = std::variant<int64_t, std::string>;
+using Option = std::vector<std::tuple<OptionString, OptionValue>>;
+using BIOSTableObj =
+    std::tuple<AttributeType, ReadonlyStatus, DisplayName, Description,
+               MenuPath, CurrentValue, DefaultValue, Option>;
+using BaseBIOSTable = std::map<AttributeName, BIOSTableObj>;
 
 class Handler : public oem_fileio::Handler
 {
@@ -63,6 +78,8 @@ class Handler : public oem_fileio::Handler
 
 namespace oem_ibm_platform
 {
+using PendingObj = std::tuple<AttributeType, CurrentValue>;
+using PendingAttributes = std::map<AttributeName, PendingObj>;
 constexpr uint16_t ENTITY_INSTANCE_0 = 0;
 constexpr uint16_t ENTITY_INSTANCE_1 = 1;
 
@@ -219,6 +236,38 @@ class Handler : public oem_platform::Handler
                 processSAIUpdate();
             }
         });
+        updateBIOSMatch = std::make_unique<sdbusplus::bus::match::match>(
+            pldm::utils::DBusHandler::getBus(),
+            propertiesChanged("/xyz/openbmc_project/bios_config/manager",
+                              "xyz.openbmc_project.BIOSConfig.Manager"),
+            [this, codeUpdate](sdbusplus::message_t& msg) {
+                constexpr auto propertyName = "PendingAttributes";
+                using Value =
+                    std::variant<std::string, PendingAttributes, BaseBIOSTable>;
+                using Properties = std::map<pldm::utils::DbusProp, Value>;
+                Properties props{};
+                std::string intf;
+                msg.read(intf, props);
+
+                auto valPropMap = props.find(propertyName);
+                if (valPropMap == props.end())
+                {
+                    return;
+                }
+
+                PendingAttributes pendingAttributes =
+                    std::get<PendingAttributes>(valPropMap->second);
+                for (auto it : pendingAttributes)
+                {
+                    if (it.first == "hb_fw_boot_side")
+                    {
+                        auto& [attributeType, attributevalue] = it.second;
+                        std::string nextBootSide =
+                            std::get<std::string>(attributevalue);
+                        codeUpdate->setNextBootSide(nextBootSide);
+                    }
+                }
+            });
     }
 
     int getOemStateSensorReadingsHandler(
@@ -478,6 +527,8 @@ class Handler : public oem_platform::Handler
 
     /** @brief Pointer to BMC's entity association tree */
     pldm_entity_association_tree* bmcEntityTree;
+    /** @brief D-Bus property changed signal match */
+    std::unique_ptr<sdbusplus::bus::match::match> updateBIOSMatch;
 
     /** @brief D-Bus property changed signal match */
     std::unique_ptr<sdbusplus::bus::match_t> hostOffMatch;
