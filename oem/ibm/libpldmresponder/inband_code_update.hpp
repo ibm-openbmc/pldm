@@ -22,6 +22,7 @@ static constexpr auto redundancyIntf =
 struct pldm_boot_side_data
 {
     std::string current_boot_side;
+    std::string next_boot_side;
     std::string running_version_object;
 };
 
@@ -249,6 +250,7 @@ class CodeUpdate
     uint16_t markerLidSensorId;
     uint16_t firmwareUpdateSensorId;
     uint16_t bootSideRenameStateSensorId;
+
     /** @brief D-Bus property changed signal match for image activation */
     std::unique_ptr<sdbusplus::bus::match::match> imageActivationMatch;
 
@@ -292,7 +294,15 @@ int processCodeUpdateLid(const std::string& filePath);
  */
 int assembleCodeUpdateImage();
 
-/* @brief Method to set the hb_boot_side property with the current
+/* @brief Method to get the value from the fw_boot_side attribute which
+ *        is set by host, this is next boot side
+ * @param[in] bootSideAttr - the bios attribute from which the value needs
+ *        to be retrieved(fw_boot_side)
+ * @return - the next boot side value
+ */
+std::string getBootSideBiosAttr(const std::string& bootSideAttr);
+
+/* @brief Method to set the fw_boot_side_current property with the current
  *        boot side
  * @param[in] bootSide - the current boot side needed to set the bios
  *        attribute*/
