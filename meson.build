@@ -34,6 +34,7 @@ conf_data.set_quoted('FRU_MASTER_JSON', join_paths(package_datadir, 'fru_master.
 conf_data.set_quoted('HOST_JSONS_DIR', join_paths(package_datadir, 'host'))
 conf_data.set_quoted('EVENTS_JSONS_DIR', join_paths(package_datadir, 'events'))
 conf_data.set('HEARTBEAT_TIMEOUT', get_option('heartbeat-timeout-seconds'))
+conf_data.set_quoted('FLIGHT_RECORDER_DUMP_PATH', '/tmp/pldm_flight_recorder')
 add_project_arguments('-DLIBPLDMRESPONDER', language : ['c','cpp'])
 endif
 if get_option('softoff').enabled()
@@ -58,6 +59,7 @@ conf_data.set('RESPONSE_TIME_OUT',get_option('response-time-out'))
 if get_option('libpldm-only').disabled()
   conf_data.set_quoted('HOST_EID_PATH', join_paths(package_datadir, 'host_eid'))
 endif
+conf_data.set('FLIGHT_RECORDER_MAX_SIZE',get_option('flightrecorder-size'))
 configure_file(output: 'config.h',
   configuration: conf_data
 )
