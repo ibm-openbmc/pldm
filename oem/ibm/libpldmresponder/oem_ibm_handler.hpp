@@ -276,8 +276,7 @@ class Handler : public oem_platform::Handler
         std::vector<get_sensor_state_field>& stateField);
 
     int oemSetStateEffecterStatesHandler(
-        uint16_t entityType, uint16_t entityInstance, uint16_t stateSetId,
-        uint8_t compEffecterCnt,
+        uint16_t entityType, uint16_t stateSetId, uint8_t compEffecterCnt,
         std::vector<set_effecter_state_field>& stateField, uint16_t effecterId);
 
     /** @brief Method to set the platform handler in the

@@ -146,14 +146,14 @@ TEST(OemSetStateEffecterStatesHandler, testGoodRequest)
     setEffecterStateField.push_back({PLDM_REQUEST_SET, pSideNum});
 
     rc = oemPlatformHandler->oemSetStateEffecterStatesHandler(
-        entityID_, entityInstance_, stateSetId_, compSensorCnt_,
-        setEffecterStateField, effecterId);
+        entityID_, stateSetId_, compSensorCnt_, setEffecterStateField,
+        effecterId);
     ASSERT_EQ(rc, PLDM_SUCCESS);
 
     entityInstance_ = 2;
     rc = oemPlatformHandler->oemSetStateEffecterStatesHandler(
-        entityID_, entityInstance_, stateSetId_, compSensorCnt_,
-        setEffecterStateField, effecterId);
+        entityID_, stateSetId_, compSensorCnt_, setEffecterStateField,
+        effecterId);
 
     ASSERT_EQ(rc, PLDM_PLATFORM_INVALID_STATE_VALUE);
 
@@ -161,8 +161,8 @@ TEST(OemSetStateEffecterStatesHandler, testGoodRequest)
     stateSetId_ = 99;
     entityInstance_ = 0;
     rc = oemPlatformHandler->oemSetStateEffecterStatesHandler(
-        entityID_, entityInstance_, stateSetId_, compSensorCnt_,
-        setEffecterStateField, effecterId);
+        entityID_, stateSetId_, compSensorCnt_, setEffecterStateField,
+        effecterId);
     ASSERT_EQ(rc, PLDM_PLATFORM_SET_EFFECTER_UNSUPPORTED_SENSORSTATE);
 }
 
