@@ -567,6 +567,5 @@ bool checkFruPresence(const char* objPath)
     {}
     return isPresent;
 }
-
 } // namespace utils
 } // namespace pldm
