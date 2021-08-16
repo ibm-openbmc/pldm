@@ -46,7 +46,6 @@ class Handler : public CmdHandler
      *         it's own handler.
      *
      *  @param[in] entityType - entity type corresponding to the effecter id
-     *  @param[in] entityInstance - entity instance
      *  @param[in] stateSetId - state set id
      *  @param[in] compEffecterCnt - composite effecter count
      *  @param[in] stateField - The state field data for each of the states,
@@ -58,8 +57,7 @@ class Handler : public CmdHandler
      *            be set
      */
     virtual int oemSetStateEffecterStatesHandler(
-        uint16_t entityType, uint16_t entityInstance, uint16_t stateSetId,
-        uint8_t compEffecterCnt,
+        uint16_t entityType, uint16_t stateSetId, uint8_t compEffecterCnt,
         std::vector<set_effecter_state_field>& stateField,
         uint16_t effecterId) = 0;
 

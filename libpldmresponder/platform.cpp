@@ -366,8 +366,7 @@ Response Handler::setStateEffecterStates(const pldm_msg* request,
         !effecterDbusObjMaps.contains(effecterId))
     {
         rc = oemPlatformHandler->oemSetStateEffecterStatesHandler(
-            entityType, entityInstance, stateSetId, compEffecterCnt, stateField,
-            effecterId);
+            entityType, stateSetId, compEffecterCnt, stateField, effecterId);
     }
     else
     {
