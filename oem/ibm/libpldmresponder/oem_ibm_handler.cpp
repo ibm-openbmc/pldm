@@ -563,7 +563,7 @@ void pldm::responder::oem_ibm_platform::Handler::disableWatchDogTimer()
     }
     try
     {
-        pldm::utils::DBusHandler().setDbusProperty(dbusMapping, "false");
+        pldm::utils::DBusHandler().setDbusProperty(dbusMapping, false);
     }
     catch (const std::exception& e)
     {
