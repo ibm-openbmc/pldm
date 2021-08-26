@@ -258,10 +258,9 @@ int main(int argc, char** argv)
 #endif
 
     invoker.registerHandler(PLDM_PLATFORM, std::move(platformHandler));
-    invoker.registerHandler(
-        PLDM_BASE, std::make_unique<base::Handler>(oemPlatformHandler.get(),
-                                                   sockfd, hostEID, dbusImplReq,
-                                                   event, &reqHandler));
+    invoker.registerHandler(PLDM_BASE, std::make_unique<base::Handler>(
+                                           oemPlatformHandler.get(), hostEID,
+                                           dbusImplReq, event, &reqHandler));
     invoker.registerHandler(PLDM_FRU, std::move(fruHandler));
     dbus_api::Pdr dbusImplPdr(bus, "/xyz/openbmc_project/pldm", pdrRepo.get());
     sdbusplus::xyz::openbmc_project::PLDM::server::Event dbusImplEvent(
