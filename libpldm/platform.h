@@ -92,6 +92,12 @@ enum pldm_sensor_present_state {
 	PLDM_SENSOR_UPPERFATAL = 0x0a
 };
 
+enum pldm_operational_fault_status {
+	PLDM_OPERATIONAL_NORMAL = 0x1,
+	PLDM_OPERATIONAL_ERROR = 0x2,
+	PLDM_OPERATIONAL_NON_RECOVERABLE_ERROR = 0x3
+};
+
 enum pldm_sensor_event_message_enable {
 	PLDM_NO_EVENT_GENERATION,
 	PLDM_EVENTS_DISABLED,
@@ -336,7 +342,7 @@ struct pldm_pdr_fru_record_set {
 	uint16_t terminus_handle;
 	uint16_t fru_rsi;
 	uint16_t entity_type;
-	uint16_t entity_instance_num;
+	uint16_t entity_instance;
 	uint16_t container_id;
 } __attribute__((packed));
 

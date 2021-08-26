@@ -6,14 +6,16 @@
 #include "common/types.hpp"
 #include "common/utils.hpp"
 #include "libpldmresponder/event_parser.hpp"
+#include "libpldmresponder/oem_handler.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
-#include "pldmd/dbus_impl_requester.hpp"
 #include "requester/handler.hpp"
+#include "utils.hpp"
 
 #include <sdeventplus/event.hpp>
 #include <sdeventplus/source/event.hpp>
 
 #include <deque>
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <vector>
@@ -104,6 +106,7 @@ class HostPDRHandler
         pldm_entity_association_tree* bmcEntityTree,
         pldm::dbus_api::Requester& requester,
         pldm::requester::Handler<pldm::requester::Request>* handler,
+        pldm::responder::oem_platform::Handler* oemPlatformHandler,
         bool verbose = false);
 
     /** @brief fetch PDRs from host firmware. See @class.
@@ -155,6 +158,13 @@ class HostPDRHandler
     void parseStateSensorPDRs(const PDRList& stateSensorPDRs,
                               const TLPDRMap& tlpdrInfo);
 
+    /** @brief Parse FRU record set PDRs
+     *
+     *  @param[in] fruRecordSetPDRs - host fru record set PDRs
+     *
+     */
+    void parseFruRecordSetPDRs(const PDRList& fruRecordSetPDRs);
+
     /** @brief this function sends a GetPDR request to Host firmware.
      *  And processes the PDRs based on type
      *
@@ -192,14 +202,6 @@ class HostPDRHandler
      */
     void mergeEntityAssociations(const std::vector<uint8_t>& pdr);
 
-    /** @brief Find parent of input entity type, from the entity association
-     *  tree
-     *  @param[in] type - PLDM entity type
-     *  @param[out] parent - PLDM entity information of parent
-     *  @return bool - true if parent found, false otherwise
-     */
-    bool getParent(EntityType type, pldm_entity& parent);
-
     /** @brief process the Host's PDR and add to BMC's PDR repo
      *  @param[in] eid - MCTP id of Host
      *  @param[in] response - response from Host for GetPDR
@@ -220,6 +222,46 @@ class HostPDRHandler
     void _processFetchPDREvent(uint32_t nextRecordHandle,
                                sdeventplus::source::EventBase& source);
 
+    /** @brief Get FRU record table metadata by host
+     *
+     *  @param[out] uint16_t    - total table records
+     */
+    void getFRURecordTableMetadataByHost(const PDRList& fruRecordSetPDRs);
+
+    /** @brief Get FRU record table by host
+     *
+     *  @return
+     */
+    void getFRURecordTableByHost(uint16_t& total,
+                                 const PDRList& fruRecordSetPDRs);
+
+    /** @brief Get FRU Record Set Identifier from FRU Record data Format
+     *  @param[in] fruRecordSetPDRs - fru record set pdr
+     *  @param[in] entity           - PLDM entity information
+     *  @return
+     */
+    uint16_t getRSI(const PDRList& fruRecordSetPDRs, const pldm_entity& entity);
+
+    /** @brief Get present state from state sensor readings
+     *  @param[in] sensorId   - state sensor Id
+     *
+     *  @param[out] state     - pldm operational fault status
+     *  @param[in] path       - object path
+     */
+    void getPresentStateBySensorReadigs(uint16_t sensorId, uint8_t state,
+                                        const std::string& path);
+
+    /** @brief Set the OperationalStatus interface
+     *  @return
+     */
+    void setOperationStatus();
+
+    /** @brief Set the Present dbus Property
+     *  @param[in] path     - object path
+     *  @return
+     */
+    void setPresentPropertyStatus(const std::string& path);
+
     /** @brief fd of MCTP communications socket */
     int mctp_fd;
     /** @brief MCTP EID of host firmware */
@@ -228,6 +270,10 @@ class HostPDRHandler
      *  work.
      */
     sdeventplus::Event& event;
+
+    /** @brief iterator to track the entries in the objPathMap */
+    ObjectPathMaps::iterator sensorMapIndex;
+
     /** @brief pointer to BMC's primary PDR repo, host PDRs are added here */
     pldm_pdr* repo;
 
@@ -269,6 +315,36 @@ class HostPDRHandler
 
     /** @brief whether response received from Host */
     bool responseReceived;
+
+    /** @brief veriable that captures if the first entity association PDR
+     *         from host is merged into the BMC tree
+     */
+    bool mergedHostParents;
+
+    /** @brief whether timed out waiting for a response from Host */
+    bool timeOut;
+    /** @brief request message instance id */
+    uint8_t insId;
+
+    /** @brief maps an object path to pldm_entity from the BMC's entity
+     *         association tree
+     */
+    ObjectPathMaps objPathMap;
+
+    /** @brief maps an entity name to map, maps to entity name to pldm_entity
+     */
+    EntityAssociations entityAssociations;
+
+    /** @brief the vector of FRU Record Data Format
+     */
+    std::vector<responder::pdr_utils::FruRecordDataFormat> fruRecordData;
+
+    /** @OEM platform handler */
+    pldm::responder::oem_platform::Handler* oemPlatformHandler;
+
+    /** @brief Object path and entity association and is only loaded once
+     */
+    bool objPathEntityAssociation;
 };
 
 } // namespace pldm

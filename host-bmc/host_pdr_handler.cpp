@@ -2,7 +2,11 @@
 
 #include "host_pdr_handler.hpp"
 
+#include "libpldm/fru.h"
 #include "libpldm/requester/pldm.h"
+#include "oem/ibm/libpldm/fru.h"
+
+#include "custom_dbus.hpp"
 
 #include <assert.h>
 
@@ -13,6 +17,7 @@
 #include <sdeventplus/source/time.hpp>
 
 #include <fstream>
+#include <type_traits>
 
 namespace pldm
 {
@@ -23,21 +28,55 @@ using namespace pldm::utils;
 using namespace sdbusplus::bus::match::rules;
 using Json = nlohmann::json;
 namespace fs = std::filesystem;
+using namespace pldm::dbus;
 constexpr auto fruJson = "host_frus.json";
 const Json emptyJson{};
 const std::vector<Json> emptyJsonList{};
+
+template <typename T>
+void updateContanierId(pldm_entity_association_tree* entityTree,
+                       std::vector<uint8_t>& pdr)
+{
+    T* t = nullptr;
+    if (entityTree == nullptr)
+    {
+        return;
+    }
+    if (std::is_same<T, pldm_pdr_fru_record_set>::value)
+    {
+        t = (T*)(pdr.data() + sizeof(pldm_pdr_hdr));
+    }
+    else
+    {
+        t = (T*)(pdr.data());
+    }
+    if (t == nullptr)
+    {
+        return;
+    }
+
+    pldm_entity entity{t->entity_type, t->entity_instance, t->container_id};
+    auto node = pldm_entity_association_tree_find(entityTree, &entity, true);
+    if (node)
+    {
+        pldm_entity e = pldm_entity_extract(node);
+        t->container_id = e.entity_container_id;
+    }
+}
 
 HostPDRHandler::HostPDRHandler(
     int mctp_fd, uint8_t mctp_eid, sdeventplus::Event& event, pldm_pdr* repo,
     const std::string& eventsJsonsDir, pldm_entity_association_tree* entityTree,
     pldm_entity_association_tree* bmcEntityTree, Requester& requester,
-    pldm::requester::Handler<pldm::requester::Request>* handler, bool verbose) :
+    pldm::requester::Handler<pldm::requester::Request>* handler,
+    pldm::responder::oem_platform::Handler* oemPlatformHandler, bool verbose) :
     mctp_fd(mctp_fd),
     mctp_eid(mctp_eid), event(event), repo(repo),
     stateSensorHandler(eventsJsonsDir), entityTree(entityTree),
     bmcEntityTree(bmcEntityTree), requester(requester), handler(handler),
-    verbose(verbose)
+    verbose(verbose), oemPlatformHandler(oemPlatformHandler)
 {
+    mergedHostParents = false;
     fs::path hostFruJson(fs::path(HOST_JSONS_DIR) / fruJson);
     if (fs::exists(hostFruJson))
     {
@@ -93,6 +132,8 @@ HostPDRHandler::HostPDRHandler(
                     pldm_entity_association_tree_copy_root(bmcEntityTree,
                                                            entityTree);
                     this->sensorMap.clear();
+                    this->mergedHostParents = false;
+                    this->sensorMapIndex = objPathMap.begin();
                 }
             }
         });
@@ -166,6 +207,21 @@ void HostPDRHandler::getHostPDR(uint32_t nextRecordHandle)
 int HostPDRHandler::handleStateSensorEvent(const StateSensorEntry& entry,
                                            pdr::EventState state)
 {
+    for (auto& entity : objPathMap)
+    {
+        pldm_entity node_entity = pldm_entity_extract(entity.second);
+
+        if (node_entity.entity_type != entry.entityType ||
+            node_entity.entity_instance_num != entry.entityInstance ||
+            node_entity.entity_container_id != entry.containerId)
+        {
+            continue;
+        }
+
+        CustomDBus::getCustomDBus().setOperationalStatus(entity.first, state);
+        break;
+    }
+
     auto rc = stateSensorHandler.eventAction(entry, state);
     if (rc != PLDM_SUCCESS)
     {
@@ -173,19 +229,8 @@ int HostPDRHandler::handleStateSensorEvent(const StateSensorEntry& entry,
                   << std::endl;
         return rc;
     }
-    return PLDM_SUCCESS;
-}
-bool HostPDRHandler::getParent(EntityType type, pldm_entity& parent)
-{
-    auto found = parents.find(type);
-    if (found != parents.end())
-    {
-        parent.entity_type = found->second.entity_type;
-        parent.entity_instance_num = found->second.entity_instance_num;
-        return true;
-    }
 
-    return false;
+    return PLDM_SUCCESS;
 }
 
 void HostPDRHandler::mergeEntityAssociations(const std::vector<uint8_t>& pdr)
@@ -198,19 +243,38 @@ void HostPDRHandler::mergeEntityAssociations(const std::vector<uint8_t>& pdr)
 
     pldm_entity_association_pdr_extract(pdr.data(), pdr.size(), &numEntities,
                                         &entities);
-    for (size_t i = 0; i < numEntities; ++i)
+    if (numEntities > 0)
     {
-        pldm_entity parent{};
-        if (getParent(entities[i].entity_type, parent))
+        pldm_entity_node* pNode;
+        if (!mergedHostParents)
         {
-            auto node = pldm_entity_association_tree_find(entityTree, &parent);
-            if (node)
-            {
-                pldm_entity_association_tree_add(entityTree, &entities[i],
-                                                 0xFFFF, node,
-                                                 entityPdr->association_type);
-                merged = true;
-            }
+            pNode = pldm_entity_association_tree_find(entityTree, &entities[0],
+                                                      false);
+        }
+        else
+        {
+            pNode = pldm_entity_association_tree_find(entityTree, &entities[0],
+                                                      true);
+        }
+        if (!pNode)
+        {
+            return;
+        }
+
+        Entities entityAssoc;
+        entityAssoc.push_back(pNode);
+        for (size_t i = 1; i < numEntities; ++i)
+        {
+            auto node = pldm_entity_association_tree_add(
+                entityTree, &entities[i], entities[i].entity_instance_num,
+                pNode, entityPdr->association_type, true);
+            merged = true;
+            entityAssoc.push_back(node);
+        }
+        mergedHostParents = true;
+        if (merged)
+        {
+            entityAssociations.push_back(entityAssoc);
         }
     }
 
@@ -367,6 +431,7 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
 {
     static bool merged = false;
     static PDRList stateSensorPDRs{};
+    static PDRList fruRecordSetPDRs{};
     static TLPDRMap tlpdrInfo{};
     uint32_t nextRecordHandle{};
     std::vector<TlInfo> tlInfo;
@@ -477,7 +542,17 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                 }
                 else if (pdrHdr->type == PLDM_STATE_SENSOR_PDR)
                 {
+                    updateContanierId<pldm_state_sensor_pdr>(entityTree, pdr);
                     stateSensorPDRs.emplace_back(pdr);
+                }
+                else if (pdrHdr->type == PLDM_PDR_FRU_RECORD_SET)
+                {
+                    updateContanierId<pldm_pdr_fru_record_set>(entityTree, pdr);
+                    fruRecordSetPDRs.emplace_back(pdr);
+                }
+                else if (pdrHdr->type == PLDM_STATE_EFFECTER_PDR)
+                {
+                    updateContanierId<pldm_state_effecter_pdr>(entityTree, pdr);
                 }
 
                 // if the TLPDR is invalid update the repo accordingly
@@ -495,14 +570,26 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
     }
     if (!nextRecordHandle)
     {
+        pldm::hostbmc::utils::updateEntityAssociation(
+            entityAssociations, entityTree, objPathMap, oemPlatformHandler);
+
+        if (oemPlatformHandler != nullptr)
+        {
+            pldm::hostbmc::utils::setCoreCount(entityAssociations);
+        }
+
         /*received last record*/
         this->parseStateSensorPDRs(stateSensorPDRs, tlpdrInfo);
+        this->parseFruRecordSetPDRs(fruRecordSetPDRs);
         if (isHostUp())
         {
             this->setHostSensorState(stateSensorPDRs, tlInfo);
         }
         stateSensorPDRs.clear();
         tlpdrInfo.clear();
+        fruRecordSetPDRs.clear();
+        entityAssociations.clear();
+
         if (merged)
         {
             merged = false;
@@ -756,4 +843,337 @@ void HostPDRHandler::setHostSensorState(const PDRList& stateSensorPDRs,
         }
     }
 }
+
+void HostPDRHandler::getFRURecordTableMetadataByHost(
+    const PDRList& fruRecordSetPDRs)
+{
+    auto instanceId = requester.getInstanceId(mctp_eid);
+    std::vector<uint8_t> requestMsg(
+        sizeof(pldm_msg_hdr) + PLDM_GET_FRU_RECORD_TABLE_METADATA_REQ_BYTES);
+
+    // GetFruRecordTableMetadata
+    auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+    auto rc = encode_get_fru_record_table_metadata_req(
+        instanceId, request, requestMsg.size() - sizeof(pldm_msg_hdr));
+    if (rc != PLDM_SUCCESS)
+    {
+        requester.markFree(mctp_eid, instanceId);
+        std::cerr << "Failed to encode_get_fru_record_table_metadata_req, rc = "
+                  << rc << std::endl;
+        return;
+    }
+
+    auto getFruRecordTableMetadataResponseHandler = [this, fruRecordSetPDRs](
+                                                        mctp_eid_t /*eid*/,
+                                                        const pldm_msg*
+                                                            response,
+                                                        size_t respMsgLen) {
+        if (response == nullptr || !respMsgLen)
+        {
+            std::cerr << "Failed to receive response for the Get FRU Record "
+                         "Table Metadata\n";
+            return;
+        }
+
+        uint8_t cc = 0;
+        uint8_t fru_data_major_version, fru_data_minor_version;
+        uint32_t fru_table_maximum_size, fru_table_length;
+        uint16_t total_record_set_identifiers;
+        uint16_t total;
+        uint32_t checksum;
+
+        auto rc = decode_get_fru_record_table_metadata_resp(
+            response, respMsgLen, &cc, &fru_data_major_version,
+            &fru_data_minor_version, &fru_table_maximum_size, &fru_table_length,
+            &total_record_set_identifiers, &total, &checksum);
+
+        if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
+        {
+            std::cerr << "Faile to decode get fru record table metadata resp, "
+                         "Message Error: "
+                      << "rc=" << rc << ",cc=" << (int)cc << std::endl;
+            return;
+        }
+
+        // pass total to getFRURecordTableByHost
+        this->getFRURecordTableByHost(total, fruRecordSetPDRs);
+    };
+
+    rc = handler->registerRequest(
+        mctp_eid, instanceId, PLDM_FRU, PLDM_GET_FRU_RECORD_TABLE_METADATA,
+        std::move(requestMsg),
+        std::move(getFruRecordTableMetadataResponseHandler));
+    if (rc != PLDM_SUCCESS)
+    {
+        std::cerr
+            << "Failed to send the the Set State Effecter States request\n";
+    }
+
+    return;
+}
+
+void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records,
+                                             const PDRList& fruRecordSetPDRs)
+{
+    fruRecordData.clear();
+
+    if (!total_table_records)
+    {
+        std::cerr << "Failed to get fru record table." << std::endl;
+        return;
+    }
+
+    auto instanceId = requester.getInstanceId(mctp_eid);
+    std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
+                                    PLDM_GET_FRU_RECORD_TABLE_REQ_BYTES);
+
+    // send the getFruRecordTable command
+    auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+    auto rc = encode_get_fru_record_table_req(
+        instanceId, 0, PLDM_GET_FIRSTPART, request,
+        requestMsg.size() - sizeof(pldm_msg_hdr));
+    if (rc != PLDM_SUCCESS)
+    {
+        requester.markFree(mctp_eid, instanceId);
+        std::cerr << "Failed to encode_get_fru_record_table_req, rc = " << rc
+                  << std::endl;
+        return;
+    }
+
+    auto getFruRecordTableResponseHandler = [total_table_records, this,
+                                             fruRecordSetPDRs](
+                                                mctp_eid_t /*eid*/,
+                                                const pldm_msg* response,
+                                                size_t respMsgLen) {
+        if (response == nullptr || !respMsgLen)
+        {
+            std::cerr << "Failed to receive response for the Get FRU Record "
+                         "Table\n";
+            return;
+        }
+
+        uint8_t cc = 0;
+        uint32_t next_data_transfer_handle = 0;
+        uint8_t transfer_flag = 0;
+        size_t fru_record_table_length = 0;
+        std::vector<uint8_t> fru_record_table_data(respMsgLen -
+                                                   sizeof(pldm_msg_hdr));
+        auto responsePtr = reinterpret_cast<const struct pldm_msg*>(response);
+        auto rc = decode_get_fru_record_table_resp(
+            responsePtr, respMsgLen - sizeof(pldm_msg_hdr), &cc,
+            &next_data_transfer_handle, &transfer_flag,
+            fru_record_table_data.data(), &fru_record_table_length);
+
+        if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
+        {
+            std::cerr
+                << "Faile to decode get fru record table resp, Message Error: "
+                << "rc=" << rc << ",cc=" << (int)cc << std::endl;
+            return;
+        }
+
+        fruRecordData = responder::pdr_utils::parseFruRecordTable(
+            fru_record_table_data.data(), fru_record_table_length);
+
+        if (total_table_records != fruRecordData.size())
+        {
+            fruRecordData.clear();
+
+            std::cerr << "failed to parse fru recrod data format.\n";
+            return;
+        }
+
+        sensorMapIndex = objPathMap.begin();
+
+        // update xyz.openbmc_project.State.Decorator.OperationalStatus
+        setOperationStatus();
+
+        for (auto& entity : objPathMap)
+        {
+            pldm_entity node = pldm_entity_extract(entity.second);
+            auto fruRSI = getRSI(fruRecordSetPDRs, node);
+
+            // update the Present Property
+            setPresentPropertyStatus(entity.first);
+            if (node.entity_type == (PLDM_ENTITY_PROC | 0x8000))
+            {
+                CustomDBus::getCustomDBus().implementCpuCoreInterface(
+                    entity.first);
+            }
+
+            for (auto& data : fruRecordData)
+            {
+                if (fruRSI != data.fruRSI)
+                {
+                    continue;
+                }
+
+                if (data.fruRecType == PLDM_FRU_RECORD_TYPE_OEM)
+                {
+                    for (auto& tlv : data.fruTLV)
+                    {
+                        if (tlv.fruFieldType ==
+                            PLDM_OEM_FRU_FIELD_TYPE_LOCATION_CODE)
+                        {
+                            CustomDBus::getCustomDBus().setLocationCode(
+                                entity.first,
+                                std::string(reinterpret_cast<const char*>(
+                                                tlv.fruFieldValue.data()),
+                                            tlv.fruFieldLen));
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    rc = handler->registerRequest(
+        mctp_eid, instanceId, PLDM_FRU, PLDM_GET_FRU_RECORD_TABLE,
+        std::move(requestMsg), std::move(getFruRecordTableResponseHandler));
+    if (rc != PLDM_SUCCESS)
+    {
+        std::cerr
+            << "Failed to send the the Set State Effecter States request\n";
+    }
+}
+
+void HostPDRHandler::getPresentStateBySensorReadigs(uint16_t sensorId,
+                                                    uint8_t state,
+                                                    const std::string& path)
+{
+
+    auto instanceId = requester.getInstanceId(mctp_eid);
+    std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
+                                    PLDM_GET_STATE_SENSOR_READINGS_REQ_BYTES);
+
+    auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+    bitfield8_t bf;
+    bf.byte = 0;
+    auto rc = encode_get_state_sensor_readings_req(instanceId, sensorId, bf, 0,
+                                                   request);
+    if (rc != PLDM_SUCCESS)
+    {
+        requester.markFree(mctp_eid, instanceId);
+        std::cerr << "Failed to encode_get_state_sensor_readings_req, rc = "
+                  << rc << std::endl;
+        state = PLDM_OPERATIONAL_NON_RECOVERABLE_ERROR;
+        return;
+    }
+
+    state = PLDM_OPERATIONAL_ERROR;
+    auto getStateSensorReadingsResponseHandler = [this, path, &state](
+                                                     mctp_eid_t /*eid*/,
+                                                     const pldm_msg* response,
+                                                     size_t respMsgLen) {
+        if (response == nullptr || !respMsgLen)
+        {
+            std::cerr << "Failed to receive response for the Get FRU Record "
+                         "Table\n";
+            return;
+        }
+
+        uint8_t cc = 0;
+        uint8_t sensorCnt = 0;
+        std::array<get_sensor_state_field, 8> stateField{};
+        auto responsePtr = reinterpret_cast<const struct pldm_msg*>(response);
+        auto rc = decode_get_state_sensor_readings_resp(
+            responsePtr, respMsgLen - sizeof(pldm_msg_hdr), &cc, &sensorCnt,
+            stateField.data());
+        if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
+        {
+            std::cerr << "Faile to decode get state sensor readings resp, "
+                         "Message Error: "
+                      << "rc=" << rc << ",cc=" << (int)cc << std::endl;
+            state = PLDM_OPERATIONAL_NON_RECOVERABLE_ERROR;
+            return;
+        }
+
+        for (const auto& filed : stateField)
+        {
+            if (filed.present_state == PLDM_SENSOR_NORMAL)
+            {
+                state = PLDM_OPERATIONAL_NORMAL;
+                break;
+            }
+        }
+        CustomDBus::getCustomDBus().setOperationalStatus(path, state);
+
+        if (++sensorMapIndex != objPathMap.end())
+        {
+            setOperationStatus();
+        }
+    };
+
+    rc = handler->registerRequest(
+        mctp_eid, instanceId, PLDM_PLATFORM, PLDM_GET_STATE_SENSOR_READINGS,
+        std::move(requestMsg),
+        std::move(getStateSensorReadingsResponseHandler));
+    if (rc != PLDM_SUCCESS)
+    {
+        std::cerr << "Failed to get the State Sensor Readings request\n";
+    }
+
+    return;
+}
+
+uint16_t HostPDRHandler::getRSI(const PDRList& fruRecordSetPDRs,
+                                const pldm_entity& entity)
+{
+    uint16_t fruRSI = 0;
+
+    for (const auto& pdr : fruRecordSetPDRs)
+    {
+        auto fruPdr = reinterpret_cast<const pldm_pdr_fru_record_set*>(
+            const_cast<uint8_t*>(pdr.data()) + sizeof(pldm_pdr_hdr));
+
+        if (fruPdr->entity_type == entity.entity_type &&
+            fruPdr->entity_instance == entity.entity_instance_num &&
+            fruPdr->container_id == entity.entity_container_id)
+        {
+            fruRSI = fruPdr->fru_rsi;
+            break;
+        }
+    }
+
+    return fruRSI;
+}
+
+void HostPDRHandler::setOperationStatus()
+{
+    if (sensorMapIndex != objPathMap.end())
+    {
+
+        pldm_entity node = pldm_entity_extract(sensorMapIndex->second);
+
+        for (auto& sensor : sensorMap)
+        {
+            pldm::pdr::EntityInfo entityInfo{};
+            pldm::pdr::CompositeSensorStates compositeSensorStates{};
+            std::tie(entityInfo, compositeSensorStates) = sensor.second;
+            const auto& [containerId, entityType, entityInstance] = entityInfo;
+
+            if (node.entity_type != entityType ||
+                node.entity_instance_num != entityInstance ||
+                node.entity_container_id != containerId)
+            {
+                continue;
+            }
+            uint8_t state = 0;
+            // Get sensorOpState property by the getStateSensorReadings command.
+            getPresentStateBySensorReadigs(sensor.first.sensorID, state,
+                                           sensorMapIndex->first);
+        }
+    }
+}
+
+void HostPDRHandler::setPresentPropertyStatus(const std::string& path)
+{
+    CustomDBus::getCustomDBus().updateItemPresentStatus(path);
+}
+
+void HostPDRHandler::parseFruRecordSetPDRs(const PDRList& fruRecordSetPDRs)
+{
+    getFRURecordTableMetadataByHost(fruRecordSetPDRs);
+}
+
 } // namespace pldm

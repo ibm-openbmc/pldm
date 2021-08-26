@@ -176,14 +176,14 @@ Response Handler::getPLDMVersion(const pldm_msg* request, size_t payloadLength)
     return response;
 }
 
-void Handler::_processSetEventReceiver(
+void Handler::processSetEventReceiver(
     sdeventplus::source::EventBase& /*source */)
 {
     survEvent.reset();
     std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
                                     PLDM_SET_EVENT_RECEIVER_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
-    auto instanceId = requester.getInstanceId(mctp_eid);
+    auto instanceId = requester.getInstanceId(eid);
     uint8_t eventMessageGlobalEnable =
         PLDM_EVENT_MESSAGE_GLOBAL_ENABLE_ASYNC_KEEP_ALIVE;
     uint8_t transportProtocolType = PLDM_TRANSPORT_PROTOCOL_TYPE_MCTP;
@@ -195,7 +195,7 @@ void Handler::_processSetEventReceiver(
         eventReceiverAddressInfo, heartbeatTimer, request);
     if (rc != PLDM_SUCCESS)
     {
-        requester.markFree(mctp_eid, instanceId);
+        requester.markFree(eid, instanceId);
         std::cerr << "Failed to encode_set_event_receiver_req, rc = "
                   << std::hex << std::showbase << rc << std::endl;
         return;
@@ -224,7 +224,7 @@ void Handler::_processSetEventReceiver(
         }
     };
     rc = handler->registerRequest(
-        mctp_eid, instanceId, PLDM_PLATFORM, PLDM_SET_EVENT_RECEIVER,
+        eid, instanceId, PLDM_PLATFORM, PLDM_SET_EVENT_RECEIVER,
         std::move(requestMsg), std::move(processSetEventReceiverResponse));
 
     if (rc != PLDM_SUCCESS)
@@ -256,7 +256,7 @@ Response Handler::getTID(const pldm_msg* request, size_t /*payloadLength*/)
     }
 
     survEvent = std::make_unique<sdeventplus::source::Defer>(
-        event, std::bind_front(&Handler::_processSetEventReceiver, this));
+        event, std::bind_front(&Handler::processSetEventReceiver, this));
 
     return response;
 }
