@@ -68,13 +68,13 @@ class Handler : public oem_platform::Handler
             propertiesChanged("/xyz/openbmc_project/state/host0",
                               "xyz.openbmc_project.State.Host"),
             [this](sdbusplus::message::message& msg) {
-                DbusChangedProps props{};
+                pldm::utils::DbusChangedProps props{};
                 std::string intf;
                 msg.read(intf, props);
                 const auto itr = props.find("CurrentHostState");
                 if (itr != props.end())
                 {
-                    PropertyValue value = itr->second;
+                    pldm::utils::PropertyValue value = itr->second;
                     auto propVal = std::get<std::string>(value);
                     if (propVal ==
                         "xyz.openbmc_project.State.Host.HostState.Off")

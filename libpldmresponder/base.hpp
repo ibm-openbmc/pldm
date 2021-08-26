@@ -30,12 +30,10 @@ class Handler : public CmdHandler
 {
   public:
     Handler(pldm::responder::oem_platform::Handler* oemPlatformHandler,
-            int mctp_fd, uint8_t mctp_eid, Requester& requester,
-            sdeventplus::Event& event,
+            uint8_t eid, Requester& requester, sdeventplus::Event& event,
             pldm::requester::Handler<pldm::requester::Request>* handler) :
         oemPlatformHandler(oemPlatformHandler),
-        mctp_fd(mctp_fd), mctp_eid(mctp_eid), requester(requester),
-        event(event), handler(handler)
+        eid(eid), requester(requester), event(event), handler(handler)
     {
         handlers.emplace(PLDM_GET_PLDM_TYPES,
                          [this](const pldm_msg* request, size_t payloadLength) {
@@ -82,9 +80,10 @@ class Handler : public CmdHandler
     /** @brief _processSetEventReceiver does the actual work that needs
      *  to be carried out for setEventReceiver command. This is deferred
      *  after sending response for getTID command to the host
+     *
      *  @param[in] source - sdeventplus event source
      */
-    void _processSetEventReceiver(sdeventplus::source::EventBase& source);
+    void processSetEventReceiver(sdeventplus::source::EventBase& source);
 
     /** @brief Handler for getTID
      *
@@ -94,21 +93,18 @@ class Handler : public CmdHandler
      */
     Response getTID(const pldm_msg* request, size_t payloadLength);
 
+  private:
     /** @OEM platform handler */
     pldm::responder::oem_platform::Handler* oemPlatformHandler;
 
-    /** @brief fd of MCTP communications socket */
-    int mctp_fd;
-
     /** @brief MCTP EID of host firmware */
-    uint8_t mctp_eid;
+    uint8_t eid;
 
     /** @brief reference to Requester object, primarily used to access API to
      *  obtain PLDM instance id.
      */
     Requester& requester;
 
-  private:
     /** @brief reference of main event loop of pldmd, primarily used to schedule
      *  work
      */
