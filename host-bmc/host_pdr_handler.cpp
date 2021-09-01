@@ -4,6 +4,7 @@
 
 #include "libpldm/fru.h"
 #include "libpldm/requester/pldm.h"
+#include "libpldm/state_set.h"
 #include "oem/ibm/libpldm/fru.h"
 
 #include "custom_dbus.hpp"
@@ -780,10 +781,12 @@ void HostPDRHandler::setHostSensorState(const PDRList& stateSensorPDRs,
                         pldm::pdr::EntityInfo entityInfo{};
                         pldm::pdr::CompositeSensorStates
                             compositeSensorStates{};
+                        std::vector<pldm::pdr::StateSetId> stateSetIds{};
 
                         try
                         {
-                            std::tie(entityInfo, compositeSensorStates) =
+                            std::tie(entityInfo, compositeSensorStates,
+                                     stateSetIds) =
                                 lookupSensorInfo(sensorEntry);
                         }
                         catch (const std::out_of_range& e)
@@ -791,7 +794,8 @@ void HostPDRHandler::setHostSensorState(const PDRList& stateSensorPDRs,
                             try
                             {
                                 sensorEntry.terminusID = PLDM_TID_RESERVED;
-                                std::tie(entityInfo, compositeSensorStates) =
+                                std::tie(entityInfo, compositeSensorStates,
+                                         stateSetIds) =
                                     lookupSensorInfo(sensorEntry);
                             }
                             catch (const std::out_of_range& e)
@@ -1149,7 +1153,9 @@ void HostPDRHandler::setOperationStatus()
         {
             pldm::pdr::EntityInfo entityInfo{};
             pldm::pdr::CompositeSensorStates compositeSensorStates{};
-            std::tie(entityInfo, compositeSensorStates) = sensor.second;
+            std::vector<pldm::pdr::StateSetId> stateSetIds{};
+            std::tie(entityInfo, compositeSensorStates, stateSetIds) =
+                sensor.second;
             const auto& [containerId, entityType, entityInstance] = entityInfo;
 
             if (node.entity_type != entityType ||
@@ -1159,9 +1165,17 @@ void HostPDRHandler::setOperationStatus()
                 continue;
             }
             uint8_t state = 0;
-            // Get sensorOpState property by the getStateSensorReadings command.
-            getPresentStateBySensorReadigs(sensor.first.sensorID, state,
-                                           sensorMapIndex->first);
+            if (compositeSensorStates.size() == 1 &&
+
+                stateSetIds[0] == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS)
+            {
+                // set the dbus property only when its not a composite sensor
+                // and the state set it PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS
+                // Get sensorOpState property by the getStateSensorReadings
+                // command.
+                getPresentStateBySensorReadigs(sensor.first.sensorID, state,
+                                               sensorMapIndex->first);
+            }
         }
     }
 }
