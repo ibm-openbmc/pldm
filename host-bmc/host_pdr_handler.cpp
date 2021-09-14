@@ -604,6 +604,10 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
 void HostPDRHandler::_processPDRRepoChgEvent(
     sdeventplus::source::EventBase& /*source */)
 {
+    if (oemPlatformHandler != nullptr)
+    {
+        oemPlatformHandler->updateContainerID();
+    }
     deferredPDRRepoChgEvent.reset();
     this->sendPDRRepositoryChgEvent(
         std::move(std::vector<uint8_t>(1, PLDM_PDR_ENTITY_ASSOCIATION)),

@@ -4,6 +4,7 @@
 #include "oem/ibm/libpldm/state_set.h"
 
 #include "collect_slot_vpd.hpp"
+#include "common/types.hpp"
 #include "common/utils.hpp"
 #include "inband_code_update.hpp"
 #include "libpldmresponder/oem_handler.hpp"
@@ -27,6 +28,13 @@ static constexpr auto PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE = 24577;
 constexpr uint16_t ENTITY_INSTANCE_0 = 0;
 constexpr uint16_t ENTITY_INSTANCE_1 = 1;
 
+struct InstanceInfo
+{
+    uint8_t procId;
+    uint8_t dcmId;
+};
+using HostEffecterInstanceMap = std::map<pldm::pdr::EffecterID, InstanceInfo>;
+
 enum SetEventReceiverCount
 {
     SET_EVENT_RECEIVER_SENT = 0x2,
@@ -36,13 +44,13 @@ class Handler : public oem_platform::Handler
 {
   public:
     Handler(const pldm::utils::DBusHandler* dBusIntf,
-            pldm::responder::CodeUpdate* codeUpdate,
+            pldm::responder::CodeUpdate* codeUpdate, pldm_pdr* repo,
             pldm::responder::SlotHandler* slotHandler, int mctp_fd,
             uint8_t mctp_eid, pldm::dbus_api::Requester& requester,
             sdeventplus::Event& event,
             pldm::requester::Handler<pldm::requester::Request>* handler) :
         oem_platform::Handler(dBusIntf),
-        codeUpdate(codeUpdate), slotHandler(slotHandler),
+        codeUpdate(codeUpdate), pdrRepo(repo), slotHandler(slotHandler),
         platformHandler(nullptr), mctp_fd(mctp_fd), mctp_eid(mctp_eid),
         requester(requester), event(event), handler(handler)
     {
@@ -80,6 +88,12 @@ class Handler : public oem_platform::Handler
                 }
             });
     }
+
+    int oemSetNumericEffecterValueHandler(
+        uint16_t entityType, uint16_t entityInstance,
+        uint16_t effecterSemanticId, uint8_t effecterDataSize,
+        uint8_t* effecterValue, real32_t effecterOffset,
+        real32_t effecterResolution, uint16_t effecterId);
 
     int getOemStateSensorReadingsHandler(
         pldm::pdr::EntityType entityType,
@@ -199,10 +213,13 @@ class Handler : public oem_platform::Handler
 
     /** @brief update the dbus object paths */
     void upadteOemDbusPaths(std::string& dbusPath);
+    void updateContainerID();
 
     ~Handler() = default;
 
     pldm::responder::CodeUpdate* codeUpdate; //!< pointer to CodeUpdate object
+
+    const pldm_pdr* pdrRepo;
 
     pldm::responder::SlotHandler* slotHandler;
 
@@ -246,6 +263,10 @@ class Handler : public oem_platform::Handler
     bool hostOff = true;
 
     int setEventReceiverCnt = 0;
+
+    /** @brief instanceMap is a lookup data structure to lookup <EffecterID,
+     * InstanceInfo> */
+    HostEffecterInstanceMap instanceMap;
 };
 
 /** @brief Method to encode code update event msg
@@ -257,6 +278,21 @@ class Handler : public oem_platform::Handler
  */
 int encodeEventMsg(uint8_t eventType, const std::vector<uint8_t>& eventDataVec,
                    std::vector<uint8_t>& requestMsg, uint8_t instanceId);
+
+// HostEffecterInstanceMap instanceMap;
+
+/** @brief method to call a DBus method
+ *
+ *  @param[in] entityInstance - entity instance
+ *  @param[in] value - value to be set
+ *
+ *  @return PLDM status code
+ */
+int setNumericEffecter(uint16_t entityInstance,
+                       const pldm::utils::PropertyValue& value);
+
+/* @brief method to get the processor object paths*/
+std::vector<std::string> getProcObjectPaths();
 
 } // namespace oem_ibm_platform
 
