@@ -233,8 +233,8 @@ int main(int argc, char** argv)
         std::make_unique<pldm::responder::SlotHandler>(event, pdrRepo.get());
     codeUpdate->clearDirPath(LID_STAGING_DIR);
     oemPlatformHandler = std::make_unique<oem_ibm_platform::Handler>(
-        dbusHandler.get(), codeUpdate.get(), slotHandler.get(), sockfd, hostEID,
-        dbusImplReq, event, &reqHandler);
+        dbusHandler.get(), codeUpdate.get(), pdrRepo.get(), slotHandler.get(),
+        sockfd, hostEID, dbusImplReq, event, &reqHandler);
     codeUpdate->setOemPlatformHandler(oemPlatformHandler.get());
     slotHandler->setOemPlatformHandler(oemPlatformHandler.get());
     oemFruHandler = std::make_unique<oem_ibm_fru::Handler>(dbusHandler.get(),
@@ -253,7 +253,6 @@ int main(int argc, char** argv)
         // HostFirmware interface needs access to hostPDR to know if host
         // is running
         dbusImplHost.setHostPdrObj(hostPDRHandler);
-
         hostEffecterParser =
             std::make_unique<pldm::host_effecters::HostEffecterParser>(
                 &dbusImplReq, sockfd, pdrRepo.get(), dbusHandler.get(),
