@@ -228,7 +228,7 @@ void DbusToFileHandler::newLicFileAvailable(const std::string& licenseStr)
     licFile.close();
     uint32_t fileSize = fs::file_size(licFilePath);
 
-    newFileAvailableSendToHost(fileSize, 0, PLDM_FILE_TYPE_COD_LICENSE_KEY);
+    newFileAvailableSendToHost(fileSize, 1, PLDM_FILE_TYPE_COD_LICENSE_KEY);
 }
 
 void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
@@ -255,7 +255,7 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
         std::cerr << "Failed to encode_new_file_req, rc = " << rc << std::endl;
         return;
     }
-    std::cout << "Sending Sign CSR request to Host for fileHandle: "
+    std::cout << "Sending new file available request to Host with fileHandle: "
               << fileHandle << std::endl;
     auto newFileAvailableRespHandler = [](mctp_eid_t /*eid*/,
                                           const pldm_msg* response,
