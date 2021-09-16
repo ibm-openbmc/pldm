@@ -7,6 +7,7 @@
 #include "libpldmresponder/pdr_utils.hpp"
 #include "libpldmresponder/platform.hpp"
 #include "requester/handler.hpp"
+#include "utils.hpp"
 
 namespace pldm
 {
@@ -60,6 +61,7 @@ class Handler : public oem_platform::Handler
         mctp_eid(mctp_eid), requester(requester), event(event), handler(handler)
     {
         codeUpdate->setVersions();
+        pldm::responder::utils::clearLicenseStatus();
         setEventReceiverCnt = 0;
 
         using namespace sdbusplus::bus::match::rules;
@@ -82,6 +84,7 @@ class Handler : public oem_platform::Handler
                         hostOff = true;
                         setEventReceiverCnt = 0;
                         disableWatchDogTimer();
+                        pldm::responder::utils::clearLicenseStatus();
                     }
                     else if (propVal ==
                              "xyz.openbmc_project.State.Host.HostState.Running")
