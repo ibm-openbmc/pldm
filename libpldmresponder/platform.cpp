@@ -584,8 +584,8 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                 }
             }
 
-            changeRecordData += dataOffset +
-                                (numberOfChangeEntries * sizeof(ChangeEntry));
+            changeRecordData +=
+                dataOffset + (numberOfChangeEntries * sizeof(ChangeEntry));
             changeRecordDataSize -=
                 dataOffset + (numberOfChangeEntries * sizeof(ChangeEntry));
         }

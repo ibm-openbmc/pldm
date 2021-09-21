@@ -171,6 +171,11 @@ class HostPDRHandler
      */
     bool isHostUp();
 
+    /** @brief whether we received PLDM_RECORDS_MODIFIED event data operation
+     *  from host
+     */
+    bool isHostPdrModified;
+
     /** @brief map that captures various terminus information **/
     TLPDRMap tlPDRInfo;
 

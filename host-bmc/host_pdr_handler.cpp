@@ -146,6 +146,8 @@ void HostPDRHandler::fetchPDR(PDRRecordHandles&& recordHandles)
         pdrRecordHandles = std::move(recordHandles);
     }
 
+    // isHostPdrModified = isModified;
+
     // Defer the actual fetch of PDRs from the host (by queuing the call on the
     // main event loop). That way, we can respond to the platform event msg from
     // the host firmware.
@@ -461,6 +463,7 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
     static PDRList stateSensorPDRs{};
     static PDRList fruRecordSetPDRs{};
     uint32_t nextRecordHandle{};
+    uint32_t prevRh{};
     uint8_t tlEid = 0;
     bool tlValid = true;
     uint32_t rh = 0;
@@ -617,12 +620,51 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                 }
                 else
                 {
-                    rc = pldm_pdr_add_check(repo, pdr.data(), respCount, true,
-                                            pdrTerminusHandle, &rh);
-                    if (rc)
+                    if (isHostPdrModified)
                     {
-                        // pldm_pdr_add() assert()ed on failure to add a PDR.
-                        throw std::runtime_error("Failed to add PDR");
+                        isHostPdrModified = false;
+                            
+                            pldm_delete_by_record_handle(repo, rh, true);
+
+                            pldm_pdr_add_check(repo, pdr.data(), respCount, true, pdrTerminusHandle, &rh);
+
+                            if ((pdrHdr->type == PLDM_STATE_EFFECTER_PDR) &&
+                                (oemPlatformHandler != nullptr))
+                            {
+                                auto effecterPdr = reinterpret_cast<
+                                    const pldm_state_effecter_pdr*>(pdr.data());
+                                auto entityType = effecterPdr->entity_type;
+                                auto statesPtr = effecterPdr->possible_states;
+                                auto compEffCount =
+                                    effecterPdr->composite_effecter_count;
+
+                                while (compEffCount--)
+                                {
+                                    auto state = reinterpret_cast<
+                                        const state_effecter_possible_states*>(
+                                        statesPtr);
+                                    auto stateSetID = state->state_set_id;
+                                    oemPlatformHandler->modifyPDROemActions(
+                                        entityType, stateSetID);
+
+                                    if (compEffCount)
+                                    {
+                                        statesPtr +=
+                                            sizeof(
+                                                state_effecter_possible_states) +
+                                            state->possible_states_size - 1;
+                                    }
+                                }
+                            }
+                    }
+                    else
+                    {
+                        rc = pldm_pdr_add_check(repo, pdr.data(), respCount, true,
+                                            pdrTerminusHandle, &rh);
+                        if (rc)
+                        {
+                            throw std::runtime_error("Failed to add PDR");
+                        }
                     }
                 }
             }

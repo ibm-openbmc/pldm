@@ -1,5 +1,7 @@
 #pragma once
 
+#include "common/types.hpp"
+#include "common/utils.hpp"
 #include "inband_code_update.hpp"
 #include "libpldmresponder/oem_handler.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
@@ -46,12 +48,12 @@ class Handler : public oem_platform::Handler
     Handler(const pldm::utils::DBusHandler* dBusIntf,
             pldm::responder::CodeUpdate* codeUpdate, int mctp_fd,
             uint8_t mctp_eid, pldm::InstanceIdDb& instanceIdDb,
-            sdeventplus::Event& event,
+            sdeventplus::Event& event, pldm_pdr* repo,
             pldm::requester::Handler<pldm::requester::Request>* handler) :
         oem_platform::Handler(dBusIntf),
         codeUpdate(codeUpdate), platformHandler(nullptr), mctp_fd(mctp_fd),
         mctp_eid(mctp_eid), instanceIdDb(instanceIdDb), event(event),
-        handler(handler),
+        pdrRepo(repo), handler(handler),
         timer(event, std::bind(std::mem_fn(&Handler::setSurvTimer), this,
                                HYPERVISOR_TID, false)),
         hostTransitioningToOff(true)
@@ -297,6 +299,26 @@ class Handler : public oem_platform::Handler
      */
     void setSurvTimer(uint8_t tid, bool value);
 
+    /** @brief Method to perform actions when PLDM_RECORDS_MODIFIED event
+     *  is received from host
+     *  @param[in] entityType - entity type
+     *  @param[in] stateSetId - state set id
+     */
+    void modifyPDROemActions(uint16_t entityType, uint16_t stateSetId);
+
+    /** @brief D-Bus Method call to call the Panel D-Bus API
+     *
+     * @param[in] service - Service name for the D-Bus method
+     * @param[in] objPath - The D-Bus object path
+     * @param[in] dbusMethod - The Method name to be invoked
+     * @param[in] dbusInterface - The D-Bus interface
+     * @param[in] value - The value to be passed as argument
+     *            to D-Bus method
+     */
+    void setBitmapMethodCall(const char* service, const char* objPath,
+                             const char* dbusMethod, const char* dbusInterface,
+                             const pldm::utils::PropertyValue& value);
+
     ~Handler() = default;
 
     pldm::responder::CodeUpdate* codeUpdate; //!< pointer to CodeUpdate object
@@ -333,6 +355,10 @@ class Handler : public oem_platform::Handler
     /** @brief D-Bus property changed signal match for CurrentPowerState*/
     std::unique_ptr<sdbusplus::bus::match_t> chassisOffMatch;
 
+    // pdr_utils::Repo pdrRepo;
+
+    const pldm_pdr* pdrRepo;
+
     /** @brief PLDM request handler */
     pldm::requester::Handler<pldm::requester::Request>* handler;
 
@@ -344,6 +370,9 @@ class Handler : public oem_platform::Handler
 
     /** @brief Timer used for monitoring surveillance pings from host */
     sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic> timer;
+
+    /** @brief D-Bus property Changed Signal match for bootProgress*/
+    std::unique_ptr<sdbusplus::bus::match::match> bootProgressMatch;
 
     bool hostOff = true;
 
