@@ -55,7 +55,8 @@ class MockOemPlatformHandler : public oem_ibm_platform::Handler
                            uint8_t mctp_eid, pldm::InstanceIdDb& instanceIdDb,
                            sdeventplus::Event& event) :
         oem_ibm_platform::Handler(dBusIntf, codeUpdate, mctp_fd, mctp_eid,
-                                  instanceIdDb, event, nullptr, nullptr)
+                                  instanceIdDb, event, nullptr, nullptr,
+                                  nullptr)
     {}
     MOCK_METHOD(uint16_t, getNextEffecterId, ());
     MOCK_METHOD(uint16_t, getNextSensorId, ());
@@ -82,7 +83,7 @@ TEST(OemSetStateEffecterStatesHandler, testGoodRequest)
 
     oemPlatformHandler = std::make_unique<oem_ibm_platform::Handler>(
         mockDbusHandler.get(), mockCodeUpdate.get(), 0x1, 0x9, instanceIdDb,
-        event, nullptr, nullptr);
+        event, nullptr, nullptr, nullptr);
 
     auto rc = oemPlatformHandler->getOemStateSensorReadingsHandler(
         entityID_, entityInstance_, stateSetId_, compSensorCnt_, stateField);

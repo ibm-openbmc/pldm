@@ -1,5 +1,7 @@
 #pragma once
 
+#include "common/types.hpp"
+#include "common/utils.hpp"
 #include "inband_code_update.hpp"
 #include "libpldmresponder/oem_handler.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
@@ -49,13 +51,13 @@ class Handler : public oem_platform::Handler
     Handler(const pldm::utils::DBusHandler* dBusIntf,
             pldm::responder::CodeUpdate* codeUpdate, int mctp_fd,
             uint8_t mctp_eid, pldm::InstanceIdDb& instanceIdDb,
-            sdeventplus::Event& event,
+            sdeventplus::Event& event, pldm_pdr* repo,
             pldm::requester::Handler<pldm::requester::Request>* handler,
             pldm_entity_association_tree* bmcEntityTree) :
         oem_platform::Handler(dBusIntf),
         codeUpdate(codeUpdate), platformHandler(nullptr), mctp_fd(mctp_fd),
         mctp_eid(mctp_eid), instanceIdDb(instanceIdDb), event(event),
-        handler(handler), bmcEntityTree(bmcEntityTree),
+        pdrRepo(repo), handler(handler), bmcEntityTree(bmcEntityTree),
         timer(event, std::bind(std::mem_fn(&Handler::setSurvTimer), this,
                                HYPERVISOR_TID, false)),
         hostTransitioningToOff(true)
@@ -368,6 +370,26 @@ class Handler : public oem_platform::Handler
     /** @brief Method to process virtual platform/partition SAI update*/
     void processSAIUpdate();
 
+    /** @brief Method to perform actions when PLDM_RECORDS_MODIFIED event
+     *  is received from host
+     *  @param[in] entityType - entity type
+     *  @param[in] stateSetId - state set id
+     */
+    void modifyPDROemActions(uint16_t entityType, uint16_t stateSetId);
+
+    /** @brief D-Bus Method call to call the Panel D-Bus API
+     *
+     * @param[in] objPath - The D-Bus object path
+     * @param[in] dbusMethod - The Method name to be invoked
+     * @param[in] dbusInterface - The D-Bus interface
+     * @param[in] value - The value to be passed as argument
+     *            to D-Bus method
+     */
+    void setBitmapMethodCall(const std::string& objPath,
+                             const std::string& dbusMethod,
+                             const std::string& dbusInterface,
+                             const pldm::utils::PropertyValue& value);
+
     ~Handler() = default;
 
     pldm::responder::CodeUpdate* codeUpdate; //!< pointer to CodeUpdate object
@@ -403,6 +425,8 @@ class Handler : public oem_platform::Handler
 
     /** @brief D-Bus property changed signal match for CurrentPowerState*/
     std::unique_ptr<sdbusplus::bus::match_t> chassisOffMatch;
+
+    const pldm_pdr* pdrRepo;
 
     /** @brief PLDM request handler */
     pldm::requester::Handler<pldm::requester::Request>* handler;
