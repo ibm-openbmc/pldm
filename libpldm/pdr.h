@@ -71,6 +71,11 @@ uint32_t pldm_pdr_get_repo_size(const pldm_pdr *repo);
 uint32_t pldm_pdr_add(pldm_pdr *repo, const uint8_t *data, uint32_t size,
 		      uint32_t record_handle, bool is_remote);
 
+uint32_t pldm_pdr_add_hotplug_record(pldm_pdr *repo, const uint8_t *data,
+				     uint32_t size, uint32_t record_handle,
+				     bool is_remote,
+				     uint32_t prev_record_handle);
+
 /** @brief Get record handle of a PDR record
  *
  *  @param[in] repo - opaque pointer acting as a PDR repo handle
@@ -191,13 +196,24 @@ uint32_t pldm_pdr_add_fru_record_set(pldm_pdr *repo, uint16_t terminus_handle,
  *  instance number of found PDR, or 0 if not found
  *  @param[in] container_id - *cintainer_id will be FRU container id of found
  *  PDR, or 0 if not found
+ *  @param[in] is_remote - indicates which PDR to search
  *
  *  @return uint32_t - record handle assigned to PDR record
  */
 const pldm_pdr_record *pldm_pdr_fru_record_set_find_by_rsi(
     const pldm_pdr *repo, uint16_t fru_rsi, uint16_t *terminus_handle,
     uint16_t *entity_type, uint16_t *entity_instance_num,
-    uint16_t *container_id);
+    uint16_t *container_id, bool is_remote);
+
+/** @brief deletes a FRU record set PDR by FRU record set identifier
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *  @param[in] fru_rsi - FRU record set identifier
+ *  @param[in] is_remote - indicates which PDR to remove, local or remote
+ *
+ *  @return uint32_t the FRU rsi that was removed
+ */
+uint32_t pldm_pdr_remove_fru_record_set_by_rsi(pldm_pdr *repo, uint16_t fru_rsi,
+					       bool is_remote);
 
 /* =========================== */
 /* Entity Association PDR APIs */
@@ -253,6 +269,15 @@ pldm_entity_node *pldm_entity_association_tree_add(
     pldm_entity_association_tree *tree, pldm_entity *entity,
     uint16_t entity_instance_number, pldm_entity_node *parent,
     uint8_t association_type, bool is_remote);
+
+/** @brief deletes a node and it's children from the entity association tree
+ *  @param[in] tree - opaque pointer acting as a handle to the tree
+ *  @param[in] entity - the pldm entity to be deleted
+ *
+ *  @return none
+ */
+void pldm_entity_association_tree_delete_node(
+    pldm_entity_association_tree *tree, pldm_entity entity);
 
 /** @brief Visit and note each entity in the entity association tree
  *
@@ -329,6 +354,32 @@ void pldm_entity_association_pdr_add_from_node(pldm_entity_node *node,
 					       pldm_entity **entities,
 					       size_t num_entities,
 					       bool is_remote);
+
+/** @brief Remove a contained entity from an entity association PDR
+ *  @param[in] repo - opaque pointer to pldm PDR repo
+ *  @param[in] entity - the pldm entity to be deleted
+ *  @param[in] event_data_op - the event data operation that happens on the
+ *                             record
+ *  @param[in] is_remote - whether to delete from a remote pDR or local PDR
+ *
+ *  @return uint32_t the PDR record handle that was updated
+ */
+uint32_t pldm_entity_association_pdr_remove_contained_entity(
+    pldm_pdr *repo, pldm_entity entity, uint8_t *event_data_op, bool is_remote);
+
+/** @brief Add a contained entity into an entity association PDR
+ *  @param[in] repo - opaque pointer to pldm PDR repo
+ *  @param[in] entity - the pldm entity to be added
+ *  @param[in] parent - the parent entity
+ *  @param[in] event_data_op - the event data operation that happens on the
+ *                             record
+ *  @param[in] is_remote - whether to add in the local or remote PDR
+ *
+ *  @return uint32_t the updated PDR record handle
+ */
+uint32_t pldm_entity_association_pdr_add_contained_entity(
+    pldm_pdr *repo, pldm_entity entity, pldm_entity parent,
+    uint8_t *event_data_op, bool is_remote);
 
 /** @brief Find entity reference in tree
  *

@@ -96,7 +96,8 @@ int LicenseHandler::writeFromMemory(
     return PLDM_SUCCESS;
 }
 
-int LicenseHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
+int LicenseHandler::write(const char* buffer, uint32_t /*offset*/,
+                          uint32_t& length,
                           oem_platform::Handler* /*oemPlatformHandler*/)
 {
     int rc = PLDM_SUCCESS;

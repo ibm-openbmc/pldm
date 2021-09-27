@@ -28,6 +28,8 @@ namespace utils
 static constexpr auto curLicFilePath =
     "/var/lib/pldm/license/current_license.bin";
 static constexpr auto newLicFilePath = "/var/lib/pldm/license/new_license.bin";
+static constexpr auto newLicJsonFilePath =
+    "/var/lib/pldm/license/new_license.json";
 static constexpr auto licEntryPath = "/xyz/openbmc_project/license/entry";
 static constexpr uint8_t createLic = 1;
 static constexpr uint8_t clearLicStatus = 2;
@@ -221,7 +223,7 @@ int createOrUpdateLicenseDbusPaths(const uint8_t& flag)
     const Json empty{};
     std::string authTypeAsNoOfDev = "NumberOfDevice";
     struct tm tm;
-    time_t licTimeSinceEpoch;
+    time_t licTimeSinceEpoch = 0;
 
     sdbusplus::com::ibm::License::Entry::server::LicenseEntry::Type licType =
         sdbusplus::com::ibm::License::Entry::server::LicenseEntry::Type::
@@ -363,9 +365,15 @@ int createOrUpdateLicenseObjs()
     {
         fs::copy_file(newLicFilePath, curLicFilePath,
                       fs::copy_options::overwrite_existing);
+
         if (fs::exists(newLicFilePath))
         {
             fs::remove_all(newLicFilePath);
+        }
+
+        if (fs::exists(newLicJsonFilePath))
+        {
+            fs::remove_all(newLicJsonFilePath);
         }
     }
 

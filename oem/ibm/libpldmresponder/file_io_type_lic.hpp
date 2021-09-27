@@ -37,7 +37,7 @@ class LicenseHandler : public FileHandler
     virtual int read(uint32_t offset, uint32_t& length, Response& response,
                      oem_platform::Handler* /*oemPlatformHandler*/);
 
-    virtual int write(const char* buffer, uint32_t offset, uint32_t& length,
+    virtual int write(const char* buffer, uint32_t /*offset*/, uint32_t& length,
                       oem_platform::Handler* /*oemPlatformHandler*/);
 
     virtual int fileAck(uint8_t /*fileStatus*/)
@@ -60,15 +60,15 @@ class LicenseHandler : public FileHandler
     uint16_t licType;   //!< type of the license
     uint64_t licLength; //!< length of the full license data
 
-    enum class Status
+    enum Status
     {
-        InvalidLicense,
-        Activated,
-        Pending,
-        ActivationFailed,
-        IncorrectSystem,
-        InvalidHostState,
-        IncorrectSequence
+        Activated = 0x00,
+        InvalidLicense = 0x01,
+        IncorrectSystem = 0x02,
+        IncorrectSequence = 0x03,
+        Pending = 0x04,
+        ActivationFailed = 0x05,
+        InvalidHostState = 0x06
     };
 };
 } // namespace responder
