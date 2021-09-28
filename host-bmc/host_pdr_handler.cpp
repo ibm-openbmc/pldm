@@ -136,6 +136,7 @@ HostPDRHandler::HostPDRHandler(
                     this->responseReceived = false;
                     this->mergedHostParents = false;
                     this->sensorMapIndex = objPathMap.begin();
+                    this->responseReceived = false;
                 }
             }
         });
