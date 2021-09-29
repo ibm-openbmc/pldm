@@ -163,6 +163,9 @@ static constexpr auto resDumpEntry = "com.ibm.Dump.Entry.Resource";
 static constexpr auto certObjPath = "/xyz/openbmc_project/certs/ca/";
 static constexpr auto certAuthority =
     "xyz.openbmc_project.PLDM.Provider.Certs.Authority.CSR";
+
+static constexpr auto codLicObjPath = "/com/ibm/license";
+static constexpr auto codLicInterface = "com.ibm.License.LicenseManager";
 class Handler : public CmdHandler
 {
   public:
@@ -313,6 +316,32 @@ class Handler : public CmdHandler
                     }
                 }
             });
+        codLicensesubs = std::make_unique<sdbusplus::bus::match::match>(
+            pldm::utils::DBusHandler::getBus(),
+            sdbusplus::bus::match::rules::propertiesChanged(codLicObjPath,
+                                                            codLicInterface),
+            [this, hostSockFd, hostEid, dbusImplReqester,
+             &handler](sdbusplus::message::message& msg) {
+                sdbusplus::message::object_path path;
+                std::map<dbus::Property, pldm::utils::PropertyValue> props;
+                std::string iface;
+                msg.read(iface, props);
+                std::string licenseStr;
+
+                for (auto& prop : props)
+                {
+                    if (prop.first == "LicenseString")
+                    {
+                        pldm::utils::PropertyValue licStrVal{prop.second};
+                        licenseStr = std::get<std::string>(licStrVal);
+                    }
+                }
+                dbusToFileHandlers
+                    .emplace_back(std::make_unique<
+                                  pldm::requester::oem_ibm::DbusToFileHandler>(
+                        hostSockFd, hostEid, dbusImplReqester, path, handler))
+                    ->newLicFileAvailable(licenseStr);
+            });
     }
 
     /** @brief Handler for readFileIntoMemory command
@@ -412,6 +441,15 @@ class Handler : public CmdHandler
      */
     Response newFileAvailable(const pldm_msg* request, size_t payloadLength);
 
+    /** @brief Handler for fileAckWithMetaData command
+     *
+     *  @param[in] request - PLDM request msg
+     *  @param[in] payloadLength - length of the message payload
+     *
+     *  @return PLDM response message
+     */
+    Response fileAckWithMetaData(const pldm_msg* request, size_t payloadLength);
+
   private:
     oem_platform::Handler* oemPlatformHandler;
     int hostSockFd;
@@ -428,6 +466,9 @@ class Handler : public CmdHandler
     std::unique_ptr<sdbusplus::bus::match::match>
         vmiCertMatcher; //!< Pointer to capture the interface added signal
                         //!< for new csr string
+    std::unique_ptr<sdbusplus::bus::match::match>
+        codLicensesubs; //!< Pointer to capture the property changed signal
+                        //!< for new license string
     /** @brief PLDM request handler */
     pldm::requester::Handler<pldm::requester::Request>* handler;
     std::vector<std::unique_ptr<pldm::requester::oem_ibm::DbusToFileHandler>>
