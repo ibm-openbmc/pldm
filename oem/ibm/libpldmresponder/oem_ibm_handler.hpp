@@ -185,6 +185,23 @@ class Handler : public oem_platform::Handler
      */
     void _processSystemReboot(sdeventplus::source::EventBase& source);
 
+    /** @brief setNumericEffecter
+     *
+     *  @param[in] entityInstance - the entity Instance
+     *  @param[in] propertyValue - the value to be set
+     *
+     *  @return PLDM completion_code
+     */
+    int setNumericEffecter(uint16_t entityInstance,
+                           const pldm::utils::PropertyValue& propertyValue);
+
+    /** @brief monitor the dump
+     *
+     *  @param[in] object_path - The object path of the dump to monitor
+     *
+     */
+    void monitorDump(const std::string& obj_path);
+
     /*keeps track how many times setEventReceiver is sent */
     void countSetEventReceiver()
     {
@@ -213,13 +230,16 @@ class Handler : public oem_platform::Handler
 
     /** @brief update the dbus object paths */
     void upadteOemDbusPaths(std::string& dbusPath);
+    /** @brief update the conatiner ID */
     void updateContainerID();
+
+    void setHostEffecterState(bool status);
 
     ~Handler() = default;
 
     pldm::responder::CodeUpdate* codeUpdate; //!< pointer to CodeUpdate object
 
-    const pldm_pdr* pdrRepo;
+    const pldm_pdr* pdrRepo; // the PDR repo
 
     pldm::responder::SlotHandler* slotHandler;
 
@@ -244,6 +264,8 @@ class Handler : public oem_platform::Handler
     /** @brief Effecterid to dbus object path map
      */
     std::unordered_map<uint16_t, std::string> effecterIdToDbusMap;
+    /** unique pointer to the SBE dump match */
+    std::unique_ptr<sdbusplus::bus::match::match> sbeDumpMatch;
 
     /** @brief reference of main event loop of pldmd, primarily used to schedule
      *  work
