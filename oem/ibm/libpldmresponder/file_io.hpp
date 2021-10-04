@@ -231,6 +231,11 @@ class Handler : public CmdHandler
                              return this->newFileAvailable(request,
                                                            payloadLength);
                          });
+        handlers.emplace(PLDM_FILE_ACK_WITH_META_DATA,
+                         [this](const pldm_msg* request, size_t payloadLength) {
+                             return this->fileAckWithMetaData(request,
+                                                              payloadLength);
+                         });
 
         resDumpMatcher = std::make_unique<sdbusplus::bus::match::match>(
             pldm::utils::DBusHandler::getBus(),

@@ -895,10 +895,12 @@ Response Handler::newFileAvailable(const pldm_msg* request,
 Response Handler::fileAckWithMetaData(const pldm_msg* request,
                                       size_t payloadLength)
 {
+    std::cout << "Inside response handler fileAckWithMetaData" << std::endl;
+    std::cout << "payload length: " << payloadLength << std::endl;
     Response response(sizeof(pldm_msg_hdr) +
                       PLDM_FILE_ACK_WITH_META_DATA_RESP_BYTES);
 
-    if (payloadLength != PLDM_FILE_ACK_WITH_META_DATA_RESP_BYTES)
+    if (payloadLength != PLDM_FILE_ACK_WITH_META_DATA_REQ_BYTES)
     {
         return CmdHandler::ccOnlyResponse(request, PLDM_ERROR_INVALID_LENGTH);
     }
@@ -922,6 +924,8 @@ Response Handler::fileAckWithMetaData(const pldm_msg* request,
     std::unique_ptr<FileHandler> handler{};
     try
     {
+        std::cout << "file type: " << fileType << std::endl;
+        std::cout << "file handle: " << fileHandle << std::endl;
         handler = getHandlerByType(fileType, fileHandle);
     }
     catch (const InternalFailure& e)

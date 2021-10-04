@@ -155,22 +155,25 @@ int LicenseHandler::read(uint32_t offset, uint32_t& length, Response& response,
 
 int LicenseHandler::fileAckWithMetaData(uint32_t metaDataValue)
 {
-    constexpr auto codLicInterface = "com.ibm.License.LicenseManager";
-    constexpr auto codLicObjPath = "/com/ibm/license";
+    std::cout << "file ack with meta data in license handler" << std::endl;
+
+    DBusMapping dbusMapping;
+    dbusMapping.objectPath = "/com/ibm/license";
+    dbusMapping.interface = "com.ibm.License.LicenseManager";
+    dbusMapping.propertyName = "LicenseActivationStatus";
+    dbusMapping.propertyType = "string";
 
     Status status = static_cast<Status>(metaDataValue);
 
     if (status == Status::InvalidLicense)
     {
-        PropertyValue valueStatus{
-            "com.ibm.License.LicenseManager.Status.InvalidLicense"};
-        DBusMapping dbusMappingStatus{codLicObjPath, codLicInterface, "Status",
-                                      "string"};
+        std::cout << "Invalid license" << std::endl;
+        pldm::utils::PropertyValue value =
+            "com.ibm.License.LicenseManager.Status.InvalidLicense";
 
         try
         {
-            pldm::utils::DBusHandler().setDbusProperty(dbusMappingStatus,
-                                                       valueStatus);
+            pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
         }
         catch (const std::exception& e)
         {
@@ -182,15 +185,13 @@ int LicenseHandler::fileAckWithMetaData(uint32_t metaDataValue)
     }
     else if (status == Status::Activated)
     {
-        PropertyValue valueStatus{
-            "com.ibm.License.LicenseManager.Status.Activated"};
-        DBusMapping dbusMappingStatus{codLicObjPath, codLicInterface, "Status",
-                                      "string"};
+        std::cout << "Activated" << std::endl;
+        pldm::utils::PropertyValue value =
+            "com.ibm.License.LicenseManager.Status.Activated";
 
         try
         {
-            pldm::utils::DBusHandler().setDbusProperty(dbusMappingStatus,
-                                                       valueStatus);
+            pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
         }
         catch (const std::exception& e)
         {
@@ -202,15 +203,13 @@ int LicenseHandler::fileAckWithMetaData(uint32_t metaDataValue)
     }
     else if (status == Status::Pending)
     {
-        PropertyValue valueStatus{
-            "com.ibm.License.LicenseManager.Status.Pending"};
-        DBusMapping dbusMappingStatus{codLicObjPath, codLicInterface, "Status",
-                                      "string"};
+        std::cout << "Pending status" << std::endl;
+        pldm::utils::PropertyValue value =
+            "com.ibm.License.LicenseManager.Status.Pending";
 
         try
         {
-            pldm::utils::DBusHandler().setDbusProperty(dbusMappingStatus,
-                                                       valueStatus);
+            pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
         }
         catch (const std::exception& e)
         {
@@ -222,15 +221,13 @@ int LicenseHandler::fileAckWithMetaData(uint32_t metaDataValue)
     }
     else if (status == Status::ActivationFailed)
     {
-        PropertyValue valueStatus{
-            "com.ibm.License.LicenseManager.Status.ActivationFailed"};
-        DBusMapping dbusMappingStatus{codLicObjPath, codLicInterface, "Status",
-                                      "string"};
+        std::cout << "Activation failed" << std::endl;
+        pldm::utils::PropertyValue value =
+            "com.ibm.License.LicenseManager.Status.ActivationFailed";
 
         try
         {
-            pldm::utils::DBusHandler().setDbusProperty(dbusMappingStatus,
-                                                       valueStatus);
+            pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
         }
         catch (const std::exception& e)
         {
@@ -242,15 +239,13 @@ int LicenseHandler::fileAckWithMetaData(uint32_t metaDataValue)
     }
     else if (status == Status::IncorrectSystem)
     {
-        PropertyValue valueStatus{
-            "com.ibm.License.LicenseManager.Status.IncorrectSystem"};
-        DBusMapping dbusMappingStatus{codLicObjPath, codLicInterface, "Status",
-                                      "string"};
+        std::cout << "Incorrect system in license varify." << std::endl;
+        pldm::utils::PropertyValue value =
+            "com.ibm.License.LicenseManager.Status.IncorrectSystem";
 
         try
         {
-            pldm::utils::DBusHandler().setDbusProperty(dbusMappingStatus,
-                                                       valueStatus);
+            pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
         }
         catch (const std::exception& e)
         {
@@ -262,15 +257,13 @@ int LicenseHandler::fileAckWithMetaData(uint32_t metaDataValue)
     }
     else if (status == Status::InvalidHostState)
     {
-        PropertyValue valueStatus{
-            "com.ibm.License.LicenseManager.Status.InvalidHostState"};
-        DBusMapping dbusMappingStatus{codLicObjPath, codLicInterface, "Status",
-                                      "string"};
+        std::cout << "Invalid host state detected" << std::endl;
+        pldm::utils::PropertyValue value =
+            "com.ibm.License.LicenseManager.Status.InvalidHostState";
 
         try
         {
-            pldm::utils::DBusHandler().setDbusProperty(dbusMappingStatus,
-                                                       valueStatus);
+            pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
         }
         catch (const std::exception& e)
         {
@@ -282,15 +275,13 @@ int LicenseHandler::fileAckWithMetaData(uint32_t metaDataValue)
     }
     else if (status == Status::IncorrectSequence)
     {
-        PropertyValue valueStatus{
-            "com.ibm.License.LicenseManager.Status.IncorrectSequence"};
-        DBusMapping dbusMappingStatus{codLicObjPath, codLicInterface, "Status",
-                                      "string"};
+        std::cout << "Incorrect sequence detected" << std::endl;
+        pldm::utils::PropertyValue value =
+            "com.ibm.License.LicenseManager.Status.IncorrectSequence";
 
         try
         {
-            pldm::utils::DBusHandler().setDbusProperty(dbusMappingStatus,
-                                                       valueStatus);
+            pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
         }
         catch (const std::exception& e)
         {
