@@ -81,7 +81,7 @@ enum pldm_fileio_file_type {
 #define PLDM_RW_FILE_BY_TYPE_RESP_BYTES 5
 #define PLDM_FILE_ACK_REQ_BYTES 7
 #define PLDM_FILE_ACK_RESP_BYTES 1
-#define PLDM_FILE_ACK_WITH_META_DATA_REQ_BYTES 26
+#define PLDM_FILE_ACK_WITH_META_DATA_REQ_BYTES 23
 #define PLDM_FILE_ACK_WITH_META_DATA_RESP_BYTES 1
 
 /** @struct pldm_read_write_file_memory_req
