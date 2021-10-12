@@ -14,6 +14,7 @@ enum ibm_oem_pldm_state_set_ids {
 	PLDM_OEM_IBM_SBE_MAINTENANCE_STATE = 32772,
 	PLDM_OEM_IBM_BOOT_SIDE_RENAME = 32773,
 	PLDM_OEM_IBM_SBE_SEMANTIC_ID = 32775,
+	PLDM_OEM_IBM_SBE_HRESET_STATE = 32776,
 	PLDM_OEM_IBM_SLOT_ENABLE_EFFECTER_STATE = 32779,
 	PLDM_OEM_IBM_SLOT_ENABLE_SENSOR_STATE = 32780,
 };
@@ -64,6 +65,12 @@ enum ibm_oem_pldm_state_set_sbe_dump_state_values {
 enum ibm_oem_pldm_state_set_boot_side_rename_state_values {
 	PLDM_BOOT_SIDE_NOT_RENAMED = 1,
 	PLDM_BOOT_SIDE_HAS_BEEN_RENAMED = 2,
+};
+
+enum ibm_oem_pldm_state_set_sbe_hreset_state_values {
+	SBE_HRESET_NOT_READY = 0x1,
+	SBE_HRESET_READY = 0x2,
+	SBE_HRESET_FAILED = 0x3,
 };
 
 #ifdef __cplusplus
