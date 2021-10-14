@@ -1,5 +1,5 @@
-#ifndef OEM_IBM_STATE_SETS_H
-#define OEM_IBM_STATE_SETS_H
+#ifndef STATE_SET_OEM_IBM_H
+#define STATE_SET_OEM_IBM_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -78,4 +78,4 @@ enum ibm_oem_pldm_state_set_sbe_hreset_state_values {
 }
 #endif
 
-#endif /* OEM_IBM_STATE_SETS_H */
+#endif /* STATE_SET_OEM_IBM_H */
