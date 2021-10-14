@@ -1,7 +1,7 @@
 #pragma once
 #include "libpldm/entity.h"
 #include "libpldm/platform.h"
-#include "oem/ibm/libpldm/state_set.h"
+#include "oem/ibm/libpldm/state_set_oem_ibm.h"
 
 #include "collect_slot_vpd.hpp"
 #include "common/types.hpp"
