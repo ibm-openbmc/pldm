@@ -24,7 +24,7 @@ int pldm::responder::oem_ibm_fru::Handler::processOEMfruRecord(
     }
 
     auto& entityAssociationMap = getAssociateEntityMap();
-    uint16_t fruRSI = record->record_set_id;
+    uint16_t fruRSI = le16toh(record->record_set_id);
 
     const uint8_t* data = fruData.data();
     data += sizeof(pldm_fru_record_data_format) - sizeof(pldm_fru_record_tlv);
