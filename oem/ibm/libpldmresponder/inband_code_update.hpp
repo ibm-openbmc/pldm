@@ -19,6 +19,12 @@ static constexpr auto Tside = "T";
 static constexpr auto redundancyIntf =
     "xyz.openbmc_project.Software.RedundancyPriority";
 
+struct pldm_boot_side_data
+{
+    std::string current_boot_side;
+    std::string running_version_object;
+};
+
 /** @class CodeUpdate
  *
  *  @brief This class performs the necessary operation in pldm for
@@ -96,6 +102,14 @@ class CodeUpdate
         codeUpdateInProgress = progress;
     }
 
+    /* @brief Method to indicate whether out of band code update
+     *        is going on
+     */
+    bool isOutOfBandCodeUpdateInProgress()
+    {
+        return outOfBandCodeUpdateInProgress;
+    }
+
     /** @brief Method to clear contents the LID staging directory that contains
      *  images such as host firmware and BMC.
      *  @param[in] dirPath - directory system path that has to be cleared
@@ -151,6 +165,23 @@ class CodeUpdate
         return firmwareUpdateSensorId;
     }
 
+    /* @brief Method to set the sensor id for boot side rename state
+     * @param[in] sensorId - sensor id for boot side rename update
+     *                       state
+     */
+    void setBootSideRenameStateSensor(uint16_t sensorId)
+    {
+        bootSideRenameStateSensorId = sensorId;
+    }
+
+    /* @brief Method to fetch the sensor id for boot side rename state
+     * @return - sensor id
+     */
+    uint16_t getBootSideRenameStateSensor()
+    {
+        return bootSideRenameStateSensorId;
+    }
+
     /* @brief Method to send a state sensor event to Host from CodeUpdate class
      * @param[in] sensorId - sensor id for the event
      * @param[in] sensorEventClass - sensor event class wrt DSP0248
@@ -174,6 +205,24 @@ class CodeUpdate
      */
     int assembleCodeUpdateImage();
 
+    /* @brief Method to process the bootside rename event, sends a boot side
+     * rename event notification to host when code update is initiated*/
+    void processRenameEvent();
+
+    /* @brief Method to write the bootside information into mapping
+     *        file which would be stored on host
+     * @param[in] pldmBootSideData - bootside information such as
+     *        current boot side and running version
+     */
+    void writeBootSideFile(const pldm_boot_side_data& pldmBootSideData);
+
+    /* @brief Method to read the mapping file containing bootside
+     *        which is stored on host and stores that information
+     *        in a structure
+     * @return[] - the structure which holds information regarding
+     *         bootside information */
+    pldm_boot_side_data readBootSideFile();
+
     virtual ~CodeUpdate()
     {}
 
@@ -185,7 +234,10 @@ class CodeUpdate
     std::string newImageId;        //!< new image id
     bool codeUpdateInProgress =
         false; //!< indicates whether codeupdate is going on
-    const pldm::utils::DBusHandler* dBusIntf; //!< D-Bus handler
+    bool outOfBandCodeUpdateInProgress = false; //!< indicates whether
+                                                //!< out of band codeupdate
+                                                //!< is in progress
+    const pldm::utils::DBusHandler* dBusIntf;   //!< D-Bus handler
     std::vector<std::unique_ptr<sdbusplus::bus::match::match>>
         captureNextBootSideChange; //!< vector to catch the D-Bus property
                                    //!< change for next boot side
@@ -196,6 +248,7 @@ class CodeUpdate
         oemPlatformHandler; //!< oem platform handler
     uint16_t markerLidSensorId;
     uint16_t firmwareUpdateSensorId;
+    uint16_t bootSideRenameStateSensorId;
 
     /** @brief D-Bus property changed signal match for image activation */
     std::unique_ptr<sdbusplus::bus::match::match> imageActivationMatch;
@@ -234,5 +287,16 @@ int setBootSide(uint16_t entityInstance, uint8_t currState,
  */
 int processCodeUpdateLid(const std::string& filePath);
 
+/** @brief Method to assemble the code update tarball and trigger the
+ *         phosphor software manager to create a version interface
+ *  @return - PLDM_SUCCESS codes
+ */
+int assembleCodeUpdateImage();
+
+/* @brief Method to set the hb_boot_side property with the current
+ *        boot side
+ * @param[in] bootSide - the current boot side needed to set the bios
+ *        attribute*/
+void setBootSideBiosAttr(const std::string& bootSide);
 } // namespace responder
 } // namespace pldm
