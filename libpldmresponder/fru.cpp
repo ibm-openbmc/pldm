@@ -171,12 +171,8 @@ void FruImpl::buildFRUTable()
 #endif
         if (!isPresent)
         {
-            std::cout << "\nwill not build fru record for "
-                      << object.first.str.c_str() << std::endl;
             continue;
         }
-        std::cout << "\nbuilding fru record for " << object.first.str.c_str()
-                  << std::endl;
         for (const auto& interface : interfaces)
         {
             if (itemIntfsLookup.find(interface.first) != itemIntfsLookup.end())
@@ -197,11 +193,8 @@ void FruImpl::buildFRUTable()
                     }
 
                     auto recordInfos = parser.getRecordInfo(interface.first);
-                    auto tmp_rec = populateRecords(interfaces, recordInfos,
-                                                   entity, object.first);
-                    std::cout << "populateRecords returned record " << tmp_rec
-                              << std::endl;
-
+                    populateRecords(interfaces, recordInfos, entity,
+                                    object.first);
                     associatedEntityMap.emplace(object.first, entity);
                     break;
                 }
@@ -932,25 +925,16 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
     const Json& json, const std::string& fruObjectPath,
     pldm::responder::pdr_utils::Type pdrType)
 {
-    std::cout << "\nenter FruImpl::setStatePDRParams " << std::endl;
     using namespace pldm::responder::pdr_utils;
     static DbusObjMaps& sensorDbusObjMapsRef = sensorDbusObjMaps;
     static DbusObjMaps& effecterDbusObjMapsRef = effecterDbusObjMaps;
-    std::cout << "sensorDbusObjMapsRef.size() " << sensorDbusObjMapsRef.size()
-              << std::endl;
-    std::cout << "effecterDbusObjMapsRef.size() "
-              << effecterDbusObjMapsRef.size() << std::endl;
     std::vector<uint32_t> idList;
     static const Json empty{};
     if (!hotPlug)
     {
-        std::cout << "\nenter not hotplug" << std::endl;
         startStateSensorId = nextSensorId;
         startStateEffecterId = nextEffecterId;
         statePDRJsonsDir = pdrJsonsDir;
-        std::cout << "\n will start from startStateSensorId "
-                  << startStateSensorId << " and startStateEffecterId "
-                  << startStateEffecterId << std::endl;
         return idList;
     }
 
