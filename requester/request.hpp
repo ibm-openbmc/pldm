@@ -7,6 +7,8 @@
 #include "common/types.hpp"
 #include "common/utils.hpp"
 
+#include <sys/socket.h>
+
 #include <sdbusplus/timer.hpp>
 #include <sdeventplus/event.hpp>
 
@@ -150,16 +152,19 @@ class Request final : public RequestRetryTimer
      */
     explicit Request(int fd, mctp_eid_t eid, sdeventplus::Event& event,
                      pldm::Request&& requestMsg, uint8_t numRetries,
-                     std::chrono::milliseconds timeout, bool verbose) :
+                     std::chrono::milliseconds timeout,
+                     size_t currentSendbuffSize, bool verbose) :
         RequestRetryTimer(event, numRetries, timeout),
-        fd(fd), eid(eid), requestMsg(std::move(requestMsg)), verbose(verbose)
+        fd(fd), eid(eid), requestMsg(std::move(requestMsg)),
+        currentSendbuffSize(currentSendbuffSize), verbose(verbose)
     {}
 
   private:
     int fd;                   //!< file descriptor of MCTP communications socket
     mctp_eid_t eid;           //!< endpoint ID of the remote MCTP endpoint
     pldm::Request requestMsg; //!< PLDM request message
-    bool verbose;             //!< verbose tracing flag
+    mutable int currentSendbuffSize; //!< current Send Buffer size
+    bool verbose;                    //!< verbose tracing flag
 
     /** @brief Sends the PLDM request message on the socket
      *
@@ -173,6 +178,17 @@ class Request final : public RequestRetryTimer
         }
         pldm::flightrecorder::FlightRecorder::GetInstance().saveRecord(
             requestMsg, true);
+        if (currentSendbuffSize >= 0 &&
+            (size_t)currentSendbuffSize < requestMsg.size())
+        {
+            currentSendbuffSize = requestMsg.size();
+            int res =
+                setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &currentSendbuffSize,
+                           sizeof(currentSendbuffSize));
+            if (res == -1)
+                std::cerr << "Requester : Error calling setsockopt. RC = "
+                          << res << ", errno = " << errno << std::endl;
+        }
         auto rc = pldm_send(eid, fd, requestMsg.data(), requestMsg.size());
         if (rc < 0)
         {
