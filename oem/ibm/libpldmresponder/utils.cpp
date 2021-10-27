@@ -439,7 +439,6 @@ bool checkFruPresence(const char* objPath)
     std::string portStr("cxp_");
     std::string newObjPath = objPath;
     bool isPresent = true;
-    std::cout << "\n enter checkFruPresence with " << objPath << std::endl;
     /*if (newObjPath.find(nvme) != std::string::npos)
     {
         return true;
