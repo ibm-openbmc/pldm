@@ -41,6 +41,7 @@
 #include "dbus_impl_pdr.hpp"
 #include "host-bmc/dbus_to_event_handler.hpp"
 #include "host-bmc/dbus_to_host_effecters.hpp"
+#include "host-bmc/host_associations_parser.hpp"
 #include "host-bmc/host_condition.hpp"
 #include "host-bmc/host_pdr_handler.hpp"
 #include "libpldmresponder/base.hpp"
@@ -80,8 +81,9 @@ static std::optional<Response>
     processRxMsg(const std::vector<uint8_t>& requestMsg, Invoker& invoker,
                  requester::Handler<requester::Request>& handler)
 {
+    using type = uint8_t;
     uint8_t eid = requestMsg[0];
-    uint8_t type = requestMsg[1];
+
     pldm_header_info hdrFields{};
     auto hdr = reinterpret_cast<const pldm_msg_hdr*>(
         requestMsg.data() + sizeof(eid) + sizeof(type));
@@ -162,12 +164,13 @@ int main(int argc, char** argv)
                     break;
                 default:
                     optionUsage();
-                    break;
+                    exit(EXIT_FAILURE);
             }
             break;
-        default:
-            optionUsage();
+        case -1:
             break;
+        default:
+            exit(EXIT_FAILURE);
     }
 
     /* Create local socket. */
@@ -195,9 +198,13 @@ int main(int argc, char** argv)
     auto event = Event::get_default();
     auto& bus = pldm::utils::DBusHandler::getBus();
     sdbusplus::server::manager::manager objManager(
+        bus, "/xyz/openbmc_project/software");
+    sdbusplus::server::manager::manager inventoryManager(
         bus, "/xyz/openbmc_project/inventory");
     sdbusplus::server::manager::manager licObjManager(
         bus, "/xyz/openbmc_project/license");
+    sdbusplus::server::manager::manager ledManager(
+        bus, "/xyz/openbmc_project/led/groups");
     dbus_api::Requester dbusImplReq(bus, "/xyz/openbmc_project/pldm");
 
     Invoker invoker{};
@@ -220,25 +227,27 @@ int main(int argc, char** argv)
     std::shared_ptr<HostPDRHandler> hostPDRHandler;
     std::unique_ptr<pldm::host_effecters::HostEffecterParser>
         hostEffecterParser;
+    std::unique_ptr<pldm::host_associations::HostAssociationsParser>
+        associationsParser;
     std::unique_ptr<DbusToPLDMEvent> dbusToPLDMEventHandler;
-    auto dbusHandler = std::make_unique<DBusHandler>();
+    DBusHandler dbusHandler;
     auto hostEID = pldm::utils::readHostEID();
     std::unique_ptr<oem_platform::Handler> oemPlatformHandler{};
     std::unique_ptr<oem_fru::Handler> oemFruHandler{};
 
 #ifdef OEM_IBM
     std::unique_ptr<pldm::responder::CodeUpdate> codeUpdate =
-        std::make_unique<pldm::responder::CodeUpdate>(dbusHandler.get());
+        std::make_unique<pldm::responder::CodeUpdate>(&dbusHandler);
     std::unique_ptr<pldm::responder::SlotHandler> slotHandler =
         std::make_unique<pldm::responder::SlotHandler>(event, pdrRepo.get());
     codeUpdate->clearDirPath(LID_STAGING_DIR);
     oemPlatformHandler = std::make_unique<oem_ibm_platform::Handler>(
-        dbusHandler.get(), codeUpdate.get(), pdrRepo.get(), slotHandler.get(),
-        sockfd, hostEID, dbusImplReq, event, &reqHandler);
+        &dbusHandler, codeUpdate.get(), slotHandler.get(), sockfd, hostEID,
+        dbusImplReq, event, pdrRepo.get(), &reqHandler);
+    oemFruHandler =
+        std::make_unique<oem_ibm_fru::Handler>(&dbusHandler, pdrRepo.get());
     codeUpdate->setOemPlatformHandler(oemPlatformHandler.get());
     slotHandler->setOemPlatformHandler(oemPlatformHandler.get());
-    oemFruHandler = std::make_unique<oem_ibm_fru::Handler>(dbusHandler.get(),
-                                                           pdrRepo.get());
 
     invoker.registerHandler(PLDM_OEM, std::make_unique<oem_ibm::Handler>(
                                           oemPlatformHandler.get(), sockfd,
@@ -246,17 +255,22 @@ int main(int argc, char** argv)
 #endif
     if (hostEID)
     {
+        associationsParser =
+            std::make_unique<pldm::host_associations::HostAssociationsParser>(
+                HOST_JSONS_DIR);
+        hostEffecterParser =
+            std::make_unique<pldm::host_effecters::HostEffecterParser>(
+                &dbusImplReq, sockfd, pdrRepo.get(), &dbusHandler,
+                HOST_JSONS_DIR, &reqHandler);
         hostPDRHandler = std::make_shared<HostPDRHandler>(
             sockfd, hostEID, event, pdrRepo.get(), EVENTS_JSONS_DIR,
-            entityTree.get(), bmcEntityTree.get(), dbusImplReq, &reqHandler,
+            entityTree.get(), bmcEntityTree.get(), hostEffecterParser.get(),
+            dbusImplReq, &reqHandler, associationsParser.get(),
             oemPlatformHandler.get());
         // HostFirmware interface needs access to hostPDR to know if host
         // is running
         dbusImplHost.setHostPdrObj(hostPDRHandler);
-        hostEffecterParser =
-            std::make_unique<pldm::host_effecters::HostEffecterParser>(
-                &dbusImplReq, sockfd, pdrRepo.get(), dbusHandler.get(),
-                HOST_JSONS_DIR, &reqHandler);
+
         dbusToPLDMEventHandler = std::make_unique<DbusToPLDMEvent>(
             sockfd, hostEID, dbusImplReq, &reqHandler);
     }
@@ -271,7 +285,7 @@ int main(int argc, char** argv)
     // handled. To enable building FRU table, the FRU handler is passed to the
     // Platform handler.
     auto platformHandler = std::make_unique<platform::Handler>(
-        dbusHandler.get(), PDR_JSONS_DIR, pdrRepo.get(), hostPDRHandler.get(),
+        &dbusHandler, PDR_JSONS_DIR, pdrRepo.get(), hostPDRHandler.get(),
         dbusToPLDMEventHandler.get(), fruHandler.get(),
         oemPlatformHandler.get(), event, true);
 #ifdef OEM_IBM
@@ -442,14 +456,14 @@ int main(int argc, char** argv)
 
     stdplus::signal::block(SIGUSR1);
     Signal(event, SIGUSR1, interruptFlightRecorderCallBack).set_floating(true);
-    event.loop();
-
-    result = shutdown(sockfd, SHUT_RDWR);
-    if (-1 == result)
+    returnCode = event.loop();
+    if (shutdown(sockfd, SHUT_RDWR))
     {
-        returnCode = -errno;
-        std::cerr << "Failed to shutdown the socket, RC=" << returnCode << "\n";
+        std::perror("Failed to shutdown the socket");
+    }
+    if (returnCode)
+    {
         exit(EXIT_FAILURE);
     }
-    exit(EXIT_FAILURE);
+    exit(EXIT_SUCCESS);
 }

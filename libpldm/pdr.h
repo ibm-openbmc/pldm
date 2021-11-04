@@ -15,6 +15,7 @@ typedef struct pldm_pdr_record {
 	uint8_t *data;
 	struct pldm_pdr_record *next;
 	bool is_remote;
+	uint16_t terminus_handle;
 } pldm_pdr_record;
 
 /** @struct pldm_pdr
@@ -73,16 +74,36 @@ uint32_t pldm_pdr_get_repo_size(const pldm_pdr *repo);
  *  @param[in] record_handle - record handle of input PDR record; if this is set
  *  to 0, then a record handle is computed and assigned to this PDR record
  *  @param[in] is_remote - if true, then the PDR is not from this terminus
+ *  @param[in] terminus_handle - terminus handle of the input PDR record
  *
  *  @return uint32_t - record handle assigned to PDR record
  */
 uint32_t pldm_pdr_add(pldm_pdr *repo, const uint8_t *data, uint32_t size,
-		      uint32_t record_handle, bool is_remote);
+		      uint32_t record_handle, bool is_remote,
+		      uint16_t terminus_handle);
 
 uint32_t pldm_pdr_add_hotplug_record(pldm_pdr *repo, const uint8_t *data,
 				     uint32_t size, uint32_t record_handle,
 				     bool is_remote,
-				     uint32_t prev_record_handle);
+				     uint32_t prev_record_handle,
+				     uint16_t terminus_handle);
+/** @brief Add a PDR record after the record handle sent as input
+ *
+ *  @param[in/out] repo - opaque pointer acting as a PDR repo handle
+ *  @param[in] data - pointer to a PDR record, pointing to a PDR definition as
+ *  per DSP0248. This data is memcpy'd.
+ *  @param[in] size - size of input PDR record in bytes
+ *  @param[in] record_handle - record handle of input PDR record
+ *  @param[in] is_remote - if true, then the PDR is not from this terminus
+ *  @param[in] prev_record_handle - the record handle after which the input
+ *  record handle should be added in the repo
+ *
+ *  @return uint32_t - record handle assigned to PDR record*/
+uint32_t pldm_pdr_add_after_prev_record(pldm_pdr *repo, const uint8_t *data,
+					uint32_t size, uint32_t record_handle,
+					bool is_remote,
+					uint32_t prev_record_handle,
+					uint16_t terminus_handle);
 
 /** @brief Get record handle of a PDR record
  *
@@ -114,6 +135,15 @@ const pldm_pdr_record *pldm_pdr_find_record(const pldm_pdr *repo,
 					    uint32_t *next_record_handle);
 
 pldm_pdr_record *pldm_pdr_find_last_local_record(const pldm_pdr *repo);
+/** @brief Find the previous record handle of a PDR record
+ *
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *  @param[in] record_handle - record handle of input PDR record
+ *
+ *  @return record handle of the previous record
+ */
+uint32_t pldm_pdr_find_prev_record_handle(pldm_pdr *repo,
+					  uint32_t record_handle);
 
 /** @brief Get PDR record next to input PDR record
  *
@@ -159,6 +189,14 @@ bool pldm_pdr_record_is_remote(const pldm_pdr_record *record);
  */
 void pldm_pdr_remove_remote_pdrs(pldm_pdr *repo);
 
+/** @brief Remove all remote PDR's that beling to a specific terminus
+ *         handle
+ *  @param[in] terminus_handle - Terminus Handle of the remove PLDM terminus
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ */
+void pldm_pdr_remove_pdrs_by_terminus_handle(uint32_t terminus_handle,
+					     pldm_pdr *repo);
+
 /** @brief Update the validity of TL PDR - the validity is decided based on
  * whether the valid bit is set or not as per the spec DSP0248
  *
@@ -170,6 +208,14 @@ void pldm_pdr_remove_remote_pdrs(pldm_pdr *repo);
  */
 void pldm_pdr_update_TL_pdr(const pldm_pdr *repo, uint16_t terminusHandle,
 			    uint8_t tid, uint8_t tlEid, bool valid);
+/** @brief Delete record using its record handle
+ *
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *  @param[in] record_handle - record handle of input PDR record
+ *  @param[in] is_remote - if true, then the PDR is not from this terminus
+ */
+void pldm_delete_by_record_handle(pldm_pdr *repo, uint32_t record_handle,
+				  bool is_remote);
 
 /** @brief find the container ID of the contained entity
  *
@@ -291,13 +337,17 @@ pldm_entity_association_tree *pldm_entity_association_tree_init();
  *
  *  @param[in] is_remote - used to denote whether we are adding a BMC entity to
  *                        the tree or a host entity
+ *  @param[in] is_update_contanier_id - Used to determine whether need to update
+ *                                      contanier id.
+ *                                      true: should be changed
+ *                                      false: should not be changed
  *
  *  @return pldm_entity_node* - opaque pointer to added entity
  */
 pldm_entity_node *pldm_entity_association_tree_add(
     pldm_entity_association_tree *tree, pldm_entity *entity,
     uint16_t entity_instance_number, pldm_entity_node *parent,
-    uint8_t association_type, bool is_remote);
+    uint8_t association_type, bool is_remote, bool is_update_contanier_id);
 
 /** @brief deletes a node and it's children from the entity association tree
  *  @param[in] tree - opaque pointer acting as a handle to the tree
@@ -369,20 +419,21 @@ bool pldm_entity_is_exist_parent(pldm_entity_node *node);
  *  @param[in] tree - opaque pointer to entity association tree
  *  @param[in] repo - PDR repo where entity association records should be added
  *  @param[in] is_remote - if true, then the PDR is not from this terminus
+ *  @param[in] terminus_handle - terminus handle of the terminus
  */
 void pldm_entity_association_pdr_add(pldm_entity_association_tree *tree,
-				     pldm_pdr *repo, bool is_remote);
+				     pldm_pdr *repo, bool is_remote,
+				     uint16_t terminus_handle);
 /** @brief Add entity association pdr from node
  *
  *  @param[in] node - opaque pointer acting as a handle to an entity node
  *  @param[in] repo - PDR repo where entity association records should be added
  *  @param[in] is_remote  - if true, then the PDR is not from this terminus
+ *  @param[in] terminus_handle - terminus handle of the terminus
  */
-void pldm_entity_association_pdr_add_from_node(pldm_entity_node *node,
-					       pldm_pdr *repo,
-					       pldm_entity **entities,
-					       size_t num_entities,
-					       bool is_remote);
+void pldm_entity_association_pdr_add_from_node(
+    pldm_entity_node *node, pldm_pdr *repo, pldm_entity **entities,
+    size_t num_entities, bool is_remote, uint16_t terminus_handle);
 
 /** @brief Remove a contained entity from an entity association PDR
  *  @param[in] repo - opaque pointer to pldm PDR repo

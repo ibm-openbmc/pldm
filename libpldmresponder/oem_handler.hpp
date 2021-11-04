@@ -129,6 +129,7 @@ class Handler : public CmdHandler
     virtual void upadteOemDbusPaths(std::string& dbusPath) = 0;
     /** @brief Interface to update container ID */
     virtual void updateContainerID() = 0;
+    virtual void modifyPDROemActions(uint32_t recordHandle, pldm_pdr* repo) = 0;
 
     virtual ~Handler() = default;
 

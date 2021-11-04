@@ -113,7 +113,7 @@ void FruImpl::updateAssociationTree(const dbus::ObjectValueTree& objects,
             {
                 auto node = pldm_entity_association_tree_add(
                     entityTree, &entity, 0xFFFF, nullptr,
-                    PLDM_ENTITY_ASSOCIAION_PHYSICAL, false);
+                    PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true);
                 objToEntityNode[tmpObjPaths[i]] = node;
             }
             else
@@ -123,7 +123,7 @@ void FruImpl::updateAssociationTree(const dbus::ObjectValueTree& objects,
                     auto node = pldm_entity_association_tree_add(
                         entityTree, &entity, 0xFFFF,
                         objToEntityNode[tmpObjPaths[i + 1]],
-                        PLDM_ENTITY_ASSOCIAION_PHYSICAL, false);
+                        PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true);
                     objToEntityNode[tmpObjPaths[i]] = node;
                 }
             }
@@ -209,7 +209,8 @@ void FruImpl::buildFRUTable()
         }
     }
 
-    pldm_entity_association_pdr_add(entityTree, pdrRepo, false);
+    pldm_entity_association_pdr_add(entityTree, pdrRepo, false,
+                                    TERMINUS_HANDLE);
     // save a copy of bmc's entity association tree
     pldm_entity_association_tree_copy_root(entityTree, bmcEntityTree);
 
@@ -487,10 +488,7 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
 
         auto node = pldm_entity_association_tree_add(
             entityTree, &entity, 0xFFFF, parent,
-            PLDM_ENTITY_ASSOCIAION_PHYSICAL, false);
-        std::cout << "\nafter pldm_entity_association_tree_add to entityTree: "
-                  << " entity.entity_instance_num "
-                  << entity.entity_instance_num << "\n";
+            PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true);
         objToEntityNode[fruObjectPath] = node;
         auto recordInfos = parser.getRecordInfo(fruInterface);
 
@@ -509,10 +507,7 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
 
         pldm_entity_association_tree_add(
             bmcEntityTree, &entity, 0xFFFF, bmcTreeParentNode,
-            PLDM_ENTITY_ASSOCIAION_PHYSICAL, false);
-        std::cout << "\nafter pldm_entity_association_tree_add to bmcEntityTree"
-                  << " entity.entity_instance_num "
-                  << entity.entity_instance_num << std::endl;
+            PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true);
 
         for (const auto& object : objects)
         {
@@ -672,6 +667,8 @@ int FruImpl::getFRURecordByOption(std::vector<uint8_t>& fruData,
                                   uint16_t recordSetIdentifer,
                                   uint8_t recordType, uint8_t fieldType)
 {
+    using sum = uint32_t;
+
     // FRU table is built lazily, build if not done.
     buildFRUTable();
 
@@ -693,7 +690,7 @@ int FruImpl::getFRURecordByOption(std::vector<uint8_t>& fruData,
     }
 
     auto pads = pldm::utils::getNumPadBytes(recordTableSize);
-    auto sum = crc32(fruData.data(), recordTableSize + pads);
+    crc32(fruData.data(), recordTableSize + pads);
 
     auto iter = fruData.begin() + recordTableSize + pads;
     std::copy_n(reinterpret_cast<const uint8_t*>(&checksum), sizeof(checksum),
@@ -1303,7 +1300,7 @@ uint32_t
     pdrEntry.handle.recordHandle = lastHandle + 1;
     return pldm_pdr_add_hotplug_record(pdrRepo, pdrEntry.data, pdrEntry.size,
                                        pdrEntry.handle.recordHandle, false,
-                                       lastHandle);
+                                       lastHandle, TERMINUS_HANDLE);
 }
 
 namespace fru
@@ -1459,11 +1456,9 @@ void Handler::setStatePDRParams(
     pldm::responder::pdr_utils::DbusObjMaps& sensorDbusObjMaps,
     pldm::responder::pdr_utils::DbusObjMaps& effecterDbusObjMaps, bool hotPlug)
 {
-    std::cout << "\nenter Handler::setStatePDRParams" << std::endl;
     impl.setStatePDRParams(pdrJsonsDir, nextSensorId, nextEffecterId,
                            sensorDbusObjMaps, effecterDbusObjMaps, hotPlug,
                            Json());
-    std::cout << "\nexit Handler::setStatePDRParams" << std::endl;
 }
 
 } // namespace fru

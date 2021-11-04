@@ -143,8 +143,7 @@ uint8_t readHostEID()
     std::ifstream eidFile{HOST_EID_PATH};
     if (!eidFile.good())
     {
-        std::cerr << "Could not open host EID file"
-                  << "\n";
+        std::cerr << "Could not open host EID file: " << HOST_EID_PATH << "\n";
     }
     else
     {
@@ -227,7 +226,15 @@ std::string DBusHandler::getService(const char* path,
 
     auto mapper = bus.new_method_call(mapperBusName, mapperPath,
                                       mapperInterface, "GetObject");
-    mapper.append(path, DbusInterfaceList({interface}));
+
+    if (interface)
+    {
+        mapper.append(path, DbusInterfaceList({interface}));
+    }
+    else
+    {
+        mapper.append(path, DbusInterfaceList({}));
+    }
 
     auto mapperResponseMsg = bus.call(mapper);
     mapperResponseMsg.read(mapperResponse);
@@ -469,7 +476,7 @@ int emitStateSensorEventSignal(uint8_t tid, uint16_t sensorId,
 
         msg.signal_send();
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
         std::cerr << "Error emitting pldm event signal:"
                   << "ERROR=" << e.what() << "\n";
@@ -559,5 +566,27 @@ const std::string getCurrentSystemTime()
     sprintf(buf, "%02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
     return buf;
 }
+
+void dbusMethodCall(const char* service, const char* objPath,
+                    const char* dbusMethod, const char* dbusInterface,
+                    const PropertyValue& value)
+{
+    try
+    {
+        auto& bus = pldm::utils::DBusHandler::getBus();
+        auto method =
+            bus.new_method_call(service, objPath, dbusInterface, dbusMethod);
+        auto val = std::get_if<std::vector<uint8_t>>(&value);
+        method.append(*val);
+        bus.call_noreply(method);
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Failed to call the D-Bus Method"
+                  << "ERROR=" << e.what() << std::endl;
+        return;
+    }
+}
+
 } // namespace utils
 } // namespace pldm
