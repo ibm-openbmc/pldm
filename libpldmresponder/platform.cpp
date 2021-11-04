@@ -102,8 +102,6 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
         try
         {
             auto json = readJson(dirEntry.path().string());
-            std::cout << "\npicked up json " << dirEntry.path().string()
-                      << std::endl;
             if (!json.empty())
             {
                 auto effecterPDRs = json.value("effecterPDRs", empty);
@@ -194,7 +192,6 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
     }
 
     Response response(sizeof(pldm_msg_hdr) + PLDM_GET_PDR_MIN_RESP_BYTES, 0);
-    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
 
     if (payloadLength != PLDM_GET_PDR_REQ_BYTES)
     {
@@ -239,7 +236,7 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
         response.resize(sizeof(pldm_msg_hdr) + PLDM_GET_PDR_MIN_RESP_BYTES +
                             respSizeBytes,
                         0);
-        responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+        auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
         rc = encode_get_pdr_resp(
             request->hdr.instance_id, PLDM_SUCCESS, e.handle.nextRecordHandle,
             0, PLDM_START_AND_END, respSizeBytes, recordData, 0, responsePtr);
@@ -468,8 +465,8 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
         const auto& [containerId, entityType, entityInstance] = entityInfo;
         events::StateSensorEntry stateSensorEntry{containerId, entityType,
                                                   entityInstance, sensorOffset};
-        return hostPDRHandler->handleStateSensorEvent(stateSensorEntry,
-                                                      eventState);
+        return hostPDRHandler->handleStateSensorEvent(
+            stateSetIds, stateSensorEntry, eventState);
     }
     else
     {
@@ -481,12 +478,14 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
 
 int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                                        size_t payloadLength,
-                                       uint8_t /*formatVersion*/,
-                                       uint8_t /*tid*/, size_t eventDataOffset)
+                                       uint8_t /*formatVersion*/, uint8_t tid,
+                                       size_t eventDataOffset)
 {
     uint8_t eventDataFormat{};
+    uint8_t eventDataOperation{};
     uint8_t numberOfChangeRecords{};
     size_t dataOffset{};
+    bool isModified = false;
 
     auto eventData =
         reinterpret_cast<const uint8_t*>(request->payload) + eventDataOffset;
@@ -509,7 +508,7 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
 
     if (eventDataFormat == FORMAT_IS_PDR_HANDLES)
     {
-        uint8_t eventDataOperation{};
+
         uint8_t numberOfChangeEntries{};
 
         auto changeRecordData = eventData + dataOffset;
@@ -526,7 +525,8 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                 return rc;
             }
 
-            if (eventDataOperation == PLDM_RECORDS_ADDED)
+            if (eventDataOperation == PLDM_RECORDS_ADDED ||
+                eventDataOperation == PLDM_RECORDS_DELETED)
             {
                 rc = getPDRRecordHandles(
                     reinterpret_cast<const ChangeEntry*>(changeRecordData +
@@ -540,10 +540,20 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                     return rc;
                 }
             }
-
-            if (eventDataOperation == PLDM_RECORDS_MODIFIED)
+            else if (eventDataOperation == PLDM_RECORDS_MODIFIED)
             {
-                return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+                isModified = true;
+                rc = getPDRRecordHandles(
+                    reinterpret_cast<const ChangeEntry*>(changeRecordData +
+                                                         dataOffset),
+                    changeRecordDataSize - dataOffset,
+                    static_cast<size_t>(numberOfChangeEntries),
+                    pdrRecordHandles);
+
+                if (rc != PLDM_SUCCESS)
+                {
+                    return rc;
+                }
             }
 
             changeRecordData +=
@@ -554,7 +564,32 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
     }
     if (hostPDRHandler)
     {
-        hostPDRHandler->fetchPDR(std::move(pdrRecordHandles));
+        // if we get a Repository change event with the eventDataFormat
+        // as REFRESH_ENTIRE_REPOSITORY, then delete all the PDR's that
+        // have the matched Terminus handle
+        if (eventDataFormat == REFRESH_ENTIRE_REPOSITORY)
+        {
+            // We cannot get the Repo change event from the Terminus
+            // that is not already added to the BMC repository
+
+            for (const auto& [terminusHandle, terminusInfo] :
+                 hostPDRHandler->tlPDRInfo)
+            {
+                if (std::get<0>(terminusInfo) == tid)
+                {
+                    pldm_pdr_remove_pdrs_by_terminus_handle(terminusHandle,
+                                                            pdrRepo.getPdr());
+                }
+            }
+        }
+        if (eventDataOperation == PLDM_RECORDS_DELETED)
+        {
+            hostPDRHandler->deletePDRFromRepo(std::move(pdrRecordHandles));
+        }
+        else
+        {
+            hostPDRHandler->fetchPDR(std::move(pdrRecordHandles), isModified);
+        }
     }
 
     return PLDM_SUCCESS;
@@ -649,6 +684,12 @@ void Handler::generateTerminusLocatorPDR(Repo& repo)
     pdrEntry.data = pdrBuffer.data();
     pdrEntry.size = pdrBuffer.size();
     repo.addRecord(pdrEntry);
+    if (hostPDRHandler)
+    {
+        hostPDRHandler->tlPDRInfo.insert_or_assign(
+            pdr->terminus_handle,
+            std::make_tuple(pdr->tid, locatorValue->eid, pdr->validity));
+    }
 }
 
 Response Handler::getStateSensorReadings(const pldm_msg* request,

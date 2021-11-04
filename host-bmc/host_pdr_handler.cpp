@@ -35,6 +35,25 @@ const Json emptyJson{};
 const std::vector<Json> emptyJsonList{};
 
 template <typename T>
+uint16_t extractTerminusHandle(std::vector<uint8_t>& pdr)
+{
+    T* var = nullptr;
+    if (std::is_same<T, pldm_pdr_fru_record_set>::value)
+    {
+        var = (T*)(pdr.data() + sizeof(pldm_pdr_hdr));
+    }
+    else
+    {
+        var = (T*)(pdr.data());
+    }
+    if (var != nullptr)
+    {
+        return var->terminus_handle;
+    }
+    return TERMINUS_HANDLE;
+}
+
+template <typename T>
 void updateContanierId(pldm_entity_association_tree* entityTree,
                        std::vector<uint8_t>& pdr)
 {
@@ -68,13 +87,18 @@ void updateContanierId(pldm_entity_association_tree* entityTree,
 HostPDRHandler::HostPDRHandler(
     int mctp_fd, uint8_t mctp_eid, sdeventplus::Event& event, pldm_pdr* repo,
     const std::string& eventsJsonsDir, pldm_entity_association_tree* entityTree,
-    pldm_entity_association_tree* bmcEntityTree, Requester& requester,
+    pldm_entity_association_tree* bmcEntityTree,
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser,
+    Requester& requester,
     pldm::requester::Handler<pldm::requester::Request>* handler,
+    pldm::host_associations::HostAssociationsParser* associationsParser,
     pldm::responder::oem_platform::Handler* oemPlatformHandler) :
     mctp_fd(mctp_fd),
     mctp_eid(mctp_eid), event(event), repo(repo),
     stateSensorHandler(eventsJsonsDir), entityTree(entityTree),
-    bmcEntityTree(bmcEntityTree), requester(requester), handler(handler),
+    bmcEntityTree(bmcEntityTree), hostEffecterParser(hostEffecterParser),
+    requester(requester), handler(handler),
+    associationsParser(associationsParser),
     oemPlatformHandler(oemPlatformHandler)
 {
     mergedHostParents = false;
@@ -128,6 +152,15 @@ HostPDRHandler::HostPDRHandler(
                 auto propVal = std::get<std::string>(value);
                 if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
                 {
+                    // Delete all the remote terminus information
+                    for (const auto& terminusInfo : this->tlPDRInfo)
+                    {
+                        if (terminusInfo.first != TERMINUS_HANDLE)
+                        {
+                            this->tlPDRInfo.erase(terminusInfo.first);
+                        }
+                    }
+
                     pldm_pdr_remove_remote_pdrs(repo);
                     pldm_entity_association_tree_destroy_root(entityTree);
                     pldm_entity_association_tree_copy_root(bmcEntityTree,
@@ -135,16 +168,17 @@ HostPDRHandler::HostPDRHandler(
                     this->sensorMap.clear();
                     this->responseReceived = false;
                     this->mergedHostParents = false;
-                    this->sensorMapIndex = objPathMap.begin();
+                    this->objMapIndex = objPathMap.begin();
                 }
             }
         });
 }
 
-void HostPDRHandler::fetchPDR(PDRRecordHandles&& recordHandles)
+void HostPDRHandler::fetchPDR(PDRRecordHandles&& recordHandles, bool isModified)
 {
     pdrRecordHandles.clear();
     pdrRecordHandles = std::move(recordHandles);
+    isHostPdrModified = isModified;
 
     // Defer the actual fetch of PDRs from the host (by queuing the call on the
     // main event loop). That way, we can respond to the platform event msg from
@@ -200,9 +234,23 @@ void HostPDRHandler::getHostPDR(uint32_t nextRecordHandle)
         std::cerr << "Failed to send the GetPDR request to Host \n";
     }
 }
+std::string HostPDRHandler::updateLedGroupPath(const std::string& path)
+{
 
-int HostPDRHandler::handleStateSensorEvent(const StateSensorEntry& entry,
-                                           pdr::EventState state)
+    std::string ledGroupPath{};
+    std::string inventoryPath = "/xyz/openbmc_project/inventory/";
+    if (path.find(inventoryPath) != std::string::npos)
+    {
+        ledGroupPath = "/xyz/openbmc_project/led/groups/" +
+                       path.substr(inventoryPath.length());
+    }
+
+    return ledGroupPath;
+}
+
+int HostPDRHandler::handleStateSensorEvent(
+    const std::vector<pldm::pdr::StateSetId>& stateSetId,
+    const StateSensorEntry& entry, pdr::EventState state)
 {
     for (auto& entity : objPathMap)
     {
@@ -215,8 +263,29 @@ int HostPDRHandler::handleStateSensorEvent(const StateSensorEntry& entry,
             continue;
         }
 
-        CustomDBus::getCustomDBus().setOperationalStatus(entity.first, state);
-        break;
+        for (const auto& setId : stateSetId)
+        {
+            if (setId == PLDM_STATE_SET_IDENTIFY_STATE)
+            {
+                auto ledGroupPath = updateLedGroupPath(entity.first);
+                if (!ledGroupPath.empty())
+                {
+                    CustomDBus::getCustomDBus().setAsserted(
+                        ledGroupPath, node_entity,
+                        state == PLDM_STATE_SET_IDENTIFY_STATE_ASSERTED,
+                        hostEffecterParser, mctp_eid);
+                }
+            }
+        }
+
+        if ((stateSetId[0] == PLDM_STATE_SET_HEALTH_STATE ||
+             stateSetId[0] == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS))
+        {
+            CustomDBus::getCustomDBus().setOperationalStatus(
+                entity.first, state == PLDM_OPERATIONAL_NORMAL);
+
+            break;
+        }
     }
 
     auto rc = stateSensorHandler.eventAction(entry, state);
@@ -242,7 +311,7 @@ void HostPDRHandler::mergeEntityAssociations(const std::vector<uint8_t>& pdr)
                                         &entities);
     if (numEntities > 0)
     {
-        pldm_entity_node* pNode;
+        pldm_entity_node* pNode = nullptr;
         if (!mergedHostParents)
         {
             pNode = pldm_entity_association_tree_find(entityTree, &entities[0],
@@ -264,7 +333,12 @@ void HostPDRHandler::mergeEntityAssociations(const std::vector<uint8_t>& pdr)
         {
             auto node = pldm_entity_association_tree_add(
                 entityTree, &entities[i], entities[i].entity_instance_num,
-                pNode, entityPdr->association_type, true);
+                pNode, entityPdr->association_type, true,
+                !(entities[i].entity_container_id & 0x8000));
+            if (!node)
+            {
+                continue;
+            }
             merged = true;
             entityAssoc.push_back(node);
         }
@@ -287,8 +361,8 @@ void HostPDRHandler::mergeEntityAssociations(const std::vector<uint8_t>& pdr)
         }
         else
         {
-            pldm_entity_association_pdr_add_from_node(node, repo, &entities,
-                                                      numEntities, true);
+            pldm_entity_association_pdr_add_from_node(
+                node, repo, &entities, numEntities, true, TERMINUS_HANDLE);
         }
     }
     free(entities);
@@ -398,8 +472,7 @@ void HostPDRHandler::sendPDRRepositoryChgEvent(std::vector<uint8_t>&& pdrTypes,
     }
 }
 
-void HostPDRHandler::parseStateSensorPDRs(const PDRList& stateSensorPDRs,
-                                          const TLPDRMap& tlpdrInfo)
+void HostPDRHandler::parseStateSensorPDRs(const PDRList& stateSensorPDRs)
 {
     for (const auto& pdr : stateSensorPDRs)
     {
@@ -409,7 +482,7 @@ void HostPDRHandler::parseStateSensorPDRs(const PDRList& stateSensorPDRs,
         sensorEntry.sensorID = sensorID;
         try
         {
-            sensorEntry.terminusID = tlpdrInfo.at(terminusHandle);
+            sensorEntry.terminusID = std::get<0>(tlPDRInfo.at(terminusHandle));
         }
         // If there is no mapping for terminusHandle assign the reserved TID
         // value of 0xFF to indicate that.
@@ -428,13 +501,14 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
     static bool merged = false;
     static PDRList stateSensorPDRs{};
     static PDRList fruRecordSetPDRs{};
-    static TLPDRMap tlpdrInfo{};
+
     uint32_t nextRecordHandle{};
-    std::vector<TlInfo> tlInfo;
+
     uint8_t tlEid = 0;
     bool tlValid = true;
     uint32_t rh = 0;
     uint16_t terminusHandle = 0;
+    uint16_t pdrTerminusHandle = 0;
     uint8_t tid = 0;
 
     uint8_t completionCode{};
@@ -504,13 +578,11 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
             {
                 if (pdrHdr->type == PLDM_TERMINUS_LOCATOR_PDR)
                 {
+                    pdrTerminusHandle =
+                        extractTerminusHandle<pldm_terminus_locator_pdr>(pdr);
                     auto tlpdr =
                         reinterpret_cast<const pldm_terminus_locator_pdr*>(
                             pdr.data());
-                    tlpdrInfo.emplace(
-                        static_cast<pldm::pdr::TerminusHandle>(
-                            tlpdr->terminus_handle),
-                        static_cast<pldm::pdr::TerminusID>(tlpdr->tid));
 
                     terminusHandle = tlpdr->terminus_handle;
                     tid = tlpdr->tid;
@@ -527,23 +599,37 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                     {
                         tlValid = false;
                     }
-                    tlInfo.emplace_back(
-                        TlInfo{tlpdr->validity, static_cast<uint8_t>(tlEid),
-                               tlpdr->tid, tlpdr->terminus_handle});
+                    tlPDRInfo.insert_or_assign(
+                        tlpdr->terminus_handle,
+                        std::make_tuple(tlpdr->tid, tlEid, tlpdr->validity));
                 }
                 else if (pdrHdr->type == PLDM_STATE_SENSOR_PDR)
                 {
+                    pdrTerminusHandle =
+                        extractTerminusHandle<pldm_state_sensor_pdr>(pdr);
                     updateContanierId<pldm_state_sensor_pdr>(entityTree, pdr);
                     stateSensorPDRs.emplace_back(pdr);
                 }
                 else if (pdrHdr->type == PLDM_PDR_FRU_RECORD_SET)
                 {
+                    pdrTerminusHandle =
+                        extractTerminusHandle<pldm_pdr_fru_record_set>(pdr);
                     updateContanierId<pldm_pdr_fru_record_set>(entityTree, pdr);
                     fruRecordSetPDRs.emplace_back(pdr);
                 }
                 else if (pdrHdr->type == PLDM_STATE_EFFECTER_PDR)
                 {
+                    pdrTerminusHandle =
+                        extractTerminusHandle<pldm_state_effecter_pdr>(pdr);
                     updateContanierId<pldm_state_effecter_pdr>(entityTree, pdr);
+                }
+                else if (pdrHdr->type == PLDM_NUMERIC_EFFECTER_PDR)
+                {
+                    pdrTerminusHandle =
+                        extractTerminusHandle<pldm_numeric_effecter_value_pdr>(
+                            pdr);
+                    updateContanierId<pldm_numeric_effecter_value_pdr>(
+                        entityTree, pdr);
                 }
 
                 // if the TLPDR is invalid update the repo accordingly
@@ -554,7 +640,26 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                 }
                 else
                 {
-                    pldm_pdr_add(repo, pdr.data(), respCount, rh, true);
+                    if (isHostPdrModified)
+                    {
+                        auto prevRh =
+                            pldm_pdr_find_prev_record_handle(repo, rh);
+                        // pldm_delete_by_record_handle to delete
+                        // the effecter from the repo using record handle.
+                        pldm_delete_by_record_handle(repo, rh, true);
+
+                        // call pldm_pdr_add_after_prev_record to add the
+                        // record into the repo from where it was deleted
+                        pldm_pdr_add_after_prev_record(
+                            repo, pdr.data(), respCount, rh, true, prevRh,
+                            pdrTerminusHandle);
+                    }
+                    else
+                    {
+
+                        pldm_pdr_add(repo, pdr.data(), respCount, rh, true,
+                                     pdrTerminusHandle);
+                    }
                 }
             }
         }
@@ -570,16 +675,17 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
         }
 
         /*received last record*/
-        this->parseStateSensorPDRs(stateSensorPDRs, tlpdrInfo);
-        this->parseFruRecordSetPDRs(fruRecordSetPDRs);
+        this->parseStateSensorPDRs(stateSensorPDRs);
+        this->createDbusObjects(fruRecordSetPDRs);
         if (isHostUp())
         {
-            this->setHostSensorState(stateSensorPDRs, tlInfo);
+            this->setHostSensorState(stateSensorPDRs);
         }
         stateSensorPDRs.clear();
-        tlpdrInfo.clear();
+
         fruRecordSetPDRs.clear();
         entityAssociations.clear();
+        mergedHostParents = false;
 
         if (merged)
         {
@@ -590,6 +696,16 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                     std::bind(
                         std::mem_fn((&HostPDRHandler::_processPDRRepoChgEvent)),
                         this, std::placeholders::_1));
+        }
+
+        if (isHostPdrModified)
+
+        {
+            isHostPdrModified = false;
+            if (oemPlatformHandler)
+            {
+                oemPlatformHandler->modifyPDROemActions(rh, repo);
+            }
         }
     }
     else
@@ -672,8 +788,7 @@ bool HostPDRHandler::isHostUp()
     return responseReceived;
 }
 
-void HostPDRHandler::setHostSensorState(const PDRList& stateSensorPDRs,
-                                        const std::vector<TlInfo>& tlinfo)
+void HostPDRHandler::setHostSensorState(const PDRList& stateSensorPDRs)
 {
     for (const auto& stateSensorPDR : stateSensorPDRs)
     {
@@ -690,18 +805,18 @@ void HostPDRHandler::setHostSensorState(const PDRList& stateSensorPDRs,
 
         uint16_t sensorId = pdr->sensor_id;
 
-        for (auto info : tlinfo)
+        for (const auto& [terminusHandle, terminusInfo] : tlPDRInfo)
         {
-            if (info.terminusHandle == pdr->terminus_handle)
+            if (terminusHandle == pdr->terminus_handle)
             {
-                if (info.valid == PLDM_TL_PDR_VALID)
+                if (std::get<2>(terminusInfo) == PLDM_TL_PDR_VALID)
                 {
-                    mctp_eid = info.eid;
+                    mctp_eid = std::get<1>(terminusInfo);
                 }
 
                 bitfield8_t sensorRearm;
                 sensorRearm.byte = 0;
-                uint8_t tid = info.tid;
+                uint8_t tid = std::get<0>(terminusInfo);
 
                 auto instanceId = requester.getInstanceId(mctp_eid);
                 std::vector<uint8_t> requestMsg(
@@ -818,7 +933,8 @@ void HostPDRHandler::setHostSensorState(const PDRList& stateSensorPDRs,
                         pldm::responder::events::StateSensorEntry
                             stateSensorEntry{containerId, entityType,
                                              entityInstance, sensorOffset};
-                        handleStateSensorEvent(stateSensorEntry, eventState);
+                        handleStateSensorEvent(stateSetIds, stateSensorEntry,
+                                               eventState);
                     }
                 };
 
@@ -977,48 +1093,7 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records,
             return;
         }
 
-        sensorMapIndex = objPathMap.begin();
-
-        // update xyz.openbmc_project.State.Decorator.OperationalStatus
-        setOperationStatus();
-
-        for (auto& entity : objPathMap)
-        {
-            pldm_entity node = pldm_entity_extract(entity.second);
-            auto fruRSI = getRSI(fruRecordSetPDRs, node);
-
-            // update the Present Property
-            setPresentPropertyStatus(entity.first);
-            if (node.entity_type == (PLDM_ENTITY_PROC | 0x8000))
-            {
-                CustomDBus::getCustomDBus().implementCpuCoreInterface(
-                    entity.first);
-            }
-
-            for (auto& data : fruRecordData)
-            {
-                if (fruRSI != data.fruRSI)
-                {
-                    continue;
-                }
-
-                if (data.fruRecType == PLDM_FRU_RECORD_TYPE_OEM)
-                {
-                    for (auto& tlv : data.fruTLV)
-                    {
-                        if (tlv.fruFieldType ==
-                            PLDM_OEM_FRU_FIELD_TYPE_LOCATION_CODE)
-                        {
-                            CustomDBus::getCustomDBus().setLocationCode(
-                                entity.first,
-                                std::string(reinterpret_cast<const char*>(
-                                                tlv.fruFieldValue.data()),
-                                            tlv.fruFieldLen));
-                        }
-                    }
-                }
-            }
-        }
+        this->setLocationCode(fruRecordSetPDRs, fruRecordData);
     };
 
     rc = handler->registerRequest(
@@ -1031,9 +1106,9 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records,
     }
 }
 
-void HostPDRHandler::getPresentStateBySensorReadigs(uint16_t sensorId,
-                                                    uint8_t state,
-                                                    const std::string& path)
+void HostPDRHandler::getPresentStateBySensorReadigs(
+    uint16_t sensorId, uint16_t type, uint16_t instance, uint16_t containerId,
+    uint8_t state, const std::string& path, pldm::pdr::StateSetId stateSetId)
 {
 
     auto instanceId = requester.getInstanceId(mctp_eid);
@@ -1055,7 +1130,9 @@ void HostPDRHandler::getPresentStateBySensorReadigs(uint16_t sensorId,
     }
 
     state = PLDM_OPERATIONAL_ERROR;
-    auto getStateSensorReadingsResponseHandler = [this, path, &state](
+    auto getStateSensorReadingsResponseHandler = [this, path, type, instance,
+                                                  containerId, &state,
+                                                  stateSetId](
                                                      mctp_eid_t /*eid*/,
                                                      const pldm_msg* response,
                                                      size_t respMsgLen) {
@@ -1090,12 +1167,42 @@ void HostPDRHandler::getPresentStateBySensorReadigs(uint16_t sensorId,
                 break;
             }
         }
-        CustomDBus::getCustomDBus().setOperationalStatus(path, state);
 
-        if (++sensorMapIndex != objPathMap.end())
+        if (stateSetId == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS ||
+            stateSetId == PLDM_STATE_SET_HEALTH_STATE)
         {
-            setOperationStatus();
+            // set the dbus property only when its not a composite sensor
+            // and the state set it PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS
+            // Get sensorOpState property by the getStateSensorReadings
+            // command.
+            CustomDBus::getCustomDBus().setOperationalStatus(
+                path, state == PLDM_OPERATIONAL_NORMAL);
         }
+        else if (stateSetId == PLDM_STATE_SET_IDENTIFY_STATE)
+        {
+            auto ledGroupPath = updateLedGroupPath(path);
+            if (!ledGroupPath.empty())
+            {
+                pldm_entity entity{type, instance, containerId};
+                CustomDBus::getCustomDBus().setAsserted(
+                    ledGroupPath, entity,
+                    state == PLDM_STATE_SET_IDENTIFY_STATE_ASSERTED,
+                    hostEffecterParser, mctp_eid);
+                std::vector<std::tuple<std::string, std::string, std::string>>
+                    associations{{"identify_led_group",
+                                  "identify_inventory_object", ledGroupPath}};
+                CustomDBus::getCustomDBus().setAssociations(path, associations);
+            }
+        }
+
+        ++sensorMapIndex;
+        if (sensorMapIndex == sensorMap.end())
+        {
+            // std::cerr << "sensor map completed\n";
+            ++objMapIndex;
+            sensorMapIndex = sensorMap.begin();
+        }
+        setOperationStatus();
     };
 
     rc = handler->registerRequest(
@@ -1132,41 +1239,125 @@ uint16_t HostPDRHandler::getRSI(const PDRList& fruRecordSetPDRs,
     return fruRSI;
 }
 
+void HostPDRHandler::setLocationCode(
+    const PDRList& fruRecordSetPDRs,
+    const std::vector<responder::pdr_utils::FruRecordDataFormat>& fruRecordData)
+{
+    for (auto& entity : objPathMap)
+    {
+        pldm_entity node = pldm_entity_extract(entity.second);
+        auto fruRSI = getRSI(fruRecordSetPDRs, node);
+
+        for (auto& data : fruRecordData)
+        {
+            if (fruRSI != data.fruRSI)
+            {
+                continue;
+            }
+
+            if (data.fruRecType == PLDM_FRU_RECORD_TYPE_OEM)
+            {
+                for (auto& tlv : data.fruTLV)
+                {
+                    if (tlv.fruFieldType ==
+                        PLDM_OEM_FRU_FIELD_TYPE_LOCATION_CODE)
+                    {
+                        CustomDBus::getCustomDBus().setLocationCode(
+                            entity.first,
+                            std::string(reinterpret_cast<const char*>(
+                                            tlv.fruFieldValue.data()),
+                                        tlv.fruFieldLen));
+                    }
+                }
+            }
+        }
+    }
+}
 void HostPDRHandler::setOperationStatus()
 {
-    if (sensorMapIndex != objPathMap.end())
+    if (objMapIndex != objPathMap.end())
     {
 
-        pldm_entity node = pldm_entity_extract(sensorMapIndex->second);
+        pldm_entity node = pldm_entity_extract(objMapIndex->second);
 
-        for (auto& sensor : sensorMap)
+        bool valid = getValidity(sensorMapIndex->first.terminusID);
+        if (valid)
         {
             pldm::pdr::EntityInfo entityInfo{};
             pldm::pdr::CompositeSensorStates compositeSensorStates{};
             std::vector<pldm::pdr::StateSetId> stateSetIds{};
             std::tie(entityInfo, compositeSensorStates, stateSetIds) =
-                sensor.second;
+                sensorMapIndex->second;
             const auto& [containerId, entityType, entityInstance] = entityInfo;
 
-            if (node.entity_type != entityType ||
-                node.entity_instance_num != entityInstance ||
-                node.entity_container_id != containerId)
+            if (node.entity_type == entityType &&
+                node.entity_instance_num == entityInstance &&
+                node.entity_container_id == containerId)
             {
-                continue;
+                if ((stateSetIds[0] == PLDM_STATE_SET_HEALTH_STATE ||
+                     stateSetIds[0] == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS))
+                {
+                    uint8_t state = 0;
+                    // set the dbus property only when its not a
+                    // composite sensor and the state set it
+                    // PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS Get
+                    // sensorOpState property by the
+                    // getStateSensorReadings command.
+
+                    getPresentStateBySensorReadigs(
+                        sensorMapIndex->first.sensorID, entityType,
+                        entityInstance, containerId, state, objMapIndex->first,
+                        stateSetIds[0]);
+                    return;
+                }
+                if (stateSetIds[0] == PLDM_STATE_SET_IDENTIFY_STATE)
+                {
+                    uint8_t state = 0;
+                    getPresentStateBySensorReadigs(
+                        sensorMapIndex->first.sensorID, entityType,
+                        entityInstance, containerId, state, objMapIndex->first,
+                        stateSetIds[0]);
+                    return;
+                }
             }
-            uint8_t state = 0;
-            if (compositeSensorStates.size() == 1 &&
-                stateSetIds[0] == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS)
+            else
             {
-                // set the dbus property only when its not a composite sensor
-                // and the state set it PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS
-                // Get sensorOpState property by the getStateSensorReadings
-                // command.
-                getPresentStateBySensorReadigs(sensor.first.sensorID, state,
-                                               sensorMapIndex->first);
+                ++sensorMapIndex;
+                if (sensorMapIndex == sensorMap.end())
+                {
+                    ++objMapIndex;
+                    sensorMapIndex = sensorMap.begin();
+                }
+                setOperationStatus();
             }
         }
+        else
+        {
+            ++sensorMapIndex;
+            if (sensorMapIndex == sensorMap.end())
+            {
+                ++objMapIndex;
+                sensorMapIndex = sensorMap.begin();
+            }
+            setOperationStatus();
+        }
     }
+}
+
+bool HostPDRHandler::getValidity(const pldm::pdr::TerminusID& tid)
+{
+    for (const auto& [terminusHandle, terminusInfo] : tlPDRInfo)
+    {
+        if (std::get<0>(terminusInfo) == tid)
+        {
+            if (std::get<2>(terminusInfo) == PLDM_TL_PDR_NOT_VALID)
+            {
+                return false;
+            }
+            return true;
+        }
+    }
+    return false;
 }
 
 void HostPDRHandler::setPresentPropertyStatus(const std::string& path)
@@ -1174,9 +1365,116 @@ void HostPDRHandler::setPresentPropertyStatus(const std::string& path)
     CustomDBus::getCustomDBus().updateItemPresentStatus(path);
 }
 
-void HostPDRHandler::parseFruRecordSetPDRs(const PDRList& fruRecordSetPDRs)
+void HostPDRHandler::setFRUAssociations(
+    const std::string& parentPath,
+    const std::vector<std::tuple<pldm::host_associations::entity, std::string,
+                                 std::string>>& child)
+{
+    std::vector<std::tuple<std::string, std::string, std::string>> associations;
+    for (const auto& c : child)
+    {
+        pldm::host_associations::entity expectedchild = std::get<0>(c);
+        for (const auto& [childPath, node] : objPathMap)
+        {
+            pldm_entity childentity = pldm_entity_extract(node);
+            if (childentity.entity_type == expectedchild.entity_type &&
+                childentity.entity_instance_num ==
+                    expectedchild.entity_instance_num &&
+                childentity.entity_container_id ==
+                    expectedchild.entity_container_id)
+            {
+                auto associationTuple =
+                    std::make_tuple(std::get<1>(c), std::get<2>(c), childPath);
+                associations.push_back(associationTuple);
+            }
+        }
+    }
+    CustomDBus::getCustomDBus().setAssociations(parentPath, associations);
+}
+
+void HostPDRHandler::createDbusObjects(const PDRList& fruRecordSetPDRs)
 {
     getFRURecordTableMetadataByHost(fruRecordSetPDRs);
+    objMapIndex = objPathMap.begin();
+
+    sensorMapIndex = sensorMap.begin();
+
+    // update xyz.openbmc_project.State.Decorator.OperationalStatus
+    setOperationStatus();
+
+    for (const auto& entity : objPathMap)
+    {
+        pldm_entity node = pldm_entity_extract(entity.second);
+        // update the Present Property
+        setPresentPropertyStatus(entity.first);
+        switch (node.entity_type)
+        {
+            case 32903:
+                CustomDBus::getCustomDBus().implementCpuCoreInterface(
+                    entity.first);
+                break;
+            case PLDM_ENTITY_SYSTEM_CHASSIS:
+                CustomDBus::getCustomDBus().implementChassisInterface(
+                    entity.first);
+                break;
+            case PLDM_ENTITY_POWER_SUPPLY:
+                CustomDBus::getCustomDBus().implementPowerSupplyInterface(
+                    entity.first);
+                break;
+            case PLDM_ENTITY_FAN:
+                CustomDBus::getCustomDBus().implementFanInterface(entity.first);
+                break;
+            case PLDM_ENTITY_SYS_BOARD:
+                CustomDBus::getCustomDBus().implementMotherboardInterface(
+                    entity.first);
+                break;
+            case PLDM_ENTITY_POWER_CONVERTER:
+                CustomDBus::getCustomDBus().implementVRMInterface(entity.first);
+                break;
+            case PLDM_ENTITY_SLOT:
+                CustomDBus::getCustomDBus().implementPCIeSlotInterface(
+                    entity.first);
+                break;
+            case PLDM_ENTITY_CONNECTOR:
+                CustomDBus::getCustomDBus().implementConnecterInterface(
+                    entity.first);
+                break;
+            case PLDM_ENTITY_MODULE:
+                CustomDBus::getCustomDBus().implementBoard(entity.first);
+                break;
+            case PLDM_ENTITY_IO_MODULE:
+                CustomDBus::getCustomDBus().implementFabricAdapter(
+                    entity.first);
+            default:
+                break;
+        }
+
+        // Establish the Associations across various FRU's
+        for (const auto& [parentAssoc, childAssoc] :
+             associationsParser->associationsInfoMap)
+        {
+            if (node.entity_type == parentAssoc.entity_type &&
+                node.entity_instance_num == parentAssoc.entity_instance_num &&
+                node.entity_container_id == parentAssoc.entity_container_id)
+            {
+                // parent matches , so implement the child Associations on the
+                // parent dbus object path
+
+                // iterate over child associtons - as there can be mutiple
+                // entity,forward,reverse
+                setFRUAssociations(entity.first, childAssoc);
+                break;
+            }
+        }
+    }
+}
+
+void HostPDRHandler::deletePDRFromRepo(PDRRecordHandles&& recordHandles)
+{
+    for (auto& recordHandle : recordHandles)
+    {
+        pldm_delete_by_record_handle(repo, recordHandle, true);
+    }
 }
 
 } // namespace pldm

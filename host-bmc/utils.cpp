@@ -2,6 +2,7 @@
 
 #include "libpldm/entity.h"
 
+#include "common/utils.hpp"
 #include "utils.hpp"
 
 #include <iostream>
@@ -102,6 +103,20 @@ void addObjectPathEntityAssociations(
                 path /
                 fs::path{entityName +
                          std::to_string(node_entity.entity_instance_num)};
+            std::string entity_path = p.string();
+            if (oemPlatformHandler != nullptr)
+            {
+                oemPlatformHandler->upadteOemDbusPaths(entity_path);
+            }
+            try
+            {
+                pldm::utils::DBusHandler().getService(entity_path.c_str(),
+                                                      nullptr);
+            }
+            catch (const std::exception& e)
+            {
+                objPathMap[entity_path] = entity;
+            }
 
             for (size_t i = 1; i < ev.size(); i++)
             {
@@ -122,7 +137,14 @@ void addObjectPathEntityAssociations(
         {
             oemPlatformHandler->upadteOemDbusPaths(dbusPath);
         }
-        objPathMap[dbusPath] = entity;
+        try
+        {
+            pldm::utils::DBusHandler().getService(dbusPath.c_str(), nullptr);
+        }
+        catch (const std::exception& e)
+        {
+            objPathMap[dbusPath] = entity;
+        }
     }
 }
 
