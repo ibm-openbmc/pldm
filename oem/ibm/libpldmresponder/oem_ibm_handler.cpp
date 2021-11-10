@@ -536,7 +536,7 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
                                   ENTITY_INSTANCE_0,
                                   PLDM_OEM_IBM_FIRMWARE_UPDATE_STATE, repo);
     buildAllCodeUpdateEffecterPDR(this, PLDM_ENTITY_SYSTEM_CHASSIS,
-                                  ENTITY_INSTANCE_0,
+                                  ENTITY_INSTANCE_1,
                                   PLDM_OEM_IBM_SYSTEM_POWER_STATE, repo);
     std::vector<std::string> slotobjpaths = {
         "/xyz/openbmc_project/inventory/system/chassis/motherboard/pcieslot0",
