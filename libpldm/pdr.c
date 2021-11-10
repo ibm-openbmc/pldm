@@ -292,25 +292,22 @@ pldm_pdr_record *pldm_pdr_find_last_local_record(const pldm_pdr *repo)
 	return NULL;
 }
 
-uint32_t pldm_pdr_find_prev_record_handle(pldm_pdr *repo,
-					  uint32_t record_handle)
+bool pldm_pdr_find_prev_record_handle(pldm_pdr *repo, uint32_t record_handle,
+				      uint32_t *prev_record_handle)
 {
 
 	assert(repo != NULL);
 	pldm_pdr_record *curr = repo->first;
-	pldm_pdr_record *prev = NULL;
-	uint32_t prev_hdl = 0;
-	if (repo->first->record_handle == record_handle) {
-		return prev_hdl;
-	}
+	pldm_pdr_record *prev = repo->first;
 	while (curr != NULL) {
 		if (curr->record_handle == record_handle) {
-			prev_hdl = prev->record_handle;
+			*prev_record_handle = prev->record_handle;
+			return true;
 		}
 		prev = curr;
 		curr = curr->next;
 	}
-	return prev_hdl;
+	return false;
 }
 
 const pldm_pdr_record *
