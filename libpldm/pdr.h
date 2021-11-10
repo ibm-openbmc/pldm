@@ -139,11 +139,13 @@ pldm_pdr_record *pldm_pdr_find_last_local_record(const pldm_pdr *repo);
  *
  *  @param[in] repo - opaque pointer acting as a PDR repo handle
  *  @param[in] record_handle - record handle of input PDR record
+ *  @param[out] prev_record_handle - record handle of the previous
+ *                                   PDR
  *
- *  @return record handle of the previous record
+ *  @return true if record found, false otherwise
  */
-uint32_t pldm_pdr_find_prev_record_handle(pldm_pdr *repo,
-					  uint32_t record_handle);
+bool pldm_pdr_find_prev_record_handle(pldm_pdr *repo, uint32_t record_handle,
+				      uint32_t *prev_record_handle);
 
 /** @brief Get PDR record next to input PDR record
  *
