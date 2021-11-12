@@ -294,6 +294,16 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
             getService(dBusMap.objectPath.c_str(), dBusMap.interface.c_str());
         auto method = bus.new_method_call(
             service.c_str(), dBusMap.objectPath.c_str(), dbusProperties, "Set");
+        if (dBusMap.objectPath ==
+                "/xyz/openbmc_project/network/hypervisor/eth0/ipv4/addr0" ||
+            dBusMap.objectPath ==
+                "/xyz/openbmc_project/network/hypervisor/eth1/ipv4/addr0")
+        {
+            std::cout << " ,service :" << service.c_str()
+                      << " , interface : " << dBusMap.interface.c_str()
+                      << " , path : " << dBusMap.objectPath.c_str()
+                      << std::endl;
+        }
         method.append(dBusMap.interface.c_str(), dBusMap.propertyName.c_str(),
                       variant);
         bus.call_noreply(method);
@@ -307,6 +317,13 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
     else if (dBusMap.propertyType == "bool")
     {
         std::variant<bool> v = std::get<bool>(value);
+        if (dBusMap.objectPath ==
+                "/xyz/openbmc_project/network/hypervisor/eth0/ipv4/addr0" ||
+            dBusMap.objectPath ==
+                "/xyz/openbmc_project/network/hypervisor/eth1/ipv4/addr0")
+        {
+            std::cout << " value : " << std::get<bool>(value);
+        }
         setDbusValue(v);
     }
     else if (dBusMap.propertyType == "int16_t")

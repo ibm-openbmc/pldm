@@ -152,12 +152,17 @@ HostPDRHandler::HostPDRHandler(
                 auto propVal = std::get<std::string>(value);
                 if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
                 {
-                    // Delete all the remote terminus information
-                    for (const auto& terminusInfo : this->tlPDRInfo)
+
+                    for (auto it = this->tlPDRInfo.cbegin();
+                         it != this->tlPDRInfo.cend();)
                     {
-                        if (terminusInfo.first != TERMINUS_HANDLE)
+                        if (it->first != TERMINUS_HANDLE)
                         {
-                            this->tlPDRInfo.erase(terminusInfo.first);
+                            this->tlPDRInfo.erase(it++);
+                        }
+                        else
+                        {
+                            ++it;
                         }
                     }
 
