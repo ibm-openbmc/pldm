@@ -242,7 +242,7 @@ class Handler : public CmdHandler
             sdbusplus::bus::match::rules::interfacesAdded() +
                 sdbusplus::bus::match::rules::argNpath(0, dumpObjPath),
             [this, hostSockFd, hostEid, dbusImplReqester,
-             &handler](sdbusplus::message::message& msg) {
+             handler](sdbusplus::message::message& msg) {
                 std::map<
                     std::string,
                     std::map<std::string, std::variant<std::string, uint32_t>>>
@@ -285,7 +285,7 @@ class Handler : public CmdHandler
             sdbusplus::bus::match::rules::interfacesAdded() +
                 sdbusplus::bus::match::rules::argNpath(0, certObjPath),
             [this, hostSockFd, hostEid, dbusImplReqester,
-             &handler](sdbusplus::message::message& msg) {
+             handler](sdbusplus::message::message& msg) {
                 std::map<
                     std::string,
                     std::map<std::string, std::variant<std::string, uint32_t>>>
@@ -326,7 +326,7 @@ class Handler : public CmdHandler
             sdbusplus::bus::match::rules::propertiesChanged(codLicObjPath,
                                                             codLicInterface),
             [this, hostSockFd, hostEid, dbusImplReqester,
-             &handler](sdbusplus::message::message& msg) {
+             handler](sdbusplus::message::message& msg) {
                 sdbusplus::message::object_path path;
                 std::map<dbus::Property, pldm::utils::PropertyValue> props;
                 std::string iface;
