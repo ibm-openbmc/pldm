@@ -569,10 +569,8 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     buildAllCodeUpdateSensorPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
                                 ENTITY_INSTANCE_0,
                                 PLDM_OEM_IBM_BOOT_SIDE_RENAME, repo);
-
     buildAllNumericEffecterPDR(this, PLDM_ENTITY_PROC, ENTITY_INSTANCE_0,
                                PLDM_OEM_IBM_SBE_SEMANTIC_ID, repo, instanceMap);
-
     auto sensorId = findStateSensorId(
         repo.getPdr(), 0, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
         ENTITY_INSTANCE_0, 1, PLDM_OEM_IBM_VERIFICATION_STATE);

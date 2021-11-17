@@ -70,7 +70,10 @@ int CodeUpdate::setCurrentBootSide(const std::string& currSide)
 
 int CodeUpdate::setNextBootSide(const std::string& nextSide)
 {
+    pldm_boot_side_data pldmBootSideData = readBootSideFile();
+    currBootSide = pldmBootSideData.current_boot_side;
     nextBootSide = nextSide;
+    pldmBootSideData.next_boot_side = nextSide;
     std::string objPath{};
     if (nextBootSide == currBootSide)
     {
@@ -100,6 +103,7 @@ int CodeUpdate::setNextBootSide(const std::string& nextSide)
                   << " ERROR=" << e.what() << "\n";
         return PLDM_ERROR;
     }
+    writeBootSideFile(pldmBootSideData);
     return PLDM_SUCCESS;
 }
 
@@ -189,7 +193,10 @@ void CodeUpdate::setVersions()
         if (!fs::exists(bootSideDirPath))
         {
             pldm_boot_side_data pldmBootSideData;
-            pldmBootSideData.current_boot_side = "Temp";
+            std::string nextBootSideBiosValue =
+                getBootSideBiosAttr("fw_boot_side");
+            pldmBootSideData.current_boot_side = nextBootSideBiosValue;
+            pldmBootSideData.next_boot_side = nextBootSideBiosValue;
             pldmBootSideData.running_version_object = runningVersion.c_str();
 
             writeBootSideFile(pldmBootSideData);
@@ -201,6 +208,7 @@ void CodeUpdate::setVersions()
             if (pldmBootSideData.running_version_object != runningVersion)
             {
                 pldmBootSideData.current_boot_side = "Temp" ? "Perm" : "Temp";
+                pldmBootSideData.next_boot_side = "Temp" ? "Perm" : "Temp";
                 writeBootSideFile(pldmBootSideData);
                 setBootSideBiosAttr(pldmBootSideData.current_boot_side);
             }
@@ -374,6 +382,7 @@ void CodeUpdate::writeBootSideFile(const pldm_boot_side_data& pldmBootSideData)
     if (writeFile)
     {
         writeFile << pldmBootSideData.current_boot_side << std::endl;
+        writeFile << pldmBootSideData.next_boot_side << std::endl;
         writeFile << pldmBootSideData.running_version_object << std::endl;
 
         writeFile.close();
@@ -390,6 +399,7 @@ pldm_boot_side_data CodeUpdate::readBootSideFile()
     if (readFile)
     {
         readFile >> pldmBootSideDataRead.current_boot_side;
+        readFile >> pldmBootSideDataRead.next_boot_side;
         readFile >> pldmBootSideDataRead.running_version_object;
 
         readFile.close();
@@ -720,6 +730,38 @@ int CodeUpdate::assembleCodeUpdateImage()
     return PLDM_SUCCESS;
 }
 
+std::string getBootSideBiosAttr(const std::string& bootSideAttr)
+{
+    constexpr auto biosConfigPath = "/xyz/openbmc_project/bios_config/manager";
+    constexpr auto biosConfigIntf = "xyz.openbmc_project.BIOSConfig.Manager";
+
+    std::string var1;
+    std::variant<std::string> var2;
+    std::variant<std::string> var3;
+
+    auto bus = sdbusplus::bus::new_default();
+    try
+    {
+        auto service = pldm::utils::DBusHandler().getService(biosConfigPath,
+                                                             biosConfigIntf);
+        auto method = bus.new_method_call(
+            service.c_str(), biosConfigPath,
+            "xyz.openbmc_project.BIOSConfig.Manager", "GetAttribute");
+        method.append(bootSideAttr);
+        auto reply = bus.call(method);
+        reply.read(var1, var2, var3);
+    }
+    catch (const sdbusplus::exception::SdBusError& e)
+    {
+        std::cout << "Error getting the bios attribute"
+                  << "ERROR=" << e.what() << "ATTRIBUTE=" << bootSideAttr
+                  << std::endl;
+        return {};
+    }
+
+    return std::get<std::string>(var2);
+}
+
 void setBootSideBiosAttr(const std::string& bootSide)
 {
     static constexpr auto SYSTEMD_PROPERTY_INTERFACE =
@@ -729,7 +771,7 @@ void setBootSideBiosAttr(const std::string& bootSide)
 
     constexpr auto biosConfigPath = "/xyz/openbmc_project/bios_config/manager";
     constexpr auto biosConfigIntf = "xyz.openbmc_project.BIOSConfig.Manager";
-    constexpr auto dbusAttrName = "hb_fw_boot_side";
+    constexpr auto dbusAttrName = "fw_boot_side_current";
     constexpr auto dbusAttrType =
         "xyz.openbmc_project.BIOSConfig.Manager.AttributeType.Enumeration";
 
