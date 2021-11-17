@@ -814,7 +814,7 @@ void HostPDRHandler::_setHostSensorState()
     {
         std::cerr << "Failed to get State sensor PDR" << std::endl;
         pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.pldm.InternalFailure");
+            "xyz.openbmc_project.bmc.pldm.GetStateSensorPDRFail");
         return;
     }
 
@@ -848,7 +848,7 @@ void HostPDRHandler::_setHostSensorState()
                              "encode_get_state_sensor_readings_req, rc = "
                           << rc << std::endl;
                 pldm::utils::reportError(
-                    "xyz.openbmc_project.bmc.pldm.InternalFailure");
+                    "xyz.openbmc_project.bmc.pldm.EncodeStateSensorFail");
                 return;
             }
 
@@ -879,7 +879,7 @@ void HostPDRHandler::_setHostSensorState()
                               << " cc=" << static_cast<unsigned>(completionCode)
                               << std::endl;
                     pldm::utils::reportError(
-                        "xyz.openbmc_project.bmc.pldm.InternalFailure");
+                        "xyz.openbmc_project.bmc.pldm.DecodeStateSensorFail");
                 }
 
                 uint8_t eventState;

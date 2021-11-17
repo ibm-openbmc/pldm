@@ -220,7 +220,7 @@ void Handler::processSetEventReceiver(
                       << " rc=" << rc << "cc=" << (uint8_t)completionCode
                       << "\n";
             pldm::utils::reportError(
-                "xyz.openbmc_project.bmc.pldm.InternalFailure");
+                "xyz.openbmc_project.bmc.pldm.DecodeSetEventReceiverFail");
         }
     };
     rc = handler->registerRequest(
