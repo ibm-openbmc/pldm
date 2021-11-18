@@ -77,8 +77,9 @@ class DbusToFileHandler
                                     const uint16_t type);
 
     /** @brief report failure that a resource dump has failed
+     *  @param[in] str - string of function that calls resource dump failure
      */
-    void reportResourceDumpFailure();
+    void reportResourceDumpFailure(std::string str);
 
     /** @brief fd of MCTP communications socket */
     int mctp_fd;
