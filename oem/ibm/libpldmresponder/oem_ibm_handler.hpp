@@ -473,6 +473,12 @@ class Handler : public oem_platform::Handler
                              const std::string& dbusInterface,
                              const pldm::utils::PropertyValue& value);
 
+    /** @brief To handle the boot types bios attributes at power on*/
+    void handleBootTypesAtPowerOn();
+
+    /** @brief To handle the boot types bios attributes at shutdown*/
+    void handleBootTypesAtChassisOff();
+
     ~Handler() = default;
 
     pldm::responder::CodeUpdate* codeUpdate; //!< pointer to CodeUpdate object

@@ -133,7 +133,6 @@ using DBusInterfaceAdded = std::vector<
     std::pair<pldm::dbus::Interface,
               std::vector<std::pair<pldm::dbus::Property,
                                     std::variant<pldm::dbus::Property>>>>>;
-
 using ObjectPath = std::string;
 using EntityName = std::string;
 using Entities = std::vector<pldm_entity_node*>;
@@ -149,6 +148,7 @@ using GetSubTreePathsResponse = std::vector<std::string>;
 using PropertyMap = std::map<std::string, PropertyValue>;
 using InterfaceMap = std::map<std::string, PropertyMap>;
 using ObjectValueTree = std::map<sdbusplus::message::object_path, InterfaceMap>;
+using BiosAttributeList = std::vector<std::pair<std::string, std::string>>;
 
 /**
  * @brief The interface for DBusHandler
@@ -546,5 +546,21 @@ std::vector<pldm::pdr::EffecterID> findEffecterIds(const pldm_pdr* pdrRepo,
                                                    uint16_t entityInstance,
                                                    uint16_t containerId);
 
+/** @brief Method to get the value from a bios attribute
+ *
+ *  @param[in] dbusAttrName - the bios attribute name from
+ *             which the value must be retrieved
+ *
+ *  @return the attribute value
+ */
+std::string getBiosAttrValue(const std::string& dbusAttrName);
+
+/** @brief Method to set the specified bios attribute with
+ *         specified value
+ *
+ *  @param[in] BiosAttributeList - the list of bios attribute and values
+ *             to be set
+ */
+void setBiosAttr(const BiosAttributeList& biosAttrList);
 } // namespace utils
 } // namespace pldm

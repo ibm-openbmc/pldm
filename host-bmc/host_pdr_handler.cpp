@@ -119,17 +119,18 @@ HostPDRHandler::HostPDRHandler(
         pldm::utils::DBusHandler::getBus(),
         propertiesChanged("/xyz/openbmc_project/state/host0",
                           "xyz.openbmc_project.State.Host"),
-        [this, repo, entityTree, bmcEntityTree](sdbusplus::message_t& msg) {
-        DbusChangedProps props{};
-        std::string intf;
-        msg.read(intf, props);
-        const auto itr = props.find("CurrentHostState");
-        if (itr != props.end())
-        {
-            pldm::utils::PropertyValue value = itr->second;
-            auto propVal = std::get<std::string>(value);
-            if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
+        [this, repo, entityTree, bmcEntityTree,
+         oemPlatformHandler](sdbusplus::message_t& msg) {
+            DbusChangedProps props{};
+            std::string intf;
+            msg.read(intf, props);
+            const auto itr = props.find("CurrentHostState");
+            if (itr != props.end())
             {
+                pldm::utils::PropertyValue value = itr->second;
+                auto propVal = std::get<std::string>(value);
+                if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
+                {
                 // Delete all the remote terminus information
                 std::erase_if(tlPDRInfo, [](const auto& item) {
                     auto const& [key, value] = item;
@@ -160,6 +161,14 @@ HostPDRHandler::HostPDRHandler(
                 {
                     pldm_entity obj{};
                     this->objPathMap[element.first] = obj;
+                }
+                else if (propVal ==
+                         "xyz.openbmc_project.State.Host.HostState.Running")
+                {
+                    if (oemPlatformHandler != nullptr)
+                    {
+                        oemPlatformHandler->handleBootTypesAtPowerOn();
+                    }
                 }
             }
             else if (propVal ==
