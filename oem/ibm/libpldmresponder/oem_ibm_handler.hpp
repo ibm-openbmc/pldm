@@ -47,6 +47,8 @@ using BIOSTableObj =
     std::tuple<AttributeType, ReadonlyStatus, DisplayName, Description,
                MenuPath, CurrentValue, DefaultValue, Option>;
 using BaseBIOSTable = std::map<AttributeName, BIOSTableObj>;
+using PendingObj = std::tuple<AttributeType, CurrentValue>;
+using PendingAttributes = std::map<AttributeName, PendingObj>;
 
 class Handler : public oem_fileio::Handler
 {
@@ -78,8 +80,6 @@ class Handler : public oem_fileio::Handler
 
 namespace oem_ibm_platform
 {
-using PendingObj = std::tuple<AttributeType, CurrentValue>;
-using PendingAttributes = std::map<AttributeName, PendingObj>;
 constexpr uint16_t ENTITY_INSTANCE_0 = 0;
 constexpr uint16_t ENTITY_INSTANCE_1 = 1;
 
@@ -474,6 +474,12 @@ class Handler : public oem_platform::Handler
                              const std::string& dbusMethod,
                              const std::string& dbusInterface,
                              const pldm::utils::PropertyValue& value);
+
+    /** @brief To handle the boot types bios attributes at power on*/
+    void handleBootTypesAtPowerOn();
+
+    /** @brief To handle the boot types bios attributes at shutdown*/
+    void handleBootTypesAtChassisOff();
 
     ~Handler() = default;
 
