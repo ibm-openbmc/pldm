@@ -306,6 +306,12 @@ class Handler : public oem_platform::Handler
                              const char* dbusMethod, const char* dbusInterface,
                              const PropertyValue& value);
 
+    /** @brief To handle the boot types bios attributes at power on*/
+    void handleBootTypesAtPowerOn();
+
+    /** @brief To handle the boot types bios attributes at shutdown*/
+    void handleBootTypesAtChassisOff();
+
     ~Handler() = default;
 
     pldm::responder::CodeUpdate* codeUpdate; //!< pointer to CodeUpdate object
