@@ -100,6 +100,12 @@ class Handler : public oem_fru::Handler
      *  @param[in] objPath - the object path of the fru
      */
     void setFruPresence(const std::string& objPath);
+
+    /** @brief setting firmware UAK
+     *
+     *  @param[in] data - value to be set
+     */
+    void setFirmwareUAK(std::vector<uint8_t> data);
 };
 
 } // namespace oem_ibm_fru
