@@ -102,12 +102,16 @@ class FruImpl
             "xyz.openbmc_project.Inventory.Item.PowerSupply";
         static constexpr auto pcieAdapterInterface =
             "xyz.openbmc_project.Inventory.Item.PCIeDevice";
+        static constexpr auto panelInterface =
+            "xyz.openbmc_project.Inventory.Item.Panel";
         subscribeFruPresence(inventoryObjPath, fanInterface, itemInterface,
                              fanHotplugMatch);
         subscribeFruPresence(inventoryObjPath, psuInterface, itemInterface,
                              psuHotplugMatch);
         subscribeFruPresence(inventoryObjPath, pcieAdapterInterface,
                              itemInterface, pcieHotplugMatch);
+        subscribeFruPresence(inventoryObjPath, panelInterface, itemInterface,
+                             panelHotplugMatch);
     }
 
     /** @brief Total length of the FRU table in bytes, this excludes the pad
@@ -340,6 +344,8 @@ class FruImpl
     std::vector<std::unique_ptr<sdbusplus::bus::match::match>> fanHotplugMatch;
     std::vector<std::unique_ptr<sdbusplus::bus::match::match>> psuHotplugMatch;
     std::vector<std::unique_ptr<sdbusplus::bus::match::match>> pcieHotplugMatch;
+    std::vector<std::unique_ptr<sdbusplus::bus::match::match>>
+        panelHotplugMatch;
     dbus::ObjectValueTree objects;
     std::string statePDRJsonsDir;
     uint16_t startStateSensorId;
