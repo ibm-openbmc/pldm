@@ -166,6 +166,9 @@ HostPDRHandler::HostPDRHandler(
                         }
                     }
 
+                    // when the host is powered off, set the present
+                    // state of all the dbus objects to false
+                    this->setPresenceFrus();
                     pldm_pdr_remove_remote_pdrs(repo);
                     pldm_entity_association_tree_destroy_root(entityTree);
                     pldm_entity_association_tree_copy_root(bmcEntityTree,
@@ -226,6 +229,14 @@ HostPDRHandler::HostPDRHandler(
                 }
             }
         });
+}
+void HostPDRHandler::setPresenceFrus()
+{
+    // iterate over all dbus objects
+    for (const auto& [path, entityId] : objPathMap)
+    {
+        CustomDBus::getCustomDBus().updateItemPresentStatus(path, false);
+    }
 }
 
 void HostPDRHandler::fetchPDR(PDRRecordHandles&& recordHandles, bool isModified)
@@ -1189,7 +1200,7 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
         return;
     }
 
-    state = PLDM_OPERATIONAL_ERROR;
+    state = PLDM_SENSOR_UNKNOWN;
     auto getStateSensorReadingsResponseHandler = [this, path, type, instance,
                                                   containerId, &state,
                                                   stateSetId](
@@ -1221,11 +1232,8 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
 
         for (const auto& filed : stateField)
         {
-            if (filed.present_state == PLDM_SENSOR_NORMAL)
-            {
-                state = PLDM_OPERATIONAL_NORMAL;
-                break;
-            }
+            state = filed.present_state;
+            break;
         }
 
         if (stateSetId == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS ||
@@ -1422,34 +1430,7 @@ bool HostPDRHandler::getValidity(const pldm::pdr::TerminusID& tid)
 
 void HostPDRHandler::setPresentPropertyStatus(const std::string& path)
 {
-    CustomDBus::getCustomDBus().updateItemPresentStatus(path);
-}
-
-void HostPDRHandler::setFRUAssociations(
-    const std::string& parentPath,
-    const std::vector<std::tuple<pldm::host_associations::entity, std::string,
-                                 std::string>>& child)
-{
-    std::vector<std::tuple<std::string, std::string, std::string>> associations;
-    for (const auto& c : child)
-    {
-        pldm::host_associations::entity expectedchild = std::get<0>(c);
-        for (const auto& [childPath, node] : objPathMap)
-        {
-            pldm_entity childentity = pldm_entity_extract(node);
-            if (childentity.entity_type == expectedchild.entity_type &&
-                childentity.entity_instance_num ==
-                    expectedchild.entity_instance_num &&
-                childentity.entity_container_id ==
-                    expectedchild.entity_container_id)
-            {
-                auto associationTuple =
-                    std::make_tuple(std::get<1>(c), std::get<2>(c), childPath);
-                associations.push_back(associationTuple);
-            }
-        }
-    }
-    CustomDBus::getCustomDBus().setAssociations(parentPath, associations);
+    CustomDBus::getCustomDBus().updateItemPresentStatus(path, true);
 }
 
 void HostPDRHandler::createDbusObjects(const PDRList& fruRecordSetPDRs)
@@ -1508,23 +1489,67 @@ void HostPDRHandler::createDbusObjects(const PDRList& fruRecordSetPDRs)
             default:
                 break;
         }
-
-        // Establish the Associations across various FRU's
-        for (const auto& [parentAssoc, childAssoc] :
-             associationsParser->associationsInfoMap)
+    }
+    this->setFRUDynamicAssociations();
+}
+void HostPDRHandler::setFRUDynamicAssociations()
+{
+    for (const auto& [leftPath, leftElement] : objPathMap)
+    {
+        // for each path, compare it with rest of the paths in the
+        // map
+        pldm_entity leftEntity = pldm_entity_extract(leftElement);
+        uint16_t leftEntityType = leftEntity.entity_type;
+        for (const auto& [rightPath, rightElement] : objPathMap)
         {
-            if (node.entity_type == parentAssoc.entity_type &&
-                node.entity_instance_num == parentAssoc.entity_instance_num &&
-                node.entity_container_id == parentAssoc.entity_container_id)
+            pldm_entity rightEntity = pldm_entity_extract(rightElement);
+            uint16_t rightEntityType = rightEntity.entity_type;
+            // if leftpath is same as rightPath
+            // then both dbus objects are same, so
+            // no need to create any associations
+            if (leftPath == rightPath)
             {
-                // parent matches , so implement the child Associations on the
-                // parent dbus object path
-
-                // iterate over child associtons - as there can be mutiple
-                // entity,forward,reverse
-                setFRUAssociations(entity.first, childAssoc);
-                break;
+                continue;
             }
+            else if ((rightPath.string().find(leftPath) != std::string::npos) ||
+                     (leftPath.string().find(rightPath) != std::string::npos))
+            {
+                // this means left path dbus object is parent of the
+                // right path dbus object, something like this
+                // leftpath = /xyz/openbmc_project/system/chassis15363
+                // rightpath = /xyz/openbmc_project/system/chassis15363/fan1
+                auto key = std::make_pair(leftEntityType, rightEntityType);
+                if (associationsParser->associationsInfoMap.contains(key))
+                {
+                    auto value = associationsParser->associationsInfoMap[key];
+                    // we have some associations defined for this parent type &
+                    // child type
+                    std::vector<
+                        std::tuple<std::string, std::string, std::string>>
+                        associations{{value.first, value.second, rightPath}};
+                    CustomDBus::getCustomDBus().setAssociations(leftPath,
+                                                                associations);
+                }
+            }
+        }
+    }
+}
+
+void HostPDRHandler::setRecordPresent(uint32_t recordHandle)
+{
+    pldm_entity recordEntity =
+        pldm_get_entity_from_record_handle(repo, recordHandle);
+    for (const auto& [path, entity_node] : objPathMap)
+    {
+        pldm_entity dbusEntity = pldm_entity_extract(entity_node);
+        if (dbusEntity.entity_type == recordEntity.entity_type &&
+            dbusEntity.entity_instance_num ==
+                recordEntity.entity_instance_num &&
+            dbusEntity.entity_container_id == recordEntity.entity_container_id)
+        {
+            // if the record has the same entity id, mark that dbus object as
+            // not present
+            CustomDBus::getCustomDBus().updateItemPresentStatus(path, false);
         }
     }
 }
@@ -1533,6 +1558,7 @@ void HostPDRHandler::deletePDRFromRepo(PDRRecordHandles&& recordHandles)
 {
     for (auto& recordHandle : recordHandles)
     {
+        this->setRecordPresent(recordHandle);
         pldm_delete_by_record_handle(repo, recordHandle, true);
     }
 }

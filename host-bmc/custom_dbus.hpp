@@ -188,8 +188,9 @@ class CustomDBus
 
     /** @brief Set the Inventory Item property
      *  @param[in] path - The object path
+     *  @param[in] bool - the presence of fru
      */
-    void updateItemPresentStatus(const std::string& path);
+    void updateItemPresentStatus(const std::string& path, bool isPresent);
 
     /** @brief Implement CpuCore Interface
      *  @param[in] path - The object path
