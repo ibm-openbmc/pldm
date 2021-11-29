@@ -433,6 +433,64 @@ TEST(PDRAccess, testFindByType)
     pldm_pdr_destroy(repo);
 }
 
+TEST(PDRAccess, getPLDMEntityfromPDR)
+{
+    auto repo = pldm_pdr_init();
+
+    // Test FRU Record set PDR
+    auto handle = pldm_pdr_add_fru_record_set(repo, 1, 10, 1, 0, 100, 0);
+    auto entity = pldm_get_entity_from_record_handle(repo, handle);
+    EXPECT_EQ(entity.entity_type, htole16(1));
+    EXPECT_EQ(entity.entity_instance_num, htole16(0));
+    EXPECT_EQ(entity.entity_container_id, htole16(100));
+
+    // Test State Effecter PDR
+    std::array<uint8_t, 29> data{212, 1, 0,   0, 1,  11, 0, 0, 19, 0,
+                                 1,   0, 196, 0, 64, 0,  1, 0, 2,  0,
+                                 0,   0, 0,   0, 1,  10, 0, 1, 6};
+    handle = pldm_pdr_add(repo, data.data(), data.size(), 0, false, 1);
+    entity = pldm_get_entity_from_record_handle(repo, handle);
+    EXPECT_EQ(entity.entity_type, htole16(64));
+    EXPECT_EQ(entity.entity_instance_num, htole16(1));
+    EXPECT_EQ(entity.entity_container_id, htole16(2));
+
+    // Test State Sensor PDR
+    std::array<uint8_t, 27> data2{10, 1, 0, 0,   1, 4,   0, 0, 17,
+                                  0,  1, 0, 199, 0, 120, 0, 4, 0,
+                                  5,  0, 0, 0,   1, 10,  0, 1, 6};
+    handle = pldm_pdr_add(repo, data2.data(), data2.size(), 0, false, 1);
+    entity = pldm_get_entity_from_record_handle(repo, handle);
+    EXPECT_EQ(entity.entity_type, htole16(120));
+    EXPECT_EQ(entity.entity_instance_num, htole16(4));
+    EXPECT_EQ(entity.entity_container_id, htole16(5));
+
+    // Test Numeric Effecter PDR
+    std::array<uint8_t, 27> data3{10, 1, 0, 0, 1, 9, 0, 0, 17, 0,  1, 0, 199, 0,
+                                  6,  0, 3, 0, 2, 0, 0, 0, 1,  10, 0, 1, 6};
+    handle = pldm_pdr_add(repo, data3.data(), data3.size(), 0, false, 1);
+    entity = pldm_get_entity_from_record_handle(repo, handle);
+    EXPECT_EQ(entity.entity_type, htole16(6));
+    EXPECT_EQ(entity.entity_instance_num, htole16(3));
+    EXPECT_EQ(entity.entity_container_id, htole16(2));
+
+    // Test Non Supported PDR types
+    std::array<uint8_t, 18> notSupportedtypes{
+        1, 2, 3, 5, 6, 7, 8, 10, 12, 13, 14, 15, 16, 17, 18, 19, 126, 127};
+    for (const auto& type : notSupportedtypes)
+    {
+        std::array<uint8_t, sizeof(pldm_pdr_hdr)> data4{};
+        pldm_pdr_hdr* hdr = reinterpret_cast<pldm_pdr_hdr*>(data4.data());
+        hdr->type = type;
+        auto handle =
+            pldm_pdr_add(repo, data4.data(), data4.size(), 0, false, 1);
+        entity = pldm_get_entity_from_record_handle(repo, handle);
+        EXPECT_EQ(entity.entity_type, htole16(0));
+        EXPECT_EQ(entity.entity_instance_num, htole16(0));
+        EXPECT_EQ(entity.entity_container_id, htole16(0));
+    }
+    pldm_pdr_destroy(repo);
+}
+
 TEST(PDRUpdate, testAddFruRecordSet)
 {
     auto repo = pldm_pdr_init();

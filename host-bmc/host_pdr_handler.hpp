@@ -181,6 +181,15 @@ class HostPDRHandler
     TLPDRMap tlPDRInfo;
 
   private:
+    /** @brief set the FRU presence based on the host off signal
+     */
+    void setPresenceFrus();
+
+    /** @brief set the presence of the fru from record handle
+     *  @param[in] recorHandle - record handle of the PDR
+     */
+    void setRecordPresent(uint32_t recorHandle);
+
     /** @brief deferred function to fetch PDR from Host, scheduled to work on
      *  the event loop. The PDR exchg with the host is async.
      *  @param[in] source - sdeventplus event source
@@ -230,11 +239,8 @@ class HostPDRHandler
         const PDRList& fruRecordSetPDRs,
         const std::vector<responder::pdr_utils::FruRecordDataFormat>&
             fruRecordData);
+    void setFRUDynamicAssociations();
 
-    void setFRUAssociations(
-        const std::string& parentPath,
-        const std::vector<std::tuple<pldm::host_associations::entity,
-                                     std::string, std::string>>& child);
     /** @brief Get FRU record table by host
      *
      *  @return

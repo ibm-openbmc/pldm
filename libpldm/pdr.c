@@ -593,6 +593,68 @@ void pldm_delete_by_record_handle(pldm_pdr *repo, uint32_t record_handle,
 	}
 }
 
+pldm_entity pldm_get_entity_from_record_handle(const pldm_pdr *repo,
+					       uint32_t record_handle)
+{
+	assert(repo != NULL);
+	pldm_entity element = {0, 0, 0};
+
+	pldm_pdr_record *record = repo->first;
+
+	while (record != NULL) {
+		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
+		if (hdr->record_handle == record_handle) {
+			switch (hdr->type) {
+			case (PLDM_PDR_FRU_RECORD_SET): {
+				struct pldm_pdr_fru_record_set *pdr =
+				    (struct pldm_pdr_fru_record_set
+					 *)((uint8_t *)record->data +
+					    sizeof(struct pldm_pdr_hdr));
+				element.entity_type = pdr->entity_type;
+				element.entity_instance_num =
+				    pdr->entity_instance;
+				element.entity_container_id = pdr->container_id;
+				return element;
+			}
+			case (PLDM_STATE_SENSOR_PDR): {
+				struct pldm_state_sensor_pdr *pdr =
+				    (struct pldm_state_sensor_pdr
+					 *)((uint8_t *)record->data);
+				element.entity_type = pdr->entity_type;
+				element.entity_instance_num =
+				    pdr->entity_instance;
+				element.entity_container_id = pdr->container_id;
+				return element;
+			}
+			case (PLDM_STATE_EFFECTER_PDR): {
+				struct pldm_state_effecter_pdr *pdr =
+				    (struct pldm_state_effecter_pdr
+					 *)((uint8_t *)record->data);
+				element.entity_type = pdr->entity_type;
+				element.entity_instance_num =
+				    pdr->entity_instance;
+				element.entity_container_id = pdr->container_id;
+				return element;
+			}
+			case (PLDM_NUMERIC_EFFECTER_PDR): {
+				struct pldm_numeric_effecter_value_pdr *pdr =
+				    (struct pldm_numeric_effecter_value_pdr
+					 *)((uint8_t *)record->data);
+				element.entity_type = pdr->entity_type;
+				element.entity_instance_num =
+				    pdr->entity_instance;
+				element.entity_container_id = pdr->container_id;
+				return element;
+			}
+			default:
+				break;
+			}
+		}
+		record = record->next;
+	}
+	return element;
+}
+
 uint16_t pldm_find_container_id(const pldm_pdr *repo, uint16_t entityType,
 				uint16_t entityInstance)
 {
