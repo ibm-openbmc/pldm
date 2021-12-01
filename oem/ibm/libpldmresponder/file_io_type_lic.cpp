@@ -153,7 +153,10 @@ int LicenseHandler::read(uint32_t offset, uint32_t& length, Response& response,
     return PLDM_SUCCESS;
 }
 
-int LicenseHandler::fileAckWithMetaData(uint32_t metaDataValue)
+int LicenseHandler::fileAckWithMetaData(uint32_t metaDataValue1,
+                                        uint32_t /*metaDataValue2*/,
+                                        uint32_t /*metaDataValue3*/,
+                                        uint32_t /*metaDataValue4*/)
 {
     DBusMapping dbusMapping;
     dbusMapping.objectPath = "/com/ibm/license";
@@ -161,7 +164,7 @@ int LicenseHandler::fileAckWithMetaData(uint32_t metaDataValue)
     dbusMapping.propertyName = "LicenseActivationStatus";
     dbusMapping.propertyType = "string";
 
-    Status status = static_cast<Status>(metaDataValue);
+    Status status = static_cast<Status>(metaDataValue1);
 
     if (status == Status::InvalidLicense)
     {

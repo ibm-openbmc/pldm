@@ -930,7 +930,8 @@ Response Handler::fileAckWithMetaData(const pldm_msg* request,
         return CmdHandler::ccOnlyResponse(request, PLDM_INVALID_FILE_TYPE);
     }
 
-    rc = handler->fileAckWithMetaData(fileMetaData1);
+    rc = handler->fileAckWithMetaData(fileMetaData1, fileMetaData2,
+                                      fileMetaData3, fileMetaData4);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
     encode_file_ack_with_meta_data_resp(request->hdr.instance_id, rc,
                                         responsePtr);
