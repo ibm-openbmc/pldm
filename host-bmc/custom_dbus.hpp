@@ -18,6 +18,7 @@
 #include <xyz/openbmc_project/Inventory/Item/CpuCore/server.hpp>
 #include <xyz/openbmc_project/Inventory/Item/FabricAdapter/server.hpp>
 #include <xyz/openbmc_project/Inventory/Item/Fan/server.hpp>
+#include <xyz/openbmc_project/Inventory/Item/Global/server.hpp>
 #include <xyz/openbmc_project/Inventory/Item/PCIeSlot/server.hpp>
 #include <xyz/openbmc_project/Inventory/Item/PowerSupply/server.hpp>
 #include <xyz/openbmc_project/Inventory/Item/Vrm/server.hpp>
@@ -74,6 +75,8 @@ using ItemFabricAdapter = sdbusplus::server::object::object<
     sdbusplus::xyz::openbmc_project::Inventory::Item::server::FabricAdapter>;
 using ItemBoard = sdbusplus::server::object::object<
     sdbusplus::xyz::openbmc_project::Inventory::Item::server::Board>;
+using ItemGlobal = sdbusplus::server::object::object<
+    sdbusplus::xyz::openbmc_project::Inventory::Item::server::Global>;
 
 using LicIntf = sdbusplus::server::object::object<
     sdbusplus::com::ibm::License::Entry::server::LicenseEntry>;
@@ -224,6 +227,8 @@ class CustomDBus
     void implementFabricAdapter(const std::string& path);
 
     void implementBoard(const std::string& path);
+
+    void implementGlobalInterface(const std::string& path);
     /**
      * @brief Implement the xyz.openbmc_project.Object.Enable interface
      *
@@ -338,6 +343,7 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<ItemFabricAdapter>>
         fabricAdapter;
     std::unordered_map<ObjectPath, std::unique_ptr<ItemBoard>> board;
+    std::unordered_map<ObjectPath, std::unique_ptr<ItemGlobal>> global;
 };
 
 } // namespace dbus

@@ -186,6 +186,16 @@ void CustomDBus::implementObjectEnableIface(const std::string& path)
     }
 }
 
+void CustomDBus::implementGlobalInterface(const std::string& path)
+{
+    if (global.find(path) == global.end())
+    {
+        global.emplace(path,
+                       std::make_unique<ItemGlobal>(
+                           pldm::utils::DBusHandler::getBus(), path.c_str()));
+    }
+}
+
 void CustomDBus::implementLicInterfaces(
     const std::string& path, const uint32_t& authdevno, const std::string& name,
     const std::string& serialno, const uint64_t& exptime,
