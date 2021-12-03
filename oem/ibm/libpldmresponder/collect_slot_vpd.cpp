@@ -33,7 +33,6 @@ void SlotHandler::enableSlot(uint16_t effecterId,
                              uint8_t stateFileValue)
 
 {
-    std::cerr << (unsigned)effecterId << std::endl;
     const pldm_entity entity = getEntityIDfromEffecterID(effecterId);
 
     for (const auto& [key, value] : fruAssociationMap)
@@ -42,9 +41,6 @@ void SlotHandler::enableSlot(uint16_t effecterId,
             entity.entity_type == value.entity_type &&
             entity.entity_container_id == value.entity_container_id)
         {
-            std::cerr << key << std::endl;
-            std::cerr << (unsigned)value.entity_type << std::endl;
-            std::cerr << (unsigned)value.entity_instance_num << std::endl;
             this->current_on_going_slot_entity.entity_type = value.entity_type;
             this->current_on_going_slot_entity.entity_instance_num =
                 value.entity_instance_num;
@@ -145,8 +141,6 @@ void SlotHandler::createPresenceMatch(const std::string& adapterObjectPath,
                                       uint8_t stateFieldValue)
 {
 
-    std::cerr << "Create presence match for present property under"
-              << adapterObjectPath << std::endl;
     fruPresenceMatch = std::make_unique<sdbusplus::bus::match::match>(
         pldm::utils::DBusHandler::getBus(),
         propertiesChanged(adapterObjectPath,
@@ -292,7 +286,6 @@ void SlotHandler::sendStateSensorEvent(
 
 bool SlotHandler::fetchSensorStateFromDbus(const std::string& adapterObjectPath)
 {
-    std::cerr << "fetch sensor state from dbus" << std::endl;
 
     std::variant<bool> presentProperty{};
     auto& bus = pldm::utils::DBusHandler::getBus();

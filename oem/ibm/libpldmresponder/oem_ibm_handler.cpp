@@ -588,16 +588,6 @@ void pldm::responder::oem_ibm_platform::Handler::setPlatformHandler(
 int pldm::responder::oem_ibm_platform::Handler::sendEventToHost(
     std::vector<uint8_t>& requestMsg, uint8_t instanceId)
 {
-    if (requestMsg.size())
-    {
-        std::ostringstream tempStream;
-        for (int byte : requestMsg)
-        {
-            tempStream << std::setfill('0') << std::setw(2) << std::hex << byte
-                       << " ";
-        }
-        std::cout << tempStream.str() << std::endl;
-    }
     auto oemPlatformEventMessageResponseHandler =
         [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
             uint8_t completionCode{};
