@@ -1457,6 +1457,8 @@ void HostPDRHandler::createDbusObjects(const PDRList& fruRecordSetPDRs)
             case PLDM_ENTITY_SYSTEM_CHASSIS:
                 CustomDBus::getCustomDBus().implementChassisInterface(
                     entity.first);
+                CustomDBus::getCustomDBus().implementGlobalInterface(
+                    entity.first);
                 break;
             case PLDM_ENTITY_POWER_SUPPLY:
                 CustomDBus::getCustomDBus().implementPowerSupplyInterface(
