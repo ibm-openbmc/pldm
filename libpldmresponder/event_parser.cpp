@@ -49,13 +49,17 @@ StateSensorHandler::StateSensorHandler(const std::string& dirPath)
         {
             StateSensorEntry stateSensorEntry{};
             stateSensorEntry.containerId =
-                static_cast<uint16_t>(entry.value("containerID", 0));
+                static_cast<uint16_t>(entry.value("containerID", 0xFFFF));
             stateSensorEntry.entityType =
                 static_cast<uint16_t>(entry.value("entityType", 0));
             stateSensorEntry.entityInstance =
                 static_cast<uint16_t>(entry.value("entityInstance", 0));
             stateSensorEntry.sensorOffset =
                 static_cast<uint8_t>(entry.value("sensorOffset", 0));
+
+            // container id is not found in the json
+            stateSensorEntry.skipContainerCheck =
+                (stateSensorEntry.containerId == 0xFFFF) ? true : false;
 
             pldm::utils::DBusMapping dbusInfo{};
 
@@ -114,9 +118,19 @@ StateToDBusValue StateSensorHandler::mapStateToDBusVal(
     return eventStateMap;
 }
 
-int StateSensorHandler::eventAction(const StateSensorEntry& entry,
+int StateSensorHandler::eventAction(StateSensorEntry entry,
                                     pdr::EventState state)
 {
+    for (const auto& kv : eventMap)
+    {
+        if (kv.first.skipContainerCheck &&
+            kv.first.entityType == entry.entityType &&
+            kv.first.entityInstance == entry.entityInstance)
+        {
+            entry.skipContainerCheck = true;
+            break;
+        }
+    }
     try
     {
         const auto& [dbusMapping, eventStateMap] = eventMap.at(entry);

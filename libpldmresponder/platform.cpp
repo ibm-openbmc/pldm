@@ -463,8 +463,8 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
         }
 
         const auto& [containerId, entityType, entityInstance] = entityInfo;
-        events::StateSensorEntry stateSensorEntry{containerId, entityType,
-                                                  entityInstance, sensorOffset};
+        events::StateSensorEntry stateSensorEntry{
+            containerId, entityType, entityInstance, sensorOffset, false};
         return hostPDRHandler->handleStateSensorEvent(
             stateSetIds, stateSensorEntry, eventState);
     }
