@@ -252,7 +252,7 @@ std::vector<FruRecordDataFormat> parseFruRecordTable(const uint8_t* fruData,
  *
  *  @return the bitmap of possible states
  *  */
-std::vector<uint8_t> fetchBitMap(std::vector<std::vector<uint8_t>> pdrs);
+std::vector<uint8_t> fetchBitMap(const std::vector<std::vector<uint8_t>>& pdrs);
 
 } // namespace pdr_utils
 } // namespace responder

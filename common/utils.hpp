@@ -382,18 +382,6 @@ std::string toString(const struct variable_field& var);
  */
 const std::string getCurrentSystemTime();
 
-/** @brief D-Bus Method call
- *
- *  @param[in] service - Service name for the D-Bus method
- *  @param[in] objPath - The D-Bus object path
- *  @param[in] dbusMethod - The Method name to be invoked
- *  @param[in] dbusInterface - The D-Bus interface
- *  @param[in] value - The value to be passed as argument
- *             to D-Bus method*
- */
-void dbusMethodCall(const char* service, const char* objPath,
-                    const char* dbusMethod, const char* dbusInterface,
-                    const PropertyValue& value);
 /** @brief Split strings according to special identifiers
  *
  *  We can split the string according to the custom identifier(';', ',', '&' or

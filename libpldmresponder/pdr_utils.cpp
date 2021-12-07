@@ -247,12 +247,12 @@ std::vector<FruRecordDataFormat> parseFruRecordTable(const uint8_t* fruData,
 
     return frus;
 }
-std::vector<uint8_t> fetchBitMap(std::vector<std::vector<uint8_t>> pdrs)
+std::vector<uint8_t> fetchBitMap(const std::vector<std::vector<uint8_t>>& pdrs)
 {
     std::vector<uint8_t> bitMap;
     for (const auto& pdr : pdrs)
     {
-
+        bitMap.clear();
         auto effecterPdr =
             reinterpret_cast<const pldm_state_effecter_pdr*>(pdr.data());
         auto statesPtr = effecterPdr->possible_states;
@@ -271,6 +271,13 @@ std::vector<uint8_t> fetchBitMap(std::vector<std::vector<uint8_t>> pdrs)
             std::for_each(state->states,
                           state->states + state->possible_states_size,
                           printStates);
+            std::ostringstream tempStream;
+            for (int byte : bitMap)
+            {
+                tempStream << std::setfill('0') << std::setw(2) << std::hex
+                           << byte << " ";
+            }
+            std::cout << tempStream.str() << std::endl;
             if (compEffCount)
             {
                 statesPtr += sizeof(state_effecter_possible_states) +

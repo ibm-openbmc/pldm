@@ -239,11 +239,10 @@ void HostPDRHandler::setPresenceFrus()
     }
 }
 
-void HostPDRHandler::fetchPDR(PDRRecordHandles&& recordHandles, bool isModified)
+void HostPDRHandler::fetchPDR(PDRRecordHandles&& recordHandles)
 {
     pdrRecordHandles.clear();
     pdrRecordHandles = std::move(recordHandles);
-    isHostPdrModified = isModified;
 
     // Defer the actual fetch of PDRs from the host (by queuing the call on the
     // main event loop). That way, we can respond to the platform event msg from
@@ -564,7 +563,6 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                                      size_t respMsgLen)
 {
     static bool merged = false;
-    static bool isModifyPDRAction = false;
     static PDRList fruRecordSetPDRs{};
 
     uint32_t nextRecordHandle{};
@@ -707,8 +705,6 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                 {
                     if (isHostPdrModified)
                     {
-                        isModifyPDRAction = true;
-                        isHostPdrModified = false;
                         bool recFound =
                             pldm_pdr_find_prev_record_handle(repo, rh, &prevRh);
 
@@ -723,6 +719,35 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                             pldm_pdr_add_after_prev_record(
                                 repo, pdr.data(), respCount, rh, true, prevRh,
                                 pdrTerminusHandle);
+
+                            if ((pdrHdr->type == PLDM_STATE_EFFECTER_PDR) &&
+                                (oemPlatformHandler != nullptr))
+                            {
+                                auto effecterPdr = reinterpret_cast<
+                                    const pldm_state_effecter_pdr*>(pdr.data());
+                                auto entityType = effecterPdr->entity_type;
+                                auto statesPtr = effecterPdr->possible_states;
+                                auto compEffCount =
+                                    effecterPdr->composite_effecter_count;
+
+                                while (compEffCount--)
+                                {
+                                    auto state = reinterpret_cast<
+                                        const state_effecter_possible_states*>(
+                                        statesPtr);
+                                    auto stateSetID = state->state_set_id;
+                                    oemPlatformHandler->modifyPDROemActions(
+                                        entityType, stateSetID);
+
+                                    if (compEffCount)
+                                    {
+                                        statesPtr +=
+                                            sizeof(
+                                                state_effecter_possible_states) +
+                                            state->possible_states_size - 1;
+                                    }
+                                }
+                            }
                         }
                     }
                     else
@@ -766,16 +791,6 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                     std::bind(
                         std::mem_fn((&HostPDRHandler::_processPDRRepoChgEvent)),
                         this, std::placeholders::_1));
-        }
-
-        if (isModifyPDRAction)
-
-        {
-            isModifyPDRAction = false;
-            if (oemPlatformHandler)
-            {
-                oemPlatformHandler->modifyPDROemActions(rh, repo);
-            }
         }
     }
     else
