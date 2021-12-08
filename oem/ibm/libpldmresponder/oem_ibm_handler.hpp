@@ -107,38 +107,6 @@ class Handler : public oem_platform::Handler
                     }
                 }
             });
-        bootProgressMatch = std::make_unique<sdbusplus::bus::match::match>(
-            pldm::utils::DBusHandler::getBus(),
-            propertiesChanged("/xyz/openbmc_project/state/host0",
-                              "xyz.openbmc_project.State.Boot.Progress"),
-            [this](sdbusplus::message::message& msg) {
-                pldm::utils::DbusChangedProps props{};
-                std::string intf;
-                msg.read(intf, props);
-                const auto itr = props.find("BootProgress");
-                if (itr != props.end())
-                {
-                    pldm::utils::PropertyValue value = itr->second;
-                    auto propVal = std::get<std::string>(value);
-                    if (propVal == "xyz.openbmc_project.State.Boot.Progress."
-                                   "ProgressStages.SystemInitComplete")
-                    {
-                        auto pdrs = pldm::utils::findStateEffecterPDR(
-                            0xD0, PLDM_OEM_IBM_FRONT_PANEL_TRIGGER,
-                            PLDM_OEM_IBM_PANEL_TRIGGER_STATE, pdrRepo);
-
-                        if (!std::empty(pdrs))
-                        {
-                            auto bitMap =
-                                responder::pdr_utils::fetchBitMap(pdrs);
-
-                            pldm::utils::dbusMethodCall(
-                                "com.ibm.PanelApp", "/com/ibm/panel_app",
-                                "toggleFunctionState", "com.ibm.panel", bitMap);
-                        }
-                    }
-                }
-            });
         updateBIOSMatch = std::make_unique<sdbusplus::bus::match::match>(
             pldm::utils::DBusHandler::getBus(),
             propertiesChanged("/xyz/openbmc_project/bios_config/manager",
@@ -318,7 +286,25 @@ class Handler : public oem_platform::Handler
     void updateContainerID();
 
     void setHostEffecterState(bool status);
-    void modifyPDROemActions(uint32_t recordHandle, pldm_pdr* repo);
+    /** @brief Method to perform actions when PLDM_RECORDS_MODIFIED event
+     *  is received from host
+     *  @param[in] entityType - entity type
+     *  @param[in] stateSetId - state set id
+     */
+    void modifyPDROemActions(uint16_t entityType, uint16_t stateSetId);
+
+    /** @brief D-Bus Method call to call the Panel D-Bus API
+     *
+     * @param[in] service - Service name for the D-Bus method
+     * @param[in] objPath - The D-Bus object path
+     * @param[in] dbusMethod - The Method name to be invoked
+     * @param[in] dbusInterface - The D-Bus interface
+     * @param[in] value - The value to be passed as argument
+     *            to D-Bus method
+     */
+    void setBitmapMethodCall(const char* service, const char* objPath,
+                             const char* dbusMethod, const char* dbusInterface,
+                             const PropertyValue& value);
 
     ~Handler() = default;
 

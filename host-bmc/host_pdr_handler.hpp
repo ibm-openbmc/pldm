@@ -108,7 +108,7 @@ class HostPDRHandler
      *             PDRs that need to be fetched.
      */
 
-    void fetchPDR(PDRRecordHandles&& recordHandles, bool isModified);
+    void fetchPDR(PDRRecordHandles&& recordHandles);
 
     void deletePDRFromRepo(PDRRecordHandles&& recordHandles);
 
@@ -177,6 +177,12 @@ class HostPDRHandler
     /** @brief check whether Host is running when pldmd starts
      */
     bool isHostUp();
+
+    /** @brief whether we received PLDM_RECORDS_MODIFIED event data operation
+     *  from host
+     */
+    bool isHostPdrModified;
+
     /** @brief map that captures various terminus information **/
     TLPDRMap tlPDRInfo;
 
@@ -341,6 +347,10 @@ class HostPDRHandler
 
     /** @brief list of PDR record handles pointing to host's PDRs */
     PDRRecordHandles pdrRecordHandles;
+
+    /** @brief list of PDR record handles modified pointing to host's PDRs */
+    PDRRecordHandles modifiedPDRRecordHandles;
+
     /** @brief maps an entity type to parent pldm_entity from the BMC's entity
      *  association tree
      */
@@ -391,10 +401,6 @@ class HostPDRHandler
     /** @brief Object path and entity association and is only loaded once
      */
     bool objPathEntityAssociation;
-    /** @brief whether we received PLDM_RECORDS_MODIFIED event data operation
-     *  from host
-     */
-    bool isHostPdrModified;
 };
 
 } // namespace pldm
