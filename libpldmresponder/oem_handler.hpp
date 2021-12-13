@@ -123,7 +123,7 @@ class Handler : public CmdHandler
     virtual void countSetEventReceiver() = 0;
 
     /** @brief Interface to check the BMC state */
-    virtual int checkBMCState() = 0;
+    virtual bool getBMCState() = 0;
 
     /** @brief update the dbus object paths */
     virtual void upadteOemDbusPaths(std::string& dbusPath) = 0;

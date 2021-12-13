@@ -19,6 +19,7 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+#include <thread>
 #include <variant>
 #include <vector>
 
@@ -187,7 +188,7 @@ class DBusHandler : public DBusHandlerInterface
     /** @brief Get the bus connection. */
     static auto& getBus()
     {
-        static auto bus = sdbusplus::bus::new_default();
+        static thread_local auto bus = sdbusplus::bus::new_default();
         return bus;
     }
 

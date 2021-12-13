@@ -156,47 +156,8 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
     }
 }
 
-Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
+Response Handler::sendPDRs(const pldm_msg* request, size_t payloadLength)
 {
-    if (hostPDRHandler)
-    {
-        if (hostPDRHandler->isHostUp() && oemPlatformHandler != nullptr)
-        {
-            auto rc = oemPlatformHandler->checkBMCState();
-            if (rc != PLDM_SUCCESS)
-            {
-                return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
-            }
-        }
-    }
-
-    // Build FRU table if not built, since entity association PDR's
-    // are built when the FRU table is constructed.
-    if (fruHandler)
-    {
-        fruHandler->buildFRUTable();
-    }
-
-    if (!pdrCreated)
-    {
-        generateTerminusLocatorPDR(pdrRepo);
-        generate(*dBusIntf, pdrJsonsDir, pdrRepo, bmcEntityTree);
-        if (oemPlatformHandler != nullptr)
-        {
-            oemPlatformHandler->buildOEMPDR(pdrRepo);
-        }
-
-        pdrCreated = true;
-
-        if (dbusToPLDMEventHandler)
-        {
-            deferredGetPDREvent = std::make_unique<sdeventplus::source::Defer>(
-                event,
-                std::bind(std::mem_fn(&pldm::responder::platform::Handler::
-                                          _processPostGetPDRActions),
-                          this, std::placeholders::_1));
-        }
-    }
 
     Response response(sizeof(pldm_msg_hdr) + PLDM_GET_PDR_MIN_RESP_BYTES, 0);
 
@@ -259,6 +220,89 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
         return CmdHandler::ccOnlyResponse(request, PLDM_ERROR);
     }
     return response;
+}
+
+Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
+{
+    if (hostPDRHandler)
+    {
+        if (hostPDRHandler->isHostUp() && oemPlatformHandler != nullptr)
+        {
+            if (!oemPlatformHandler->getBMCState())
+            {
+                return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
+            }
+
+            // This is R/R case where host is UP, so defer the PDR generation
+            // on to a new thread & unblock the pldm daemon
+            auto expected = pldmRepoStatus::PLDM_REPO_NOT_BUILT;
+            bool notBuilt = repoCreated.compare_exchange_strong(
+                expected, pldmRepoStatus::PLDM_REPO_BUILDING_IN_PROGRESS);
+            if (notBuilt)
+            {
+                // The repository is not build, return NOT_READY and
+                // spawn a new thread to generate the PDR's and unblock
+                // the PLDM daemon
+                std::thread pdrGenThread(&Handler::_generatePDRs, this);
+
+                // detach the thread, so that the main thread wont be
+                // waiting for the response of the secondary thread
+                pdrGenThread.detach();
+
+                return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
+            }
+            else if (repoCreated.load() ==
+                     pldmRepoStatus::PLDM_REPO_BUILDING_IN_PROGRESS)
+            {
+                return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
+            }
+            else if (repoCreated.load() ==
+                     pldmRepoStatus::PLDM_REPO_ALREADY_BUILT)
+            {
+                if (dbusToPLDMEventHandler && pdrCreated)
+                {
+                    deferredGetPDREvent =
+                        std::make_unique<sdeventplus::source::Defer>(
+                            event,
+                            std::bind(std::mem_fn(
+                                          &pldm::responder::platform::Handler::
+                                              _processPostGetPDRActions),
+                                      this, std::placeholders::_1));
+                }
+                return sendPDRs(request, payloadLength);
+            }
+        }
+    }
+
+    // Host is off, this is a normal power on operation
+    // This is needed as hostboot does not handle the
+    // repository_in_progress status code and re-try
+    if (fruHandler)
+    {
+        fruHandler->buildFRUTable();
+    }
+    if (repoCreated == pldmRepoStatus::PLDM_REPO_NOT_BUILT)
+    {
+        generateTerminusLocatorPDR(pdrRepo);
+        generate(*dBusIntf, pdrJsonsDir, pdrRepo, bmcEntityTree);
+        if (oemPlatformHandler != nullptr)
+        {
+            oemPlatformHandler->buildOEMPDR(pdrRepo);
+        }
+
+        repoCreated = pldmRepoStatus::PLDM_REPO_ALREADY_BUILT;
+
+        if (dbusToPLDMEventHandler)
+        {
+            deferredGetPDREvent = std::make_unique<sdeventplus::source::Defer>(
+                event,
+                std::bind(std::mem_fn(&pldm::responder::platform::Handler::
+                                          _processPostGetPDRActions),
+                          this, std::placeholders::_1));
+        }
+    }
+
+    return sendPDRs(request, payloadLength);
 }
 
 Response Handler::setStateEffecterStates(const pldm_msg* request,
@@ -768,6 +812,7 @@ Response Handler::getStateSensorReadings(const pldm_msg* request,
 void Handler::_processPostGetPDRActions(sdeventplus::source::EventBase&
                                         /*source */)
 {
+    pdrCreated = false;
     deferredGetPDREvent.reset();
     dbusToPLDMEventHandler->listenSensorEvent(pdrRepo, sensorDbusObjMaps);
 }

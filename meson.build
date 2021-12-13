@@ -66,6 +66,8 @@ configure_file(output: 'config.h',
   configuration: conf_data
 )
 
+thread_dep = dependency('threads')
+
 phosphor_dbus_interfaces = dependency(
   'phosphor-dbus-interfaces',
   fallback: ['phosphor-dbus-interfaces', 'phosphor_dbus_interfaces_dep'],

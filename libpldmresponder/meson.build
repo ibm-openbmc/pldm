@@ -4,7 +4,8 @@ deps = [
   sdbusplus,
   sdeventplus,
   libpldm_dep,
-  libpldmutils
+  libpldmutils,
+  thread_dep
 ]
 
 sources = [

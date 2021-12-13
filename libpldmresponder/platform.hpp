@@ -46,6 +46,13 @@ using EventHandlers = std::vector<EventHandler>;
 using EventMap = std::map<EventType, EventHandlers>;
 using AssociatedEntityMap = std::map<DbusPath, pldm_entity>;
 
+enum class pldmRepoStatus : uint8_t
+{
+    PLDM_REPO_NOT_BUILT,
+    PLDM_REPO_BUILDING_IN_PROGRESS,
+    PLDM_REPO_ALREADY_BUILT,
+};
+
 class Handler : public CmdHandler
 {
   public:
@@ -63,13 +70,14 @@ class Handler : public CmdHandler
         dbusToPLDMEventHandler(dbusToPLDMEventHandler), fruHandler(fruHandler),
         bmcEntityTree(bmcEntityTree), dBusIntf(dBusIntf),
         oemPlatformHandler(oemPlatformHandler), event(event),
-        pdrJsonsDir(pdrJsonsDir), pdrCreated(false)
+        pdrJsonsDir(pdrJsonsDir),
+        repoCreated(pldmRepoStatus::PLDM_REPO_NOT_BUILT), pdrCreated(false)
     {
         if (!buildPDRLazily)
         {
             generateTerminusLocatorPDR(pdrRepo);
             generate(*dBusIntf, pdrJsonsDir, pdrRepo, bmcEntityTree);
-            pdrCreated = true;
+            repoCreated = pldmRepoStatus::PLDM_REPO_ALREADY_BUILT;
         }
 
         handlers.emplace(PLDM_GET_PDR,
@@ -212,6 +220,7 @@ class Handler : public CmdHandler
      *  @param[out] Response - Response message written here
      */
     Response getPDR(const pldm_msg* request, size_t payloadLength);
+    Response sendPDRs(const pldm_msg* request, size_t payloadLength);
 
     /** @brief Handler for setNumericEffecterValue
      *
@@ -451,6 +460,25 @@ class Handler : public CmdHandler
      */
     void _processPostGetPDRActions(sdeventplus::source::EventBase& source);
 
+    /** @brief Dont block PLDM while Generate the PDR's by deferring the action
+     *         on to a new thread
+     */
+    void _generatePDRs()
+    {
+        if (fruHandler)
+        {
+            fruHandler->buildFRUTable();
+        }
+        generateTerminusLocatorPDR(pdrRepo);
+        generate(*dBusIntf, pdrJsonsDir, pdrRepo, bmcEntityTree);
+        if (oemPlatformHandler != nullptr)
+        {
+            oemPlatformHandler->buildOEMPDR(pdrRepo);
+        }
+        repoCreated = pldmRepoStatus::PLDM_REPO_ALREADY_BUILT;
+        pdrCreated = true;
+    }
+
   private:
     pdr_utils::Repo pdrRepo;
     uint16_t nextEffecterId{};
@@ -465,6 +493,9 @@ class Handler : public CmdHandler
     pldm::responder::oem_platform::Handler* oemPlatformHandler;
     sdeventplus::Event& event;
     std::string pdrJsonsDir;
+    std::atomic<pldmRepoStatus> repoCreated;
+
+    std::unique_ptr<sdeventplus::source::Defer> deferredPDRGeneration;
     bool pdrCreated;
     std::unique_ptr<sdeventplus::source::Defer> deferredGetPDREvent;
 };

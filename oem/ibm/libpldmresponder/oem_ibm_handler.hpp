@@ -72,7 +72,7 @@ class Handler : public oem_platform::Handler
         codeUpdate(codeUpdate), slotHandler(slotHandler),
         platformHandler(nullptr), mctp_fd(mctp_fd), mctp_eid(mctp_eid),
         requester(requester), event(event), pdrRepo(repo), handler(handler),
-        bmcEntityTree(bmcEntityTree)
+        bmcEntityTree(bmcEntityTree), isBMCReady(false)
     {
         codeUpdate->setVersions();
         pldm::responder::utils::clearLicenseStatus();
@@ -136,6 +136,32 @@ class Handler : public oem_platform::Handler
                         std::string nextBootSide =
                             std::get<std::string>(attributevalue);
                         codeUpdate->setNextBootSide(nextBootSide);
+                    }
+                }
+            });
+        bmcReadyMatch = std::make_unique<sdbusplus::bus::match::match>(
+            pldm::utils::DBusHandler::getBus(),
+            propertiesChanged("/xyz/openbmc_project/state/bmc0",
+                              "xyz.openbmc_project.State.BMC"),
+            [this](sdbusplus::message::message& msg) {
+                pldm::utils::DbusChangedProps props{};
+                std::string intf;
+                msg.read(intf, props);
+                const auto itr = props.find("CurrentBMCState");
+                if (itr != props.end())
+                {
+                    pldm::utils::PropertyValue value = itr->second;
+                    auto propVal = std::get<std::string>(value);
+                    if (propVal ==
+                        "xyz.openbmc_project.State.BMC.BMCState.Ready")
+                    {
+                        std::cerr << "BMC is just Ready\n";
+                        isBMCReady = true;
+                    }
+                    else
+                    {
+                        std::cerr << "BMC is just not Ready\n";
+                        isBMCReady = false;
                     }
                 }
             });
@@ -278,7 +304,7 @@ class Handler : public oem_platform::Handler
     void disableWatchDogTimer();
 
     /** @brief to check the BMC state*/
-    int checkBMCState();
+    bool getBMCState();
 
     /** @brief update the dbus object paths */
     void upadteOemDbusPaths(std::string& dbusPath);
@@ -353,12 +379,16 @@ class Handler : public oem_platform::Handler
     /** @brief Pointer to BMC's entity association tree */
     pldm_entity_association_tree* bmcEntityTree;
 
+    bool isBMCReady;
+
     /** @brief D-Bus property changed signal match */
     std::unique_ptr<sdbusplus::bus::match::match> hostOffMatch;
     std::unique_ptr<sdbusplus::bus::match::match> updateBIOSMatch;
 
     /** @brief D-Bus property Changed Signal match for bootProgress*/
     std::unique_ptr<sdbusplus::bus::match::match> bootProgressMatch;
+
+    std::unique_ptr<sdbusplus::bus::match::match> bmcReadyMatch;
 
     bool hostOff = true;
 
