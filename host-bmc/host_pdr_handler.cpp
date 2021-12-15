@@ -239,6 +239,29 @@ void HostPDRHandler::setPresenceFrus()
     }
 }
 
+std::string HostPDRHandler::getParentChassis(const std::string& frupath)
+{
+    if (objPathMap.contains(frupath))
+    {
+        auto node = objPathMap[frupath];
+        pldm_entity fruentity = pldm_entity_extract(node);
+        if (fruentity.entity_type == PLDM_ENTITY_SYSTEM_CHASSIS)
+        {
+            return "";
+        }
+    }
+    for (const auto& [objpath, nodeentity] : objPathMap)
+    {
+        pldm_entity entity = pldm_entity_extract(nodeentity);
+        if (frupath.find(objpath) != std::string::npos &&
+            entity.entity_type == PLDM_ENTITY_SYSTEM_CHASSIS)
+        {
+            return objpath;
+        }
+    }
+    return "";
+}
+
 void HostPDRHandler::fetchPDR(PDRRecordHandles&& recordHandles)
 {
     pdrRecordHandles.clear();
@@ -357,7 +380,8 @@ int HostPDRHandler::handleStateSensorEvent(
              stateSetId[0] == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS))
         {
             CustomDBus::getCustomDBus().setOperationalStatus(
-                entity.first, state == PLDM_OPERATIONAL_NORMAL);
+                entity.first, state == PLDM_OPERATIONAL_NORMAL,
+                getParentChassis(entity.first));
 
             break;
         }
@@ -1285,7 +1309,7 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
             // Get sensorOpState property by the getStateSensorReadings
             // command.
             CustomDBus::getCustomDBus().setOperationalStatus(
-                path, state == PLDM_OPERATIONAL_NORMAL);
+                path, state == PLDM_OPERATIONAL_NORMAL, getParentChassis(path));
         }
         else if (stateSetId == PLDM_STATE_SET_IDENTIFY_STATE)
         {
