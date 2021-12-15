@@ -178,8 +178,11 @@ class CustomDBus
      *  @param[in] path   - The object path
      *
      *  @param[in] status - PLDM operational fault status
+     *  @param [in] parentChassis - The parent chassis of the FRU
+     *
      */
-    void setOperationalStatus(const std::string& path, bool status);
+    void setOperationalStatus(const std::string& path, bool status,
+                              const std::string& parentChassis);
 
     /** @brief Get the Functional property
      *

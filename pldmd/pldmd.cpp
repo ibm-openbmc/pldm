@@ -56,6 +56,7 @@
 #include "libpldmresponder/file_io.hpp"
 #include "libpldmresponder/fru_oem_ibm.hpp"
 #include "libpldmresponder/oem_ibm_handler.hpp"
+#include "oem/ibm/host-bmc/host_lamp_test.hpp"
 #endif
 
 constexpr uint8_t MCTP_MSG_TYPE_PLDM = 1;
@@ -252,6 +253,12 @@ int main(int argc, char** argv)
     invoker.registerHandler(PLDM_OEM, std::make_unique<oem_ibm::Handler>(
                                           oemPlatformHandler.get(), sockfd,
                                           hostEID, &dbusImplReq, &reqHandler));
+
+    // host lamp test
+    std::unique_ptr<pldm::led::HostLampTest> hostLampTest =
+        std::make_unique<pldm::led::HostLampTest>(
+            bus, "/xyz/openbmc_project/led/groups/host_lamp_test", sockfd,
+            hostEID, dbusImplReq, pdrRepo.get(), reqHandler);
 #endif
     if (hostEID)
     {

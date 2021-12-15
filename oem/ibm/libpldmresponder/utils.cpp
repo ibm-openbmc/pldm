@@ -310,7 +310,7 @@ int createOrUpdateLicenseDbusPaths(const uint8_t& flag)
             licAvailState = true;
         }
 
-        CustomDBus::getCustomDBus().setOperationalStatus(key, licOpStatus);
+        CustomDBus::getCustomDBus().setOperationalStatus(key, licOpStatus, "");
         CustomDBus::getCustomDBus().setAvailabilityState(key, licAvailState);
     }
 
