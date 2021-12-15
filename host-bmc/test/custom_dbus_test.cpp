@@ -21,14 +21,14 @@ TEST(CustomDBus, OperationalStatus)
     bool status = false;
     bool retStatus = false;
 
-    CustomDBus::getCustomDBus().setOperationalStatus(tmpPath, status);
+    CustomDBus::getCustomDBus().setOperationalStatus(tmpPath, status, "");
     retStatus = CustomDBus::getCustomDBus().getOperationalStatus(tmpPath);
 
     EXPECT_EQ(status, false);
     EXPECT_EQ(retStatus, false);
 
     status = true;
-    CustomDBus::getCustomDBus().setOperationalStatus(tmpPath, status);
+    CustomDBus::getCustomDBus().setOperationalStatus(tmpPath, status, "");
     retStatus = CustomDBus::getCustomDBus().getOperationalStatus(tmpPath);
 
     EXPECT_EQ(status, true);

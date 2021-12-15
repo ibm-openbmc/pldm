@@ -29,8 +29,17 @@ std::string CustomDBus::getLocationCode(const std::string& path) const
     return {};
 }
 
-void CustomDBus::setOperationalStatus(const std::string& path, bool status)
+void CustomDBus::setOperationalStatus(const std::string& path, bool status,
+                                      const std::string& parentChassis)
 {
+    if (!status && parentChassis != "")
+    {
+        // If we get operational status as false for any FRU, then set
+        // the critical association for it.
+        std::vector<std::tuple<std::string, std::string, std::string>>
+            associations{{"health_rollup", "critical", parentChassis}};
+        setAssociations(path, associations);
+    }
     if (operationalStatus.find(path) == operationalStatus.end())
     {
         operationalStatus.emplace(

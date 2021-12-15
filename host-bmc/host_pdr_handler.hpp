@@ -191,6 +191,10 @@ class HostPDRHandler
      */
     void setPresenceFrus();
 
+    /* @brief get the Parent chassis object path for a fru
+     */
+    std::string getParentChassis(const std::string& fruPath);
+
     /** @brief set the presence of the fru from record handle
      *  @param[in] recorHandle - record handle of the PDR
      */
