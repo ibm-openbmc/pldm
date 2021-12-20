@@ -98,6 +98,8 @@ class Handler : public CmdHandler
      */
     virtual void buildOEMPDR(pdr_utils::Repo& repo) = 0;
 
+    virtual std::filesystem::path getConfigDir() = 0;
+
     /** @brief Interface to check if setEventReceiver is sent to host already.
      *         If sent then then disableWatchDogTimer() would be called to
      *         disable the watchdog timer */

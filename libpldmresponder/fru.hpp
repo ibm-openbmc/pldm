@@ -230,7 +230,7 @@ class FruImpl
         std::vector<uint8_t>&& eventDataOps);
 
     std::vector<uint32_t> setStatePDRParams(
-        const std::string& pdrJsonsDir, uint16_t nextSensorId,
+        const std::vector<fs::path> pdrJsonsDir, uint16_t nextSensorId,
         uint16_t nextEffecterId,
         pldm::responder::pdr_utils::DbusObjMaps& sensorDbusObjMaps,
         pldm::responder::pdr_utils::DbusObjMaps& effecterDbusObjMaps,
@@ -347,7 +347,7 @@ class FruImpl
     std::vector<std::unique_ptr<sdbusplus::bus::match::match>>
         panelHotplugMatch;
     dbus::ObjectValueTree objects;
-    std::string statePDRJsonsDir;
+    std::vector<fs::path> statePDRJsonsDir;
     uint16_t startStateSensorId;
     uint16_t startStateEffecterId;
 };
@@ -452,7 +452,7 @@ class Handler : public CmdHandler
     Response setFRURecordTable(const pldm_msg* request, size_t payloadLength);
 
     void setStatePDRParams(
-        const std::string& pdrJsonsDir, uint16_t nextSensorId,
+        const std::vector<fs::path> pdrJsonsDir, uint16_t nextSensorId,
         uint16_t nextEffecterId,
         pldm::responder::pdr_utils::DbusObjMaps& sensorDbusObjMaps,
         pldm::responder::pdr_utils::DbusObjMaps& effecterDbusObjMaps,
