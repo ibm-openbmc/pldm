@@ -588,63 +588,67 @@ void FruImpl::reGenerateStatePDR(const std::string& fruObjectPath,
 {
     pldm::responder::pdr_utils::Type pdrType{};
     static const Json empty{};
-    for (const auto& dirEntry : fs::directory_iterator(statePDRJsonsDir))
+    for (const auto& directory : statePDRJsonsDir)
     {
-        try
+        for (const auto& dirEntry : fs::directory_iterator(directory))
         {
-            auto json =
-                pldm::responder::pdr_utils::readJson(dirEntry.path().string());
-            if (!json.empty())
+            try
             {
-                pldm::responder::pdr_utils::DbusObjMaps tmpMap{};
-                auto effecterPDRs = json.value("effecterPDRs", empty);
-                for (const auto& effecter : effecterPDRs)
+                auto json = pldm::responder::pdr_utils::readJson(
+                    dirEntry.path().string());
+                if (!json.empty())
                 {
-                    pdrType = effecter.value("pdrType", 0);
-                    if (pdrType == PLDM_STATE_EFFECTER_PDR)
+                    pldm::responder::pdr_utils::DbusObjMaps tmpMap{};
+                    auto effecterPDRs = json.value("effecterPDRs", empty);
+                    for (const auto& effecter : effecterPDRs)
                     {
-                        auto stateEffecterList = setStatePDRParams(
-                            statePDRJsonsDir, 0, 0, tmpMap, tmpMap, true,
-                            effecter, fruObjectPath, pdrType);
-                        std::move(stateEffecterList.begin(),
-                                  stateEffecterList.end(),
-                                  std::back_inserter(recordHdlList));
+                        pdrType = effecter.value("pdrType", 0);
+                        if (pdrType == PLDM_STATE_EFFECTER_PDR)
+                        {
+                            auto stateEffecterList = setStatePDRParams(
+                                {directory}, 0, 0, tmpMap, tmpMap, true,
+                                effecter, fruObjectPath, pdrType);
+                            std::move(stateEffecterList.begin(),
+                                      stateEffecterList.end(),
+                                      std::back_inserter(recordHdlList));
+                        }
                     }
-                }
-                auto sensorPDRs = json.value("sensorPDRs", empty);
-                for (const auto& sensor : sensorPDRs)
-                {
-                    pdrType = sensor.value("pdrType", 0);
-                    if (pdrType == PLDM_STATE_SENSOR_PDR)
+                    auto sensorPDRs = json.value("sensorPDRs", empty);
+                    for (const auto& sensor : sensorPDRs)
                     {
-                        auto stateSensorList = setStatePDRParams(
-                            statePDRJsonsDir, 0, 0, tmpMap, tmpMap, true,
-                            sensor, fruObjectPath, pdrType);
-                        std::move(stateSensorList.begin(),
-                                  stateSensorList.end(),
-                                  std::back_inserter(recordHdlList));
+                        pdrType = sensor.value("pdrType", 0);
+                        if (pdrType == PLDM_STATE_SENSOR_PDR)
+                        {
+                            auto stateSensorList = setStatePDRParams(
+                                {directory}, 0, 0, tmpMap, tmpMap, true, sensor,
+                                fruObjectPath, pdrType);
+                            std::move(stateSensorList.begin(),
+                                      stateSensorList.end(),
+                                      std::back_inserter(recordHdlList));
+                        }
                     }
                 }
             }
-        }
-        catch (const InternalFailure& e)
-        {
-            std::cerr << "PDR config directory does not exist or empty, TYPE= "
-                      << pdrType << "PATH= " << dirEntry
-                      << " ERROR=" << e.what() << "\n";
-            // log an error here
-        }
-        catch (const Json::exception& e)
-        {
-            std::cerr << "Failed parsing PDR JSON file, TYPE= " << pdrType
-                      << " ERROR=" << e.what() << "\n";
-            // log error
-        }
-        catch (const std::exception& e)
-        {
-            std::cerr << "Failed parsing PDR JSON file, TYPE= " << pdrType
-                      << " ERROR=" << e.what() << "\n";
-            // log appropriate error
+            catch (const InternalFailure& e)
+            {
+                std::cerr
+                    << "PDR config directory does not exist or empty, TYPE= "
+                    << pdrType << "PATH= " << dirEntry << " ERROR=" << e.what()
+                    << "\n";
+                // log an error here
+            }
+            catch (const Json::exception& e)
+            {
+                std::cerr << "Failed parsing PDR JSON file, TYPE= " << pdrType
+                          << " ERROR=" << e.what() << "\n";
+                // log error
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "Failed parsing PDR JSON file, TYPE= " << pdrType
+                          << " ERROR=" << e.what() << "\n";
+                // log appropriate error
+            }
         }
     }
 }
@@ -915,7 +919,7 @@ void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
 }
 
 std::vector<uint32_t> FruImpl::setStatePDRParams(
-    const std::string& pdrJsonsDir, uint16_t nextSensorId,
+    const std::vector<fs::path> pdrJsonsDir, uint16_t nextSensorId,
     uint16_t nextEffecterId,
     pldm::responder::pdr_utils::DbusObjMaps& sensorDbusObjMaps,
     pldm::responder::pdr_utils::DbusObjMaps& effecterDbusObjMaps, bool hotPlug,
@@ -1451,7 +1455,7 @@ Response Handler::setFRURecordTable(const pldm_msg* request,
 }
 
 void Handler::setStatePDRParams(
-    const std::string& pdrJsonsDir, uint16_t nextSensorId,
+    const std::vector<fs::path> pdrJsonsDir, uint16_t nextSensorId,
     uint16_t nextEffecterId,
     pldm::responder::pdr_utils::DbusObjMaps& sensorDbusObjMaps,
     pldm::responder::pdr_utils::DbusObjMaps& effecterDbusObjMaps, bool hotPlug)

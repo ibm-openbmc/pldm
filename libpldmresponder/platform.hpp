@@ -50,7 +50,7 @@ class Handler : public CmdHandler
 {
   public:
     Handler(const pldm::utils::DBusHandler* dBusIntf,
-            const std::string& pdrJsonsDir, pldm_pdr* repo,
+            const fs::path& pdrJsonDir, pldm_pdr* repo,
             HostPDRHandler* hostPDRHandler,
             pldm::state_sensor::DbusToPLDMEvent* dbusToPLDMEventHandler,
             fru::Handler* fruHandler,
@@ -63,7 +63,7 @@ class Handler : public CmdHandler
         dbusToPLDMEventHandler(dbusToPLDMEventHandler), fruHandler(fruHandler),
         bmcEntityTree(bmcEntityTree), dBusIntf(dBusIntf),
         oemPlatformHandler(oemPlatformHandler), event(event),
-        pdrJsonsDir(pdrJsonsDir), pdrCreated(false)
+        pdrJsonDir(pdrJsonDir), pdrCreated(false), pdrJsonsDir({pdrJsonDir})
     {
         if (!buildPDRLazily)
         {
@@ -187,7 +187,7 @@ class Handler : public CmdHandler
      *  @param[in] repo - instance of concrete implementation of Repo
      */
     void generate(const pldm::utils::DBusHandler& dBusIntf,
-                  const std::string& dir,
+                  const std::vector<fs::path>& dir,
                   pldm::responder::pdr_utils::Repo& repo,
                   pldm_entity_association_tree* bmcEntityTree);
 
@@ -464,8 +464,9 @@ class Handler : public CmdHandler
     const pldm::utils::DBusHandler* dBusIntf;
     pldm::responder::oem_platform::Handler* oemPlatformHandler;
     sdeventplus::Event& event;
-    std::string pdrJsonsDir;
+    fs::path pdrJsonDir;
     bool pdrCreated;
+    std::vector<fs::path> pdrJsonsDir;
     std::unique_ptr<sdeventplus::source::Defer> deferredGetPDREvent;
 };
 
