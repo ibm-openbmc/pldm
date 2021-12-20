@@ -346,6 +346,12 @@ class Handler : public oem_platform::Handler
                              const PropertyValue& value);
     std::filesystem::path getConfigDir();
 
+    /** @brief To handle the boot types bios attributes at power on*/
+    void handleBootTypesAtPowerOn();
+
+    /** @brief To handle the boot types bios attributes at shutdown*/
+    void handleBootTypesAtChassisOff();
+
     ~Handler() = default;
 
     pldm::responder::CodeUpdate* codeUpdate; //!< pointer to CodeUpdate object

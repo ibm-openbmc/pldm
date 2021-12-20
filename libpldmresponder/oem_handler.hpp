@@ -134,6 +134,12 @@ class Handler : public CmdHandler
     virtual void modifyPDROemActions(uint16_t entityType,
                                      uint16_t stateSetId) = 0;
 
+    /** @brief To handle the boot types bios attributes at power on*/
+    virtual void handleBootTypesAtPowerOn() = 0;
+
+    /** @brief To handle the boot types bios attributes at shutdown*/
+    virtual void handleBootTypesAtChassisOff() = 0;
+
     virtual ~Handler() = default;
 
   protected:
