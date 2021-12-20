@@ -139,6 +139,46 @@ class Handler : public oem_platform::Handler
                     }
                 }
             });
+        ibmCompatibleMatch = std::make_unique<sdbusplus::bus::match::match>(
+            pldm::utils::DBusHandler::getBus(),
+            sdbusplus::bus::match::rules::interfacesAdded() +
+                sdbusplus::bus::match::rules::sender(
+                    "xyz.openbmc_project.EntityManager"),
+            std::bind(&Handler::ibmCompatibleAddedCallback, this,
+                      std::placeholders::_1));
+    }
+
+    void ibmCompatibleAddedCallback(sdbusplus::message::message& msg)
+    {
+        sdbusplus::message::object_path path;
+        std::map<std::string,
+                 std::map<std::string, std::variant<std::vector<std::string>>>>
+            interfaces;
+
+        msg.read(path, interfaces);
+
+        if (!interfaces.contains(
+                "xyz.openbmc_project.Configuration.IBMCompatibleSystem"))
+        {
+            return;
+        }
+
+        // Get the "Name" property value of the
+        // "xyz.openbmc_project.Configuration.IBMCompatibleSystem" interface
+        const auto& properties = interfaces.at(
+            "xyz.openbmc_project.Configuration.IBMCompatibleSystem");
+
+        if (!properties.contains("Names"))
+        {
+            return;
+        }
+        auto names = std::get<std::vector<std::string>>(properties.at("Names"));
+
+        std::cerr << "setting the systemtype \n";
+        // get only the first system type
+        systemType = names[0];
+
+        ibmCompatibleMatch.reset();
     }
 
     int oemSetNumericEffecterValueHandler(
@@ -305,6 +345,7 @@ class Handler : public oem_platform::Handler
     void setBitmapMethodCall(const char* service, const char* objPath,
                              const char* dbusMethod, const char* dbusInterface,
                              const PropertyValue& value);
+    std::filesystem::path getConfigDir();
 
     ~Handler() = default;
 
@@ -342,6 +383,9 @@ class Handler : public oem_platform::Handler
     sdeventplus::Event& event;
 
   private:
+    /**@ brief system type/model */
+    std::string systemType;
+
     /** @brief D-Bus property changed signal match for CurrentPowerState*/
     std::unique_ptr<sdbusplus::bus::match::match> chassisOffMatch;
 
@@ -356,6 +400,8 @@ class Handler : public oem_platform::Handler
     /** @brief D-Bus property changed signal match */
     std::unique_ptr<sdbusplus::bus::match::match> hostOffMatch;
     std::unique_ptr<sdbusplus::bus::match::match> updateBIOSMatch;
+    /** @brief D-Bus Interfaced added signal match for Entity Manager */
+    std::unique_ptr<sdbusplus::bus::match::match> ibmCompatibleMatch;
 
     /** @brief D-Bus property Changed Signal match for bootProgress*/
     std::unique_ptr<sdbusplus::bus::match::match> bootProgressMatch;
