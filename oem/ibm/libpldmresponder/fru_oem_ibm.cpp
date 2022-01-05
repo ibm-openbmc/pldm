@@ -122,15 +122,15 @@ void Handler::updateDBusProperty(
                 if (!(pldm::responder::utils::checkIfIBMCableCard(key)))
                 {
                     setFruPresence(key);
-
-                    dbus_map_update(key, "Function0VendorId", vendorId);
-                    dbus_map_update(key, "Function0DeviceId", deviceId);
-                    dbus_map_update(key, "Function0RevisionId", revisionId);
-                    dbus_map_update(key, "Function0ClassCode", classCode);
-                    dbus_map_update(key, "Function0SubsystemVendorId",
-                                    subSystemVendorId);
-                    dbus_map_update(key, "Function0SubsystemId", subSystemId);
                 }
+
+                dbus_map_update(key, "Function0VendorId", vendorId);
+                dbus_map_update(key, "Function0DeviceId", deviceId);
+                dbus_map_update(key, "Function0RevisionId", revisionId);
+                dbus_map_update(key, "Function0ClassCode", classCode);
+                dbus_map_update(key, "Function0SubsystemVendorId",
+                                subSystemVendorId);
+                dbus_map_update(key, "Function0SubsystemId", subSystemId);
             }
         }
     }
