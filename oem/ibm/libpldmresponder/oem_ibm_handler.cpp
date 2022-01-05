@@ -1260,6 +1260,7 @@ void pldm::responder::oem_ibm_platform::Handler::handleBootTypesAtChassisOff()
         std::cerr << "Setting the APR to AlwaysOn as pvm_boot_initiator="
                   << bootInitiator << " and pvm_boot_type=" << bootType
                   << std::endl;
+#if 0
         pldm::utils::DBusMapping dbusMapping{
             "/xyz/openbmc_project/control/host0/"
             "power_restore_policy/one_time",
@@ -1277,6 +1278,7 @@ void pldm::responder::oem_ibm_platform::Handler::handleBootTypesAtChassisOff()
                       << "unable to set property PowerRestorePolicy"
                       << "ERROR=" << e.what() << "\n";
         }
+#endif
     }
     else
     {
