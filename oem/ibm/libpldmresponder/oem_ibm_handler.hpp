@@ -146,6 +146,39 @@ class Handler : public oem_platform::Handler
                     "xyz.openbmc_project.EntityManager"),
             std::bind(&Handler::ibmCompatibleAddedCallback, this,
                       std::placeholders::_1));
+
+        stateManagerMatch = std::make_unique<sdbusplus::bus::match::match>(
+            pldm::utils::DBusHandler::getBus(),
+            sdbusplus::bus::match::rules::interfacesAdded() +
+                sdbusplus::bus::match::rules::argNpath(
+                    0, "/xyz/openbmc_project/state/host0"),
+            [this](sdbusplus::message::message& msg) {
+                sdbusplus::message::object_path path;
+                std::map<std::string, std::map<std::string, dbus::Value>>
+                    interfaces;
+                msg.read(path, interfaces);
+
+                for (auto interface : interfaces)
+                {
+                    std::cout << interface.first;
+                }
+                if (!interfaces.contains("xyz.openbmc_project.State.Host"))
+                {
+                    return;
+                }
+
+                const auto& properties =
+                    interfaces.at("xyz.openbmc_project.State.Host");
+
+                if (!properties.contains("RestartCause"))
+                {
+                    return;
+                }
+
+                restartCause =
+                    std::get<std::string>(properties.at("RestartCause"));
+                setBootTypesBiosAttr(restartCause);
+            });
     }
 
     void ibmCompatibleAddedCallback(sdbusplus::message::message& msg)
@@ -349,6 +382,13 @@ class Handler : public oem_platform::Handler
     /** @brief To handle the boot types bios attributes at power on*/
     void handleBootTypesAtPowerOn();
 
+    /** @brief To set the boot types bios attributes based on the RestartCause
+     *  of host
+     *
+     *  @param[in] RestartCause - Host restart cause
+     */
+    void setBootTypesBiosAttr(const std::string& restartCause);
+
     /** @brief To handle the boot types bios attributes at shutdown*/
     void handleBootTypesAtChassisOff();
 
@@ -391,6 +431,9 @@ class Handler : public oem_platform::Handler
     /**@ brief system type/model */
     std::string systemType;
 
+    /*@brief Host restart cause*/
+    std::string restartCause;
+
     /** @brief D-Bus property changed signal match for CurrentPowerState*/
     std::unique_ptr<sdbusplus::bus::match::match> chassisOffMatch;
 
@@ -407,7 +450,8 @@ class Handler : public oem_platform::Handler
     std::unique_ptr<sdbusplus::bus::match::match> updateBIOSMatch;
     /** @brief D-Bus Interfaced added signal match for Entity Manager */
     std::unique_ptr<sdbusplus::bus::match::match> ibmCompatibleMatch;
-
+    /** @brief D-Bus Interfaced added signal match for State Manager */
+    std::unique_ptr<sdbusplus::bus::match::match> stateManagerMatch;
     /** @brief D-Bus property Changed Signal match for bootProgress*/
     std::unique_ptr<sdbusplus::bus::match::match> bootProgressMatch;
 

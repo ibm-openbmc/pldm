@@ -1215,32 +1215,47 @@ void pldm::responder::oem_ibm_platform::Handler::handleBootTypesAtPowerOn()
 {
     BiosAttributeList biosAttrList;
     auto bootInitiator = getBiosAttrValue("pvm_boot_initiator_current");
+    std::string restartCause;
     if (bootInitiator != "HMC" && !bootInitiator.empty())
     {
-        auto restartCause =
-            pldm::utils::DBusHandler().getDbusProperty<std::string>(
-                "/xyz/openbmc_project/state/host0", "RestartCause",
-                "xyz.openbmc_project.State.Host");
+        try
+        {
+            restartCause =
+                pldm::utils::DBusHandler().getDbusProperty<std::string>(
+                    "/xyz/openbmc_project/state/host0", "RestartCause",
+                    "xyz.openbmc_project.State.Host");
+            setBootTypesBiosAttr(restartCause);
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << "Failed to fetch the restartCause, ERROR=" << e.what()
+                      << "\n";
+        }
+    }
+}
 
-        if (restartCause ==
-            "xyz.openbmc_project.State.Host.RestartCause.ScheduledPowerOn")
-        {
-            biosAttrList.push_back(
-                std::make_pair("pvm_boot_initiator", "Host"));
-            setBiosAttr(biosAttrList);
-        }
-        else if (
-            (restartCause ==
-             "xyz.openbmc_project.State.Host.RestartCause.PowerPolicyAlwaysOn") ||
-            (restartCause ==
-             "xyz.openbmc_project.State.Host.RestartCause.PowerPolicyPreviousState") ||
-            (restartCause ==
-             "xyz.openbmc_project.State.Host.RestartCause.HostCrash"))
-        {
-            biosAttrList.push_back(
-                std::make_pair("pvm_boot_initiator", "Auto"));
-            setBiosAttr(biosAttrList);
-        }
+void pldm::responder::oem_ibm_platform::Handler::setBootTypesBiosAttr(
+    const std::string& restartCause)
+{
+    BiosAttributeList biosAttrList;
+    if (restartCause ==
+        "xyz.openbmc_project.State.Host.RestartCause.ScheduledPowerOn")
+    {
+        biosAttrList.push_back(std::make_pair("pvm_boot_initiator", "Host"));
+        setBiosAttr(biosAttrList);
+        stateManagerMatch.reset();
+    }
+    else if (
+        (restartCause ==
+         "xyz.openbmc_project.State.Host.RestartCause.PowerPolicyAlwaysOn") ||
+        (restartCause ==
+         "xyz.openbmc_project.State.Host.RestartCause.PowerPolicyPreviousState") ||
+        (restartCause ==
+         "xyz.openbmc_project.State.Host.RestartCause.HostCrash"))
+    {
+        biosAttrList.push_back(std::make_pair("pvm_boot_initiator", "Auto"));
+        setBiosAttr(biosAttrList);
+        stateManagerMatch.reset();
     }
 }
 
