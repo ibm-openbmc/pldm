@@ -237,5 +237,32 @@ int CertHandler::newFileAvailable(uint64_t length)
     return PLDM_SUCCESS;
 }
 
+int CertHandler::fileAckWithMetaData(uint32_t metaDataValue1,
+                                     uint32_t /*metaDataValue2*/,
+                                     uint32_t /*metaDataValue3*/,
+                                     uint32_t /*metaDataValue4*/)
+{
+    uint8_t fileStatus = (uint8_t)metaDataValue1;
+    if (certType == PLDM_FILE_TYPE_CERT_SIGNING_REQUEST)
+    {
+        if (fileStatus == PLDM_ERROR_INVALID_DATA)
+        {
+            std::cerr << "error reading file\n";
+            return PLDM_ERROR;
+        }
+        else if (fileStatus == PLDM_ERROR_NOT_READY)
+        {
+            std::cerr << "Unable to send signing request to VMI\n";
+            return PLDM_ERROR;
+        }
+        else if (fileStatus == PLDM_ERROR)
+        {
+            std::cerr << "signed cert not received. VMI status not success\n";
+            return PLDM_ERROR;
+        }
+    }
+    return PLDM_SUCCESS;
+}
+
 } // namespace responder
 } // namespace pldm
