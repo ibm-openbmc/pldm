@@ -130,7 +130,7 @@ class Handler : public oem_platform::Handler
                     std::get<PendingAttributes>(valPropMap->second);
                 for (auto it : pendingAttributes)
                 {
-                    if (it.first == "hb_fw_boot_side")
+                    if (it.first == "fw_boot_side")
                     {
                         auto& [attributeType, attributevalue] = it.second;
                         std::string nextBootSide =
