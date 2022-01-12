@@ -179,19 +179,6 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
                 return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
             }
         }
-        if (oemPlatformHandler)
-        {
-            // Irrespective if whether the host is up, we need to make sure
-            // that we got the system type from the entity manager service
-            // otherwise we would not have platform dependent PDR's, so
-            // sending NOT_READY untill we see a signal from entity manager
-
-            auto systemType = oemPlatformHandler->getConfigDir();
-            if (systemType.empty())
-            {
-                return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
-            }
-        }
     }
 
     // Build FRU table if not built, since entity association PDR's
@@ -208,8 +195,14 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
         if (oemPlatformHandler != nullptr)
         {
             auto systemType = oemPlatformHandler->getConfigDir();
-            pdrJsonsDir.push_back(pdrJsonDir /
-                                  oemPlatformHandler->getConfigDir());
+            if (systemType.empty())
+            {
+                pdrJsonsDir.push_back(pdrJsonDir);
+            }
+            else
+            {
+                pdrJsonsDir.push_back(pdrJsonDir / systemType);
+            }
             oemPlatformHandler->buildOEMPDR(pdrRepo);
         }
         generate(*dBusIntf, pdrJsonsDir, pdrRepo, bmcEntityTree);
