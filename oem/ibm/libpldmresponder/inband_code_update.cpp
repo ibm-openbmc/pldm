@@ -214,8 +214,14 @@ void CodeUpdate::setVersions()
             pldm_boot_side_data pldmBootSideData = readBootSideFile();
             if (pldmBootSideData.running_version_object != runningVersion)
             {
-                pldmBootSideData.current_boot_side = "Temp" ? "Perm" : "Temp";
-                pldmBootSideData.next_boot_side = "Temp" ? "Perm" : "Temp";
+                auto current_boot_side =
+                    (pldmBootSideData.current_boot_side == "Temp" ? "Perm"
+                                                                  : "Temp");
+                pldmBootSideData.current_boot_side = current_boot_side;
+                auto next_boot_side =
+                    (pldmBootSideData.next_boot_side == "Temp" ? "Perm"
+                                                               : "Temp");
+                pldmBootSideData.next_boot_side = next_boot_side;
                 writeBootSideFile(pldmBootSideData);
                 setBootSideBiosAttr(pldmBootSideData.current_boot_side);
             }
