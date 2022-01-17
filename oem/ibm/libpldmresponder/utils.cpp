@@ -3,7 +3,7 @@
 #include "libpldm/base.h"
 
 #include "common/utils.hpp"
-#include "host-bmc/custom_dbus.hpp"
+#include "host-bmc/dbus/custom_dbus.hpp"
 
 #include <sys/mman.h>
 #include <sys/socket.h>

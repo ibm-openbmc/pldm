@@ -37,6 +37,8 @@ conf_data.set('HEARTBEAT_TIMEOUT', get_option('heartbeat-timeout-seconds'))
 conf_data.set('TERMINUS_ID', get_option('terminus-id'))
 conf_data.set('TERMINUS_HANDLE',get_option('terminus-handle'))
 conf_data.set_quoted('FLIGHT_RECORDER_DUMP_PATH', '/tmp/pldm_flight_recorder')
+conf_data.set_quoted('PERSISTENT_FILE', '/var/lib/pldm/persist')
+conf_data.set_quoted('DBUS_JSON_FILE', '/usr/share/pldm/dbus-config.json')
 add_project_arguments('-DLIBPLDMRESPONDER', language : ['c','cpp'])
 endif
 if get_option('softoff').enabled()
@@ -173,6 +175,23 @@ libpldmutils = declare_dependency(
   include_directories: include_directories(libpldmutils_headers),
   link_with: libpldmutils)
 
+cereal_dep = dependency('cereal', required: false)
+has_cereal = cpp.has_header_symbol(
+    'cereal/cereal.hpp',
+    'cereal::specialize',
+    dependencies: cereal_dep,
+    required: false)
+if not has_cereal
+    cereal_opts = import('cmake').subproject_options()
+    cereal_opts.add_cmake_defines({'BUILD_TESTS': 'OFF'})
+    cereal_proj = import('cmake').subproject(
+        'cereal',
+        options: cereal_opts,
+        required: false)
+    assert(cereal_proj.found(), 'cereal is required')
+    cereal_dep = cereal_proj.dependency('cereal')
+endif
+
 deps = [
   function2_dep,
   libpldm_dep,
@@ -186,7 +205,8 @@ deps = [
 if get_option('libpldmresponder').enabled()
 subdir('libpldmresponder')
 deps += [
-  libpldmresponder
+  libpldmresponder,
+  cereal_dep,
 ]
 endif
 

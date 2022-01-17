@@ -59,6 +59,8 @@
 #include "oem/ibm/host-bmc/host_lamp_test.hpp"
 #endif
 
+#include "host-bmc/dbus/custom_dbus.hpp"
+
 constexpr uint8_t MCTP_MSG_TYPE_PLDM = 1;
 
 using namespace pldm;
@@ -452,6 +454,7 @@ int main(int argc, char** argv)
 
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
     bus.request_name("xyz.openbmc_project.PLDM");
+
     IO io(event, socketFd(), EPOLLIN, std::move(callback));
 #ifdef LIBPLDMRESPONDER
     if (hostPDRHandler)
