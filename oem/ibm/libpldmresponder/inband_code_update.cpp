@@ -207,7 +207,9 @@ void CodeUpdate::setVersions()
             pldmBootSideData.running_version_object = runningVersion.c_str();
 
             writeBootSideFile(pldmBootSideData);
-            setBootSideBiosAttr(pldmBootSideData.current_boot_side);
+            biosAttrList.push_back(std::make_pair(
+                bootSideAttrName, pldmBootSideData.current_boot_side));
+            setBiosAttr(biosAttrList);
         }
         else
         {
@@ -222,12 +224,18 @@ void CodeUpdate::setVersions()
                     (pldmBootSideData.next_boot_side == "Temp" ? "Perm"
                                                                : "Temp");
                 pldmBootSideData.next_boot_side = next_boot_side;
+                pldmBootSideData.running_version_object = runningVersion;
                 writeBootSideFile(pldmBootSideData);
-                setBootSideBiosAttr(pldmBootSideData.current_boot_side);
+                biosAttrList.push_back(
+                    std::make_pair(bootSideAttrName, current_boot_side));
+                setBiosAttr(biosAttrList);
             }
             else
             {
-                setBootSideBiosAttr(pldmBootSideData.current_boot_side);
+                pldm_boot_side_data pldmBootSideData = readBootSideFile();
+                biosAttrList.push_back(std::make_pair(
+                    bootSideAttrName, pldmBootSideData.current_boot_side));
+                setBiosAttr(biosAttrList);
             }
         }
     }
