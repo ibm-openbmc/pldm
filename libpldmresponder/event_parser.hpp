@@ -28,6 +28,7 @@ struct StateSensorEntry
     pdr::EntityInstance entityInstance;
     pdr::SensorOffset sensorOffset;
     bool skipContainerCheck;
+    pdr::StateSetId stateSetid;
 
     bool operator==(const StateSensorEntry& e) const
     {
@@ -36,13 +37,15 @@ struct StateSensorEntry
             return ((containerId == e.containerId) &&
                     (entityType == e.entityType) &&
                     (entityInstance == e.entityInstance) &&
-                    (sensorOffset == e.sensorOffset));
+                    (sensorOffset == e.sensorOffset) &&
+                    (stateSetid == e.stateSetid));
         }
         else
         {
             return ((entityType == e.entityType) &&
                     (entityInstance == e.entityInstance) &&
-                    (sensorOffset == e.sensorOffset));
+                    (sensorOffset == e.sensorOffset) &&
+                    (stateSetid == e.stateSetid));
         }
     }
 
@@ -59,7 +62,12 @@ struct StateSensorEntry
                     ((containerId == e.containerId) &&
                      (entityType == e.entityType) &&
                      (entityInstance == e.entityInstance) &&
-                     (sensorOffset < e.sensorOffset)));
+                     (sensorOffset < e.sensorOffset)) ||
+                    ((containerId == e.containerId) &&
+                     (entityType == e.entityType) &&
+                     (entityInstance == e.entityInstance) &&
+                     (sensorOffset == e.sensorOffset) &&
+                     (stateSetid < e.stateSetid)));
         }
         else
         {
@@ -68,7 +76,11 @@ struct StateSensorEntry
                      (entityInstance < e.entityInstance)) ||
                     ((entityType == e.entityType) &&
                      (entityInstance == e.entityInstance) &&
-                     (sensorOffset < e.sensorOffset)));
+                     (sensorOffset < e.sensorOffset)) ||
+                    ((entityType == e.entityType) &&
+                     (entityInstance == e.entityInstance) &&
+                     (sensorOffset == e.sensorOffset) &&
+                     (stateSetid < e.stateSetid)));
         }
     }
 };

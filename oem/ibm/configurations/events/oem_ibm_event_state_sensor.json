@@ -4,6 +4,7 @@
             "entityType": 57346,
             "entityInstance": 0,
             "sensorOffset": 1,
+            "stateSetId": 15,
             "event_states": [
                 1,
                 2,
@@ -25,6 +26,7 @@
             "entityType": 57346,
             "entityInstance": 1,
             "sensorOffset": 1,
+            "stateSetId": 15,
             "event_states": [
                 1,
                 2,
@@ -42,5 +44,5 @@
                 ]
             }
         }
-     ]
+    ]
 }
