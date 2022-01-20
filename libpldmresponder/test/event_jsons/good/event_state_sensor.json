@@ -5,6 +5,7 @@
             "entityType": 64,
             "entityInstance": 1,
             "sensorOffset": 0,
+            "stateSetId":1,
             "event_states": [
                 0,
                 1,
@@ -27,6 +28,7 @@
             "entityType": 64,
             "entityInstance": 1,
             "sensorOffset": 1,
+            "stateSetId":1,
             "event_states": [
                 2,
                 3
@@ -47,6 +49,7 @@
             "entityType": 67,
             "entityInstance": 2,
             "sensorOffset": 0,
+            "stateSetId":1,
             "event_states": [
                 0,
                 1

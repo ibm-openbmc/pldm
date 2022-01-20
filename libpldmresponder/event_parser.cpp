@@ -56,6 +56,8 @@ StateSensorHandler::StateSensorHandler(const std::string& dirPath)
                 static_cast<uint16_t>(entry.value("entityInstance", 0));
             stateSensorEntry.sensorOffset =
                 static_cast<uint8_t>(entry.value("sensorOffset", 0));
+            stateSensorEntry.stateSetid =
+                static_cast<uint16_t>(entry.value("stateSetId", 0));
 
             // container id is not found in the json
             stateSensorEntry.skipContainerCheck =
