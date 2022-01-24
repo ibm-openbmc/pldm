@@ -25,6 +25,7 @@
 #include <xyz/openbmc_project/Inventory/Item/server.hpp>
 #include <xyz/openbmc_project/Led/Group/server.hpp>
 #include <xyz/openbmc_project/Object/Enable/server.hpp>
+#include <xyz/openbmc_project/Software/Version/server.hpp>
 #include <xyz/openbmc_project/State/Decorator/Availability/server.hpp>
 #include <xyz/openbmc_project/State/Decorator/OperationalStatus/server.hpp>
 
@@ -77,6 +78,8 @@ using ItemBoard = sdbusplus::server::object::object<
     sdbusplus::xyz::openbmc_project::Inventory::Item::server::Board>;
 using ItemGlobal = sdbusplus::server::object::object<
     sdbusplus::xyz::openbmc_project::Inventory::Item::server::Global>;
+using SoftwareVersion = sdbusplus::server::object::object<
+    sdbusplus::xyz::openbmc_project::Software::server::Version>;
 
 using LicIntf = sdbusplus::server::object::object<
     sdbusplus::com::ibm::License::Entry::server::LicenseEntry>;
@@ -84,6 +87,8 @@ using AvailabilityIntf = sdbusplus::server::object::object<
     sdbusplus::xyz::openbmc_project::State::Decorator::server::Availability>;
 using Associations =
     std::vector<std::tuple<std::string, std::string, std::string>>;
+using VersionPurpose =
+    sdbusplus::xyz::openbmc_project::Software::server::Version::VersionPurpose;
 
 class Group : public AssertedIntf
 {
@@ -214,6 +219,8 @@ class CustomDBus
      *  @param[in] path - the object path
      */
     void implementChassisInterface(const std::string& path);
+
+    void setSoftwareVersion(const std::string& path, std::string value);
 
     void implementPCIeSlotInterface(const std::string& path);
 
@@ -347,6 +354,7 @@ class CustomDBus
         fabricAdapter;
     std::unordered_map<ObjectPath, std::unique_ptr<ItemBoard>> board;
     std::unordered_map<ObjectPath, std::unique_ptr<ItemGlobal>> global;
+    std::unordered_map<ObjectPath, std::unique_ptr<SoftwareVersion>> version;
 };
 
 } // namespace dbus

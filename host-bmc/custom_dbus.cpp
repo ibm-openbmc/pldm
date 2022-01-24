@@ -29,6 +29,19 @@ std::string CustomDBus::getLocationCode(const std::string& path) const
     return {};
 }
 
+void CustomDBus::setSoftwareVersion(const std::string& path, std::string value)
+{
+    if (version.find(path) == version.end())
+    {
+        version.emplace(path,
+                        std::make_unique<SoftwareVersion>(
+                            pldm::utils::DBusHandler::getBus(), path.c_str()));
+    }
+
+    version.at(path)->version(value);
+    version.at(path)->purpose(VersionPurpose::Other);
+}
+
 void CustomDBus::setOperationalStatus(const std::string& path, bool status,
                                       const std::string& parentChassis)
 {
