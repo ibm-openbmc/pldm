@@ -1413,9 +1413,32 @@ void HostPDRHandler::setLocationCode(
                             std::string(reinterpret_cast<const char*>(
                                             tlv.fruFieldValue.data()),
                                         tlv.fruFieldLen));
+
+                        /* Remove this once phyp support is in place */
+                        if (node.entity_type == PLDM_ENTITY_SYSTEM_CHASSIS)
+                        {
+                            CustomDBus::getCustomDBus().setSoftwareVersion(
+                                entity.first, "sample_mex_version");
+                        }
+                        /* Remove this once phyp support is in place */
                     }
                 }
             }
+            /* Enable this once phyp support is in place
+            else
+            {
+                for(auto& tlv : data.fruTLV)
+                {
+                    if(tlv.fruFieldType == PLDM_FRU_FIELD_TYPE_VERSION &&
+            node.entity_type == PLDM_ENTITY_SYSTEM_CHASSIS)
+                    {
+                        CustomDBus::getCustomDBus().setSoftwareVersion(entity.first,
+                            std::string(reinterpret_cast<const char*>(
+                                            tlv.fruFieldValue.data()),
+                                        tlv.fruFieldLen))
+                    }
+                }
+            }*/
         }
     }
 }
