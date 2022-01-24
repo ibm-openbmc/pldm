@@ -173,21 +173,11 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
     {
         if (hostPDRHandler->isHostUp() && oemPlatformHandler != nullptr)
         {
+            // When host is up, we assume that the entity manager
+            // already sends the system type information before we
+            // reach BMC ready state.
             auto rc = oemPlatformHandler->checkBMCState();
             if (rc != PLDM_SUCCESS)
-            {
-                return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
-            }
-        }
-        if (oemPlatformHandler)
-        {
-            // Irrespective if whether the host is up, we need to make sure
-            // that we got the system type from the entity manager service
-            // otherwise we would not have platform dependent PDR's, so
-            // sending NOT_READY untill we see a signal from entity manager
-
-            auto systemType = oemPlatformHandler->getConfigDir();
-            if (systemType.empty())
             {
                 return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
             }
@@ -208,8 +198,16 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
         if (oemPlatformHandler != nullptr)
         {
             auto systemType = oemPlatformHandler->getConfigDir();
-            pdrJsonsDir.push_back(pdrJsonDir /
-                                  oemPlatformHandler->getConfigDir());
+            if (!systemType.empty())
+            {
+                // In case of normal poweron , the system type would have been
+                // already filled by entity manager when ever BMC reaches Ready
+                // state. If this is not filled by time we get a getpdr request
+                // we can assume that the entity manager service is not present
+                // on this system & continue to build the common PDR's.
+                pdrJsonsDir.push_back(pdrJsonDir /
+                                      oemPlatformHandler->getConfigDir());
+            }
             oemPlatformHandler->buildOEMPDR(pdrRepo);
         }
         generate(*dBusIntf, pdrJsonsDir, pdrRepo, bmcEntityTree);
