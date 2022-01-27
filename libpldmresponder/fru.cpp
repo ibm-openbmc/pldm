@@ -139,6 +139,15 @@ void FruImpl::buildFRUTable()
         return;
     }
 
+    subscribeFruPresence(inventoryObjPath, fanInterface, itemInterface,
+                         fanHotplugMatch);
+    subscribeFruPresence(inventoryObjPath, psuInterface, itemInterface,
+                         psuHotplugMatch);
+    subscribeFruPresence(inventoryObjPath, pcieAdapterInterface, itemInterface,
+                         pcieHotplugMatch);
+    subscribeFruPresence(inventoryObjPath, panelInterface, itemInterface,
+                         panelHotplugMatch);
+
     fru_parser::DBusLookupInfo dbusInfo;
     // Read the all the inventory D-Bus objects
     auto& bus = pldm::utils::DBusHandler::getBus();
