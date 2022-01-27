@@ -45,6 +45,17 @@ using ObjectPathToRSIMap = std::map<ObjectPath, uint16_t>;
 
 using ChangeEntry = uint32_t;
 
+static constexpr auto inventoryObjPath =
+    "/xyz/openbmc_project/inventory/system/chassis";
+static constexpr auto itemInterface = "xyz.openbmc_project.Inventory.Item";
+static constexpr auto fanInterface = "xyz.openbmc_project.Inventory.Item.Fan";
+static constexpr auto psuInterface =
+    "xyz.openbmc_project.Inventory.Item.PowerSupply";
+static constexpr auto pcieAdapterInterface =
+    "xyz.openbmc_project.Inventory.Item.PCIeDevice";
+static constexpr auto panelInterface =
+    "xyz.openbmc_project.Inventory.Item.Panel";
+
 /** @class FruImpl
  *
  *  @brief Builds the PLDM FRU table containing the FRU records
@@ -92,26 +103,6 @@ class FruImpl
     {
         startStateSensorId = 0;
         startStateEffecterId = 0;
-        static constexpr auto inventoryObjPath =
-            "/xyz/openbmc_project/inventory/system/chassis";
-        static constexpr auto itemInterface =
-            "xyz.openbmc_project.Inventory.Item";
-        static constexpr auto fanInterface =
-            "xyz.openbmc_project.Inventory.Item.Fan";
-        static constexpr auto psuInterface =
-            "xyz.openbmc_project.Inventory.Item.PowerSupply";
-        static constexpr auto pcieAdapterInterface =
-            "xyz.openbmc_project.Inventory.Item.PCIeDevice";
-        static constexpr auto panelInterface =
-            "xyz.openbmc_project.Inventory.Item.Panel";
-        subscribeFruPresence(inventoryObjPath, fanInterface, itemInterface,
-                             fanHotplugMatch);
-        subscribeFruPresence(inventoryObjPath, psuInterface, itemInterface,
-                             psuHotplugMatch);
-        subscribeFruPresence(inventoryObjPath, pcieAdapterInterface,
-                             itemInterface, pcieHotplugMatch);
-        subscribeFruPresence(inventoryObjPath, panelInterface, itemInterface,
-                             panelHotplugMatch);
     }
 
     /** @brief Total length of the FRU table in bytes, this excludes the pad
