@@ -178,6 +178,14 @@ HostPDRHandler::HostPDRHandler(
                     this->responseReceived = false;
                     this->mergedHostParents = false;
                     this->objMapIndex = objPathMap.begin();
+
+                    // After a power off , the remote notes will be deleted
+                    // from the entity association tree, making the nodes point
+                    // to junk values, so set them to nullptr
+                    for (const auto& element : this->objPathMap)
+                    {
+                        this->objPathMap[element.first] = nullptr;
+                    }
                 }
                 else if (propVal ==
                          "xyz.openbmc_project.State.Host.HostState.Running")

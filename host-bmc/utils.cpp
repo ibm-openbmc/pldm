@@ -112,6 +112,13 @@ void addObjectPathEntityAssociations(
             {
                 pldm::utils::DBusHandler().getService(entity_path.c_str(),
                                                       nullptr);
+                if (objPathMap.contains(entity_path))
+                {
+                    // if the object is from PLDM, them update/refresh the
+                    // object map as the map would be with junk values after a
+                    // power off
+                    objPathMap[entity_path] = entity;
+                }
             }
             catch (const std::exception& e)
             {
@@ -140,6 +147,12 @@ void addObjectPathEntityAssociations(
         try
         {
             pldm::utils::DBusHandler().getService(dbusPath.c_str(), nullptr);
+            if (objPathMap.contains(dbusPath))
+            {
+                // if the object is from PLDM, them update/refresh the object
+                // map as the map would be with junk values after a power off
+                objPathMap[dbusPath] = entity;
+            }
         }
         catch (const std::exception& e)
         {
