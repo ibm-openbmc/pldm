@@ -72,6 +72,7 @@ int CodeUpdate::setCurrentBootSide(const std::string& currSide)
 
 int CodeUpdate::setNextBootSide(const std::string& nextSide)
 {
+    std::cout << "setNextBootSide, nextSide=" << nextSide << std::endl;
     pldm_boot_side_data pldmBootSideData = readBootSideFile();
     currBootSide = pldmBootSideData.current_boot_side;
     nextBootSide = nextSide;
@@ -79,10 +80,14 @@ int CodeUpdate::setNextBootSide(const std::string& nextSide)
     std::string objPath{};
     if (nextBootSide == currBootSide)
     {
+        std::cout << "Current bootside is same as next boot side,\n"
+                  << "setting priority of running version 0" << std::endl;
         objPath = runningVersion;
     }
     else
     {
+        std::cout << "Current bootside is not same as next boot side,\n"
+                  << "setting priority of non running version 0" << std::endl;
         objPath = nonRunningVersion;
     }
     if (objPath.empty())
@@ -205,6 +210,8 @@ void CodeUpdate::setVersions()
             writeBootSideFile(pldmBootSideData);
             biosAttrList.push_back(std::make_pair(
                 bootSideAttrName, pldmBootSideData.current_boot_side));
+            biosAttrList.push_back(std::make_pair(
+                "pvm_fw_boot_side", pldmBootSideData.current_boot_side));
             setBiosAttr(biosAttrList);
         }
         else
@@ -224,6 +231,8 @@ void CodeUpdate::setVersions()
                 writeBootSideFile(pldmBootSideData);
                 biosAttrList.push_back(
                     std::make_pair(bootSideAttrName, current_boot_side));
+                biosAttrList.push_back(
+                    std::make_pair("pvm_fw_boot_side", current_boot_side));
                 setBiosAttr(biosAttrList);
             }
             else
@@ -231,6 +240,8 @@ void CodeUpdate::setVersions()
                 pldm_boot_side_data pldmBootSideData = readBootSideFile();
                 biosAttrList.push_back(std::make_pair(
                     bootSideAttrName, pldmBootSideData.current_boot_side));
+                biosAttrList.push_back(std::make_pair(
+                    "pvm_fw_boot_side", pldmBootSideData.current_boot_side));
                 setBiosAttr(biosAttrList);
             }
         }
@@ -392,6 +403,8 @@ void CodeUpdate::processRenameEvent()
     writeBootSideFile(pldmBootSideData);
     biosAttrList.push_back(
         std::make_pair(bootSideAttrName, pldmBootSideData.current_boot_side));
+    biosAttrList.push_back(
+        std::make_pair("pvm_fw_boot_side", pldmBootSideData.current_boot_side));
     setBiosAttr(biosAttrList);
 }
 
