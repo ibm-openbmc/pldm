@@ -733,9 +733,12 @@ static inline uint16_t next_container_id(pldm_entity_association_tree *tree)
 
 pldm_entity pldm_entity_extract(pldm_entity_node *node)
 {
-	assert(node != NULL);
+	if (node != NULL) {
+		return node->entity;
+	}
 
-	return node->entity;
+	pldm_entity entity = {0, 0, 0};
+	return entity;
 }
 
 uint16_t pldm_extract_host_container_id(const pldm_entity_node *entity)
