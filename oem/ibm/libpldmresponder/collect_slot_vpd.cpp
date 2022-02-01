@@ -64,7 +64,6 @@ void SlotHandler::processSlotOperations(const std::string& slotObjectPath,
     }
     catch (const std::bad_optional_access& e)
     {
-        std::cerr << e.what() << '\n';
         return;
     }
 
