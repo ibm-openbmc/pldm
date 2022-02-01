@@ -354,9 +354,7 @@ uint32_t FruImpl::populateRecords(
 
 void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
 {
-    std::cout << "\nenter removeIndividualFRU with " << fruObjPath << std::endl;
     uint16_t rsi = objectPathToRSIMap[fruObjPath];
-    std::cout << "rsi to delete " << rsi << std::endl;
     pldm_entity removeEntity;
     uint16_t terminusHdl{};
     uint16_t entityType{};
@@ -368,33 +366,18 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
     removeEntity.entity_instance_num = entityInsNum;
     removeEntity.entity_container_id = containerId;
 
-    std::cout << "removeEntity.entity_type "
-              << (uint32_t)removeEntity.entity_type
-              << "\nremoveEntity.entity_instance_num "
-              << (uint32_t)removeEntity.entity_instance_num
-              << "\nremoveEntity.entity_container_id "
-              << (uint32_t)removeEntity.entity_container_id << std::endl;
-
     uint8_t bmcEventDataOps = PLDM_INVALID_OP;
     uint8_t hostEventDataOps = PLDM_INVALID_OP;
     auto updateRecordHdlBmc =
         pldm_entity_association_pdr_remove_contained_entity(
             pdrRepo, removeEntity, &bmcEventDataOps, false);
-    std::cout << "\n pldm_entity_association_pdr_remove_contained_entity"
-                 "updateRecordHdlBmc "
-              << updateRecordHdlBmc << std::endl;
 
     auto updateRecordHdlHost =
         pldm_entity_association_pdr_remove_contained_entity(
             pdrRepo, removeEntity, &hostEventDataOps, true);
-    std::cout << "\n pldm_entity_association_pdr_remove_contained_entity"
-                 "updateRecordHdlHost "
-              << updateRecordHdlHost << std::endl;
 
     auto deleteRecordHdl =
         pldm_pdr_remove_fru_record_set_by_rsi(pdrRepo, rsi, false);
-    std::cout << "\npldm_pdr_remove_fru_record_set_by_rsi deleteRecordHdl "
-              << deleteRecordHdl << std::endl;
 
     // sm00
     /* std::cout << "\nprinting the entityTree before deleting node\n";
@@ -404,12 +387,8 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
      free(out);*/
     // sm00
 
-    std::cout << "\nbefore pldm_entity_association_tree_delete_node "
-              << std::endl;
     pldm_entity_association_tree_delete_node(entityTree, removeEntity);
 
-    std::cout
-        << "\nafter pldm_entity_association_tree_delete_node for entityTree \n";
     // sm00
     /*std::cout << "\nprinting the entityTree after deleting node\n";
     num = 0;
@@ -418,9 +397,6 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
     free(out);*/
     // sm00
     pldm_entity_association_tree_delete_node(bmcEntityTree, removeEntity);
-    std::cout
-        << "\nafter pldm_entity_association_tree_delete_node for bmcEntityTree"
-        << std::endl;
     objectPathToRSIMap.erase(fruObjPath);
     objToEntityNode.erase(fruObjPath);     // sm00
     associatedEntityMap.erase(fruObjPath); // sm00
@@ -457,14 +433,11 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
             std::move(std::vector<ChangeEntry>(1, updateRecordHdlHost)),
             std::move(std::vector<uint8_t>(1, hostEventDataOps)));
     } // sm00 this can be RECORDS_DELETED also for adapter pdrs
-    std::cout << "\nexit removeIndividualFRU " << std::endl;
 }
 
 void FruImpl::buildIndividualFRU(const std::string& fruInterface,
                                  const std::string& fruObjectPath)
 {
-    std::cout << "\nenter buildIndividualFRU with " << fruObjectPath << " and "
-              << fruInterface << std::endl;
     // An exception will be thrown by getRecordInfo, if the item
     // D-Bus interface name specified in FRU_Master.json does
     // not have corresponding config jsons
@@ -476,7 +449,6 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
     {
         entity.entity_type = parser.getEntityType(fruInterface);
         auto parentObj = pldm::utils::findParent(fruObjectPath);
-        std::cout << "\nfound parent as " << parentObj << std::endl;
         do
         {
             auto iter = objToEntityNode.find(parentObj);
@@ -525,9 +497,6 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
                 const auto& interfaces = object.second;
                 newRecordHdl = populateRecords(interfaces, recordInfos, entity,
                                                fruObjectPath, true);
-                std::cout << "\npopulateRecords returned"
-                             " newRecordHdl "
-                          << newRecordHdl << std::endl;
                 associatedEntityMap.emplace(fruObjectPath, entity);
                 break;
             }
@@ -543,29 +512,16 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
     uint8_t bmcEventDataOps = PLDM_INVALID_OP;
     auto updatedRecordHdlBmc = pldm_entity_association_pdr_add_contained_entity(
         pdrRepo, entity, parentEntity, &bmcEventDataOps, false);
-    std::cout << "\npldm_entity_association_pdr_add_contained_entity"
-                 "updatedRecordHdlBmc "
-              << updatedRecordHdlBmc << std::endl;
 
     uint8_t hostEventDataOps = PLDM_INVALID_OP;
 
     auto updatedRecordHdlHost =
         pldm_entity_association_pdr_add_contained_entity(
             pdrRepo, entity, parentEntity, &hostEventDataOps, true);
-    std::cout << "\npldm_entity_association_pdr_add_contained_entity"
-                 "updatedRecordHdlHost "
-              << updatedRecordHdlHost << std::endl;
 
     // create the relevant state effecter and sensor PDRs for the new fru record
     std::vector<uint32_t> recordHdlList;
     reGenerateStatePDR(fruObjectPath, recordHdlList);
-    std::cout << "\ncreated " << recordHdlList.size() << " new pdrs"
-              << std::endl;
-
-    for (auto& newLedRecord : recordHdlList)
-    {
-        std::cout << "\ncreated record handle " << newLedRecord << std::endl;
-    }
 
     if (table.size())
     {
@@ -589,7 +545,6 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
     sendPDRRepositoryChgEventbyPDRHandles(
         std::move(std::vector<ChangeEntry>(1, updatedRecordHdlHost)),
         std::move(std::vector<uint8_t>(1, hostEventDataOps)));
-    std::cout << "\nexit buildIndividualFRU" << std::endl;
 }
 
 void FruImpl::reGenerateStatePDR(const std::string& fruObjectPath,
@@ -948,8 +903,6 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
         return idList;
     }
 
-    std::cout << "startStateEffecterId " << startStateEffecterId
-              << " startStateSensorId " << startStateSensorId << std::endl;
     if (pdrType == PLDM_STATE_EFFECTER_PDR)
     {
         static const std::vector<Json> emptyList{};
@@ -1009,8 +962,6 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
                 }
                 pdr->effecter_id =
                     startStateEffecterId++; // handler.getNextEffecterId();
-                std::cout << "assigned effecter id " << pdr->effecter_id
-                          << std::endl;
                 // auto& associatedEntityMap = handler.getAssociateEntityMap();
                 if (entity_path != "" &&
                     associatedEntityMap.find(entity_path) !=
@@ -1113,7 +1064,6 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
             pdrEntry.size = pdrSize;
             if (singleEffecter)
             {
-                std::cout << "calling addHotPlugRecord" << std::endl;
                 auto newRecordHdl = addHotPlugRecord(pdrEntry);
                 // nowa dd to the vector
                 idList.push_back(newRecordHdl);
@@ -1298,7 +1248,6 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
             }
         }
     }
-    std::cout << "\nexit FruImpl::setStatePDRParams" << std::endl;
     return idList;
 }
 
@@ -1307,9 +1256,6 @@ uint32_t
 {
     auto lastLocalRecord = pldm_pdr_find_last_local_record(pdrRepo);
     auto lastHandle = lastLocalRecord->record_handle;
-    std::cout << "lastLocalRecord->record_handle "
-              << lastLocalRecord->record_handle << " lastHandle " << lastHandle
-              << std::endl;
     pdrEntry.handle.recordHandle = lastHandle + 1;
     return pldm_pdr_add_hotplug_record(pdrRepo, pdrEntry.data, pdrEntry.size,
                                        pdrEntry.handle.recordHandle, false,
