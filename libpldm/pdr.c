@@ -407,9 +407,6 @@ uint32_t pldm_pdr_add_fru_record_set(pldm_pdr *repo, uint16_t terminus_handle,
 
 	if (bmc_record_handle == 0xFFFF) // handle hot plug
 	{
-		printf("\nadding a hot plugged record, record count=%d before "
-		       "adding\n",
-		       repo->record_count);
 		hotplug = true;
 		pldm_pdr_record *curr = repo->first;
 		while (curr != NULL) {
@@ -420,7 +417,6 @@ uint32_t pldm_pdr_add_fru_record_set(pldm_pdr *repo, uint16_t terminus_handle,
 			curr = curr->next;
 		}
 		bmc_record_handle = prev->record_handle + 1;
-		printf("\ngenerated record handle=%d", bmc_record_handle);
 	}
 
 	struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)&data;
@@ -917,21 +913,6 @@ static void entity_association_tree_visit(pldm_entity_node *node,
 	entity->entity_type = node->entity.entity_type;
 	entity->entity_instance_num = node->entity.entity_instance_num;
 	entity->entity_container_id = node->entity.entity_container_id;
-	printf("\n\n\nentity_type=%d, instance_num=%d,container_id=%d",
-	       entity->entity_type, entity->entity_instance_num,
-	       entity->entity_container_id);
-	if (node->next_sibling) {
-		printf("\nsibling type=%d, instance=%d, container=%d",
-		       node->next_sibling->entity.entity_type,
-		       node->next_sibling->entity.entity_instance_num,
-		       node->next_sibling->entity.entity_container_id);
-	}
-	if (node->first_child) {
-		printf("\nfirst child type=%d, instance=%d, container=%d",
-		       node->first_child->entity.entity_type,
-		       node->first_child->entity.entity_instance_num,
-		       node->first_child->entity.entity_container_id);
-	}
 	entity_association_tree_visit(node->next_sibling, entities, index);
 	entity_association_tree_visit(node->first_child, entities, index);
 }

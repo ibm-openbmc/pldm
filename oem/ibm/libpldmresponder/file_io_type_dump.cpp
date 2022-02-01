@@ -98,8 +98,10 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to make a d-bus call to DUMP manager, ERROR="
+        std::cerr << "Failure with DumpHandler::findDumpObjPath call, ERROR="
                   << e.what() << "\n";
+        pldm::utils::reportError(
+            "xyz.openbmc_project.bmc.PLDM.DumpHandler.findDumpObjPathFail");
     }
 
     return curResDumpEntryPath;
@@ -110,6 +112,7 @@ int DumpHandler::newFileAvailable(uint64_t length)
     static constexpr auto dumpInterface = "xyz.openbmc_project.Dump.NewDump";
     auto& bus = pldm::utils::DBusHandler::getBus();
 
+    std::cout << "newFileAvailable for NewDump" << std::endl;
     auto notifyObjPath = dumpObjPath;
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
     {
@@ -129,8 +132,11 @@ int DumpHandler::newFileAvailable(uint64_t length)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to make a d-bus call to DUMP manager, ERROR="
+        std::cerr << "failed to make a d-bus call to notify"
+                     " a new dump request using newFileAvailable, ERROR="
                   << e.what() << "\n";
+        pldm::utils::reportError(
+            "xyz.openbmc_project.bmc.PLDM.newFileAvailable.NewDumpNotifyFail");
         return PLDM_ERROR;
     }
 
@@ -140,6 +146,8 @@ int DumpHandler::newFileAvailable(uint64_t length)
 std::string DumpHandler::getOffloadUri(uint32_t fileHandle)
 {
     auto path = findDumpObjPath(fileHandle);
+    std::cout << "DumpHandler::getOffloadUri path = " << path.c_str()
+              << " fileHandle = " << fileHandle << std::endl;
     if (path.empty())
     {
         return {};
@@ -152,11 +160,14 @@ std::string DumpHandler::getOffloadUri(uint32_t fileHandle)
         socketInterface =
             pldm::utils::DBusHandler().getDbusProperty<std::string>(
                 path.c_str(), "OffloadUri", dumpEntry);
+        std::cout << "socketInterface=" << socketInterface << std::endl;
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to make a d-bus call to DUMP manager, ERROR="
+        std::cerr << "Failed to get the OffloadUri d-bus property, ERROR="
                   << e.what() << "\n";
+        pldm::utils::reportError(
+            "xyz.openbmc_project.bmc.PLDM.DumpHandler.getOffloadUriFail");
     }
 
     return socketInterface;
@@ -165,6 +176,9 @@ std::string DumpHandler::getOffloadUri(uint32_t fileHandle)
 int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
                                  oem_platform::Handler* /*oemPlatformHandler*/)
 {
+    std::cout << "Enter DumpHandler::writeFromMemory length = " << length
+              << " address = " << address << " fileHandle = " << fileHandle
+              << std::endl;
     if (DumpHandler::fd == -1)
     {
         auto socketInterface = getOffloadUri(fileHandle);
@@ -182,12 +196,17 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
 
         DumpHandler::fd = sock;
     }
+    std::cout
+        << "Start of DumpHandler::writeFromMemory transferFileDataToSocket"
+        << std::endl;
     return transferFileDataToSocket(DumpHandler::fd, length, address);
 }
 
 int DumpHandler::write(const char* buffer, uint32_t, uint32_t& length,
                        oem_platform::Handler* /*oemPlatformHandler*/)
 {
+    std::cout << "Enter DumpHandler::write length = " << length
+              << " DumpHandler::fd = " << DumpHandler::fd << std::endl;
     int rc = writeToUnixSocket(DumpHandler::fd, buffer, length);
     if (rc < 0)
     {
@@ -199,6 +218,7 @@ int DumpHandler::write(const char* buffer, uint32_t, uint32_t& length,
                   << std::endl;
         return PLDM_ERROR;
     }
+    std::cout << "End of DumpHandler::write" << std::endl;
 
     return PLDM_SUCCESS;
 }
@@ -224,9 +244,10 @@ int DumpHandler::fileAck(uint8_t fileStatus)
             }
             catch (const std::exception& e)
             {
-                std::cerr << "failed to make a d-bus call to DUMP "
-                             "manager, ERROR="
-                          << e.what() << "\n";
+                std::cerr
+                    << "Failure in setting Progress as OperationStatus.Failed"
+                       "in fileAck, ERROR="
+                    << e.what() << "\n";
             }
         }
 
@@ -292,8 +313,11 @@ int DumpHandler::fileAck(uint8_t fileStatus)
             catch (const std::exception& e)
             {
                 std::cerr
-                    << "failed to make a d-bus call to DUMP manager, ERROR="
+                    << "Failed to set the Offloaded dbus property to true, ERROR="
                     << e.what() << "\n";
+                pldm::utils::reportError(
+                    "xyz.openbmc_project.bmc.PLDM.fileAck.DumpEntryOffloadedSetFail");
+                return PLDM_ERROR;
             }
 
             auto socketInterface = getOffloadUri(fileHandle);
@@ -340,7 +364,8 @@ int DumpHandler::fileAckWithMetaData(uint32_t metaDataValue1,
     uint8_t fileStatus = (uint8_t)metaDataValue2;
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
     {
-        std::cout << "Token: " << metaDataValue1 << std::endl;
+        std::cout << "fileAckWithMetaData with token: " << metaDataValue1
+                  << " and status: " << metaDataValue2 << std::endl;
         if (fileStatus != PLDM_SUCCESS)
         {
             std::cerr << "Failue in resource dump file ack with metadata"
@@ -358,9 +383,10 @@ int DumpHandler::fileAckWithMetaData(uint32_t metaDataValue1,
             }
             catch (const std::exception& e)
             {
-                std::cerr << "failed to make a d-bus call to DUMP "
-                             "manager, ERROR="
-                          << e.what() << "\n";
+                std::cerr
+                    << "Failure in setting Progress as OperationStatus.Failed"
+                       "in fileAckWithMetaData, ERROR="
+                    << e.what() << "\n";
             }
         }
         // commented as the DBUS support is not yet in
@@ -410,8 +436,11 @@ int DumpHandler::fileAckWithMetaData(uint32_t metaDataValue1,
             catch (const std::exception& e)
             {
                 std::cerr
-                    << "failed to make a d-bus call to DUMP manager, ERROR="
+                    << "Failed to set the Offloaded dbus property to true, ERROR="
                     << e.what() << "\n";
+                pldm::utils::reportError(
+                    "xyz.openbmc_project.bmc.PLDM.fileAckWithMetaData.DumpEntryOffloadedSetFail");
+                return PLDM_ERROR;
             }
 
             close(DumpHandler::fd);
@@ -430,7 +459,8 @@ int DumpHandler::newFileAvailableWithMetaData(uint64_t length, uint32_t token)
     static constexpr auto dumpInterface = "xyz.openbmc_project.Dump.NewDump";
     auto& bus = pldm::utils::DBusHandler::getBus();
 
-    std::cout << "Token sent:" << token << std::endl;
+    std::cout << "newFileAvailableWithMetaData for NewDump with token :"
+              << token << std::endl;
     auto notifyObjPath = dumpObjPath;
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
     {

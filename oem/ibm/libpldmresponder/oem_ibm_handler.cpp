@@ -182,7 +182,6 @@ int pldm::responder::oem_ibm_platform::Handler::
             }
             else if (stateSetId == PLDM_OEM_IBM_SLOT_ENABLE_EFFECTER_STATE)
             {
-                std::cerr << "Effecter id : " << effecterId << std::endl;
                 slotHandler->enableSlot(effecterId, entityAssociationMap,
                                         stateField[currState].effecter_state);
             }
@@ -1228,8 +1227,7 @@ void pldm::responder::oem_ibm_platform::Handler::handleBootTypesAtPowerOn()
         }
         catch (const std::exception& e)
         {
-            std::cerr << "Failed to fetch the restartCause, ERROR=" << e.what()
-                      << "\n";
+            return;
         }
     }
 }
