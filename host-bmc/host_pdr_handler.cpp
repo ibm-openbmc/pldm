@@ -1186,7 +1186,6 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records,
 
     if (!total_table_records)
     {
-        std::cerr << "Failed to get fru record table." << std::endl;
         return;
     }
 
