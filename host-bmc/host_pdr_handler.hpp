@@ -302,6 +302,12 @@ class HostPDRHandler
      */
     void setPresentPropertyStatus(const std::string& path);
 
+    /** @brief Set the availabilty dbus Property
+     *  @param[in] path     - object path
+     *  @return
+     */
+    void setAvailabilityState(const std::string& path);
+
     /** @brief Update the Led Group path
      *  @param[in] path     - object path
      *  @return
