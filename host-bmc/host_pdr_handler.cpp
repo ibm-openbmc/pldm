@@ -949,6 +949,7 @@ void HostPDRHandler::setHostSensorState()
 
 void HostPDRHandler::_setHostSensorState()
 {
+    uint8_t mctpEid = pldm::utils::readHostEID();
     std::vector<uint8_t> stateSensorPDR = *sensorIndex;
     auto pdr =
         reinterpret_cast<const pldm_state_sensor_pdr*>(stateSensorPDR.data());
@@ -969,14 +970,14 @@ void HostPDRHandler::_setHostSensorState()
         {
             if (std::get<2>(terminusInfo) == PLDM_TL_PDR_VALID)
             {
-                mctp_eid = std::get<1>(terminusInfo);
+                mctpEid = std::get<1>(terminusInfo);
             }
 
             bitfield8_t sensorRearm;
             sensorRearm.byte = 0;
             uint8_t tid = std::get<0>(terminusInfo);
 
-            auto instanceId = requester.getInstanceId(mctp_eid);
+            auto instanceId = requester.getInstanceId(mctpEid);
             std::vector<uint8_t> requestMsg(
                 sizeof(pldm_msg_hdr) +
                 PLDM_GET_STATE_SENSOR_READINGS_REQ_BYTES);
@@ -986,7 +987,7 @@ void HostPDRHandler::_setHostSensorState()
 
             if (rc != PLDM_SUCCESS)
             {
-                requester.markFree(mctp_eid, instanceId);
+                requester.markFree(mctpEid, instanceId);
                 std::cerr << "Failed to "
                              "encode_get_state_sensor_readings_req, rc = "
                           << rc << std::endl;
@@ -1097,7 +1098,7 @@ void HostPDRHandler::_setHostSensorState()
             };
 
             rc = handler->registerRequest(
-                mctp_eid, instanceId, PLDM_PLATFORM,
+                mctpEid, instanceId, PLDM_PLATFORM,
                 PLDM_GET_STATE_SENSOR_READINGS, std::move(requestMsg),
                 std::move(getStateSensorReadingRespHandler));
 
