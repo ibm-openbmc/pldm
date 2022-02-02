@@ -872,7 +872,7 @@ void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
         }
     };
     rc = handler->registerRequest(
-        mctp_eid, instanceId, PLDM_PLATFORM, PLDM_PDR_REPOSITORY_CHG_EVENT,
+        mctp_eid, instanceId, PLDM_PLATFORM, PLDM_PLATFORM_EVENT_MESSAGE,
         std::move(requestMsg), std::move(platformEventMessageResponseHandler));
     if (rc)
     {
