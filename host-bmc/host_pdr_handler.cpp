@@ -166,7 +166,7 @@ HostPDRHandler::HostPDRHandler(
                         }
                     }
 
-                    // when the host is powered off, set the present
+                    // when the host is powered off, set the availability
                     // state of all the dbus objects to false
                     this->setPresenceFrus();
                     pldm_pdr_remove_remote_pdrs(repo);
@@ -255,7 +255,7 @@ void HostPDRHandler::setPresenceFrus()
     // iterate over all dbus objects
     for (const auto& [path, entityId] : objPathMap)
     {
-        CustomDBus::getCustomDBus().updateItemPresentStatus(path, false);
+        CustomDBus::getCustomDBus().setAvailabilityState(path, false);
     }
 }
 
@@ -1541,6 +1541,11 @@ void HostPDRHandler::setPresentPropertyStatus(const std::string& path)
     CustomDBus::getCustomDBus().updateItemPresentStatus(path, true);
 }
 
+void HostPDRHandler::setAvailabilityState(const std::string& path)
+{
+    CustomDBus::getCustomDBus().setAvailabilityState(path, true);
+}
+
 void HostPDRHandler::createDbusObjects(const PDRList& fruRecordSetPDRs)
 {
     getFRURecordTableMetadataByHost(fruRecordSetPDRs);
@@ -1556,6 +1561,10 @@ void HostPDRHandler::createDbusObjects(const PDRList& fruRecordSetPDRs)
         pldm_entity node = pldm_entity_extract(entity.second);
         // update the Present Property
         setPresentPropertyStatus(entity.first);
+
+        // Implement & update the Availability to true
+        setAvailabilityState(entity.first);
+
         switch (node.entity_type)
         {
             case 32903:
