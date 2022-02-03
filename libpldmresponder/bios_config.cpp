@@ -446,6 +446,24 @@ void BIOSConfig::updateBaseBIOSTableProperty()
         auto method = bus.new_method_call(service.c_str(), biosConfigPath,
                                           dbusProperties, "Set");
         std::variant<BaseBIOSTable> value = baseBIOSTableMaps;
+#ifdef OEM_IBM
+        for (const auto& [attrName, biostabObj] : baseBIOSTableMaps)
+        {
+            if (attrName == "fw_boot_side")
+            {
+                BiosAttributeList biosAttrList;
+                std::string nextBootSide =
+                    std::get<std::string>(std::get<5>(biostabObj));
+                std::string currNextBootSide = getBiosAttrValue("fw_boot_side");
+                if (currNextBootSide != nextBootSide)
+                {
+                    biosAttrList.push_back(
+                        std::make_pair(attrName, nextBootSide));
+                    setBiosAttr(biosAttrList);
+                }
+            }
+        }
+#endif
         method.append(biosConfigInterface, biosConfigPropertyName, value);
         bus.call_noreply(method);
     }
