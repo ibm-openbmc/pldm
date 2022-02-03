@@ -219,6 +219,12 @@ void CodeUpdate::setVersions()
             pldm_boot_side_data pldmBootSideData = readBootSideFile();
             if (pldmBootSideData.running_version_object != runningVersion)
             {
+                std::cout
+                    << "BMC have booted with the new image runningVersion="
+                    << runningVersion << std::endl;
+                std::cout << "Previous Image was: "
+                          << pldmBootSideData.running_version_object
+                          << std::endl;
                 auto current_boot_side =
                     (pldmBootSideData.current_boot_side == "Temp" ? "Perm"
                                                                   : "Temp");
@@ -237,6 +243,9 @@ void CodeUpdate::setVersions()
             }
             else
             {
+                std::cout
+                    << "BMC have booted with the previous image runningVersion="
+                    << pldmBootSideData.running_version_object << std::endl;
                 pldm_boot_side_data pldmBootSideData = readBootSideFile();
                 biosAttrList.push_back(std::make_pair(
                     bootSideAttrName, pldmBootSideData.current_boot_side));
