@@ -568,6 +568,18 @@
          "helpText" : "Specifies if the boot type is an IPL or a ReIPL. Set pvm_boot_type instead",
          "displayName" : "Boot Type Indicator (current)",
          "readOnly":true
-     }
+     },
+     {
+        "attribute_name":"pvm_keep_and_clear",
+        "possible_values":[
+           "Disabled",
+           "Enabled"
+        ],
+        "default_values":[
+           "Disabled"
+        ],
+        "helpText" : "The hypervisor needs to clear most of PHYP NVRAM, but preserve the NVRAM for the manufacturing default partition",
+        "displayName" : "pvm_keep_and_clear"
+     }     
    ]
 }
