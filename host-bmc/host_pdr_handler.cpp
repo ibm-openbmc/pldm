@@ -1262,12 +1262,25 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records,
     }
 }
 
-void HostPDRHandler::getPresentStateBySensorReadigs(
-    uint16_t sensorId, uint16_t type, uint16_t instance, uint16_t containerId,
-    uint8_t state, const std::string& path, pldm::pdr::StateSetId stateSetId)
+pdr::EID HostPDRHandler::getMctpEID(const pldm::pdr::TerminusID& tid)
 {
+    for (const auto& [terminusHandle, terminusInfo] : tlPDRInfo)
+    {
+        if (std::get<0>(terminusInfo) == tid)
+        {
+            return std::get<1>(terminusInfo);
+        }
+    }
+    return pldm::utils::readHostEID();
+}
 
-    auto instanceId = requester.getInstanceId(mctp_eid);
+void HostPDRHandler::getPresentStateBySensorReadigs(
+    const pldm::pdr::TerminusID& tid, uint16_t sensorId, uint16_t type,
+    uint16_t instance, uint16_t containerId, uint8_t state,
+    const std::string& path, pldm::pdr::StateSetId stateSetId)
+{
+    auto mctpEid = getMctpEID(tid);
+    auto instanceId = requester.getInstanceId(mctpEid);
     std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
                                     PLDM_GET_STATE_SENSOR_READINGS_REQ_BYTES);
 
@@ -1278,7 +1291,7 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
                                                    request);
     if (rc != PLDM_SUCCESS)
     {
-        requester.markFree(mctp_eid, instanceId);
+        requester.markFree(mctpEid, instanceId);
         std::cerr << "Failed to encode_get_state_sensor_readings_req, rc = "
                   << rc << std::endl;
         state = PLDM_OPERATIONAL_NON_RECOVERABLE_ERROR;
@@ -1288,14 +1301,26 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
     state = PLDM_SENSOR_UNKNOWN;
     auto getStateSensorReadingsResponseHandler = [this, path, type, instance,
                                                   containerId, &state,
-                                                  stateSetId](
+                                                  stateSetId, mctpEid,
+                                                  sensorId](
                                                      mctp_eid_t /*eid*/,
                                                      const pldm_msg* response,
                                                      size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
-            std::cerr << "Failed to receive response for the Get FRU Record "
-                         "Table\n";
+            std::cerr
+                << "Failed to receive response for get_state_sensor_readings command, sensor id : "
+                << sensorId << std::endl;
+            // even when for some reason , if we fail to get a response
+            // to one sensor, try all the dbus objects
+            ++sensorMapIndex;
+            if (sensorMapIndex == sensorMap.end())
+            {
+                // std::cerr << "sensor map completed\n";
+                ++objMapIndex;
+                sensorMapIndex = sensorMap.begin();
+            }
+            setOperationStatus();
             return;
         }
 
@@ -1340,7 +1365,7 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
                 CustomDBus::getCustomDBus().setAsserted(
                     ledGroupPath, entity,
                     state == PLDM_STATE_SET_IDENTIFY_STATE_ASSERTED,
-                    hostEffecterParser, mctp_eid);
+                    hostEffecterParser, mctpEid);
                 std::vector<std::tuple<std::string, std::string, std::string>>
                     associations{{"identify_led_group",
                                   "identify_inventory_object", ledGroupPath}};
@@ -1359,7 +1384,7 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
     };
 
     rc = handler->registerRequest(
-        mctp_eid, instanceId, PLDM_PLATFORM, PLDM_GET_STATE_SENSOR_READINGS,
+        mctpEid, instanceId, PLDM_PLATFORM, PLDM_GET_STATE_SENSOR_READINGS,
         std::move(requestMsg),
         std::move(getStateSensorReadingsResponseHandler));
     if (rc != PLDM_SUCCESS)
@@ -1481,6 +1506,7 @@ void HostPDRHandler::setOperationStatus()
                     // getStateSensorReadings command.
 
                     getPresentStateBySensorReadigs(
+                        sensorMapIndex->first.terminusID,
                         sensorMapIndex->first.sensorID, entityType,
                         entityInstance, containerId, state, objMapIndex->first,
                         stateSetIds[0]);
@@ -1490,6 +1516,7 @@ void HostPDRHandler::setOperationStatus()
                 {
                     uint8_t state = 0;
                     getPresentStateBySensorReadigs(
+                        sensorMapIndex->first.terminusID,
                         sensorMapIndex->first.sensorID, entityType,
                         entityInstance, containerId, state, objMapIndex->first,
                         stateSetIds[0]);
