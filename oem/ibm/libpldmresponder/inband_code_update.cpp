@@ -169,6 +169,7 @@ void CodeUpdate::setVersions()
     static constexpr auto activeObjPath =
         "/xyz/openbmc_project/software/active";
     static constexpr auto propIntf = "org.freedesktop.DBus.Properties";
+    static constexpr auto pathIntf = "xyz.openbmc_project.Common.FilePath";
 
     auto& bus = dBusIntf->getBus();
     try
@@ -182,6 +183,9 @@ void CodeUpdate::setVersions()
         reply.read(paths);
 
         runningVersion = std::get<std::vector<std::string>>(paths)[0];
+        auto runningPathPropValue = dBusIntf->getDbusPropertyVariant(
+            runningVersion.c_str(), "Path", pathIntf);
+        const auto& runningPath = std::get<std::string>(runningPathPropValue);
 
         auto method1 =
             bus.new_method_call(mapperService, activeObjPath, propIntf, "Get");
@@ -205,7 +209,7 @@ void CodeUpdate::setVersions()
                 getBiosAttrValue("fw_boot_side");
             pldmBootSideData.current_boot_side = nextBootSideBiosValue;
             pldmBootSideData.next_boot_side = nextBootSideBiosValue;
-            pldmBootSideData.running_version_object = runningVersion.c_str();
+            pldmBootSideData.running_version_object = runningPath;
 
             writeBootSideFile(pldmBootSideData);
             biosAttrList.push_back(std::make_pair(
@@ -217,11 +221,10 @@ void CodeUpdate::setVersions()
         else
         {
             pldm_boot_side_data pldmBootSideData = readBootSideFile();
-            if (pldmBootSideData.running_version_object != runningVersion)
+            if (pldmBootSideData.running_version_object != runningPath)
             {
-                std::cout
-                    << "BMC have booted with the new image runningVersion="
-                    << runningVersion << std::endl;
+                std::cout << "BMC have booted with the new image runningPath="
+                          << runningPath << std::endl;
                 std::cout << "Previous Image was: "
                           << pldmBootSideData.running_version_object
                           << std::endl;
@@ -230,7 +233,7 @@ void CodeUpdate::setVersions()
                                                                   : "Temp");
                 pldmBootSideData.current_boot_side = current_boot_side;
                 pldmBootSideData.next_boot_side = current_boot_side;
-                pldmBootSideData.running_version_object = runningVersion;
+                pldmBootSideData.running_version_object = runningPath;
                 writeBootSideFile(pldmBootSideData);
                 biosAttrList.push_back(
                     std::make_pair(bootSideAttrName, current_boot_side));
@@ -241,7 +244,7 @@ void CodeUpdate::setVersions()
             else
             {
                 std::cout
-                    << "BMC have booted with the previous image runningVersion="
+                    << "BMC have booted with the previous image runningPath="
                     << pldmBootSideData.running_version_object << std::endl;
                 pldm_boot_side_data pldmBootSideData = readBootSideFile();
                 pldmBootSideData.next_boot_side =
