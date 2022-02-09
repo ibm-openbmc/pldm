@@ -272,7 +272,6 @@ class HostPDRHandler
     uint16_t getRSI(const PDRList& fruRecordSetPDRs, const pldm_entity& entity);
 
     /** @brief Get present state from state sensor readings
-     *  @param[in] tid          - terminus id
      *  @param[in] sensorId     - state sensor Id
      *  @param[in] type         - entity type
      *  @param[in] instance     - entity instance num
@@ -282,17 +281,10 @@ class HostPDRHandler
      *  @param[in] path       - object path
      *  @param[in] stateSetId - state set Id
      */
-    void getPresentStateBySensorReadigs(const pldm::pdr::TerminusID& tid,
-                                        uint16_t sensorId, uint16_t type,
+    void getPresentStateBySensorReadigs(uint16_t sensorId, uint16_t type,
                                         uint16_t instance, uint16_t containerId,
                                         uint8_t state, const std::string& path,
                                         pldm::pdr::StateSetId stateSetId);
-
-    /** @brief Obtain the mctp_eid for a particular sensor
-     *  @param[in] tid        -  terminus id of the sensor
-     *  @param[out] uint8_t   -  mctp_eid
-     */
-    pdr::EID getMctpEID(const pldm::pdr::TerminusID& tid);
 
     /** @brief Set the OperationalStatus interface
      *  @return
