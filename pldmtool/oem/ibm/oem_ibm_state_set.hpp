@@ -55,6 +55,8 @@ extern const std::map<uint8_t, std::string> OemIBMEntityType{
      "OEM IBM Firmware Update"},
     {PLDM_OEM_ENTITY_TYPE_START, "OEM IBM Entity Type Start"},
     {PLDM_OEM_ENTITY_TYPE_END, "OEM IBM Entity Type End"},
+    {pldm::responder::oem_ibm_platform::PLDM_OEM_IBM_ENTITY_REAL_SAI,
+     "OEM IBM Real SAI"},
 };
 
 /** @brief Map for PLDM OEM IBM State Sets

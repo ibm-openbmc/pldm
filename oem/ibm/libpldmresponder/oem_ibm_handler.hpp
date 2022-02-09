@@ -43,6 +43,8 @@ using PendingObj = std::tuple<AttributeType, CurrentValue>;
 using PendingAttributes = std::map<AttributeName, PendingObj>;
 static constexpr auto PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE = 24577;
 static constexpr auto PLDM_OEM_IBM_FRONT_PANEL_TRIGGER = 32837;
+static constexpr auto PLDM_OEM_IBM_ENTITY_REAL_SAI = 24578;
+
 constexpr uint16_t ENTITY_INSTANCE_0 = 0;
 constexpr uint16_t ENTITY_INSTANCE_1 = 1;
 
@@ -391,6 +393,16 @@ class Handler : public oem_platform::Handler
 
     /** @brief To handle the boot types bios attributes at shutdown*/
     void handleBootTypesAtChassisOff();
+
+    /** @brief To turn off Real SAI effecter*/
+    void turnOffRealSAIEffecter();
+
+    /** @brief Fetch Real SAI status based on the partition SAI and platform SAI
+     *  sensor state. Real SAI is turned on if any of the partition or platform
+     *  SAI turned on else Real SAI is turned off.
+     *  @return Real SAI sensor state PLDM_SENSOR_WARNING/PLDM_SENSOR_NORMAL
+     */
+    uint8_t fetchRealSAIStatus();
 
     ~Handler() = default;
 
