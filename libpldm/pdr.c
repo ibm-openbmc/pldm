@@ -7,13 +7,6 @@
 
 #include <stdio.h>
 
-typedef struct pldm_pdr {
-	uint32_t record_count;
-	uint32_t size;
-	pldm_pdr_record *first;
-	pldm_pdr_record *last;
-} pldm_pdr;
-
 static inline uint32_t get_next_record_handle(const pldm_pdr *repo,
 					      const pldm_pdr_record *record)
 {
@@ -261,37 +254,6 @@ const pldm_pdr_record *pldm_pdr_find_record(const pldm_pdr *repo,
 	return NULL;
 }
 
-pldm_pdr_record *pldm_pdr_find_last_local_record(const pldm_pdr *repo)
-{
-	printf("\nenter pldm_pdr_find_last_local_record record_count=%d \n",
-	       repo->record_count);
-	assert(repo != NULL);
-	pldm_pdr_record *curr = repo->first;
-	pldm_pdr_record *prev = repo->first;
-	uint32_t i = 0;
-	// printf("\n first record handle=%d\n",repo->first->record_handle);
-	// printf("\nlast record handle=%d,
-	// last->next=%d",repo->last->record_handle, (unsigned
-	// int)repo->last->next);
-	while (curr != NULL) {
-		i = curr->record_handle;
-		// printf("\ni=%d\n",i);
-		if (!(prev->is_remote) && (curr->is_remote)) {
-			printf("\nfound record at %d, prev->record_handle=%d\n",
-			       i, prev->record_handle);
-			return prev;
-		}
-		prev = curr;
-		curr = curr->next;
-	}
-	if (curr == NULL) {
-		printf("\nreached curr as NULL prev->record_handle=%d\n",
-		       prev->record_handle);
-		return prev;
-	}
-	return NULL;
-}
-
 bool pldm_pdr_find_prev_record_handle(pldm_pdr *repo, uint32_t record_handle,
 				      uint32_t *prev_record_handle)
 {
@@ -397,27 +359,11 @@ uint32_t pldm_pdr_add_fru_record_set(pldm_pdr *repo, uint16_t terminus_handle,
 				     uint16_t fru_rsi, uint16_t entity_type,
 				     uint16_t entity_instance_num,
 				     uint16_t container_id,
-				     uint32_t bmc_record_handle)
+				     uint32_t bmc_record_handle, bool hotplug)
 {
 	uint32_t size = sizeof(struct pldm_pdr_hdr) +
 			sizeof(struct pldm_pdr_fru_record_set);
 	uint8_t data[size];
-	bool hotplug = false;
-	pldm_pdr_record *prev = repo->first;
-
-	if (bmc_record_handle == 0xFFFF) // handle hot plug
-	{
-		hotplug = true;
-		pldm_pdr_record *curr = repo->first;
-		while (curr != NULL) {
-			if (!prev->is_remote && curr->is_remote) {
-				break;
-			}
-			prev = curr;
-			curr = curr->next;
-		}
-		bmc_record_handle = prev->record_handle + 1;
-	}
 
 	struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)&data;
 	hdr->version = 1;
@@ -434,10 +380,11 @@ uint32_t pldm_pdr_add_fru_record_set(pldm_pdr *repo, uint16_t terminus_handle,
 	fru->entity_instance = htole16(entity_instance_num);
 	fru->container_id = htole16(container_id);
 
+	uint32_t prev_record_handle = bmc_record_handle - 1;
 	if (hotplug) {
 		return pldm_pdr_add_hotplug_record(
 		    repo, data, size, bmc_record_handle, false,
-		    prev->record_handle, fru->terminus_handle);
+		    prev_record_handle, fru->terminus_handle);
 	} else {
 		return pldm_pdr_add(repo, data, size, bmc_record_handle, false,
 				    fru->terminus_handle);
@@ -1654,7 +1601,6 @@ void pldm_pdr_remove_pdrs_by_terminus_handle(uint32_t terminus_handle,
 					     pldm_pdr *repo)
 {
 	assert(repo != NULL);
-	bool removed = false;
 
 	pldm_pdr_record *record = repo->first;
 	pldm_pdr_record *prev = NULL;
@@ -1675,28 +1621,13 @@ void pldm_pdr_remove_pdrs_by_terminus_handle(uint32_t terminus_handle,
 			--repo->record_count;
 			repo->size -= record->size;
 			free(record);
-			removed = true;
 		} else {
 			prev = record;
 		}
 		record = next;
 	}
-
-	if (removed == true) {
-		record = repo->first;
-		uint32_t record_handle = 0;
-		while (record != NULL) {
-			record->record_handle = ++record_handle;
-			if (record->data != NULL) {
-				struct pldm_pdr_hdr *hdr =
-				    (struct pldm_pdr_hdr *)(record->data);
-				hdr->record_handle =
-				    htole32(record->record_handle);
-			}
-			record = record->next;
-		}
-	}
 }
+
 void pldm_pdr_remove_remote_pdrs(pldm_pdr *repo)
 {
 	assert(repo != NULL);
