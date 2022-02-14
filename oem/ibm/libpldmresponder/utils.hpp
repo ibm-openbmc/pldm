@@ -10,6 +10,8 @@ namespace pldm
 {
 namespace responder
 {
+
+enum SocketWriteStatus { Completed, InProgress, Free, Error};
 namespace utils
 {
 namespace fs = std::filesystem;
@@ -38,7 +40,7 @@ int setupUnixSocket(const std::string& socketInterface);
  *            on failure returns -1
 
  */
-int writeToUnixSocket(const int sock, const char* buf,
+void writeToUnixSocket(const int sock, const char* buf,
                       const uint64_t blockSize);
 
 /** @brief Converts a binary file to json data
@@ -113,6 +115,8 @@ bool checkFruPresence(const char* objPath);
  */
 void findPortObjects(const std::string& cardObjPath,
                      std::vector<std::string>& portObjects);
+
+
 } // namespace utils
 } // namespace responder
 } // namespace pldm

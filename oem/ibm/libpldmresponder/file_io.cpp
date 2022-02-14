@@ -14,7 +14,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-
+#include <future>
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -29,7 +29,6 @@ namespace responder
 {
 
 namespace fs = std::filesystem;
-
 namespace dma
 {
 
@@ -106,18 +105,10 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
             << rc << " ADDRESS=" << address << " LENGTH=" << length << "\n";
         return rc;
     }
-
-    rc = writeToUnixSocket(fd, static_cast<const char*>(vgaMemPtr.get()),
-                           length);
-    if (rc < 0)
-    {
-        rc = -errno;
-        close(fd);
-        std::cerr << "transferHostDataToSocket : failure in closing socket"
-                  << std::endl;
-        return rc;
-    }
-    return 0;
+   std::cerr << "calling asyncThread \n"; 
+   std::future<void> asyncThread = std::async(std::launch::async, &writeToUnixSocket, fd, static_cast<const char*>(vgaMemPtr.get()), length);
+   std::cerr << "return after asyncThread \n"; 
+  return 0;
 }
 
 int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
