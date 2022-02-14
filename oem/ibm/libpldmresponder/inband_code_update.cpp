@@ -229,10 +229,7 @@ void CodeUpdate::setVersions()
                     (pldmBootSideData.current_boot_side == "Temp" ? "Perm"
                                                                   : "Temp");
                 pldmBootSideData.current_boot_side = current_boot_side;
-                auto next_boot_side =
-                    (pldmBootSideData.next_boot_side == "Temp" ? "Perm"
-                                                               : "Temp");
-                pldmBootSideData.next_boot_side = next_boot_side;
+                pldmBootSideData.next_boot_side = current_boot_side;
                 pldmBootSideData.running_version_object = runningVersion;
                 writeBootSideFile(pldmBootSideData);
                 biosAttrList.push_back(
@@ -247,12 +244,19 @@ void CodeUpdate::setVersions()
                     << "BMC have booted with the previous image runningVersion="
                     << pldmBootSideData.running_version_object << std::endl;
                 pldm_boot_side_data pldmBootSideData = readBootSideFile();
+                pldmBootSideData.next_boot_side =
+                    pldmBootSideData.current_boot_side;
+                writeBootSideFile(pldmBootSideData);
                 biosAttrList.push_back(std::make_pair(
                     bootSideAttrName, pldmBootSideData.current_boot_side));
                 biosAttrList.push_back(std::make_pair(
                     "pvm_fw_boot_side", pldmBootSideData.current_boot_side));
                 setBiosAttr(biosAttrList);
             }
+            currBootSide =
+                (pldmBootSideData.current_boot_side == "Temp" ? Tside : Pside);
+            nextBootSide =
+                (pldmBootSideData.next_boot_side == "Temp" ? Tside : Pside);
         }
     }
     catch (const std::exception& e)
@@ -460,8 +464,15 @@ void CodeUpdate::processPriorityChangeNotification(
         return;
     }
     uint8_t newVal = std::get<uint8_t>(it->second);
-    nextBootSide = (newVal == 0) ? currBootSide
-                                 : ((currBootSide == Tside) ? Pside : Tside);
+
+    pldm_boot_side_data pldmBootSideData = readBootSideFile();
+    pldmBootSideData.next_boot_side =
+        (newVal == 0)
+            ? pldmBootSideData.current_boot_side
+            : ((pldmBootSideData.current_boot_side == "Temp") ? "Perm"
+                                                              : "Temp");
+    writeBootSideFile(pldmBootSideData);
+    nextBootSide = (pldmBootSideData.next_boot_side == "Temp" ? Tside : Pside);
 }
 
 void CodeUpdate::setOemPlatformHandler(
