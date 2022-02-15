@@ -19,6 +19,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <thread>
 
 namespace pldm
 {
@@ -58,11 +59,6 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
     {
         pageAlignedLength += pageSize;
     }
-
-    auto mmapCleanup = [pageAlignedLength](void* vgaMem) {
-        munmap(vgaMem, pageAlignedLength);
-    };
-
     int dmaFd = -1;
     int rc = 0;
     dmaFd = open(xdmaDev, O_RDWR);
@@ -77,20 +73,20 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
 
     pldm::utils::CustomFD xdmaFd(dmaFd);
 
-    void* vgaMem;
-    vgaMem =
+    vgaMemDump =
         mmap(nullptr, pageAlignedLength, PROT_READ, MAP_SHARED, xdmaFd(), 0);
-    if (MAP_FAILED == vgaMem)
+    if (MAP_FAILED == vgaMemDump)
     {
         rc = -errno;
         std::cerr
             << "transferHostDataToSocket : Failed to mmap the XDMA device, RC="
             << rc << "\n";
+        close(fd);
         return rc;
     }
 
-    std::unique_ptr<void, decltype(mmapCleanup)> vgaMemPtr(vgaMem, mmapCleanup);
-
+ std::cerr
+            << "transferHostDataToSocket :" << pageAlignedLength <<std::endl;
     AspeedXdmaOp xdmaOp;
     xdmaOp.upstream = 0;
     xdmaOp.hostAddr = address;
@@ -103,11 +99,13 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
         std::cerr
             << "transferHostDataToSocket : Failed to execute the DMA operation, RC="
             << rc << " ADDRESS=" << address << " LENGTH=" << length << "\n";
+        close(fd);
         return rc;
     }
-   std::cerr << "calling asyncThread \n"; 
-   std::future<void> asyncThread = std::async(std::launch::async, &writeToUnixSocket, fd, static_cast<const char*>(vgaMemPtr.get()), length);
-   std::cerr << "return after asyncThread \n"; 
+    std::cerr << "calling new thread \n"; 
+    std::thread dumpOffloadThread(writeToUnixSocket,fd, static_cast<const char*>(vgaMemDump), length);
+    dumpOffloadThread.detach();
+    std::cerr << "return after new Thread \n"; 
   return 0;
 }
 

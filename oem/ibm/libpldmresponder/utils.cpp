@@ -15,6 +15,8 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <sys/mman.h>
+#include <mutex>
 
 namespace pldm
 {
@@ -23,7 +25,8 @@ namespace responder
 {
 
 
-SocketWriteStatus socketWriteStatus = Free;
+std::atomic<SocketWriteStatus> socketWriteStatus = Free;
+std::mutex lockMutex;
 
 namespace utils
 {
@@ -109,12 +112,18 @@ int setupUnixSocket(const std::string& socketInterface)
         }
         close(sock);
     }
+std::cerr << "setupUnixSocket: done " << errno
+                  << std::endl;
     return fd;
 }
 
 void writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
 {
+
+    const std::lock_guard<std::mutex> lock(lockMutex);
+
     socketWriteStatus=InProgress;
+     std::cerr << "writeToUnixSocket: set Inprogress" << std::endl;
     uint64_t i;
     int nwrite = 0;
 
@@ -159,7 +168,7 @@ void writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize
                     nwrite = 0;
                     continue;
                 }
-                std::cerr << "writeToUnixSocket: Failed to write" << std::endl;
+                std::cerr << "writeToUnixSocket: Failed to write " << errno << std::endl;
                 close(sock);
                 socketWriteStatus =Error;
                 return;
@@ -170,6 +179,9 @@ void writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize
             nwrite = 0;
         }
     }
+    std::cerr << "writeToUnixSocket: set completed" << std::endl;
+
+    munmap((void*)buf, blockSize);
     socketWriteStatus=Completed;
     return;
 }

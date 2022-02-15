@@ -69,6 +69,7 @@ int FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
         address += dma::maxSize;
     }
     auto rc = xdmaInterface.transferHostDataToSocket(fd, length, address);
+    std::cerr << "wating for rc from transferHostDataToSocket "<< rc<< std::endl;
     return rc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
 }
 

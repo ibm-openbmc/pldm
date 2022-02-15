@@ -71,6 +71,7 @@ class DMA
      * @return returns 0 on success, negative errno on failure
      */
     int transferHostDataToSocket(int fd, uint32_t length, uint64_t address);
+    void* vgaMemDump=NULL;
 };
 
 /** @brief Transfer the data between BMC and host using DMA.
