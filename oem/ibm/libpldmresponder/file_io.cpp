@@ -14,7 +14,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <future>
+
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -28,7 +28,7 @@ using namespace sdbusplus::xyz::openbmc_project::Common::Error;
 
 namespace responder
 {
-
+extern SocketWriteStatus socketWriteStatus;
 namespace fs = std::filesystem;
 namespace dma
 {
@@ -51,6 +51,7 @@ constexpr auto xdmaDev = "/dev/aspeed-xdma";
 
 int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
 {
+    socketWriteStatus = NotReady;
     static const size_t pageSize = getpagesize();
     uint32_t numPages = length / pageSize;
     uint32_t pageAlignedLength = numPages * pageSize;
@@ -72,7 +73,7 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
     }
 
     pldm::utils::CustomFD xdmaFd(dmaFd);
-
+    void* vgaMemDump = NULL;
     vgaMemDump =
         mmap(nullptr, pageAlignedLength, PROT_READ, MAP_SHARED, xdmaFd(), 0);
     if (MAP_FAILED == vgaMemDump)
@@ -81,12 +82,9 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
         std::cerr
             << "transferHostDataToSocket : Failed to mmap the XDMA device, RC="
             << rc << "\n";
-        close(fd);
         return rc;
     }
 
- std::cerr
-            << "transferHostDataToSocket :" << pageAlignedLength <<std::endl;
     AspeedXdmaOp xdmaOp;
     xdmaOp.upstream = 0;
     xdmaOp.hostAddr = address;
@@ -99,14 +97,15 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
         std::cerr
             << "transferHostDataToSocket : Failed to execute the DMA operation, RC="
             << rc << " ADDRESS=" << address << " LENGTH=" << length << "\n";
-        close(fd);
+        munmap(vgaMemDump, pageAlignedLength);
         return rc;
     }
-    std::cerr << "calling new thread \n"; 
-    std::thread dumpOffloadThread(writeToUnixSocket,fd, static_cast<const char*>(vgaMemDump), length);
+
+    std::thread dumpOffloadThread(writeToUnixSocket, fd,
+                                  static_cast<const char*>(vgaMemDump), length);
     dumpOffloadThread.detach();
-    std::cerr << "return after new Thread \n"; 
-  return 0;
+
+    return 0;
 }
 
 int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,

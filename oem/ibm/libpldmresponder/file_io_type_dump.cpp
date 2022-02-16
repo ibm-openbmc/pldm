@@ -195,28 +195,58 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
         }
 
         DumpHandler::fd = sock;
-    }
-    std::cout
-        << "Start of DumpHandler::writeFromMemory transferFileDataToSocket"
-        << std::endl;
-
-    if (socketWriteStatus==Error)
-    {
-          std::cerr<< "DumpHandler::writeFromMemory: Error while writing to Unix socket" << std::endl;
-          close(fd);
-          return PLDM_ERROR;
-    }
-    else if (socketWriteStatus==InProgress )
-    {
-          std::cout<< "Dump offload InProgress, sending Busy message" << std::endl;
-          return PLDM_ERROR_NOT_READY;
-    }
-    else if (socketWriteStatus==Completed )
-    {
-          std::cout<< "Dump offload socketWriteStatus complete" << std::endl;
+        auto rc = transferFileDataToSocket(DumpHandler::fd, length, address);
+        if (rc < 0)
+        {
+            std::cerr
+                << "DumpHandler::writeFromMemory: transferFileDataToSocket failed"
+                << std::endl;
+            if (DumpHandler::fd >= 0)
+            {
+                close(DumpHandler::fd);
+                DumpHandler::fd = -1;
+            }
+            std::remove(socketInterface.c_str());
+            return PLDM_ERROR;
+        }
+        return rc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
     }
 
-    return transferFileDataToSocket(DumpHandler::fd, length, address);
+    if (socketWriteStatus == Error) 
+    {
+        std::cerr
+            << "DumpHandler::writeFromMemory: Error while writing to Unix socket"
+            << std::endl;
+        if (DumpHandler::fd >= 0)
+        {
+            close(DumpHandler::fd);
+            DumpHandler::fd = -1;
+        }
+        auto socketInterface = getOffloadUri(fileHandle);
+        std::remove(socketInterface.c_str());
+        return PLDM_ERROR;
+    }
+    else if (socketWriteStatus == InProgress || socketWriteStatus == NotReady)
+    {
+        return PLDM_ERROR_NOT_READY;
+    }
+
+    auto rc = transferFileDataToSocket(DumpHandler::fd, length, address);
+    if (rc < 0)
+    {
+        std::cerr
+            << "DumpHandler::writeFromMemory: transferFileDataToSocket failed"
+            << std::endl;
+        if (DumpHandler::fd >= 0)
+        {
+            close(DumpHandler::fd);
+            DumpHandler::fd = -1;
+        }
+        auto socketInterface = getOffloadUri(fileHandle);
+        std::remove(socketInterface.c_str());
+        return PLDM_ERROR;
+    }
+    return rc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
 }
 
 int DumpHandler::write(const char* buffer, uint32_t, uint32_t& length,
@@ -225,31 +255,31 @@ int DumpHandler::write(const char* buffer, uint32_t, uint32_t& length,
     std::cout << "Enter DumpHandler::write length = " << length
               << " DumpHandler::fd = " << DumpHandler::fd << std::endl;
 
-     if (socketWriteStatus==Error)
-     {
-           std::cerr<< "DumpHandler::write: Error while writing to Unix socket" << std::endl;
-           close(fd);
-           auto socketInterface = getOffloadUri(fileHandle);
-           std::remove(socketInterface.c_str());
-           return PLDM_ERROR;
-     }
-     else if (socketWriteStatus==InProgress )
-     {
-           std::cout<< "Dump offload InProgress, sending Busy message" << std::endl;
-           return PLDM_ERROR_NOT_READY;
-     }
+    if (socketWriteStatus == Error)
+    {
+        std::cerr << "DumpHandler::write: Error while writing to Unix socket"
+                  << std::endl;
+        close(fd);
+        auto socketInterface = getOffloadUri(fileHandle);
+        std::remove(socketInterface.c_str());
+        return PLDM_ERROR;
+    }
+    else if (socketWriteStatus == InProgress)
+    {
+        return PLDM_ERROR_NOT_READY;
+    }
 
     writeToUnixSocket(DumpHandler::fd, buffer, length);
-    if (socketWriteStatus==Error)
-     {
-           std::cerr<< "DumpHandler::write: Error while writing to Unix socket" << std::endl;
-           close(fd);
-           auto socketInterface = getOffloadUri(fileHandle);
-           std::remove(socketInterface.c_str());
-           return PLDM_ERROR;
-     }
- 
-    std::cout << "End of DumpHandler::write" << std::endl;
+    if (socketWriteStatus == Error)
+    {
+        std::cerr << "DumpHandler::write: Error while writing to Unix socket"
+                  << std::endl;
+        close(fd);
+        auto socketInterface = getOffloadUri(fileHandle);
+        std::remove(socketInterface.c_str());
+        return PLDM_ERROR;
+    }
+
     return PLDM_SUCCESS;
 }
 
@@ -334,6 +364,12 @@ int DumpHandler::fileAck(uint8_t fileStatus)
         if (dumpType == PLDM_FILE_TYPE_DUMP ||
             dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
         {
+
+            if (socketWriteStatus == InProgress)
+            {
+                return PLDM_ERROR_NOT_READY;
+            }
+
             PropertyValue value{true};
             DBusMapping dbusMapping{path, dumpEntry, "Offloaded", "bool"};
             try
@@ -351,12 +387,12 @@ int DumpHandler::fileAck(uint8_t fileStatus)
             }
 
             auto socketInterface = getOffloadUri(fileHandle);
-            std::remove(socketInterface.c_str());
             if (DumpHandler::fd >= 0)
             {
                 close(DumpHandler::fd);
                 DumpHandler::fd = -1;
             }
+            std::remove(socketInterface.c_str());
         }
         return PLDM_SUCCESS;
     }

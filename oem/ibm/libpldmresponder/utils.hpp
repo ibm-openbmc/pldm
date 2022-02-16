@@ -11,7 +11,14 @@ namespace pldm
 namespace responder
 {
 
-enum SocketWriteStatus { Completed, InProgress, Free, Error};
+enum SocketWriteStatus
+{
+    Completed,
+    InProgress,
+    Free,
+    Error,
+    NotReady
+};
 namespace utils
 {
 namespace fs = std::filesystem;
@@ -41,7 +48,7 @@ int setupUnixSocket(const std::string& socketInterface);
 
  */
 void writeToUnixSocket(const int sock, const char* buf,
-                      const uint64_t blockSize);
+                       const uint64_t blockSize);
 
 /** @brief Converts a binary file to json data
  *  This function converts bson data stored in a binary file to
@@ -115,8 +122,6 @@ bool checkFruPresence(const char* objPath);
  */
 void findPortObjects(const std::string& cardObjPath,
                      std::vector<std::string>& portObjects);
-
-
 } // namespace utils
 } // namespace responder
 } // namespace pldm
