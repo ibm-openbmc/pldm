@@ -48,16 +48,16 @@ class CertHandler : public FileHandler
 
     virtual int newFileAvailable(uint64_t length);
 
-    virtual int fileAckWithMetaData(uint32_t metaDataValue1,
+    virtual int fileAckWithMetaData(uint8_t fileStatus, uint32_t metaDataValue1,
                                     uint32_t /*metaDataValue2*/,
                                     uint32_t /*metaDataValue3*/,
                                     uint32_t /*metaDataValue4*/);
 
-    virtual int newFileAvailableWithMetaData(uint64_t /*length*/,
-                                             uint32_t /*token*/)
-    {
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
-    }
+    virtual int newFileAvailableWithMetaData(uint64_t length,
+                                             uint32_t metaDataValue1,
+                                             uint32_t /*metaDataValue2*/,
+                                             uint32_t /*metaDataValue3*/,
+                                             uint32_t /*metaDataValue4*/);
 
     /** @brief CertHandler destructor
      */
@@ -68,6 +68,11 @@ class CertHandler : public FileHandler
     uint16_t certType;      //!< type of the certificate
     static CertMap certMap; //!< holds the fd and remaining read/write size for
                             //!< each certificate
+
+    enum SignedCertStatus
+    {
+        PLDM_INVALID_CERT_DATA = 0X03
+    };
 };
 } // namespace responder
 } // namespace pldm

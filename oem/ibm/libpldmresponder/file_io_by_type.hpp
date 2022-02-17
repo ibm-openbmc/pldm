@@ -89,7 +89,7 @@ class FileHandler
      *
      *  @return PLDM status code
      */
-    virtual int fileAckWithMetaData(uint32_t metaDataValue1,
+    virtual int fileAckWithMetaData(uint8_t fileStatus, uint32_t metaDataValue1,
                                     uint32_t metaDataValue2,
                                     uint32_t metaDataValue3,
                                     uint32_t metaDataValue4) = 0;
@@ -103,7 +103,10 @@ class FileHandler
      * @return PLDM status code
      */
     virtual int newFileAvailableWithMetaData(uint64_t length,
-                                             uint32_t token) = 0;
+                                             uint32_t metaDataValue1,
+                                             uint32_t metaDataValue2,
+                                             uint32_t metaDataValue3,
+                                             uint32_t metaDataValue4) = 0;
 
     /** @brief Method to read an oem file type's content into the PLDM response.
      *  @param[in] filePath - file to read from

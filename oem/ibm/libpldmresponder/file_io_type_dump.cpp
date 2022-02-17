@@ -355,7 +355,8 @@ int DumpHandler::read(uint32_t offset, uint32_t& length, Response& response,
     return readFile(resDumpDirPath, offset, length, response);
 }
 
-int DumpHandler::fileAckWithMetaData(uint32_t metaDataValue1,
+int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
+                                     uint32_t metaDataValue1,
                                      uint32_t metaDataValue2,
                                      uint32_t /*metaDataValue3*/,
                                      uint32_t /*metaDataValue4*/)
@@ -454,13 +455,17 @@ int DumpHandler::fileAckWithMetaData(uint32_t metaDataValue1,
     return PLDM_ERROR;
 }
 
-int DumpHandler::newFileAvailableWithMetaData(uint64_t length, uint32_t token)
+int DumpHandler::newFileAvailableWithMetaData(uint64_t length,
+                                              uint32_t metaDataValue1,
+                                              uint32_t /*metaDataValue2*/,
+                                              uint32_t /*metaDataValue3*/,
+                                              uint32_t /*metaDataValue4*/)
 {
     static constexpr auto dumpInterface = "xyz.openbmc_project.Dump.NewDump";
     auto& bus = pldm::utils::DBusHandler::getBus();
 
     std::cout << "newFileAvailableWithMetaData for NewDump with token :"
-              << token << std::endl;
+              << metaDataValue1 << std::endl;
     auto notifyObjPath = dumpObjPath;
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
     {
