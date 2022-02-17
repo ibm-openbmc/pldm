@@ -26,9 +26,11 @@ class SoftPowerOff
      *  @param[in] bus       - system D-Bus handler
      *  @param[in] event     - sd_event handler
      *  @param[in] instanceDb - pldm instance database
+     *  @param[in] noTimeOut - bool variable that captures
+     *                         is there is indeed a timeout
      */
     SoftPowerOff(sdbusplus::bus_t& bus, sd_event* event,
-                 InstanceIdDb& instanceIdDb);
+                 InstanceIdDb& instanceIdDb, noTimeOut);
 
     /** @brief Is the pldm-softpoweroff has error.
      * if hasError is true, that means the pldm-softpoweroff failed to
@@ -43,6 +45,10 @@ class SoftPowerOff
      */
     inline bool isTimerExpired()
     {
+        if (noTimeOut)
+        {
+            return false;
+        }
         return timer.isExpired();
     }
 
@@ -163,6 +169,10 @@ class SoftPowerOff
     /** @brief Reference to the instance database
      */
     InstanceIdDb& instanceIdDb;
+
+    /** @brief captures if the is a timeout value
+     */
+    bool noTimeOut;
 };
 
 } // namespace pldm
