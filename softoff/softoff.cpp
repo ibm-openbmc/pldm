@@ -38,9 +38,9 @@ pldm::pdr::TerminusID TID = 0;
 namespace sdbusRule = sdbusplus::bus::match::rules;
 
 SoftPowerOff::SoftPowerOff(sdbusplus::bus_t& bus, sd_event* event,
-                           pldm::InstanceIdDb& instanceIdDb) :
+                           pldm::InstanceIdDb& instanceIdDb, bool noTimeOut) :
     bus(bus),
-    timer(event), instanceIdDb(instanceIdDb)
+    timer(event), instanceIdDb(instanceIdDb), noTimeOut(noTimeOut)
 {
     auto jsonData = parseConfig();
 
@@ -137,12 +137,17 @@ void SoftPowerOff::hostSoftOffComplete(sdbusplus::message_t& msg)
     if (msgSensorID == sensorID && msgSensorOffset == sensorOffset &&
         msgEventState == PLDM_SW_TERM_GRACEFUL_SHUTDOWN && msgTID == TID)
     {
-        // Receive Graceful shutdown completion event message. Disable the timer
-        auto rc = timer.stop();
-        if (rc < 0)
+        info("Recieved the graceful shutdown signal from host");
+        if (!noTimeOut)
         {
-            error("PLDM soft off: Failure to STOP the timer. ERRNO={RC}", "RC",
-                  rc);
+            // Receive Graceful shutdown completion event message. Disable the
+            // timer
+            auto rc = timer.stop();
+            if (rc < 0)
+            {
+                error("PLDM soft off: Failure to STOP the timer. ERRNO={RC}",
+                      "RC", rc);
+            }
         }
 
         // This marks the completion of pldm soft power off.
@@ -362,26 +367,36 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
             exit(-1);
         }
 
+        info("Got the response for set effecter states command, PLDM RC = {RC}",
+             "RC", lg2::hex, static_cast<uint16_t>(response->payload[0]));
+        std::vector<uint8_t> responseMessage;
+        responseMessage.resize(responseMsgSize);
+        memcpy(responseMessage.data(), responseMsg, responseMessage.size());
+        pldm::utils::printBuffer(pldm::utils::Rx, responseMessage);
+
         responseReceived = true;
 
-        // Start Timer
-        using namespace std::chrono;
-        auto timeMicroseconds =
-            duration_cast<microseconds>(seconds(SOFTOFF_TIMEOUT_SECONDS));
+        if (!noTimeOut)
+        {
+            // Start Timer
+            using namespace std::chrono;
+            auto timeMicroseconds =
+                duration_cast<microseconds>(seconds(SOFTOFF_TIMEOUT_SECONDS));
 
-        auto ret = startTimer(timeMicroseconds);
-        if (ret < 0)
-        {
-            error(
-                "Failure to start Host soft off wait timer, ERRNO = {RET}. Exit the pldm-softpoweroff",
-                "RET", ret);
-            exit(-1);
-        }
-        else
-        {
-            error(
-                "Timer started waiting for host soft off, TIMEOUT_IN_SEC = {TIMEOUT_SEC}",
-                "TIMEOUT_SEC", SOFTOFF_TIMEOUT_SECONDS);
+            auto ret = startTimer(timeMicroseconds);
+            if (ret < 0)
+            {
+                error(
+                    "Failure to start Host soft off wait timer, ERRNO = {RET}. Exit the pldm-softpoweroff",
+                    "RET", ret);
+                exit(-1);
+            }
+            else
+            {
+                error(
+                    "Timer started waiting for host soft off, TIMEOUT_IN_SEC = {TIMEOUT_SEC}",
+                    "TIMEOUT_SEC", SOFTOFF_TIMEOUT_SECONDS);
+            }
         }
         return;
     };
@@ -397,6 +412,8 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
             "RC", static_cast<int>(rc), "ERR", errno);
         return PLDM_ERROR;
     }
+    std::vector<uint8_t> requestbuffer(requestMsg.begin(), requestMsg.end());
+    pldm::utils::printBuffer(pldm::utils::Tx, requestbuffer);
 
     // Time out or soft off complete
     while (!isCompleted() && !isTimerExpired())
