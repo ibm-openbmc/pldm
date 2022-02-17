@@ -377,12 +377,6 @@ void printBuffer(bool isTx, const std::vector<uint8_t>& buffer);
  */
 std::string toString(const struct variable_field& var);
 
-/** @brief Get the current system time in readable format
- *
- *  @return - std::string equivalent of the system time
- */
-const std::string getCurrentSystemTime();
-
 /** @brief Split strings according to special identifiers
  *
  *  We can split the string according to the custom identifier(';', ',', '&' or
@@ -396,6 +390,11 @@ const std::string getCurrentSystemTime();
  */
 std::vector<std::string> split(std::string_view srcStr, std::string_view delim,
                                std::string_view trimStr = "");
+/** @brief Get the current system time in readable format
+ *
+ *  @return - std::string equivalent of the system time
+ */
+std::string getCurrentSystemTime();
 
 /** @brief Method to get the value from a bios attribute
  *
