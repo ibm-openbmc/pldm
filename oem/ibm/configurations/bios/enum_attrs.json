@@ -306,7 +306,7 @@
             "Enabled"
          ],
          "default_values":[
-            "Disabled"
+            "Enabled"
          ],
          "helpText" : "Enabling vTPM makes a TPM available to the guest operating system.",
          "displayName" : "Virtual Trusted Platform Module"
@@ -318,7 +318,7 @@
             "Enabled"
          ],
          "default_values":[
-            "Disabled"
+            "Enabled"
          ],
          "helpText" : "Specifies the current vTPM policy. Do not set this attribute directly; set pvm_vtpm instead.",
          "displayName" : "Virtual Trusted Platform Module (current)"
