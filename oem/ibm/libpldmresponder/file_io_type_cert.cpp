@@ -237,5 +237,126 @@ int CertHandler::newFileAvailable(uint64_t length)
     return PLDM_SUCCESS;
 }
 
+int CertHandler::newFileAvailableWithMetaData(uint64_t length,
+                                              uint32_t metaDataValue1,
+                                              uint32_t /*metaDataValue2*/,
+                                              uint32_t /*metaDataValue3*/,
+                                              uint32_t /*metaDataValue4*/)
+{
+    constexpr auto certObjPath = "/xyz/openbmc_project/certs/ca/entry/";
+    constexpr auto certEntryIntf = "xyz.openbmc_project.Certs.Entry";
+    uint8_t certSigningStatus = (uint8_t)metaDataValue1;
+    fs::create_directories(certFilePath);
+    fs::permissions(certFilePath,
+                    fs::perms::others_read | fs::perms::owner_write);
+    int fileFd = -1;
+    int flags = O_WRONLY | O_CREAT | O_TRUNC;
+    std::string filePath = certFilePath;
+
+    if (certType == PLDM_FILE_TYPE_CERT_SIGNING_REQUEST)
+    {
+        return PLDM_ERROR_INVALID_DATA;
+    }
+    if (certType == PLDM_FILE_TYPE_SIGNED_CERT)
+    {
+        if (certSigningStatus == PLDM_SUCCESS)
+        {
+            std::cerr << "new file available client cert file, file handle: "
+                      << fileHandle << std::endl;
+            fileFd = open(
+                (filePath + "ClientCert_" + std::to_string(fileHandle)).c_str(),
+                flags, S_IRUSR | S_IWUSR);
+        }
+        else if (certSigningStatus == PLDM_INVALID_CERT_DATA)
+        {
+            std::cerr << "client cert file Invalid data, file handle: "
+                      << fileHandle << std::endl;
+            DBusMapping dbusMapping{certObjPath + std::to_string(fileHandle),
+                                    certEntryIntf, "Status", "string"};
+            std::string status = "xyz.openbmc_project.Certs.Entry.State.BadCSR";
+            PropertyValue value{status};
+            try
+            {
+                pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr
+                    << "Failed to set status property of certicate entry, "
+                       "ERROR="
+                    << e.what() << "\n";
+                return PLDM_ERROR;
+            }
+        }
+    }
+    else if (certType == PLDM_FILE_TYPE_ROOT_CERT)
+    {
+        fileFd =
+            open((filePath + "RootCert").c_str(), flags, S_IRUSR | S_IWUSR);
+    }
+    if (fileFd == -1)
+    {
+        std::cerr << "failed to open file for type " << certType
+                  << " ERROR=" << errno << "\n";
+        return PLDM_ERROR;
+    }
+    certMap.emplace(certType, std::tuple(fileFd, length));
+    return PLDM_SUCCESS;
+}
+
+int CertHandler::fileAckWithMetaData(uint8_t fileStatus,
+                                     uint32_t /*metaDataValue1*/,
+                                     uint32_t /*metaDataValue2*/,
+                                     uint32_t /*metaDataValue3*/,
+                                     uint32_t /*metaDataValue4*/)
+{
+    constexpr auto certObjPath = "/xyz/openbmc_project/certs/ca/entry/";
+    constexpr auto certEntryIntf = "xyz.openbmc_project.Certs.Entry";
+
+    if (certType == PLDM_FILE_TYPE_CERT_SIGNING_REQUEST)
+    {
+        if (fileStatus == PLDM_ERROR_INVALID_DATA)
+        {
+            DBusMapping dbusMapping{certObjPath + std::to_string(fileHandle),
+                                    certEntryIntf, "Status", "string"};
+            std::string status = "xyz.openbmc_project.Certs.Entry.State.BadCSR";
+            PropertyValue value{status};
+            try
+            {
+                pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr
+                    << "Failed to set status property of certicate entry, "
+                       "ERROR="
+                    << e.what() << "\n";
+                return PLDM_ERROR;
+            }
+        }
+        else if (fileStatus == PLDM_ERROR_NOT_READY)
+        {
+            DBusMapping dbusMapping{certObjPath + std::to_string(fileHandle),
+                                    certEntryIntf, "Status", "string"};
+            std::string status =
+                "xyz.openbmc_project.Certs.Entry.State.Pending";
+            PropertyValue value{status};
+            try
+            {
+                pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr
+                    << "Failed to set status property of certicate entry, "
+                       "ERROR="
+                    << e.what() << "\n";
+                return PLDM_ERROR;
+            }
+        }
+    }
+    return PLDM_SUCCESS;
+}
+
 } // namespace responder
 } // namespace pldm
