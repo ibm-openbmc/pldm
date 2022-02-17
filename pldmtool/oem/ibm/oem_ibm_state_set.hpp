@@ -57,7 +57,8 @@ extern const std::map<uint8_t, std::string> OemIBMEntityType{
     {PLDM_OEM_ENTITY_TYPE_END, "OEM IBM Entity Type End"},
     {pldm::responder::oem_ibm_platform::PLDM_OEM_IBM_ENTITY_REAL_SAI,
      "OEM IBM Real SAI"},
-};
+    {pldm::responder::oem_ibm_platform::PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER,
+     "OEM IBM Chassis Power Controller"}};
 
 /** @brief Map for PLDM OEM IBM State Sets
  */
