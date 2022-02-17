@@ -223,14 +223,6 @@ void FruImpl::buildFRUTable()
     // save a copy of bmc's entity association tree
     pldm_entity_association_tree_copy_root(entityTree, bmcEntityTree);
 
-    if (table.size())
-    {
-        padBytes = pldm::utils::getNumPadBytes(table.size());
-        table.resize(table.size() + padBytes, 0);
-
-        // Calculate the checksum
-        checksum = crc32(table.data(), table.size());
-    }
     isBuilt = true;
 }
 std::string FruImpl::populatefwVersion()
@@ -401,22 +393,23 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
     objToEntityNode.erase(fruObjPath);     // sm00
     associatedEntityMap.erase(fruObjPath); // sm00
 
-    if (table
-            .size()) /// need to remove the entry from table before doing this
-                     // may be a separate commit to handle that. as of now it
-                     // does not create issue because the pdr repo is updated.
-                     // the fru record table is not. which means the pldmtool
-                     // fru commands will still show the old record. that may be
-                     // fine since Host is not asking at this moment they are
-                     // getting the updated pdr (both fru and entity assoc pdr)
-                     // but eventually we need it because an add happened after
-                     // a remove will cause two fru records for the same fan
-    {
-        padBytes = pldm::utils::getNumPadBytes(table.size());
-        table.resize(table.size() + padBytes, 0);
-        // Calculate the checksum
-        checksum = crc32(table.data(), table.size());
-    }
+    /* if (table
+             .size()) /// need to remove the entry from table before doing this
+                      // may be a separate commit to handle that. as of now it
+                      // does not create issue because the pdr repo is updated.
+                      // the fru record table is not. which means the pldmtool
+                      // fru commands will still show the old record. that may
+     be
+                      // fine since Host is not asking at this moment they are
+                      // getting the updated pdr (both fru and entity assoc pdr)
+                      // but eventually we need it because an add happened after
+                      // a remove will cause two fru records for the same fan
+     {
+         padBytes = pldm::utils::getNumPadBytes(table.size());
+         table.resize(table.size() + padBytes, 0);
+         // Calculate the checksum
+         checksum = crc32(table.data(), table.size());
+     }*/
     sendPDRRepositoryChgEventbyPDRHandles(
         std::move(std::vector<ChangeEntry>(1, deleteRecordHdl)),
         std::move(std::vector<uint8_t>(1, PLDM_RECORDS_DELETED))); // need to
@@ -523,13 +516,6 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
     std::vector<uint32_t> recordHdlList;
     reGenerateStatePDR(fruObjectPath, recordHdlList);
 
-    if (table.size())
-    {
-        padBytes = pldm::utils::getNumPadBytes(table.size());
-        table.resize(table.size() + padBytes, 0);
-        // Calculate the checksum
-        checksum = crc32(table.data(), table.size());
-    }
     sendPDRRepositoryChgEventbyPDRHandles(
         std::move(std::vector<ChangeEntry>(1, newRecordHdl)),
         std::move(std::vector<uint8_t>(1, PLDM_RECORDS_ADDED)));
@@ -623,12 +609,21 @@ void FruImpl::reGenerateStatePDR(const std::string& fruObjectPath,
 void FruImpl::getFRUTable(Response& response)
 {
     auto hdrSize = response.size();
+    std::vector<uint8_t> tempTable;
 
-    response.resize(hdrSize + table.size() + sizeof(checksum), 0);
-    std::copy(table.begin(), table.end(), response.begin() + hdrSize);
+    if (table.size())
+    {
+        std::copy(table.begin(), table.end(), std::back_inserter(tempTable));
+        padBytes = pldm::utils::getNumPadBytes(table.size());
+        tempTable.resize(tempTable.size() + padBytes, 0);
+
+        checksum = crc32(tempTable.data(), tempTable.size());
+    }
+    response.resize(hdrSize + tempTable.size() + sizeof(checksum), 0);
+    std::copy(tempTable.begin(), tempTable.end(), response.begin() + hdrSize);
 
     // Copy the checksum to response data
-    auto iter = response.begin() + hdrSize + table.size();
+    auto iter = response.begin() + hdrSize + tempTable.size();
     std::copy_n(reinterpret_cast<const uint8_t*>(&checksum), sizeof(checksum),
                 iter);
 }
