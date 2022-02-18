@@ -640,18 +640,23 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     buildAllCodeUpdateEffecterPDR(this, PLDM_ENTITY_SYSTEM_CHASSIS,
                                   ENTITY_INSTANCE_1,
                                   PLDM_OEM_IBM_SYSTEM_POWER_STATE, repo);
-    buildAllRealSAIEffecterPDR(this, PLDM_OEM_IBM_ENTITY_REAL_SAI,
-                               ENTITY_INSTANCE_1, repo);
+
     static constexpr auto objectPath = "/xyz/openbmc_project/inventory/system";
     const std::vector<std::string> slotInterface = {
         "xyz.openbmc_project.Inventory.Item.PCIeSlot"};
+
+    auto slotPaths = dBusIntf->getSubTreePaths(objectPath, 0, slotInterface);
+
+    buildAllSlotEnableEffecterPDR(this, repo, slotPaths);
+    buildAllSlotEnableSensorPDR(this, repo, slotPaths);
+
+    buildAllRealSAIEffecterPDR(this, PLDM_OEM_IBM_ENTITY_REAL_SAI,
+                               ENTITY_INSTANCE_1, repo);
+    buildAllRealSAISensorPDR(this, PLDM_OEM_IBM_ENTITY_REAL_SAI,
+                             ENTITY_INSTANCE_1, repo);
     buildAllCodeUpdateEffecterPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
                                   ENTITY_INSTANCE_0,
                                   PLDM_OEM_IBM_BOOT_SIDE_RENAME, repo);
-
-    auto slotPaths = dBusIntf->getSubTreePaths(objectPath, 0, slotInterface);
-    buildAllSlotEnableEffecterPDR(this, repo, slotPaths);
-    buildAllSlotEnableSensorPDR(this, repo, slotPaths);
 
     buildAllCodeUpdateSensorPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
                                 ENTITY_INSTANCE_0,
@@ -659,8 +664,9 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     buildAllCodeUpdateSensorPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
                                 ENTITY_INSTANCE_0,
                                 PLDM_OEM_IBM_VERIFICATION_STATE, repo);
-    buildAllRealSAISensorPDR(this, PLDM_OEM_IBM_ENTITY_REAL_SAI,
-                             ENTITY_INSTANCE_1, repo);
+    buildAllCodeUpdateSensorPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
+                                ENTITY_INSTANCE_0,
+                                PLDM_OEM_IBM_BOOT_SIDE_RENAME, repo);
 
     buildAllSystemPowerStateEffecterPDR(
         this, PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER, ENTITY_INSTANCE_0,
@@ -679,9 +685,6 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     realSAISensorId = findStateSensorId(
         repo.getPdr(), 0, PLDM_OEM_IBM_ENTITY_REAL_SAI, ENTITY_INSTANCE_1, 1,
         PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS);
-    buildAllCodeUpdateSensorPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
-                                ENTITY_INSTANCE_0,
-                                PLDM_OEM_IBM_BOOT_SIDE_RENAME, repo);
     auto sensorId = findStateSensorId(
         repo.getPdr(), 0, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
         ENTITY_INSTANCE_0, 1, PLDM_OEM_IBM_VERIFICATION_STATE);
@@ -1345,7 +1348,7 @@ void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
     }
     else if (!value && timer.isEnabled())
     {
-         info(
+        info(
             "setSurvTimer:LogginPel:hostOff={HOST_OFF} hostTransitioningToOff={HOST_TRANST_OFF} tid={TID}",
             "HOST_OFF", (bool)hostOff, "HOST_TRANST_OFF",
             (bool)hostTransitioningToOff, "TID", (uint16_t)tid);

@@ -81,7 +81,7 @@ TEST(OemSetStateEffecterStatesHandler, testGoodRequest)
     uint16_t entityInstance_ = 0;
     uint16_t containerId_ = 0;
     uint8_t compSensorCnt_ = 1;
-    uint16_t effecterId = 0xA;
+    // uint16_t effecterId = 0xA;
     uint16_t sensorId = 0x1;
     TestInstanceIdDb instanceIdDb;
 
@@ -135,34 +135,6 @@ TEST(OemSetStateEffecterStatesHandler, testGoodRequest)
         entityID_, entityInstance_, containerId_, stateSetId_, compSensorCnt_,
         sensorId, stateField1);
     ASSERT_EQ(rc, PLDM_PLATFORM_INVALID_STATE_VALUE);
-
-    entityID_ = PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE;
-    entityInstance_ = 0;
-    stateSetId_ = PLDM_OEM_IBM_BOOT_STATE;
-    compSensorCnt_ = 1;
-
-    std::vector<set_effecter_state_field> setEffecterStateField;
-    setEffecterStateField.push_back({PLDM_REQUEST_SET, pSideNum});
-
-    rc = oemPlatformHandler->oemSetStateEffecterStatesHandler(
-        entityID_, stateSetId_, compSensorCnt_, setEffecterStateField,
-        effecterId);
-    ASSERT_EQ(rc, PLDM_SUCCESS);
-
-    entityInstance_ = 2;
-    rc = oemPlatformHandler->oemSetStateEffecterStatesHandler(
-        entityID_, stateSetId_, compSensorCnt_, setEffecterStateField,
-        effecterId);
-
-    ASSERT_EQ(rc, PLDM_PLATFORM_INVALID_STATE_VALUE);
-
-    entityID_ = 34;
-    stateSetId_ = 99;
-    entityInstance_ = 0;
-    rc = oemPlatformHandler->oemSetStateEffecterStatesHandler(
-        entityID_, stateSetId_, compSensorCnt_, setEffecterStateField,
-        effecterId);
-    ASSERT_EQ(rc, PLDM_PLATFORM_SET_EFFECTER_UNSUPPORTED_SENSORSTATE);
 }
 
 TEST(EncodeCodeUpdateEvent, testGoodRequest)
@@ -269,10 +241,10 @@ TEST(generateStateEffecterOEMPDR, testGoodRequest)
     ASSERT_EQ(pdr->composite_effecter_count, 1);
     state_effecter_possible_states* states =
         reinterpret_cast<state_effecter_possible_states*>(pdr->possible_states);
-    ASSERT_EQ(states->state_set_id, 32769);
+    ASSERT_EQ(states->state_set_id, 32768);
     ASSERT_EQ(states->possible_states_size, 2);
     bitfield8_t bf1{};
-    bf1.byte = 6;
+    bf1.byte = 126;
     ASSERT_EQ(states->states[0].byte, bf1.byte);
 
     // Test for effecter number 2, for next boot side state
@@ -287,7 +259,7 @@ TEST(generateStateEffecterOEMPDR, testGoodRequest)
     ASSERT_EQ(pdr->hdr.record_change_num, 0);
     ASSERT_EQ(pdr->hdr.length, 16);
     ASSERT_EQ(pdr->terminus_handle, TERMINUS_HANDLE);
-    ASSERT_EQ(pdr->entity_type, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE);
+    ASSERT_EQ(pdr->entity_type, PLDM_ENTITY_SYSTEM_CHASSIS);
     ASSERT_EQ(pdr->entity_instance, 1);
     ASSERT_EQ(pdr->container_id, 1);
     ASSERT_EQ(pdr->effecter_semantic_id, 0);
@@ -296,19 +268,19 @@ TEST(generateStateEffecterOEMPDR, testGoodRequest)
     ASSERT_EQ(pdr->composite_effecter_count, 1);
     states =
         reinterpret_cast<state_effecter_possible_states*>(pdr->possible_states);
-    ASSERT_EQ(states->state_set_id, 32769);
+    ASSERT_EQ(states->state_set_id, 32771);
     ASSERT_EQ(states->possible_states_size, 2);
     bitfield8_t bf2{};
-    bf2.byte = 6;
+    bf2.byte = 2;
     ASSERT_EQ(states->states[0].byte, bf2.byte);
 
     // Test for effecter number 3, for firmware update state control
-    auto record3 = pdr::getRecordByHandle(inRepo, 3, e);
+    auto record3 = pdr::getRecordByHandle(inRepo, 5, e);
     ASSERT_NE(record3, nullptr);
 
     pdr = reinterpret_cast<pldm_state_effecter_pdr*>(e.data);
 
-    ASSERT_EQ(pdr->hdr.record_handle, 3);
+    ASSERT_EQ(pdr->hdr.record_handle, 5);
     ASSERT_EQ(pdr->hdr.version, 1);
     ASSERT_EQ(pdr->hdr.type, PLDM_STATE_EFFECTER_PDR);
     ASSERT_EQ(pdr->hdr.record_change_num, 0);
@@ -323,19 +295,19 @@ TEST(generateStateEffecterOEMPDR, testGoodRequest)
     ASSERT_EQ(pdr->composite_effecter_count, 1);
     states =
         reinterpret_cast<state_effecter_possible_states*>(pdr->possible_states);
-    ASSERT_EQ(states->state_set_id, 32768);
+    ASSERT_EQ(states->state_set_id, 32773);
     ASSERT_EQ(states->possible_states_size, 2);
     bitfield8_t bf3{};
-    bf3.byte = 126;
+    bf3.byte = 6;
     ASSERT_EQ(states->states[0].byte, bf3.byte);
 
     // Test for effecter number 5, to turn off Real SAI led
-    auto record5 = pdr::getRecordByHandle(inRepo, 5, e);
+    auto record5 = pdr::getRecordByHandle(inRepo, 3, e);
     ASSERT_NE(record5, nullptr);
 
     pdr = reinterpret_cast<pldm_state_effecter_pdr*>(e.data);
 
-    ASSERT_EQ(pdr->hdr.record_handle, 5);
+    ASSERT_EQ(pdr->hdr.record_handle, 3);
     ASSERT_EQ(pdr->hdr.version, 1);
     ASSERT_EQ(pdr->hdr.type, PLDM_STATE_EFFECTER_PDR);
     ASSERT_EQ(pdr->hdr.record_change_num, 0);
@@ -403,10 +375,10 @@ TEST(generateStateSensorOEMPDR, testGoodRequest)
     ASSERT_EQ(pdr->composite_sensor_count, 1);
     state_sensor_possible_states* states =
         reinterpret_cast<state_sensor_possible_states*>(pdr->possible_states);
-    ASSERT_EQ(states->state_set_id, 32769);
+    ASSERT_EQ(states->state_set_id, 32768);
     ASSERT_EQ(states->possible_states_size, 2);
     bitfield8_t bf1{};
-    bf1.byte = 6;
+    bf1.byte = 126;
     ASSERT_EQ(states->states[0].byte, bf1.byte);
 
     // Test for sensor number 2, for next boot side state
@@ -422,14 +394,14 @@ TEST(generateStateSensorOEMPDR, testGoodRequest)
     ASSERT_EQ(pdr->hdr.length, 14);
     ASSERT_EQ(pdr->terminus_handle, TERMINUS_HANDLE);
     ASSERT_EQ(pdr->entity_type, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE);
-    ASSERT_EQ(pdr->entity_instance, 1);
+    ASSERT_EQ(pdr->entity_instance, 0);
     ASSERT_EQ(pdr->container_id, 1);
     ASSERT_EQ(pdr->sensor_init, PLDM_NO_INIT);
     ASSERT_EQ(pdr->sensor_auxiliary_names_pdr, false);
     ASSERT_EQ(pdr->composite_sensor_count, 1);
     states =
         reinterpret_cast<state_sensor_possible_states*>(pdr->possible_states);
-    ASSERT_EQ(states->state_set_id, 32769);
+    ASSERT_EQ(states->state_set_id, 32770);
     ASSERT_EQ(states->possible_states_size, 2);
     bitfield8_t bf2{};
     bf2.byte = 6;
@@ -455,19 +427,18 @@ TEST(generateStateSensorOEMPDR, testGoodRequest)
     ASSERT_EQ(pdr->composite_sensor_count, 1);
     states =
         reinterpret_cast<state_sensor_possible_states*>(pdr->possible_states);
-    ASSERT_EQ(states->state_set_id, 32768);
+    ASSERT_EQ(states->state_set_id, 32773);
     ASSERT_EQ(states->possible_states_size, 2);
     bitfield8_t bf3{};
-    bf3.byte = 126;
+    bf3.byte = 6;
     ASSERT_EQ(states->states[0].byte, bf3.byte);
 
-    // Test for sensor number 5, for Real SAI sensor states
-    auto record5 = pdr::getRecordByHandle(inRepo, 10, e);
+    auto record5 = pdr::getRecordByHandle(inRepo, 4, e);
     ASSERT_NE(record5, nullptr);
 
     pdr = reinterpret_cast<pldm_state_sensor_pdr*>(e.data);
 
-    ASSERT_EQ(pdr->hdr.record_handle, 10);
+    ASSERT_EQ(pdr->hdr.record_handle, 4);
     ASSERT_EQ(pdr->hdr.version, 1);
     ASSERT_EQ(pdr->hdr.type, PLDM_STATE_SENSOR_PDR);
     ASSERT_EQ(pdr->hdr.record_change_num, 0);

@@ -175,51 +175,52 @@ class Handler : public oem_platform::Handler
                 }
             });
 
-    powerStateOffMatch = std::make_unique<sdbusplus::bus::match::match>(
-        pldm::utils::DBusHandler::getBus(),
-        propertiesChanged("/xyz/openbmc_project/state/chassis0",
-                          "xyz.openbmc_project.State.Chassis"),
-        [this](sdbusplus::message_t& msg) {
-        pldm::utils::DbusChangedProps props{};
-        std::string intf;
-        msg.read(intf, props);
-        const auto itr = props.find("CurrentPowerState");
-        if (itr != props.end())
-        {
-            pldm::utils::PropertyValue value = itr->second;
-            auto propVal = std::get<std::string>(value);
-            if (propVal == "xyz.openbmc_project.State.Chassis.PowerState.Off")
+        powerStateOffMatch = std::make_unique<sdbusplus::bus::match::match>(
+            pldm::utils::DBusHandler::getBus(),
+            propertiesChanged("/xyz/openbmc_project/state/chassis0",
+                              "xyz.openbmc_project.State.Chassis"),
+            [](sdbusplus::message_t& msg) {
+            pldm::utils::DbusChangedProps props{};
+            std::string intf;
+            msg.read(intf, props);
+            const auto itr = props.find("CurrentPowerState");
+            if (itr != props.end())
             {
-                static constexpr auto searchpath =
-                    "/xyz/openbmc_project/inventory/system/chassis/motherboard";
-                int depth = 0;
-                std::vector<std::string> powerInterface = {
-                    "xyz.openbmc_project.State.Decorator.PowerState"};
-                pldm::utils::GetSubTreeResponse response =
-                    pldm::utils::DBusHandler().getSubtree(searchpath, depth,
-                                                          powerInterface);
-                for (const auto& [objPath, serviceMap] : response)
+                pldm::utils::PropertyValue value = itr->second;
+                auto propVal = std::get<std::string>(value);
+                if (propVal ==
+                    "xyz.openbmc_project.State.Chassis.PowerState.Off")
                 {
-                    pldm::utils::DBusMapping dbusMapping{
-                        objPath,
-                        "xyz.openbmc_project.State.Decorator.PowerState",
-                        "PowerState", "string"};
-                    value =
-                        "xyz.openbmc_project.State.Decorator.PowerState.State.Off";
-                    try
+                    static constexpr auto searchpath =
+                        "/xyz/openbmc_project/inventory/system/chassis/motherboard";
+                    int depth = 0;
+                    std::vector<std::string> powerInterface = {
+                        "xyz.openbmc_project.State.Decorator.PowerState"};
+                    pldm::utils::GetSubTreeResponse response =
+                        pldm::utils::DBusHandler().getSubtree(searchpath, depth,
+                                                              powerInterface);
+                    for (const auto& [objPath, serviceMap] : response)
                     {
-                        pldm::utils::DBusHandler().setDbusProperty(dbusMapping,
-                                                                   value);
-                    }
-                    catch (const std::exception& e)
-                    {
-                        error(
-                            "Unable to set the slot power state to Off error - {ERROR}",
-                            "ERROR", e);
+                        pldm::utils::DBusMapping dbusMapping{
+                            objPath,
+                            "xyz.openbmc_project.State.Decorator.PowerState",
+                            "PowerState", "string"};
+                        value =
+                            "xyz.openbmc_project.State.Decorator.PowerState.State.Off";
+                        try
+                        {
+                            pldm::utils::DBusHandler().setDbusProperty(
+                                dbusMapping, value);
+                        }
+                        catch (const std::exception& e)
+                        {
+                            error(
+                                "Unable to set the slot power state to Off error - {ERROR}",
+                                "ERROR", e);
+                        }
                     }
                 }
             }
-        }
     });
 
     platformSAIMatch = std::make_unique<sdbusplus::bus::match_t>(
@@ -254,39 +255,23 @@ class Handler : public oem_platform::Handler
         }
     });
 
-    partitionSAIMatch = std::make_unique<sdbusplus::bus::match_t>(
-            pldm::utils::DBusHandler::getBus(),
-            propertiesChanged(
-                "/xyz/openbmc_project/led/groups/platform_system_attention_indicator",
-                "xyz.openbmc_project.Led.Group"),
-            [this](sdbusplus::message_t& msg) {
-            pldm::utils::DbusChangedProps props{};
-            std::string intf;
-            msg.read(intf, props);
-            const auto itr = props.find("Asserted");
-            if (itr != props.end())
-            {
-                processSAIUpdate();
-            }
-        });
         updateBIOSMatch = std::make_unique<sdbusplus::bus::match::match>(
             pldm::utils::DBusHandler::getBus(),
             propertiesChanged("/xyz/openbmc_project/bios_config/manager",
                               "xyz.openbmc_project.BIOSConfig.Manager"),
-            [this, codeUpdate](sdbusplus::message_t& msg) {
-                constexpr auto propertyName = "PendingAttributes";
-                using Value =
-                    std::variant<std::string, PendingAttributes, BaseBIOSTable>;
-                using Properties = std::map<pldm::utils::DbusProp, Value>;
-                Properties props{};
-                std::string intf;
-                msg.read(intf, props);
-
-                auto valPropMap = props.find(propertyName);
-                if (valPropMap == props.end())
-                {
-                    return;
-                }
+            [codeUpdate](sdbusplus::message_t& msg) {
+            constexpr auto propertyName = "PendingAttributes";
+            using Value =
+                std::variant<std::string, PendingAttributes, BaseBIOSTable>;
+            using Properties = std::map<pldm::utils::DbusProp, Value>;
+            Properties props{};
+            std::string intf;
+            msg.read(intf, props);
+            auto valPropMap = props.find(propertyName);
+            if (valPropMap == props.end())
+            {
+                return;
+            }
 
                 PendingAttributes pendingAttributes =
                     std::get<PendingAttributes>(valPropMap->second);
@@ -300,35 +285,34 @@ class Handler : public oem_platform::Handler
                         codeUpdate->setNextBootSide(nextBootSide);
                     }
                 }
-            });
+        });
         stateManagerMatch = std::make_unique<sdbusplus::bus::match::match>(
             pldm::utils::DBusHandler::getBus(),
             sdbusplus::bus::match::rules::interfacesAdded() +
                 sdbusplus::bus::match::rules::argNpath(
                     0, "/xyz/openbmc_project/state/host0"),
             [this](sdbusplus::message::message& msg) {
-                sdbusplus::message::object_path path;
-                std::map<std::string, std::map<std::string, dbus::Value>>
-                    interfaces;
-                msg.read(path, interfaces);
+            sdbusplus::message::object_path path;
+            std::map<std::string, std::map<std::string, dbus::Value>>
+                interfaces;
+            msg.read(path, interfaces);
 
-                if (!interfaces.contains("xyz.openbmc_project.State.Host"))
-                {
-                    return;
-                }
+            if (!interfaces.contains("xyz.openbmc_project.State.Host"))
+            {
+                return;
+            }
 
-                const auto& properties =
-                    interfaces.at("xyz.openbmc_project.State.Host");
+            const auto& properties =
+                interfaces.at("xyz.openbmc_project.State.Host");
 
-                if (!properties.contains("RestartCause"))
-                {
-                    return;
-                }
+            if (!properties.contains("RestartCause"))
+            {
+                return;
+            }
 
-                restartCause =
-                    std::get<std::string>(properties.at("RestartCause"));
-                setBootTypesBiosAttr(restartCause);
-            });
+            restartCause = std::get<std::string>(properties.at("RestartCause"));
+            setBootTypesBiosAttr(restartCause);
+        });
     }
 
     int getOemStateSensorReadingsHandler(
@@ -597,7 +581,7 @@ class Handler : public oem_platform::Handler
     /** @brief Pointer to BMC's entity association tree */
     pldm_entity_association_tree* bmcEntityTree;
     /** @brief D-Bus property changed signal match */
-    std::unique_ptr<sdbusplus::bus::match::match> updateBIOSMatch;
+    std::unique_ptr<sdbusplus::bus::match_t> updateBIOSMatch;
 
     /** @brief D-Bus property changed signal match */
     std::unique_ptr<sdbusplus::bus::match_t> hostOffMatch;
@@ -607,18 +591,17 @@ class Handler : public oem_platform::Handler
 
     /** @brief D-Bus Interface added signal match for virtual platform SAI */
     std::unique_ptr<sdbusplus::bus::match_t> platformSAIMatch;
-
-    /** @brief D-Bus Interface added signal match for virtual partition SAI */
-    std::unique_ptr<sdbusplus::bus::match_t> partitionSAIMatch;
-
-    /** @brief Timer used for monitoring surveillance pings from host */
-    sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic> timer;
     /** @brief D-Bus Interfaced added signal match for Entity Manager */
     std::unique_ptr<sdbusplus::bus::match_t> ibmCompatibleMatch;
     /** @brief D-Bus Interfaced added signal match for State Manager */
     std::unique_ptr<sdbusplus::bus::match_t> stateManagerMatch;
     /** @brief D-Bus property Changed Signal match for bootProgress*/
     std::unique_ptr<sdbusplus::bus::match_t> bootProgressMatch;
+    /** @brief Timer used for monitoring surveillance pings from host */
+    sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic> timer;
+
+    /** @brief D-Bus Interface added signal match for virtual partition SAI */
+    std::unique_ptr<sdbusplus::bus::match_t> partitionSAIMatch;
 
     bool hostOff = true;
 
@@ -632,9 +615,9 @@ class Handler : public oem_platform::Handler
     std::unique_ptr<pldm::responder::oem_fileio::Handler> dbusToFileioIntf;
 
     /** @brief Method to reset or stop the surveillance timer
-    *
-    *   @param[in] value - true or false, to indicate if the timer
-    *                     should be reset or turned off*/
+     *
+     *  @param[in] value - true or false, to indicate if the timer
+     *                    should be reset or turned off*/
     void startStopTimer(bool value);
 };
 
