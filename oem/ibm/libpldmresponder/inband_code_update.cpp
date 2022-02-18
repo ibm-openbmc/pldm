@@ -180,6 +180,7 @@ void CodeUpdate::setVersions()
     static constexpr auto activeObjPath =
         "/xyz/openbmc_project/software/active";
     static constexpr auto propIntf = "org.freedesktop.DBus.Properties";
+    static constexpr auto pathIntf = "xyz.openbmc_project.Common.FilePath";
 
     auto& bus = dBusIntf->getBus();
     try
@@ -193,6 +194,9 @@ void CodeUpdate::setVersions()
         reply.read(paths);
 
         runningVersion = std::get<std::vector<std::string>>(paths)[0];
+        auto runningPathPropValue = dBusIntf->getDbusPropertyVariant(
+            runningVersion.c_str(), "Path", pathIntf);
+        const auto& runningPath = std::get<std::string>(runningPathPropValue);
 
         auto method1 = bus.new_method_call(mapperService, activeObjPath,
                                            propIntf, "Get");
@@ -216,7 +220,7 @@ void CodeUpdate::setVersions()
                 getBiosAttrValue("fw_boot_side");
             pldmBootSideData.current_boot_side = nextBootSideBiosValue;
             pldmBootSideData.next_boot_side = nextBootSideBiosValue;
-            pldmBootSideData.running_version_object = runningVersion.c_str();
+            pldmBootSideData.running_version_object = runningPath;
 
             writeBootSideFile(pldmBootSideData);
             biosAttrList.push_back(std::make_pair(
@@ -228,7 +232,7 @@ void CodeUpdate::setVersions()
         else
         {
             pldm_boot_side_data pldmBootSideData = readBootSideFile();
-            if (pldmBootSideData.running_version_object != runningVersion)
+            if (pldmBootSideData.running_version_object != runningPath)
             {
                 info(
                     "BMC have booted with the new image runningPath={RUNN_PATH}",
@@ -240,7 +244,7 @@ void CodeUpdate::setVersions()
                                                                   : "Temp");
                 pldmBootSideData.current_boot_side = current_boot_side;
                 pldmBootSideData.next_boot_side = current_boot_side;
-                pldmBootSideData.running_version_object = runningVersion;
+                pldmBootSideData.running_version_object = runningPath;
                 writeBootSideFile(pldmBootSideData);
                 biosAttrList.push_back(
                     std::make_pair(bootSideAttrName, current_boot_side));
@@ -322,15 +326,15 @@ void CodeUpdate::setVersions()
 
                 try
                 {
-                    auto propVal =
-                        pldm::utils::DBusHandler().getDbusPropertyVariant(
-                            imageObjPath, "Activation", imageInterface);
-                    const auto& activation = std::get<std::string>(propVal);
-
-                    if (activation ==
-                        "xyz.openbmc_project.Software.Activation.Activations.Invalid")
+                    if (isCodeUpdateInProgress())
                     {
-                        if (isCodeUpdateInProgress())
+                        auto propVal =
+                            pldm::utils::DBusHandler().getDbusPropertyVariant(
+                                imageObjPath, "Activation", imageInterface);
+                        const auto& activation = std::get<std::string>(propVal);
+
+                        if (activation ==
+                            "xyz.openbmc_project.Software.Activation.Activations.Invalid")
                         {
                             error(
                                 "InbandCodeUpdate Failed: Received Invalid Signal, Sending Error on End update sensor event to PHYP");
@@ -368,7 +372,7 @@ void CodeUpdate::setVersions()
                                     propertiesChanged(newImageId,
                                                       "xyz.openbmc_project."
                                                       "Software.Activation"),
-                                    [this](sdbusplus::message::message& msg) {
+                                    [this](sdbusplus::message_t& msg) {
                                 DbusChangedProps props;
                                 std::string iface;
                                 msg.read(iface, props);
@@ -433,12 +437,9 @@ void CodeUpdate::setVersions()
                         }
                         break;
                     }
-                    else if (imageProp == "xyz.openbmc_project.Software."
-                                          "Activation.Activations.Ready" &&
-                             !isOutOfBandCodeUpdateInProgress())
+                    else
                     {
-                        outOfBandCodeUpdateInProgress = true;
-                        nonRunningVersion = path.str;
+                        // Out of band update
                         processRenameEvent();
                     }
                 }
@@ -456,6 +457,8 @@ void CodeUpdate::setVersions()
 
 void CodeUpdate::processRenameEvent()
 {
+    info("Processing Rename Event");
+
     BiosAttributeList biosAttrList;
     pldm_boot_side_data pldmBootSideData = readBootSideFile();
     pldmBootSideData.current_boot_side = "Perm";

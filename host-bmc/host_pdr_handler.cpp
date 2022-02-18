@@ -121,12 +121,12 @@ HostPDRHandler::HostPDRHandler(
                           "xyz.openbmc_project.State.Host"),
         [this, repo, entityTree, bmcEntityTree,
          oemPlatformHandler](sdbusplus::message_t& msg) {
-            DbusChangedProps props{};
-            std::string intf;
-            msg.read(intf, props);
-            const auto itr = props.find("CurrentHostState");
-            if (itr != props.end())
-            {
+        DbusChangedProps props{};
+        std::string intf;
+        msg.read(intf, props);
+        const auto itr = props.find("CurrentHostState");
+        if (itr != props.end())
+        {
             pldm::utils::PropertyValue value = itr->second;
             auto propVal = std::get<std::string>(value);
             if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
@@ -162,20 +162,16 @@ HostPDRHandler::HostPDRHandler(
                     pldm_entity obj{};
                     this->objPathMap[element.first] = obj;
                 }
-            {
-            else if (propVal ==
-                     "xyz.openbmc_project.State.Host.HostState.Running")
-            {
-                if (!oemPlatformHandler)
-                {
-                    oemPlatformHandler->handleBootTypesAtPowerOn();
-                }
             }
             else if (propVal ==
                      "xyz.openbmc_project.State.Host.HostState.Running")
             {
                 isHostRunning = true;
                 isHostOff = false;
+                if (oemPlatformHandler)
+                {
+                    oemPlatformHandler->handleBootTypesAtPowerOn();
+                }
             }
             else
             {

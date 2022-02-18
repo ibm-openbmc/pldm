@@ -640,26 +640,33 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     buildAllCodeUpdateEffecterPDR(this, PLDM_ENTITY_SYSTEM_CHASSIS,
                                   ENTITY_INSTANCE_1,
                                   PLDM_OEM_IBM_SYSTEM_POWER_STATE, repo);
-    buildAllRealSAIEffecterPDR(this, PLDM_OEM_IBM_ENTITY_REAL_SAI,
-                               ENTITY_INSTANCE_1, repo);
+
     static constexpr auto objectPath = "/xyz/openbmc_project/inventory/system";
     const std::vector<std::string> slotInterface = {
         "xyz.openbmc_project.Inventory.Item.PCIeSlot"};
+
+    auto slotPaths = dBusIntf->getSubTreePaths(objectPath, 0, slotInterface);
+
+    buildAllSlotEnableEffecterPDR(this, repo, slotPaths);
+    buildAllSlotEnableSensorPDR(this, repo, slotPaths);
+
+    buildAllRealSAIEffecterPDR(this, PLDM_OEM_IBM_ENTITY_REAL_SAI,
+                               ENTITY_INSTANCE_1, repo);
+    buildAllRealSAISensorPDR(this, PLDM_OEM_IBM_ENTITY_REAL_SAI,
+                             ENTITY_INSTANCE_1, repo);
     buildAllCodeUpdateEffecterPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
                                   ENTITY_INSTANCE_0,
                                   PLDM_OEM_IBM_BOOT_SIDE_RENAME, repo);
 
-    auto slotPaths = dBusIntf->getSubTreePaths(objectPath, 0, slotInterface);
-    buildAllSlotEnableEffecterPDR(this, repo, slotPaths);
-    buildAllSlotEnableSensorPDR(this, repo, slotPaths);
     buildAllCodeUpdateSensorPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
                                 ENTITY_INSTANCE_0,
                                 PLDM_OEM_IBM_FIRMWARE_UPDATE_STATE, repo);
     buildAllCodeUpdateSensorPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
                                 ENTITY_INSTANCE_0,
                                 PLDM_OEM_IBM_VERIFICATION_STATE, repo);
-    buildAllRealSAISensorPDR(this, PLDM_OEM_IBM_ENTITY_REAL_SAI,
-                             ENTITY_INSTANCE_1, repo);
+    buildAllCodeUpdateSensorPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
+                                ENTITY_INSTANCE_0,
+                                PLDM_OEM_IBM_BOOT_SIDE_RENAME, repo);
 
     buildAllSystemPowerStateEffecterPDR(
         this, PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER, ENTITY_INSTANCE_0,
@@ -678,9 +685,6 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     realSAISensorId = findStateSensorId(
         repo.getPdr(), 0, PLDM_OEM_IBM_ENTITY_REAL_SAI, ENTITY_INSTANCE_1, 1,
         PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS);
-    buildAllCodeUpdateSensorPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
-                                ENTITY_INSTANCE_0,
-                                PLDM_OEM_IBM_BOOT_SIDE_RENAME, repo);
     auto sensorId = findStateSensorId(
         repo.getPdr(), 0, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
         ENTITY_INSTANCE_0, 1, PLDM_OEM_IBM_VERIFICATION_STATE);
@@ -900,41 +904,30 @@ void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
                         "Policy.AlwaysOn";
                 try
                 {
-                    pldm::utils::DBusMapping dbusMapping{
-                        "/xyz/openbmc_project/control/host0/"
-                        "power_restore_policy/one_time",
-                        "xyz.openbmc_project.Control.Power.RestorePolicy",
-                        "PowerRestorePolicy", "string"};
-                    value = "xyz.openbmc_project.Control.Power.RestorePolicy."
-                            "Policy.AlwaysOn";
-                    try
-                    {
-                        info(
-                            "InbandCodeUpdate: Setting the one time APR policy");
-                        dBusIntf->setDbusProperty(dbusMapping, value);
-                    }
-                    catch (const std::exception& e)
-                    {
-                        error(
-                        "Setting one-time restore policy failed, unable to set property PowerRestorePolicy ERROR={ERR_EXCEP}",
-                        "ERR_EXCEP", e);
-                    }
-                    dbusMapping = pldm::utils::DBusMapping{
-                        "/xyz/openbmc_project/state/bmc0",
-                        "xyz.openbmc_project.State.BMC",
-                        "RequestedBMCTransition", "string"};
-                    value = "xyz.openbmc_project.State.BMC.Transition.Reboot";
-                    try
-                    {
-                        info("InbandCodeUpdate: Rebooting the BMC");
-                        dBusIntf->setDbusProperty(dbusMapping, value);
-                    }
-                    catch (const std::exception& e)
-                    {
-                        error(
-                            "BMC state transition to reboot failed, unable to set property RequestedBMCTransition ERROR={ERR_EXCEP}",
-                            "ERR_EXCEP", e);
-                    }
+                    info("InbandCodeUpdate: Setting the one time APR policy");
+                    dBusIntf->setDbusProperty(dbusMapping, value);
+                }
+                catch (const std::exception& e)
+                {
+                    error(
+                        "Failure in setting one-time restore policy, unable to set property PowerRestorePolicy, error - {ERROR}",
+                        "ERROR", e);
+                }
+                dbusMapping = pldm::utils::DBusMapping{
+                    "/xyz/openbmc_project/state/bmc0",
+                    "xyz.openbmc_project.State.BMC", "RequestedBMCTransition",
+                    "string"};
+                value = "xyz.openbmc_project.State.BMC.Transition.Reboot";
+                try
+                {
+                    info("InbandCodeUpdate: Rebooting the BMC");
+                    dBusIntf->setDbusProperty(dbusMapping, value);
+                }
+                catch (const std::exception& e)
+                {
+                    error(
+                        "Failure in BMC state transition to reboot, unable to set property RequestedBMCTransition , error - {ERROR}",
+                        "ERROR", e);
                 }
             }
         }
@@ -1352,14 +1345,13 @@ void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
     }
     else if (!value && timer.isEnabled())
     {
-         info(
+        info(
             "setSurvTimer:LogginPel:hostOff={HOST_OFF} hostTransitioningToOff={HOST_TRANST_OFF} tid={TID}",
             "HOST_OFF", (bool)hostOff, "HOST_TRANST_OFF",
             (bool)hostTransitioningToOff, "TID", (uint16_t)tid);
         startStopTimer(false);
         pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.PLDM.setSurvTimer.RecvSurveillancePingFail",
-            pldm::PelSeverity::INFORMATIONAL);
+            "xyz.openbmc_project.bmc.PLDM.setSurvTimer.RecvSurveillancePingFail");
     }
 }
 
