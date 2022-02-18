@@ -140,6 +140,9 @@ class Handler : public CmdHandler
     /** @brief To handle the boot types bios attributes at shutdown*/
     virtual void handleBootTypesAtChassisOff() = 0;
 
+    /** @brief To update container ID of Proc LED PDRs */
+    virtual void updateContainerIDofProcLed() = 0;
+
     virtual ~Handler() = default;
 
   protected:

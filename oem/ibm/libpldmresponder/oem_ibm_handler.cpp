@@ -18,6 +18,28 @@ namespace responder
 {
 namespace oem_ibm_platform
 {
+std::vector<InstanceInfo> generateProcAndDcmIDs()
+{
+    std::vector<InstanceInfo> dcmProcInfo;
+    std::vector<std::string> procObjectPaths;
+    procObjectPaths = getProcObjectPaths();
+
+    for (const auto& entity_path : procObjectPaths)
+    {
+        if (entity_path.rfind('/') != std::string::npos)
+        {
+            char pId = entity_path.back();
+            auto procId = pId - 48;
+            char id = entity_path.at(61);
+            auto dcmId = id - 48;
+
+            dcmProcInfo.emplace_back(InstanceInfo{static_cast<uint8_t>(procId),
+                                                  static_cast<uint8_t>(dcmId)});
+        }
+    }
+    return dcmProcInfo;
+}
+
 int pldm::responder::oem_ibm_platform::Handler::
     oemSetNumericEffecterValueHandler(
         uint16_t entityType, uint16_t entityInstance,
@@ -469,9 +491,10 @@ void buildAllNumericEffecterPDR(oem_ibm_platform::Handler* platformHandler,
         return;
     }
 
-    std::vector<std::string> procObjectPaths;
-    procObjectPaths = getProcObjectPaths();
-    for (const auto& entity_path : procObjectPaths)
+    std::vector<InstanceInfo> info;
+    info = generateProcAndDcmIDs();
+
+    for (auto procDcmInfo : info)
     {
         pdr->hdr.record_handle = 0;
         pdr->hdr.version = 1;
@@ -486,20 +509,10 @@ void buildAllNumericEffecterPDR(oem_ibm_platform::Handler* platformHandler,
 
         pdr->entity_type = entityType;
 
-        if (entity_path.rfind('/') != std::string::npos)
-        {
-            char pId = entity_path.back();
-            auto procId = pId - 48;
-            char id = entity_path.at(61);
-            auto dcmId = id - 48;
+        instanceMap.emplace(effecterId, procDcmInfo);
 
-            InstanceInfo info{};
-            info.procId = procId;
-            info.dcmId = dcmId;
-            instanceMap.emplace(effecterId, info);
-
-            entityInstance = procId;
-        }
+        entityInstance = procDcmInfo.procId;
+        ;
 
         pdr->entity_instance = entityInstance;
         pdr->container_id = 3;
@@ -1479,6 +1492,128 @@ uint8_t pldm::responder::oem_ibm_platform::Handler::fetchRealSAIStatus()
     return PLDM_SENSOR_NORMAL;
 }
 
+void pldm::responder::oem_ibm_platform::Handler::
+    updateIdentifyEffecterAndSensorPDRs()
+{
+    pldm::pdr::EntityType entityType = PLDM_ENTITY_PROC;
+
+    auto stateEffecterPDRs = pldm::utils::findStateEffecterPDR(
+        mctp_eid, entityType,
+        static_cast<uint16_t>(PLDM_STATE_SET_IDENTIFY_STATE), pdrRepo);
+
+    if (stateEffecterPDRs.empty())
+    {
+        std::cerr << "The State effecter PDR cannot be found, entityType = "
+                  << entityType << std::endl;
+        return;
+    }
+
+    for (auto& effecterPDR : stateEffecterPDRs)
+    {
+        for (auto& [key, value] : instanceMap)
+        {
+            auto instNumber = (value.dcmId * 2) + value.procId;
+            auto pdr =
+                reinterpret_cast<pldm_state_effecter_pdr*>(effecterPDR.data());
+            if (instNumber == ((pdr->entity_instance) - 1))
+            {
+                uint16_t newContainerID = pldm_find_container_id(
+                    pdrRepo, PLDM_ENTITY_PROC_MODULE, value.dcmId);
+                pldm_change_container_id_of_effecter(pdrRepo, pdr->effecter_id,
+                                                     newContainerID);
+                pldm_change_instance_number_of_effecter(
+                    pdrRepo, pdr->effecter_id, (instNumber % 2));
+                break;
+            }
+        }
+    }
+
+    auto stateSensorIdentifyPDRs = findStateSensorPDR(
+        mctp_eid, entityType,
+        static_cast<uint16_t>(PLDM_STATE_SET_IDENTIFY_STATE), pdrRepo);
+    for (auto& identifySensorPDR : stateSensorIdentifyPDRs)
+    {
+        for (auto& [key, value] : instanceMap)
+        {
+            auto instanceNumber = (value.dcmId * 2) + value.procId;
+            auto pdr = reinterpret_cast<pldm_state_sensor_pdr*>(
+                identifySensorPDR.data());
+            if (instanceNumber == ((pdr->entity_instance) - 1))
+            {
+                uint16_t newContainerID = pldm_find_container_id(
+                    pdrRepo, PLDM_ENTITY_PROC_MODULE, value.dcmId);
+                pldm_change_container_id_of_sensor(pdrRepo, pdr->sensor_id,
+                                                   newContainerID);
+                pldm_change_instance_number_of_sensor(pdrRepo, pdr->sensor_id,
+                                                      (instanceNumber % 2));
+                break;
+            }
+        }
+    }
+}
+
+void pldm::responder::oem_ibm_platform::Handler::
+    updateFaultEffecterAndSensorPDRs()
+{
+    pldm::pdr::EntityType entityType = PLDM_ENTITY_PROC;
+    auto stateEffecterFaultPDRs = pldm::utils::findStateEffecterPDR(
+        mctp_eid, entityType,
+        static_cast<uint16_t>(PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS),
+        pdrRepo);
+    for (auto& faultEffecterPDR : stateEffecterFaultPDRs)
+    {
+        for (auto& [key, value] : instanceMap)
+        {
+            auto instanceNumber = (value.dcmId * 2) + value.procId;
+            auto pdr = reinterpret_cast<pldm_state_effecter_pdr*>(
+                faultEffecterPDR.data());
+            if (instanceNumber == (pdr->entity_instance) - 1)
+            {
+                uint16_t newContainerID = pldm_find_container_id(
+                    pdrRepo, PLDM_ENTITY_PROC_MODULE, value.dcmId);
+                pldm_change_container_id_of_effecter(pdrRepo, pdr->effecter_id,
+                                                     newContainerID);
+                pldm_change_instance_number_of_effecter(
+                    pdrRepo, pdr->effecter_id, (instanceNumber % 2));
+                break;
+            }
+        }
+    }
+
+    auto stateSensorFaultPDRs = findStateSensorPDR(
+        mctp_eid, entityType,
+        static_cast<uint16_t>(PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS),
+        pdrRepo);
+    for (auto& faultSensorPDR : stateSensorFaultPDRs)
+    {
+        for (auto& [key, value] : instanceMap)
+        {
+            auto instanceNumber = (value.dcmId * 2) + value.procId;
+            auto pdr =
+                reinterpret_cast<pldm_state_sensor_pdr*>(faultSensorPDR.data());
+            if (instanceNumber == (pdr->entity_instance) - 1)
+            {
+                uint16_t newContainerID = pldm_find_container_id(
+                    pdrRepo, PLDM_ENTITY_PROC_MODULE, value.dcmId);
+                pldm_change_container_id_of_sensor(pdrRepo, pdr->sensor_id,
+                                                   newContainerID);
+                pldm_change_instance_number_of_sensor(pdrRepo, pdr->sensor_id,
+                                                      (instanceNumber % 2));
+                break;
+            }
+        }
+    }
+}
+
+void pldm::responder::oem_ibm_platform::Handler::updateContainerIDofProcLed()
+{
+    if (update)
+    {
+        updateIdentifyEffecterAndSensorPDRs();
+        updateFaultEffecterAndSensorPDRs();
+        update = false;
+    }
+}
 } // namespace oem_ibm_platform
 } // namespace responder
 } // namespace pldm

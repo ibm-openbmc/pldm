@@ -404,6 +404,15 @@ class Handler : public oem_platform::Handler
      */
     uint8_t fetchRealSAIStatus();
 
+    /** @brief updating the container ID of PROC LEd PDRs*/
+    void updateContainerIDofProcLed();
+
+    /** @brief update conatiner id of identify effecter and sensor LED PDRs*/
+    void updateIdentifyEffecterAndSensorPDRs();
+
+    /** @brief update conatiner id of fault effecter and sensor LED PDRs*/
+    void updateFaultEffecterAndSensorPDRs();
+
     ~Handler() = default;
 
     pldm::responder::CodeUpdate* codeUpdate; //!< pointer to CodeUpdate object
@@ -474,6 +483,8 @@ class Handler : public oem_platform::Handler
     /** @brief instanceMap is a lookup data structure to lookup <EffecterID,
      * InstanceInfo> */
     HostEffecterInstanceMap instanceMap;
+
+    bool update = true; // to indicate if update is done
 };
 
 /** @brief Method to encode code update event msg

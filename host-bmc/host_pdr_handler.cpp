@@ -872,6 +872,7 @@ void HostPDRHandler::_processPDRRepoChgEvent(
     if (oemPlatformHandler != nullptr)
     {
         oemPlatformHandler->updateContainerID();
+        oemPlatformHandler->updateContainerIDofProcLed();
     }
     deferredPDRRepoChgEvent.reset();
     this->sendPDRRepositoryChgEvent(
