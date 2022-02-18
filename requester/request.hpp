@@ -176,8 +176,7 @@ class Request final : public RequestRetryTimer
         {
             pldm::utils::printBuffer(pldm::utils::Tx, requestMsg);
         }
-        pldm::flightrecorder::FlightRecorder::GetInstance().saveRecord(
-            requestMsg, true);
+
         if (currentSendbuffSize >= 0 &&
             (size_t)currentSendbuffSize < requestMsg.size())
         {
@@ -189,6 +188,8 @@ class Request final : public RequestRetryTimer
                 std::cerr << "Requester : Error calling setsockopt. RC = "
                           << res << ", errno = " << errno << std::endl;
         }
+        pldm::flightrecorder::FlightRecorder::GetInstance().saveRecord(
+            requestMsg, true);
         auto rc = pldm_send(eid, fd, requestMsg.data(), requestMsg.size());
         if (rc < 0)
         {

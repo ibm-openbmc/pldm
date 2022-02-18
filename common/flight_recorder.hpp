@@ -20,6 +20,8 @@ using FlightRecorderRecord =
     std::tuple<FlightRecorderTimeStamp, ReqOrResponse, FlightRecorderData>;
 using FlightRecorderCassette = std::vector<FlightRecorderRecord>;
 
+static constexpr auto flightRecorderDumpPath = "/tmp/pldm_flight_recorder";
+
 /** @class FlightRecorder
  *
  *  The class for implementing the PLDM flight recorder logic. This class
@@ -32,12 +34,17 @@ class FlightRecorder
   private:
     FlightRecorder() : index(0)
     {
-        tapeRecorder = FlightRecorderCassette(FLIGHT_RECORDER_MAX_SIZE);
+        flightRecorderPolicy = FLIGHT_RECORDER_MAX_ENTRIES ? true : false;
+        if (flightRecorderPolicy)
+        {
+            tapeRecorder = FlightRecorderCassette(FLIGHT_RECORDER_MAX_ENTRIES);
+        }
     }
 
   protected:
     int index;
     FlightRecorderCassette tapeRecorder;
+    bool flightRecorderPolicy;
 
   public:
     FlightRecorder(const FlightRecorder&) = delete;
@@ -62,8 +69,17 @@ class FlightRecorder
      */
     void saveRecord(const FlightRecorderData& buffer, ReqOrResponse isRequest)
     {
-        tapeRecorder[index++ % FLIGHT_RECORDER_MAX_SIZE] = std::make_tuple(
-            pldm::utils::getCurrentSystemTime(), isRequest, buffer);
+        // if the flight recorder policy is enabled, then only insert the
+        // messages into the flight recorder, if not this function will be just
+        // a no-op
+        if (flightRecorderPolicy)
+        {
+            int currentIndex = index++;
+            tapeRecorder[currentIndex] = std::make_tuple(
+                pldm::utils::getCurrentSystemTime(), isRequest, buffer);
+            index =
+                (currentIndex == FLIGHT_RECORDER_MAX_ENTRIES - 1) ? 0 : index;
+        }
     }
 
     /** @brief play flight recorder
@@ -73,30 +89,37 @@ class FlightRecorder
 
     void playRecorder()
     {
-        std::ofstream recorderOutputFile(FLIGHT_RECORDER_DUMP_PATH);
-        std::cout << "Dumping the flight recorder into : "
-                  << FLIGHT_RECORDER_DUMP_PATH << "\n";
-
-        for (const auto& message : tapeRecorder)
+        if (flightRecorderPolicy)
         {
-            recorderOutputFile << std::get<FlightRecorderTimeStamp>(message)
-                               << " : ";
-            if (std::get<ReqOrResponse>(message))
+            std::ofstream recorderOutputFile(flightRecorderDumpPath);
+            std::cout << "Dumping the flight recorder into : "
+                      << flightRecorderDumpPath << "\n";
+
+            for (const auto& message : tapeRecorder)
             {
-                recorderOutputFile << "Tx : \n";
+                recorderOutputFile << std::get<FlightRecorderTimeStamp>(message)
+                                   << " : ";
+                if (std::get<ReqOrResponse>(message))
+                {
+                    recorderOutputFile << "Tx : \n";
+                }
+                else
+                {
+                    recorderOutputFile << "Rx : \n";
+                }
+                for (const auto& word : std::get<FlightRecorderData>(message))
+                {
+                    recorderOutputFile << std::setfill('0') << std::setw(2)
+                                       << std::hex << (unsigned)word << " ";
+                }
+                recorderOutputFile << std::endl;
             }
-            else
-            {
-                recorderOutputFile << "Rx : \n";
-            }
-            for (const auto& word : std::get<FlightRecorderData>(message))
-            {
-                recorderOutputFile << std::setfill('0') << std::setw(2)
-                                   << std::hex << (unsigned)word << " ";
-            }
-            recorderOutputFile << std::endl;
+            recorderOutputFile.close();
         }
-        recorderOutputFile.close();
+        else
+        {
+            std::cerr << "Fight recorder policy is disabled\n";
+        }
     }
 };
 

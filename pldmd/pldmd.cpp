@@ -461,7 +461,8 @@ int main(int argc, char** argv)
 #endif
 
     stdplus::signal::block(SIGUSR1);
-    Signal(event, SIGUSR1, interruptFlightRecorderCallBack).set_floating(true);
+    sdeventplus::source::Signal sigUsr1(
+        event, SIGUSR1, std::bind_front(&interruptFlightRecorderCallBack));
     returnCode = event.loop();
     if (shutdown(sockfd, SHUT_RDWR))
     {

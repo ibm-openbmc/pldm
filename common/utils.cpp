@@ -569,21 +569,6 @@ std::string toString(const struct variable_field& var)
     return str;
 }
 
-const std::string getCurrentSystemTime()
-{
-    struct timeval tpend;
-    gettimeofday(&tpend, NULL);
-
-    int secofday = (tpend.tv_sec + 3600 * 8) % 86400;
-    int hours = secofday / 3600;
-    int minutes = (secofday - hours * 3600) / 60;
-    int seconds = secofday % 60;
-    int milliseconds = tpend.tv_usec / 1000;
-    char buf[40];
-    sprintf(buf, "%02d:%02d:%02d.%03d", hours, minutes, seconds, milliseconds);
-    return buf;
-}
-
 std::vector<std::string> split(std::string_view srcStr, std::string_view delim,
                                std::string_view trimStr)
 {
@@ -681,6 +666,19 @@ void setBiosAttr(const BiosAttributeList& biosAttrList)
             return;
         }
     }
+}
+std::string getCurrentSystemTime()
+{
+    using namespace std::chrono;
+    const time_point<system_clock> tp = system_clock::now();
+    std::time_t tt = system_clock::to_time_t(tp);
+    auto ms = duration_cast<microseconds>(tp.time_since_epoch()) -
+              duration_cast<seconds>(tp.time_since_epoch());
+
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&tt), "%F %Z %T.")
+       << std::to_string(ms.count());
+    return ss.str();
 }
 
 } // namespace utils
