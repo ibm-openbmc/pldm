@@ -901,41 +901,30 @@ void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
                         "Policy.AlwaysOn";
                 try
                 {
-                    pldm::utils::DBusMapping dbusMapping{
-                        "/xyz/openbmc_project/control/host0/"
-                        "power_restore_policy/one_time",
-                        "xyz.openbmc_project.Control.Power.RestorePolicy",
-                        "PowerRestorePolicy", "string"};
-                    value = "xyz.openbmc_project.Control.Power.RestorePolicy."
-                            "Policy.AlwaysOn";
-                    try
-                    {
-                        info(
-                            "InbandCodeUpdate: Setting the one time APR policy");
-                        dBusIntf->setDbusProperty(dbusMapping, value);
-                    }
-                    catch (const std::exception& e)
-                    {
-                        error(
-                            "Setting one-time restore policy failed, unable to set property PowerRestorePolicy ERROR={ERR_EXCEP}",
-                            "ERR_EXCEP", e.what());
-                    }
-                    dbusMapping = pldm::utils::DBusMapping{
-                        "/xyz/openbmc_project/state/bmc0",
-                        "xyz.openbmc_project.State.BMC",
-                        "RequestedBMCTransition", "string"};
-                    value = "xyz.openbmc_project.State.BMC.Transition.Reboot";
-                    try
-                    {
-                        info("InbandCodeUpdate: Rebooting the BMC");
-                        dBusIntf->setDbusProperty(dbusMapping, value);
-                    }
-                    catch (const std::exception& e)
-                    {
-                        error(
-                            "BMC state transition to reboot failed, unable to set property RequestedBMCTransition ERROR={ERR_EXCEP}",
-                            "ERR_EXCEP", e);
-                    }
+                    info("InbandCodeUpdate: Setting the one time APR policy");
+                    dBusIntf->setDbusProperty(dbusMapping, value);
+                }
+                catch (const std::exception& e)
+                {
+                    error(
+                        "Setting one-time restore policy failed, unable to set property PowerRestorePolicy ERROR={ERR_EXCEP}",
+                        "ERR_EXCEP", e.what());
+                }
+                dbusMapping = pldm::utils::DBusMapping{
+                    "/xyz/openbmc_project/state/bmc0",
+                    "xyz.openbmc_project.State.BMC", "RequestedBMCTransition",
+                    "string"};
+                value = "xyz.openbmc_project.State.BMC.Transition.Reboot";
+                try
+                {
+                    info("InbandCodeUpdate: Rebooting the BMC");
+                    dBusIntf->setDbusProperty(dbusMapping, value);
+                }
+                catch (const std::exception& e)
+                {
+                    error(
+                        "BMC state transition to reboot failed, unable to set property RequestedBMCTransition ERROR={ERR_EXCEP}",
+                        "ERR_EXCEP", e);
                 }
             }
         }
@@ -1352,14 +1341,13 @@ void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
     }
     else if (!value && timer.isEnabled())
     {
-         info(
+        info(
             "setSurvTimer:LogginPel:hostOff={HOST_OFF} hostTransitioningToOff={HOST_TRANST_OFF} tid={TID}",
             "HOST_OFF", (bool)hostOff, "HOST_TRANST_OFF",
             (bool)hostTransitioningToOff, "TID", (uint16_t)tid);
         startStopTimer(false);
         pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.PLDM.setSurvTimer.RecvSurveillancePingFail",
-            pldm::PelSeverity::INFORMATIONAL);
+            "xyz.openbmc_project.bmc.PLDM.setSurvTimer.RecvSurveillancePingFail");
     }
 }
 

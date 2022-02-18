@@ -113,7 +113,7 @@ HostPDRHandler::HostPDRHandler(
     oemUtilsHandler(oemUtilsHandler)
 {
     isHostOff = false;
-    isHostTransitioningToOff = false;
+    isHostRunning = false;
     mergedHostParents = false;
     hostOffMatch = std::make_unique<sdbusplus::bus::match_t>(
         pldm::utils::DBusHandler::getBus(),
@@ -150,7 +150,7 @@ HostPDRHandler::HostPDRHandler(
                 this->stateSensorPDRs.clear();
                 fruRecordSetPDRs.clear();
                 isHostOff = true;
-                isHostTransitioningToOff = false;
+                isHostRunning = false;
                 this->sensorIndex = stateSensorPDRs.begin();
                 this->modifiedCounter = 0;
 
@@ -162,84 +162,19 @@ HostPDRHandler::HostPDRHandler(
                     pldm_entity obj{};
                     this->objPathMap[element.first] = obj;
                 }
-            {
-            else if (propVal ==
-                     "xyz.openbmc_project.State.Host.HostState.Running")
-            {
-                if (oemPlatformHandler != nullptr)
-                {
-                    oemPlatformHandler->handleBootTypesAtPowerOn();
-                }
-            }
-            else if (
-                propVal ==
-                "xyz.openbmc_project.State.Host.HostState.TransitioningToOff")
-            {
-                isHostTransitioningToOff = true;
             }
             else if (propVal ==
                      "xyz.openbmc_project.State.Host.HostState.Running")
             {
-                isHostTransitioningToOff = false;
+                isHostRunning = true;
                 isHostOff = false;
             }
-        }
-    });
-<<<<<<< HEAD
-=======
-
-    chassisOffMatch = std::make_unique<sdbusplus::bus::match::match>(
-        pldm::utils::DBusHandler::getBus(),
-        propertiesChanged("/xyz/openbmc_project/state/chassis0",
-                          "xyz.openbmc_project.State.Chassis"),
-        [this, oemPlatformHandler](sdbusplus::message::message& msg) {
-        DbusChangedProps props{};
-        std::string intf;
-        msg.read(intf, props);
-        const auto itr = props.find("CurrentPowerState");
-        if (itr != props.end())
-        {
-            PropertyValue value = itr->second;
-            auto propVal = std::get<std::string>(value);
-            if (propVal == "xyz.openbmc_project.State.Chassis.PowerState.Off")
+            else
             {
-                if (oemPlatformHandler)
-                {
-                    oemPlatformHandler->startStopTimer(false);
-                    oemPlatformHandler->handleBootTypesAtChassisOff();
-                }
-                static constexpr auto searchpath =
-                    "/xyz/openbmc_project/inventory/system/chassis/motherboard";
-                int depth = 0;
-                std::vector<std::string> powerInterface = {
-                    "xyz.openbmc_project.State.Decorator.PowerState"};
-                pldm::utils::MapperGetSubTreeResponse response =
-                    pldm::utils::DBusHandler().getSubtree(searchpath, depth,
-                                                          powerInterface);
-                for (const auto& [objPath, serviceMap] : response)
-                {
-                    pldm::utils::DBusMapping dbusMapping{
-                        objPath,
-                        "xyz.openbmc_project.State.Decorator.PowerState",
-                        "PowerState", "string"};
-                    value =
-                        "xyz.openbmc_project.State.Decorator.PowerState.State.Off";
-                    try
-                    {
-                        pldm::utils::DBusHandler().setDbusProperty(dbusMapping,
-                                                                   value);
-                    }
-                    catch (const std::exception& e)
-                    {
-                        std::cerr
-                            << "Unable to set the slot power state to Off "
-                            << "ERROR=" << e.what() << "\n";
-                    }
-                }
+                isHostRunning = false;
             }
         }
     });
->>>>>>> 7102e7d4 (Trigger Assemble method and handle response (#402))
 }
 
 void HostPDRHandler::setPresenceFrus()
