@@ -238,6 +238,35 @@ void pldm_change_container_id_of_effecter(const pldm_pdr *repo,
 					  uint16_t effecterId,
 					  uint16_t containerId);
 
+/** @brief update the container id of a sensor
+ *
+ *  @param[in] repo -  opaque pointer acting as a PDR repo handle
+ *  @param[in] sensorId - sensor ID
+ *  @param[in] containerId - conatiner ID to be updated
+ */
+void pldm_change_container_id_of_sensor(const pldm_pdr *repo, uint16_t sensorId,
+					uint16_t containerId);
+
+/** @brief update the instance number of an effecter
+ *
+ *  @param[in] repo -  opaque pointer acting as a PDR repo handle
+ *  @param[in] effecterId - effecter ID
+ *  @param[in] instanceNumber - instance number to be updated
+ */
+void pldm_change_instance_number_of_effecter(const pldm_pdr *repo,
+					     uint16_t effecterId,
+					     uint16_t instanceNumber);
+
+/** @brief update the instance number of a sensor
+ *
+ *  @param[in] repo -  opaque pointer acting as a PDR repo handle
+ *  @param[in] sensorId - sensor ID
+ *  @param[in] instanceNumber - instance number to be updated
+ */
+void pldm_change_instance_number_of_sensor(const pldm_pdr *repo,
+					   uint16_t sensorId,
+					   uint16_t instanceNumber);
+
 /* ======================= */
 /* FRU Record Set PDR APIs */
 /* ======================= */

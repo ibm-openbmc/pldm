@@ -700,6 +700,82 @@ void pldm_change_container_id_of_effecter(const pldm_pdr *repo,
 				pdr->container_id = containerId;
 				break;
 			}
+		} else if (hdr->type == PLDM_STATE_EFFECTER_PDR) {
+			struct pldm_state_effecter_pdr *pdr =
+			    (struct pldm_state_effecter_pdr *)((uint8_t *)record
+								   ->data);
+			if (pdr->effecter_id == effecterId) {
+				pdr->container_id = containerId;
+				break;
+			}
+		}
+		record = record->next;
+	}
+}
+
+void pldm_change_container_id_of_sensor(const pldm_pdr *repo, uint16_t sensorId,
+					uint16_t containerId)
+{
+	assert(repo != NULL);
+
+	pldm_pdr_record *record = repo->first;
+
+	while (record != NULL) {
+		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
+		if (hdr->type == PLDM_STATE_SENSOR_PDR) {
+			struct pldm_state_sensor_pdr *pdr =
+			    (struct pldm_state_sensor_pdr *)((uint8_t *)
+								 record->data);
+			if (pdr->sensor_id == sensorId) {
+				pdr->container_id = containerId;
+				break;
+			}
+		}
+		record = record->next;
+	}
+}
+
+void pldm_change_instance_number_of_effecter(const pldm_pdr *repo,
+					     uint16_t effecterId,
+					     uint16_t instanceNumber)
+{
+	assert(repo != NULL);
+
+	pldm_pdr_record *record = repo->first;
+
+	while (record != NULL) {
+		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
+		if (hdr->type == PLDM_STATE_EFFECTER_PDR) {
+			struct pldm_state_effecter_pdr *pdr =
+			    (struct pldm_state_effecter_pdr *)((uint8_t *)record
+								   ->data);
+			if (pdr->effecter_id == effecterId) {
+				pdr->entity_instance = instanceNumber;
+				break;
+			}
+		}
+		record = record->next;
+	}
+}
+
+void pldm_change_instance_number_of_sensor(const pldm_pdr *repo,
+					   uint16_t sensorId,
+					   uint16_t instanceNumber)
+{
+	assert(repo != NULL);
+
+	pldm_pdr_record *record = repo->first;
+
+	while (record != NULL) {
+		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
+		if (hdr->type == PLDM_STATE_SENSOR_PDR) {
+			struct pldm_state_sensor_pdr *pdr =
+			    (struct pldm_state_sensor_pdr *)((uint8_t *)
+								 record->data);
+			if (pdr->sensor_id == sensorId) {
+				pdr->entity_instance = instanceNumber;
+				break;
+			}
 		}
 		record = record->next;
 	}
