@@ -15,15 +15,20 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
+#include <sys/mman.h>
+#include <mutex>
 
 namespace pldm
 {
 using namespace pldm::dbus;
 namespace responder
 {
+
+std::atomic<SocketWriteStatus> socketWriteStatus = Free;
+std::mutex lockMutex;
+
 namespace utils
 {
-
 static constexpr auto curLicFilePath =
     "/var/lib/pldm/license/current_license.bin";
 static constexpr auto newLicFilePath = "/var/lib/pldm/license/new_license.bin";
@@ -109,8 +114,15 @@ int setupUnixSocket(const std::string& socketInterface)
     return fd;
 }
 
-int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
+void writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
 {
+
+    const std::lock_guard<std::mutex> lock(lockMutex);
+    if (socketWriteStatus==Error)
+    {
+       return;
+    }
+    socketWriteStatus=InProgress;
     uint64_t i;
     int nwrite = 0;
 
@@ -132,7 +144,8 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
             std::cerr << "writeToUnixSocket: select call failed " << errno
                       << std::endl;
             close(sock);
-            return -1;
+            socketWriteStatus = Error;
+            return;
         }
         if (retval == 0)
         {
@@ -142,6 +155,7 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
         if ((retval > 0) && (FD_ISSET(sock, &wfd)))
         {
             nwrite = write(sock, buf + i, blockSize - i);
+
             if (nwrite < 0)
             {
                 if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
@@ -152,9 +166,10 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
                     nwrite = 0;
                     continue;
                 }
-                std::cerr << "writeToUnixSocket: Failed to write" << std::endl;
+                std::cerr << "writeToUnixSocket: Failed to write " << errno << std::endl;
                 close(sock);
-                return -1;
+                socketWriteStatus =Error;
+                return;
             }
         }
         else
@@ -162,7 +177,10 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
             nwrite = 0;
         }
     }
-    return 0;
+
+    munmap((void*)buf, blockSize);
+    socketWriteStatus=Completed;
+    return;
 }
 
 Json convertBinFileToJson(const fs::path& path)

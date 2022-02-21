@@ -19,6 +19,7 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <thread>
 
 namespace pldm
 {
@@ -27,9 +28,8 @@ using namespace sdbusplus::xyz::openbmc_project::Common::Error;
 
 namespace responder
 {
-
+extern SocketWriteStatus socketWriteStatus;
 namespace fs = std::filesystem;
-
 namespace dma
 {
 
@@ -51,6 +51,7 @@ constexpr auto xdmaDev = "/dev/aspeed-xdma";
 
 int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
 {
+    socketWriteStatus = NotReady;
     static const size_t pageSize = getpagesize();
     uint32_t numPages = length / pageSize;
     uint32_t pageAlignedLength = numPages * pageSize;
@@ -59,11 +60,6 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
     {
         pageAlignedLength += pageSize;
     }
-
-    auto mmapCleanup = [pageAlignedLength](void* vgaMem) {
-        munmap(vgaMem, pageAlignedLength);
-    };
-
     int dmaFd = -1;
     int rc = 0;
     dmaFd = open(xdmaDev, O_RDWR);
@@ -77,11 +73,10 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
     }
 
     pldm::utils::CustomFD xdmaFd(dmaFd);
-
-    void* vgaMem;
-    vgaMem =
+    void* vgaMemDump = NULL;
+    vgaMemDump =
         mmap(nullptr, pageAlignedLength, PROT_READ, MAP_SHARED, xdmaFd(), 0);
-    if (MAP_FAILED == vgaMem)
+    if (MAP_FAILED == vgaMemDump)
     {
         rc = -errno;
         std::cerr
@@ -89,8 +84,6 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
             << rc << "\n";
         return rc;
     }
-
-    std::unique_ptr<void, decltype(mmapCleanup)> vgaMemPtr(vgaMem, mmapCleanup);
 
     AspeedXdmaOp xdmaOp;
     xdmaOp.upstream = 0;
@@ -104,19 +97,14 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
         std::cerr
             << "transferHostDataToSocket : Failed to execute the DMA operation, RC="
             << rc << " ADDRESS=" << address << " LENGTH=" << length << "\n";
+        munmap(vgaMemDump, pageAlignedLength);
         return rc;
     }
 
-    rc = writeToUnixSocket(fd, static_cast<const char*>(vgaMemPtr.get()),
-                           length);
-    if (rc < 0)
-    {
-        rc = -errno;
-        close(fd);
-        std::cerr << "transferHostDataToSocket : failure in closing socket"
-                  << std::endl;
-        return rc;
-    }
+    std::thread dumpOffloadThread(writeToUnixSocket, fd,
+                                  static_cast<const char*>(vgaMemDump), length);
+    dumpOffloadThread.detach();
+
     return 0;
 }
 

@@ -10,6 +10,15 @@ namespace pldm
 {
 namespace responder
 {
+
+enum SocketWriteStatus
+{
+    Completed,
+    InProgress,
+    Free,
+    Error,
+    NotReady
+};
 namespace utils
 {
 namespace fs = std::filesystem;
@@ -38,8 +47,8 @@ int setupUnixSocket(const std::string& socketInterface);
  *            on failure returns -1
 
  */
-int writeToUnixSocket(const int sock, const char* buf,
-                      const uint64_t blockSize);
+void writeToUnixSocket(const int sock, const char* buf,
+                       const uint64_t blockSize);
 
 /** @brief Converts a binary file to json data
  *  This function converts bson data stored in a binary file to
