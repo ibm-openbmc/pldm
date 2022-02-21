@@ -148,6 +148,12 @@ class FruImpl
      */
     void getFRUTable(Response& response);
 
+    /** @brief Get the Fru Table MetaData
+     *
+     *  @param[out] - Calculate Checksum and table size
+     */
+    void getFRURecordTableMetadata();
+
     /** @brief Get FRU Record Table By Option
      *  @param[out] response - Populate response with the FRU table got by
      *                         options
