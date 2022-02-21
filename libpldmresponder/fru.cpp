@@ -628,6 +628,19 @@ void FruImpl::getFRUTable(Response& response)
                 iter);
 }
 
+void FruImpl::getFRURecordTableMetadata()
+{
+    std::vector<uint8_t> tempTable;
+    if (table.size())
+    {
+        std::copy(table.begin(), table.end(), std::back_inserter(tempTable));
+        padBytes = pldm::utils::getNumPadBytes(table.size());
+        tempTable.resize(tempTable.size() + padBytes, 0);
+
+        checksum = crc32(tempTable.data(), tempTable.size());
+    }
+}
+
 int FruImpl::getFRURecordByOption(std::vector<uint8_t>& fruData,
                                   uint16_t /* fruTableHandle */,
                                   uint16_t recordSetIdentifer,
@@ -1276,6 +1289,8 @@ Response Handler::getFRURecordTableMetadata(const pldm_msg* request,
                           PLDM_GET_FRU_RECORD_TABLE_METADATA_RESP_BYTES,
                       0);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+
+    impl.getFRURecordTableMetadata();
 
     auto rc = encode_get_fru_record_table_metadata_resp(
         request->hdr.instance_id, PLDM_SUCCESS, major, minor, maxSize,
