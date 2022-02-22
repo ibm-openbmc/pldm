@@ -18,6 +18,13 @@ typedef struct pldm_pdr_record {
 	uint16_t terminus_handle;
 } pldm_pdr_record;
 
+typedef struct pldm_pdr {
+	uint32_t record_count;
+	uint32_t size;
+	pldm_pdr_record *first;
+	pldm_pdr_record *last;
+} pldm_pdr;
+
 /** @struct pldm_pdr
  *  opaque structure that acts as a handle to a PDR repository
  */
@@ -134,7 +141,6 @@ const pldm_pdr_record *pldm_pdr_find_record(const pldm_pdr *repo,
 					    uint8_t **data, uint32_t *size,
 					    uint32_t *next_record_handle);
 
-pldm_pdr_record *pldm_pdr_find_last_local_record(const pldm_pdr *repo);
 /** @brief Find the previous record handle of a PDR record
  *
  *  @param[in] repo - opaque pointer acting as a PDR repo handle
@@ -281,6 +287,7 @@ void pldm_change_instance_number_of_sensor(const pldm_pdr *repo,
  *  @param[in] entity_instance_num - entity instance number of FRU
  *  @param[in] container_id - container id of FRU
  *  @param[in] bmc_record_handle - handle used to construct the next record
+ *  @param[in] hotplug - indicates if its a hotplug PDR or not
  *
  *  @return uint32_t - record handle assigned to PDR record
  */
@@ -288,7 +295,7 @@ uint32_t pldm_pdr_add_fru_record_set(pldm_pdr *repo, uint16_t terminus_handle,
 				     uint16_t fru_rsi, uint16_t entity_type,
 				     uint16_t entity_instance_num,
 				     uint16_t container_id,
-				     uint32_t bmc_record_handle);
+				     uint32_t bmc_record_handle, bool hotplug);
 
 /** @brief Find a FRU record set PDR by FRU record set identifier
  *

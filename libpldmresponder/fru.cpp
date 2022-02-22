@@ -6,6 +6,8 @@
 #include "common/utils.hpp"
 #include "pdr.hpp"
 #ifdef OEM_IBM
+#include "oem/ibm/libpldm/pdr_oem_ibm.h"
+
 #include "oem/ibm/libpldmresponder/utils.hpp"
 #endif
 
@@ -325,12 +327,23 @@ uint32_t FruImpl::populateRecords(
             if (numRecs == numRecsCount)
             {
                 recordSetIdentifier = nextRSI();
-                // bmc_record_handle = concurrentAdd ? 0 : nextRecordHandle();
-                bmc_record_handle = concurrentAdd ? 0xFFFF : nextRecordHandle();
+                if (concurrentAdd)
+                {
+#ifdef OEM_IBM
+                    auto lastLocalRecord =
+                        pldm_pdr_find_last_local_record(pdrRepo);
+                    bmc_record_handle = (lastLocalRecord->record_handle) + 1;
+#endif
+                }
+                else
+                {
+                    bmc_record_handle = nextRecordHandle();
+                }
                 newRcord = pldm_pdr_add_fru_record_set(
                     pdrRepo, TERMINUS_HANDLE, recordSetIdentifier,
                     entity.entity_type, entity.entity_instance_num,
-                    entity.entity_container_id, bmc_record_handle);
+                    entity.entity_container_id, bmc_record_handle,
+                    concurrentAdd);
                 objectPathToRSIMap[objectPath] = recordSetIdentifier;
             }
             auto curSize = table.size();
@@ -431,6 +444,7 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
 void FruImpl::buildIndividualFRU(const std::string& fruInterface,
                                  const std::string& fruObjectPath)
 {
+
     // An exception will be thrown by getRecordInfo, if the item
     // D-Bus interface name specified in FRU_Master.json does
     // not have corresponding config jsons
@@ -1264,8 +1278,11 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
 uint32_t
     FruImpl::addHotPlugRecord(pldm::responder::pdr_utils::PdrEntry pdrEntry)
 {
+    uint32_t lastHandle = 0;
+#ifdef OEM_IBM
     auto lastLocalRecord = pldm_pdr_find_last_local_record(pdrRepo);
-    auto lastHandle = lastLocalRecord->record_handle;
+    lastHandle = lastLocalRecord->record_handle;
+#endif
     pdrEntry.handle.recordHandle = lastHandle + 1;
     return pldm_pdr_add_hotplug_record(pdrRepo, pdrEntry.data, pdrEntry.size,
                                        pdrEntry.handle.recordHandle, false,

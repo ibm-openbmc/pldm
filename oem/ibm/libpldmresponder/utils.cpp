@@ -5,6 +5,7 @@
 #include "common/utils.hpp"
 #include "host-bmc/custom_dbus.hpp"
 
+#include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
@@ -15,7 +16,6 @@
 #include <exception>
 #include <fstream>
 #include <iostream>
-#include <sys/mman.h>
 #include <mutex>
 
 namespace pldm
@@ -114,15 +114,16 @@ int setupUnixSocket(const std::string& socketInterface)
     return fd;
 }
 
-void writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
+void writeToUnixSocket(const int sock, const char* buf,
+                       const uint64_t blockSize)
 {
 
     const std::lock_guard<std::mutex> lock(lockMutex);
-    if (socketWriteStatus==Error)
+    if (socketWriteStatus == Error)
     {
-       return;
+        return;
     }
-    socketWriteStatus=InProgress;
+    socketWriteStatus = InProgress;
     uint64_t i;
     int nwrite = 0;
 
@@ -166,9 +167,10 @@ void writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize
                     nwrite = 0;
                     continue;
                 }
-                std::cerr << "writeToUnixSocket: Failed to write " << errno << std::endl;
+                std::cerr << "writeToUnixSocket: Failed to write " << errno
+                          << std::endl;
                 close(sock);
-                socketWriteStatus =Error;
+                socketWriteStatus = Error;
                 return;
             }
         }
@@ -179,7 +181,7 @@ void writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize
     }
 
     munmap((void*)buf, blockSize);
-    socketWriteStatus=Completed;
+    socketWriteStatus = Completed;
     return;
 }
 
