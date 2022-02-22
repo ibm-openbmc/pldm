@@ -112,7 +112,7 @@ class FruImpl
      */
     uint32_t size() const
     {
-        return table.size() - padBytes;
+        return table.size();
     }
 
     /** @brief The checksum of the contents of the FRU table

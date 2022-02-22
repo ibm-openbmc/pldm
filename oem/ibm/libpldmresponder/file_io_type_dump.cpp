@@ -212,7 +212,7 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
         return rc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
     }
 
-    if (socketWriteStatus == Error) 
+    if (socketWriteStatus == Error)
     {
         std::cerr
             << "DumpHandler::writeFromMemory: Error while writing to Unix socket"

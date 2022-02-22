@@ -7,13 +7,6 @@
 
 #include <stdio.h>
 
-typedef struct pldm_pdr {
-	uint32_t record_count;
-	uint32_t size;
-	pldm_pdr_record *first;
-	pldm_pdr_record *last;
-} pldm_pdr;
-
 static inline uint32_t get_next_record_handle(const pldm_pdr *repo,
 					      const pldm_pdr_record *record)
 {
@@ -46,8 +39,6 @@ static void add_record(pldm_pdr *repo, pldm_pdr_record *record)
 static void add_hotplug_record(pldm_pdr *repo, pldm_pdr_record *record,
 			       uint32_t prev_record_handle)
 {
-	/* printf("\nenter add_hotplug_record with
-	 record->record_handle=%d",record->record_handle);*/
 	// the new record
 	// needs to be added after prev_record_handle
 	assert(repo != NULL);
@@ -65,14 +56,15 @@ static void add_hotplug_record(pldm_pdr *repo, pldm_pdr_record *record,
 			}
 			curr = curr->next;
 		}
-		/* printf("\nadding the fru hotplug here
-		 curr->record_handle=%d",curr->record_handle);
-		 printf("repo-last=%x, curr=%x, curr-next=%x",
-		(unsigned int)repo->last, (unsigned int)curr, (unsigned
-		int)curr->next);*/
+		// printf("\nadding the fru hotplug here
+		// curr->record_handle=%d",curr->record_handle);
+		// printf("repo-last=%x, curr=%x, curr-next=%x",(unsigned
+		// int)repo->last, (unsigned int)curr, (unsigned
+		// int)curr->next);
 		record->next = curr->next;
 		curr->next = record;
 		if (record->next == NULL) {
+			repo->last->next = record;
 			repo->last = record;
 		}
 	}
@@ -143,11 +135,9 @@ static pldm_pdr_record *make_new_record(const pldm_pdr *repo,
 		 * caller supplied the record handle, it would exist in the
 		 * header already.
 		 */
-		if (!record_handle) {
-			struct pldm_pdr_hdr *hdr =
-			    (struct pldm_pdr_hdr *)(record->data);
-			hdr->record_handle = htole32(record->record_handle);
-		}
+		struct pldm_pdr_hdr *hdr =
+		    (struct pldm_pdr_hdr *)(record->data);
+		hdr->record_handle = htole32(record->record_handle);
 	}
 	record->next = NULL;
 
@@ -176,9 +166,6 @@ uint32_t pldm_pdr_add_hotplug_record(pldm_pdr *repo, const uint8_t *data,
 {
 	assert(size != 0);
 	assert(data != NULL);
-	// printf("\nenter pldm_pdr_add_hotplug_record with record_handle=%d,
-	// prev_record_handle=%d",
-	//             record_handle,prev_record_handle);
 
 	pldm_pdr_record *record = make_new_record(
 	    repo, data, size, record_handle, is_remote, terminus_handle);
@@ -258,37 +245,6 @@ const pldm_pdr_record *pldm_pdr_find_record(const pldm_pdr *repo,
 
 	*size = 0;
 	*next_record_handle = 0;
-	return NULL;
-}
-
-pldm_pdr_record *pldm_pdr_find_last_local_record(const pldm_pdr *repo)
-{
-	printf("\nenter pldm_pdr_find_last_local_record record_count=%d \n",
-	       repo->record_count);
-	assert(repo != NULL);
-	pldm_pdr_record *curr = repo->first;
-	pldm_pdr_record *prev = repo->first;
-	uint32_t i = 0;
-	// printf("\n first record handle=%d\n",repo->first->record_handle);
-	// printf("\nlast record handle=%d,
-	// last->next=%d",repo->last->record_handle, (unsigned
-	// int)repo->last->next);
-	while (curr != NULL) {
-		i = curr->record_handle;
-		// printf("\ni=%d\n",i);
-		if (!(prev->is_remote) && (curr->is_remote)) {
-			printf("\nfound record at %d, prev->record_handle=%d\n",
-			       i, prev->record_handle);
-			return prev;
-		}
-		prev = curr;
-		curr = curr->next;
-	}
-	if (curr == NULL) {
-		printf("\nreached curr as NULL prev->record_handle=%d\n",
-		       prev->record_handle);
-		return prev;
-	}
 	return NULL;
 }
 
@@ -397,27 +353,11 @@ uint32_t pldm_pdr_add_fru_record_set(pldm_pdr *repo, uint16_t terminus_handle,
 				     uint16_t fru_rsi, uint16_t entity_type,
 				     uint16_t entity_instance_num,
 				     uint16_t container_id,
-				     uint32_t bmc_record_handle)
+				     uint32_t bmc_record_handle, bool hotplug)
 {
 	uint32_t size = sizeof(struct pldm_pdr_hdr) +
 			sizeof(struct pldm_pdr_fru_record_set);
 	uint8_t data[size];
-	bool hotplug = false;
-	pldm_pdr_record *prev = repo->first;
-
-	if (bmc_record_handle == 0xFFFF) // handle hot plug
-	{
-		hotplug = true;
-		pldm_pdr_record *curr = repo->first;
-		while (curr != NULL) {
-			if (!prev->is_remote && curr->is_remote) {
-				break;
-			}
-			prev = curr;
-			curr = curr->next;
-		}
-		bmc_record_handle = prev->record_handle + 1;
-	}
 
 	struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)&data;
 	hdr->version = 1;
@@ -434,10 +374,12 @@ uint32_t pldm_pdr_add_fru_record_set(pldm_pdr *repo, uint16_t terminus_handle,
 	fru->entity_instance = htole16(entity_instance_num);
 	fru->container_id = htole16(container_id);
 
+	uint32_t prev_record_handle = bmc_record_handle - 1;
 	if (hotplug) {
 		return pldm_pdr_add_hotplug_record(
 		    repo, data, size, bmc_record_handle, false,
-		    prev->record_handle, fru->terminus_handle);
+		    prev_record_handle, fru->terminus_handle);
+
 	} else {
 		return pldm_pdr_add(repo, data, size, bmc_record_handle, false,
 				    fru->terminus_handle);
@@ -555,6 +497,7 @@ void pldm_pdr_update_TL_pdr(const pldm_pdr *repo, uint16_t terminusHandle,
 		    repo, PLDM_TERMINUS_LOCATOR_PDR, record, &outData, &size);
 	} while (record);
 }
+
 void pldm_delete_by_record_handle(pldm_pdr *repo, uint32_t record_handle,
 				  bool is_remote)
 {
@@ -1498,12 +1441,11 @@ uint32_t pldm_entity_association_pdr_add_contained_entity(
     pldm_pdr *repo, pldm_entity entity, pldm_entity parent,
     uint8_t *event_data_op, bool is_remote)
 {
-	/*	printf("\nenter pldm_entity_association_pdr_add_contained_entity
-	   " "entity type=%d entity ins=%d container id=%d", entity.entity_type,
-	   entity.entity_instance_num, entity.entity_container_id); printf("\n
-	   and parent entity type=%d entity ins=%d container id=%d",
-		       parent.entity_type, parent.entity_instance_num,
-		       parent.entity_container_id);*/
+	/*printf("\nenter pldm_entity_association_pdr_add_contained_entity
+      entity type=%d entity ins=%d container id=%d", entity.entity_type,
+      entity.entity_instance_num, entity.entity_container_id); printf("\n and
+      parent entity type=%d entity ins=%d container id=%d",parent.entity_type,
+      parent.entity_instance_num, parent.entity_container_id);*/
 	// testing pending with pcie slot-card. can test once cards are placed
 	// under slots in DBus. usecase: will not find the PDR and need to
 	// create a new entity assoc PDR since the number of child is always 1
@@ -1624,7 +1566,7 @@ uint32_t pldm_entity_association_pdr_add_contained_entity(
 	}
 	if (!found && !is_remote) // need to create a new entity assoc pdr
 	{
-		//	printf("\ncreating a new entity assoc pdr for slot \n");
+		// printf("\ncreating a new entity assoc pdr for slot \n");
 		uint8_t num_children = 1;
 		added = true;
 		*event_data_op = PLDM_RECORDS_ADDED;
@@ -1694,7 +1636,7 @@ uint32_t pldm_entity_association_pdr_add_contained_entity(
 			free(new_record); // sm00
 		}
 	}
-	//	printf("\nreturning updated_hdl=%d", updated_hdl);
+	// printf("\nreturning updated_hdl=%d", updated_hdl);
 	return updated_hdl;
 }
 
@@ -1730,7 +1672,6 @@ void pldm_pdr_remove_pdrs_by_terminus_handle(uint32_t terminus_handle,
 					     pldm_pdr *repo)
 {
 	assert(repo != NULL);
-	bool removed = false;
 
 	pldm_pdr_record *record = repo->first;
 	pldm_pdr_record *prev = NULL;
@@ -1751,28 +1692,13 @@ void pldm_pdr_remove_pdrs_by_terminus_handle(uint32_t terminus_handle,
 			--repo->record_count;
 			repo->size -= record->size;
 			free(record);
-			removed = true;
 		} else {
 			prev = record;
 		}
 		record = next;
 	}
-
-	if (removed == true) {
-		record = repo->first;
-		uint32_t record_handle = 0;
-		while (record != NULL) {
-			record->record_handle = ++record_handle;
-			if (record->data != NULL) {
-				struct pldm_pdr_hdr *hdr =
-				    (struct pldm_pdr_hdr *)(record->data);
-				hdr->record_handle =
-				    htole32(record->record_handle);
-			}
-			record = record->next;
-		}
-	}
 }
+
 void pldm_pdr_remove_remote_pdrs(pldm_pdr *repo)
 {
 	assert(repo != NULL);
