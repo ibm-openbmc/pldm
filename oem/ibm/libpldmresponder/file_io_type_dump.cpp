@@ -212,7 +212,7 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
         return rc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
     }
 
-    if (socketWriteStatus == Error) 
+    if (socketWriteStatus == Error)
     {
         std::cerr
             << "DumpHandler::writeFromMemory: Error while writing to Unix socket"
@@ -324,8 +324,15 @@ int DumpHandler::fileAck(uint8_t fileStatus)
         {
             uint32_t val = 0xFFFFFFFF;
             PropertyValue value = static_cast<uint32_t>(val);
-            DBusMapping dbusMapping{path.c_str(), "com.ibm.Dump.Entry.Resource",
-                                    "SourceDumpId", "uint32_t"};
+            auto dumpIntf = resDumpEntry;
+
+            if (dumpType == PLDM_FILE_TYPE_DUMP)
+            {
+                dumpIntf = systemDumpEntry;
+            }
+
+            DBusMapping dbusMapping{path.c_str(), dumpIntf, "SourceDumpId",
+                                    "uint32_t"};
             try
             {
                 pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
