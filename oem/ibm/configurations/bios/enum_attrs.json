@@ -196,7 +196,7 @@
             "Enabled"
          ],
          "default_values":[
-            "Enabled"
+            "Disabled"
          ],
          "helpText" : "This option enables or disables the Remote Trusted Attestation Daemon for host firmware.",
          "displayName" : "Remote Trusted Attestation Daemon State"
