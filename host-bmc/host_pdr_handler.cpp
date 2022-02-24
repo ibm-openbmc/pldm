@@ -663,7 +663,8 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
             std::cerr << "Failed to decode_get_pdr_resp: "
-                      << "rc=" << rc
+                      << "rc= "
+                      << ", NextRecordhandle :" << rc << nextRecordHandle
                       << ", cc=" << static_cast<unsigned>(completionCode)
                       << std::endl;
             return;
