@@ -368,6 +368,7 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
     }
     else
     {
+        std::cerr << "Property Type is:" << dBusMap.propertyType << std::endl;
         throw std::invalid_argument("UnSpported Dbus Type");
     }
 }
