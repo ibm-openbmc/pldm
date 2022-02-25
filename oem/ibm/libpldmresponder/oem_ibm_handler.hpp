@@ -43,7 +43,7 @@ using PendingObj = std::tuple<AttributeType, CurrentValue>;
 using PendingAttributes = std::map<AttributeName, PendingObj>;
 static constexpr auto PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE = 24577;
 static constexpr auto PLDM_OEM_IBM_FRONT_PANEL_TRIGGER = 32837;
-static constexpr auto PLDM_OEM_IBM_ENTITY_REAL_SAI = 24578;
+static constexpr auto PLDM_OEM_IBM_ENTITY_REAL_SAI = 24581;
 
 constexpr uint16_t ENTITY_INSTANCE_0 = 0;
 constexpr uint16_t ENTITY_INSTANCE_1 = 1;
