@@ -31,6 +31,12 @@ static constexpr auto dumpObjPath = "/xyz/openbmc_project/dump/system";
 static constexpr auto systemDumpEntry = "xyz.openbmc_project.Dump.Entry.System";
 static constexpr auto resDumpObjPath = "/xyz/openbmc_project/dump/resource";
 static constexpr auto resDumpEntry = "com.ibm.Dump.Entry.Resource";
+static constexpr auto bmcDumpObjPath = "/xyz/openbmc_project/dump/bmc/entry";
+static constexpr auto hostbootDumpObjPath =
+    "/xyz/openbmc_project/dump/hostboot/entry";
+static constexpr auto sbeDumpObjPath = "/xyz/openbmc_project/dump/sbe/entry";
+static constexpr auto hardwareDumpObjPath =
+    "/xyz/openbmc_project/dump/hardware/entry";
 
 // Resource dump file path to be deleted once hyperviosr validates the input
 // parameters. Need to re-look in to this name when we support multiple
@@ -53,18 +59,46 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
     // Stores the current resource dump entry path
     std::string curResDumpEntryPath{};
 
-    dbus::ObjectValueTree objects;
-    auto method =
-        bus.new_method_call(DUMP_MANAGER_BUSNAME, DUMP_MANAGER_PATH,
-                            OBJECT_MANAGER_INTERFACE, "GetManagedObjects");
+    if (dumpType == PLDM_FILE_TYPE_BMC_DUMP)
+    {
+        curResDumpEntryPath =
+            (std::string)bmcDumpObjPath + "/" + std::to_string(fileHandle);
+    }
+    else if (dumpType == PLDM_FILE_TYPE_SBE_DUMP)
+    {
+        curResDumpEntryPath =
+            (std::string)sbeDumpObjPath + "/" + std::to_string(fileHandle);
+    }
+    else if (dumpType == PLDM_FILE_TYPE_HOSTBOOT_DUMP)
+    {
+        curResDumpEntryPath =
+            (std::string)hostbootDumpObjPath + "/" + std::to_string(fileHandle);
+    }
+    else if (dumpType == PLDM_FILE_TYPE_HARDWARE_DUMP)
+    {
+        curResDumpEntryPath =
+            (std::string)hardwareDumpObjPath + "/" + std::to_string(fileHandle);
+    }
 
-    // Select the dump entry interface for system dump or resource dump
-    auto dumpEntryIntf = systemDumpEntry;
+    std::string dumpEntryIntf{};
     if ((dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP) ||
         (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS))
     {
         dumpEntryIntf = resDumpEntry;
     }
+    else if (dumpType == PLDM_FILE_TYPE_DUMP)
+    {
+        dumpEntryIntf = systemDumpEntry;
+    }
+    else
+    {
+        return curResDumpEntryPath;
+    }
+
+    dbus::ObjectValueTree objects;
+    auto method =
+        bus.new_method_call(DUMP_MANAGER_BUSNAME, DUMP_MANAGER_PATH,
+                            OBJECT_MANAGER_INTERFACE, "GetManagedObjects");
 
     try
     {
@@ -337,30 +371,35 @@ int DumpHandler::fileAck(uint8_t fileStatus)
     {
         if (fileStatus == PLDM_ERROR_FILE_DISCARDED)
         {
-            uint32_t val = 0xFFFFFFFF;
-            PropertyValue value = static_cast<uint32_t>(val);
-            auto dumpIntf = resDumpEntry;
+            if (dumpType == PLDM_FILE_TYPE_DUMP ||
+                dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
+            {
+                uint32_t val = 0xFFFFFFFF;
+                PropertyValue value = static_cast<uint32_t>(val);
+                auto dumpIntf = resDumpEntry;
 
-            if (dumpType == PLDM_FILE_TYPE_DUMP)
-            {
-                dumpIntf = systemDumpEntry;
-            }
+                if (dumpType == PLDM_FILE_TYPE_DUMP)
+                {
+                    dumpIntf = systemDumpEntry;
+                }
 
-            DBusMapping dbusMapping{path.c_str(), dumpIntf, "SourceDumpId",
-                                    "uint32_t"};
-            try
-            {
-                pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
-            }
-            catch (const std::exception& e)
-            {
-                std::cerr << "Failed to make a d-bus call to DUMP "
-                             "manager to reset source dump id of "
-                          << path.c_str() << ", with ERROR=" << e.what()
-                          << "\n";
-                pldm::utils::reportError(
-                    "xyz.openbmc_project.bmc.PLDM.fileAck.SourceDumpIdResetFail");
-                return PLDM_ERROR;
+                DBusMapping dbusMapping{path.c_str(), dumpIntf, "SourceDumpId",
+                                        "uint32_t"};
+                try
+                {
+                    pldm::utils::DBusHandler().setDbusProperty(dbusMapping,
+                                                               value);
+                }
+                catch (const std::exception& e)
+                {
+                    std::cerr << "Failed to make a d-bus call to DUMP "
+                                 "manager to reset source dump id of "
+                              << path.c_str() << ", with ERROR=" << e.what()
+                              << "\n";
+                    pldm::utils::reportError(
+                        "xyz.openbmc_project.bmc.PLDM.fileAck.SourceDumpIdResetFail");
+                    return PLDM_ERROR;
+                }
             }
 
             auto& bus = pldm::utils::DBusHandler::getBus();
@@ -426,9 +465,34 @@ int DumpHandler::readIntoMemory(uint32_t offset, uint32_t& length,
                                 uint64_t address,
                                 oem_platform::Handler* /*oemPlatformHandler*/)
 {
-    if (dumpType != PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
+    auto path = findDumpObjPath(fileHandle);
+    static constexpr auto dumpFilepathInterface =
+        "xyz.openbmc_project.Common.FilePath";
+    if ((dumpType == PLDM_FILE_TYPE_DUMP) ||
+        (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP))
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+    }
+    else if (dumpType != PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
+    {
+        try
+        {
+            auto filePath =
+                pldm::utils::DBusHandler().getDbusProperty<std::string>(
+                    path.c_str(), "Path", dumpFilepathInterface);
+            auto rc = transferFileData(fs::path(filePath), false, offset,
+                                       length, address);
+            return rc;
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << "Failed to fetch the filepath of the dump entry"
+                      << std::hex << fileHandle << ", error = " << e.what()
+                      << "\n";
+            pldm::utils::reportError(
+                "xyz.openbmc_project.bmc.PLDM.readIntoMemory.GetFilepathFail");
+            return PLDM_ERROR;
+        }
     }
     return transferFileData(resDumpDirPath, true, offset, length, address);
 }
@@ -436,9 +500,33 @@ int DumpHandler::readIntoMemory(uint32_t offset, uint32_t& length,
 int DumpHandler::read(uint32_t offset, uint32_t& length, Response& response,
                       oem_platform::Handler* /*oemPlatformHandler*/)
 {
-    if (dumpType != PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
+    auto path = findDumpObjPath(fileHandle);
+    static constexpr auto dumpFilepathInterface =
+        "xyz.openbmc_project.Common.FilePath";
+    if ((dumpType == PLDM_FILE_TYPE_DUMP) ||
+        (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP))
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+    }
+    else if (dumpType != PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
+    {
+        try
+        {
+            auto filePath =
+                pldm::utils::DBusHandler().getDbusProperty<std::string>(
+                    path.c_str(), "Path", dumpFilepathInterface);
+            auto rc = readFile(filePath.c_str(), offset, length, response);
+            return rc;
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << "Failed to fetch the filepath of the dump entry"
+                      << std::hex << fileHandle << ", error = " << e.what()
+                      << "\n";
+            pldm::utils::reportError(
+                "xyz.openbmc_project.bmc.PLDM.read.GetFilepathFail");
+            return PLDM_ERROR;
+        }
     }
     return readFile(resDumpDirPath, offset, length, response);
 }
