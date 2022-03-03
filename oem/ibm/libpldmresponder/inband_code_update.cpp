@@ -40,6 +40,7 @@ constexpr auto hostfwImageName = "image-hostfw";
 constexpr auto bootSideFileName = "bootSide";
 
 constexpr auto bootSideAttrName = "fw_boot_side_current";
+constexpr auto bootNextSideAttrName = "fw_boot_side";
 
 /** @brief The path to the code update tarball file */
 auto tarImagePath = fs::path(imageDirPath) / tarImageName;
@@ -93,6 +94,23 @@ int CodeUpdate::setNextBootSide(const std::string& nextSide)
     if (objPath.empty())
     {
         std::cerr << "no nonRunningVersion present \n";
+        return PLDM_PLATFORM_INVALID_STATE_VALUE;
+    }
+
+    try
+    {
+        auto priorityPropValue = dBusIntf->getDbusPropertyVariant(
+            objPath.c_str(), "Priority", redundancyIntf);
+        const auto& priorityValue = std::get<uint8_t>(priorityPropValue);
+        if (priorityValue == 0)
+        {
+            // Requested next boot side is already set
+            return PLDM_SUCCESS;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        // Alternate side may not be present due to a failed code update
         return PLDM_PLATFORM_INVALID_STATE_VALUE;
     }
 
@@ -216,6 +234,8 @@ void CodeUpdate::setVersions()
                 bootSideAttrName, pldmBootSideData.current_boot_side));
             biosAttrList.push_back(std::make_pair(
                 "pvm_fw_boot_side", pldmBootSideData.current_boot_side));
+            biosAttrList.push_back(std::make_pair(
+                bootNextSideAttrName, pldmBootSideData.next_boot_side));
             setBiosAttr(biosAttrList);
         }
         else
@@ -239,6 +259,8 @@ void CodeUpdate::setVersions()
                     std::make_pair(bootSideAttrName, current_boot_side));
                 biosAttrList.push_back(
                     std::make_pair("pvm_fw_boot_side", current_boot_side));
+                biosAttrList.push_back(std::make_pair(
+                    bootNextSideAttrName, pldmBootSideData.next_boot_side));
                 setBiosAttr(biosAttrList);
             }
             else
@@ -254,6 +276,8 @@ void CodeUpdate::setVersions()
                     bootSideAttrName, pldmBootSideData.current_boot_side));
                 biosAttrList.push_back(std::make_pair(
                     "pvm_fw_boot_side", pldmBootSideData.current_boot_side));
+                biosAttrList.push_back(std::make_pair(
+                    bootNextSideAttrName, pldmBootSideData.next_boot_side));
                 setBiosAttr(biosAttrList);
             }
             currBootSide =
@@ -305,94 +329,106 @@ void CodeUpdate::setVersions()
                             imageObjPath, "Activation", imageInterface);
                         const auto& imageProp = std::get<std::string>(propVal);
                         if (imageProp == "xyz.openbmc_project.Software."
-                                         "Activation.Activations.Ready" &&
-                            isCodeUpdateInProgress())
+                                         "Activation.Activations.Ready")
                         {
-                            newImageId = path.str;
-                            if (!imageActivationMatch)
+                            nonRunningVersion = path.str;
+
+                            if (isCodeUpdateInProgress())
                             {
-                                imageActivationMatch = std::make_unique<
-                                    sdbusplus::bus::match::match>(
-                                    pldm::utils::DBusHandler::getBus(),
-                                    propertiesChanged(newImageId,
-                                                      "xyz.openbmc_project."
-                                                      "Software.Activation"),
-                                    [this](sdbusplus::message::message& msg) {
-                                        DbusChangedProps props;
-                                        std::string iface;
-                                        msg.read(iface, props);
-                                        const auto itr =
-                                            props.find("Activation");
-                                        if (itr != props.end())
-                                        {
-                                            PropertyValue value = itr->second;
-                                            auto propVal =
-                                                std::get<std::string>(value);
-                                            if (propVal ==
-                                                "xyz.openbmc_project.Software."
-                                                "Activation.Activations.Active")
+                                // Inband update
+                                newImageId = path.str;
+                                if (!imageActivationMatch)
+                                {
+                                    imageActivationMatch = std::make_unique<
+                                        sdbusplus::bus::match::match>(
+                                        pldm::utils::DBusHandler::getBus(),
+                                        propertiesChanged(
+                                            newImageId, "xyz.openbmc_project."
+                                                        "Software.Activation"),
+                                        [this](
+                                            sdbusplus::message::message& msg) {
+                                            DbusChangedProps props;
+                                            std::string iface;
+                                            msg.read(iface, props);
+                                            const auto itr =
+                                                props.find("Activation");
+                                            if (itr != props.end())
                                             {
-                                                CodeUpdateState state =
-                                                    CodeUpdateState::END;
-                                                setCodeUpdateProgress(false);
-                                                auto sensorId =
-                                                    getFirmwareUpdateSensor();
-                                                sendStateSensorEvent(
-                                                    sensorId,
-                                                    PLDM_STATE_SENSOR_STATE, 0,
-                                                    uint8_t(state),
-                                                    uint8_t(CodeUpdateState::
+                                                PropertyValue value =
+                                                    itr->second;
+                                                auto propVal =
+                                                    std::get<std::string>(
+                                                        value);
+                                                if (propVal ==
+                                                    "xyz.openbmc_project.Software."
+                                                    "Activation.Activations.Active")
+                                                {
+                                                    CodeUpdateState state =
+                                                        CodeUpdateState::END;
+                                                    setCodeUpdateProgress(
+                                                        false);
+                                                    auto sensorId =
+                                                        getFirmwareUpdateSensor();
+                                                    sendStateSensorEvent(
+                                                        sensorId,
+                                                        PLDM_STATE_SENSOR_STATE,
+                                                        0, uint8_t(state),
+                                                        uint8_t(
+                                                            CodeUpdateState::
                                                                 START));
-                                                newImageId.clear();
-                                            }
-                                            else if (propVal ==
-                                                         "xyz.openbmc_project."
-                                                         "Software.Activation."
-                                                         "Activations.Failed" ||
-                                                     propVal ==
-                                                         "xyz.openbmc_"
-                                                         "project.Software."
-                                                         "Activation."
-                                                         "Activations."
-                                                         "Invalid")
-                                            {
-                                                CodeUpdateState state =
-                                                    CodeUpdateState::FAIL;
-                                                setCodeUpdateProgress(false);
-                                                auto sensorId =
-                                                    getFirmwareUpdateSensor();
-                                                sendStateSensorEvent(
-                                                    sensorId,
-                                                    PLDM_STATE_SENSOR_STATE, 0,
-                                                    uint8_t(state),
-                                                    uint8_t(CodeUpdateState::
+                                                    newImageId.clear();
+                                                }
+                                                else if (
+                                                    propVal ==
+                                                        "xyz.openbmc_project."
+                                                        "Software.Activation."
+                                                        "Activations.Failed" ||
+                                                    propVal ==
+                                                        "xyz.openbmc_"
+                                                        "project.Software."
+                                                        "Activation."
+                                                        "Activations."
+                                                        "Invalid")
+                                                {
+                                                    CodeUpdateState state =
+                                                        CodeUpdateState::FAIL;
+                                                    setCodeUpdateProgress(
+                                                        false);
+                                                    auto sensorId =
+                                                        getFirmwareUpdateSensor();
+                                                    sendStateSensorEvent(
+                                                        sensorId,
+                                                        PLDM_STATE_SENSOR_STATE,
+                                                        0, uint8_t(state),
+                                                        uint8_t(
+                                                            CodeUpdateState::
                                                                 START));
-                                                newImageId.clear();
+                                                    newImageId.clear();
+                                                }
                                             }
-                                        }
-                                    });
+                                        });
+                                }
+                                auto rc = setRequestedActivation();
+                                if (rc != PLDM_SUCCESS)
+                                {
+                                    CodeUpdateState state =
+                                        CodeUpdateState::FAIL;
+                                    setCodeUpdateProgress(false);
+                                    auto sensorId = getFirmwareUpdateSensor();
+                                    sendStateSensorEvent(
+                                        sensorId, PLDM_STATE_SENSOR_STATE, 0,
+                                        uint8_t(state),
+                                        uint8_t(CodeUpdateState::START));
+                                    std::cerr
+                                        << "could not set RequestedActivation \n";
+                                }
+                                break;
                             }
-                            auto rc = setRequestedActivation();
-                            if (rc != PLDM_SUCCESS)
+                            else
                             {
-                                CodeUpdateState state = CodeUpdateState::FAIL;
-                                setCodeUpdateProgress(false);
-                                auto sensorId = getFirmwareUpdateSensor();
-                                sendStateSensorEvent(
-                                    sensorId, PLDM_STATE_SENSOR_STATE, 0,
-                                    uint8_t(state),
-                                    uint8_t(CodeUpdateState::START));
-                                std::cerr
-                                    << "could not set RequestedActivation \n";
+                                // Out of band update
+                                processRenameEvent();
                             }
-                            break;
-                        }
-                        else if (imageProp == "xyz.openbmc_project.Software."
-                                              "Activation.Activations.Ready" &&
-                                 !isOutOfBandCodeUpdateInProgress())
-                        {
-                            outOfBandCodeUpdateInProgress = true;
-                            processRenameEvent();
                         }
                     }
                     catch (const sdbusplus::exception::exception& e)
@@ -406,11 +442,15 @@ void CodeUpdate::setVersions()
 
 void CodeUpdate::processRenameEvent()
 {
+    std::cout << "Processing Rename Event" << std::endl;
+
     BiosAttributeList biosAttrList;
     pldm_boot_side_data pldmBootSideData = readBootSideFile();
     pldmBootSideData.current_boot_side = "Perm";
+    pldmBootSideData.next_boot_side = "Perm";
 
     currBootSide = Pside;
+    nextBootSide = Pside;
 
     auto sensorId = getBootSideRenameStateSensor();
     sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
@@ -421,6 +461,8 @@ void CodeUpdate::processRenameEvent()
         std::make_pair(bootSideAttrName, pldmBootSideData.current_boot_side));
     biosAttrList.push_back(
         std::make_pair("pvm_fw_boot_side", pldmBootSideData.current_boot_side));
+    biosAttrList.push_back(
+        std::make_pair(bootNextSideAttrName, pldmBootSideData.next_boot_side));
     setBiosAttr(biosAttrList);
 }
 
@@ -476,6 +518,10 @@ void CodeUpdate::processPriorityChangeNotification(
                                                               : "Temp");
     writeBootSideFile(pldmBootSideData);
     nextBootSide = (pldmBootSideData.next_boot_side == "Temp" ? Tside : Pside);
+    BiosAttributeList biosAttrList;
+    biosAttrList.push_back(
+        std::make_pair(bootNextSideAttrName, pldmBootSideData.next_boot_side));
+    setBiosAttr(biosAttrList);
 }
 
 void CodeUpdate::setOemPlatformHandler(
@@ -737,8 +783,8 @@ int CodeUpdate::assembleCodeUpdateImage()
                 exit(EXIT_FAILURE);
             }
 
-            // Copy the tarball to the update directory to trigger the phosphor
-            // software manager to create a version interface
+            // Copy the tarball to the update directory to trigger the
+            // phosphor software manager to create a version interface
             fs::copy_file(tarImagePath, updateImagePath,
                           fs::copy_options::overwrite_existing);
 
