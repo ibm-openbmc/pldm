@@ -323,7 +323,8 @@ Response Handler::setStateEffecterStates(const pldm_msg* request,
 
     if (isOemStateEffecter(*this, effecterId, compEffecterCnt, entityType,
                            entityInstance, stateSetId) &&
-        oemPlatformHandler != nullptr)
+        oemPlatformHandler != nullptr &&
+        !effecterDbusObjMaps.contains(effecterId))
     {
         rc = oemPlatformHandler->oemSetStateEffecterStatesHandler(
             entityType, entityInstance, stateSetId, compEffecterCnt, stateField,
@@ -674,7 +675,8 @@ Response Handler::setNumericEffecterValue(const pldm_msg* request,
     if (isOemNumericEffecter(*this, effecterId, entityType, entityInstance,
                              effecterDataSize, effecterSemanticId,
                              effecterOffset, effecterResolution) &&
-        oemPlatformHandler != nullptr)
+        oemPlatformHandler != nullptr &&
+        !effecterDbusObjMaps.contains(effecterId))
     {
         rc = oemPlatformHandler->oemSetNumericEffecterValueHandler(
             entityType, entityInstance, effecterSemanticId, effecterDataSize,
@@ -758,7 +760,7 @@ Response Handler::getStateSensorReadings(const pldm_msg* request,
 
     if (isOemStateSensor(*this, sensorId, sensorRearmCount, comSensorCnt,
                          entityType, entityInstance, stateSetId, containerId) &&
-        oemPlatformHandler != nullptr)
+        oemPlatformHandler != nullptr && !sensorDbusObjMaps.contains(sensorId))
     {
         rc = oemPlatformHandler->getOemStateSensorReadingsHandler(
             entityType, entityInstance, containerId, stateSetId, comSensorCnt,
