@@ -39,7 +39,8 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
         std::cerr << "Failed to send resource dump parameters as requester is "
                      "not set";
         pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.PLDM.sendNewFileAvailableCmd.SendDumpParametersFail");
+            "xyz.openbmc_project.bmc.PLDM.sendNewFileAvailableCmd.SendDumpParametersFail",
+            pldm::PelSeverity::ERROR);
         return;
     }
     auto instanceId = requester->getInstanceId(mctp_eid);
@@ -95,7 +96,7 @@ void DbusToFileHandler::reportResourceDumpFailure(std::string str)
     std::string s =
         "xyz.openbmc_project.bmc.PLDM.ReportResourceDumpFail." + str;
 
-    pldm::utils::reportError(s.c_str());
+    pldm::utils::reportError(s.c_str(), pldm::PelSeverity::WARNING);
 
     PropertyValue value{resDumpStatus};
     DBusMapping dbusMapping{resDumpCurrentObjPath, resDumpProgressIntf,
@@ -276,7 +277,8 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
     {
         std::cerr << "Failed to send file to host.";
         pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.pldm.SendFileToHostFail");
+            "xyz.openbmc_project.bmc.pldm.SendFileToHostFail",
+            pldm::PelSeverity::ERROR);
         return;
     }
     auto instanceId = requester->getInstanceId(mctp_eid);
@@ -313,7 +315,8 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
                       << ", cc=" << static_cast<unsigned>(completionCode)
                       << "\n";
             pldm::utils::reportError(
-                "xyz.openbmc_project.bmc.pldm.DecodeNewFileResponseFail");
+                "xyz.openbmc_project.bmc.pldm.DecodeNewFileResponseFail",
+                pldm::PelSeverity::ERROR);
         }
     };
     rc = handler->registerRequest(
@@ -323,7 +326,8 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
     {
         std::cerr << "Failed to send NewFileAvailable Request to Host\n";
         pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.NewFileAvailableRequestFail");
+            "xyz.openbmc_project.bmc.NewFileAvailableRequestFail",
+            pldm::PelSeverity::ERROR);
     }
 }
 

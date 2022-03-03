@@ -63,7 +63,8 @@ int main(int argc, char* argv[])
     if (softPower.isTimerExpired() && softPower.isReceiveResponse())
     {
         pldm::utils::reportError(
-            "pldm soft off: Waiting for the host soft off timeout");
+            "pldm soft off: Waiting for the host soft off timeout",
+            pldm::PelSeverity::ERROR);
         std::cerr
             << "PLDM host soft off: ERROR! Wait for the host soft off timeout."
             << "Exit the pldm-softpoweroff "

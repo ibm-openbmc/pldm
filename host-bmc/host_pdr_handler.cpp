@@ -960,7 +960,8 @@ void HostPDRHandler::_setHostSensorState()
     {
         std::cerr << "Failed to get State sensor PDR" << std::endl;
         pldm::utils::reportError(
-            "xyz.openbmc_project.PLDM._setHostSensorState.GetStateSensorPDRFail");
+            "xyz.openbmc_project.PLDM._setHostSensorState.GetStateSensorPDRFail",
+            pldm::PelSeverity::ERROR);
         return;
     }
 
@@ -994,7 +995,8 @@ void HostPDRHandler::_setHostSensorState()
                              "encode_get_state_sensor_readings_req, rc = "
                           << rc << std::endl;
                 pldm::utils::reportError(
-                    "xyz.openbmc_project.bmc.PLDM._setHostSensorState.EncodeStateSensorFail");
+                    "xyz.openbmc_project.bmc.PLDM._setHostSensorState.EncodeStateSensorFail",
+                    pldm::PelSeverity::ERROR);
                 return;
             }
 

@@ -147,14 +147,16 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
                 std::cerr << "Failed parsing PDR JSON file, TYPE= " << pdrType
                           << " ERROR=" << e.what() << "\n";
                 pldm::utils::reportError(
-                    "xyz.openbmc_project.bmc.PLDM.generate.PDRJsonFileParseFail");
+                    "xyz.openbmc_project.bmc.PLDM.generate.PDRJsonFileParseFail",
+                    pldm::PelSeverity::ERROR);
             }
             catch (const std::exception& e)
             {
                 std::cerr << "Failed parsing PDR JSON file, TYPE= " << pdrType
                           << " ERROR=" << e.what() << "\n";
                 pldm::utils::reportError(
-                    "xyz.openbmc_project.bmc.PLDM.generate.PDRJsonFileParseFail");
+                    "xyz.openbmc_project.bmc.PLDM.generate.PDRJsonFileParseFail",
+                    pldm::PelSeverity::ERROR);
             }
         }
     }
