@@ -51,7 +51,8 @@ class LidHandler : public FileHandler
             (getBiosAttrValue("fw_boot_side_current") == "Perm" ? Pside
                                                                 : Tside);
         std::string dir;
-        if (currBootSide == sideToRead)
+        if ((currBootSide == sideToRead) ||
+            (lidType == PLDM_FILE_TYPE_LID_RUNNING))
         {
             dir = LID_RUNNING_DIR;
         }
@@ -63,7 +64,8 @@ class LidHandler : public FileHandler
         stream << std::hex << fileHandle;
         auto lidName = stream.str() + ".lid";
         std::string patchDir;
-        if (currBootSide == sideToRead)
+        if ((currBootSide == sideToRead) ||
+            (lidType == PLDM_FILE_TYPE_LID_RUNNING))
         {
             patchDir = LID_RUNNING_PATCH_DIR;
         }
