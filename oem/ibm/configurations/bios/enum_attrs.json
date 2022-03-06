@@ -357,7 +357,17 @@
             "Disabled"
          ],
          "helpText" : "Specifies if the power limit is enabled, requires a reboot for a change to be applied.",
-         "displayName" : "Power Limit Enable (pending)"
+         "displayName" : "Power Limit Enable (pending)",
+         "helpText" : "Specifies whether the power limit is enabled.",
+         "displayName" : "Power Limit Enable",
+         "dbus":
+            {
+               "object_path" : "/xyz/openbmc_project/control/host0/power_cap",
+               "interface" : "xyz.openbmc_project.Control.Power.Cap",
+               "property_name" : "PowerCapEnable",
+               "property_type" : "bool",
+               "property_values" : [true, false]
+            }
       },
       {
          "attribute_name":"hb_power_limit_enable_current",
