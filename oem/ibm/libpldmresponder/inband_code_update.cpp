@@ -75,9 +75,10 @@ int CodeUpdate::setNextBootSide(const std::string& nextSide)
 {
     std::cout << "setNextBootSide, nextSide=" << nextSide << std::endl;
     pldm_boot_side_data pldmBootSideData = readBootSideFile();
-    currBootSide = pldmBootSideData.current_boot_side;
+    currBootSide =
+        (pldmBootSideData.current_boot_side == "Perm" ? Pside : Tside);
     nextBootSide = nextSide;
-    pldmBootSideData.next_boot_side = nextSide;
+    pldmBootSideData.next_boot_side = (nextSide == Pside ? "Perm" : "Temp");
     std::string objPath{};
     if (nextBootSide == currBootSide)
     {
