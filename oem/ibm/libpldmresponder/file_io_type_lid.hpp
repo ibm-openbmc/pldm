@@ -86,8 +86,9 @@ class LidHandler : public FileHandler
             {
                 dir = LID_ALTERNATE_PATCH_DIR;
             }
-            if (oemIbmPlatformHandler->codeUpdate->fetchCurrentBootSide() ==
-                sideToRead)
+            if ((oemIbmPlatformHandler->codeUpdate->fetchCurrentBootSide() ==
+                 sideToRead) ||
+                (lidType == PLDM_FILE_TYPE_LID_RUNNING))
             {
                 if (isPatchDir)
                 {
