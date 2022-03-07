@@ -94,6 +94,11 @@ void generateStateSensorPDR(const DBusInterface& dBusIntf, const Json& json,
                 pdr->entity_type = e.value("type", 0);
                 pdr->entity_instance = e.value("instance", 0);
                 pdr->container_id = e.value("container", 0);
+
+                if (pdr->entity_type == 0)
+                {
+                    continue;
+                }
                 // now attach this entity to the container that was
                 // mentioned in the json, and add this entity to the
                 // parents entity assocation PDR

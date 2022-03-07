@@ -93,6 +93,11 @@ void generateStateEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
                 pdr->entity_type = e.value("type", 0);
                 pdr->entity_instance = e.value("instance", 0);
                 pdr->container_id = e.value("container", 0);
+
+                if (pdr->entity_type == 0)
+                {
+                    continue;
+                }
             }
         }
         catch (const std::exception& ex)
