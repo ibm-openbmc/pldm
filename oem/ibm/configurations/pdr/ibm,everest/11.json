@@ -5591,6 +5591,216 @@
                ]
            }
       }]
+    },
+    {
+       "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme0",
+       "effecters" : [{
+           "set" : {
+               "id" : 257,
+               "size" : 1,
+               "states" : [0,1,4]
+           },
+           "dbus" : {
+               "path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme0",
+               "interface": "xyz.openbmc_project.State.Decorator.PowerState",
+               "property_name": "PowerState",
+               "property_type": "string",
+               "property_values": [
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Unknown",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.On",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Off"
+               ]
+           }
+      }]
+    },
+    {
+       "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme1",
+       "effecters" : [{
+           "set" : {
+               "id" : 257,
+               "size" : 1,
+               "states" : [0,1,4]
+           },
+           "dbus" : {
+               "path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme1",
+               "interface": "xyz.openbmc_project.State.Decorator.PowerState",
+               "property_name": "PowerState",
+               "property_type": "string",
+               "property_values": [
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Unknown",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.On",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Off"
+               ]
+           }
+      }]
+    },
+    {
+       "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme2",
+       "effecters" : [{
+           "set" : {
+               "id" : 257,
+               "size" : 1,
+               "states" : [0,1,4]
+           },
+           "dbus" : {
+               "path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme2",
+               "interface": "xyz.openbmc_project.State.Decorator.PowerState",
+               "property_name": "PowerState",
+               "property_type": "string",
+               "property_values": [
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Unknown",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.On",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Off"
+               ]
+           }
+      }]
+    },
+    {
+       "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme3",
+       "effecters" : [{
+           "set" : {
+               "id" : 257,
+               "size" : 1,
+               "states" : [0,1,4]
+           },
+           "dbus" : {
+               "path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme3",
+               "interface": "xyz.openbmc_project.State.Decorator.PowerState",
+               "property_name": "PowerState",
+               "property_type": "string",
+               "property_values": [
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Unknown",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.On",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Off"
+               ]
+           }
+      }]
+    },
+    {
+       "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme4",
+       "effecters" : [{
+           "set" : {
+               "id" : 257,
+               "size" : 1,
+               "states" : [0,1,4]
+           },
+           "dbus" : {
+               "path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme4",
+               "interface": "xyz.openbmc_project.State.Decorator.PowerState",
+               "property_name": "PowerState",
+               "property_type": "string",
+               "property_values": [
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Unknown",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.On",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Off"
+               ]
+           }
+      }]
+    },
+    {
+       "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme5",
+       "effecters" : [{
+           "set" : {
+               "id" : 257,
+               "size" : 1,
+               "states" : [0,1,4]
+           },
+           "dbus" : {
+               "path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme5",
+               "interface": "xyz.openbmc_project.State.Decorator.PowerState",
+               "property_name": "PowerState",
+               "property_type": "string",
+               "property_values": [
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Unknown",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.On",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Off"
+               ]
+           }
+      }]
+    },
+    {
+       "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme6",
+       "effecters" : [{
+           "set" : {
+               "id" : 257,
+               "size" : 1,
+               "states" : [0,1,4]
+           },
+           "dbus" : {
+               "path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme6",
+               "interface": "xyz.openbmc_project.State.Decorator.PowerState",
+               "property_name": "PowerState",
+               "property_type": "string",
+               "property_values": [
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Unknown",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.On",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Off"
+               ]
+           }
+      }]
+    },
+    {
+       "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme7",
+       "effecters" : [{
+           "set" : {
+               "id" : 257,
+               "size" : 1,
+               "states" : [0,1,4]
+           },
+           "dbus" : {
+               "path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme7",
+               "interface": "xyz.openbmc_project.State.Decorator.PowerState",
+               "property_name": "PowerState",
+               "property_type": "string",
+               "property_values": [
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Unknown",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.On",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Off"
+               ]
+           }
+      }]
+    },
+    {
+       "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme8",
+       "effecters" : [{
+           "set" : {
+               "id" : 257,
+               "size" : 1,
+               "states" : [0,1,4]
+           },
+           "dbus" : {
+               "path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme8",
+               "interface": "xyz.openbmc_project.State.Decorator.PowerState",
+               "property_name": "PowerState",
+               "property_type": "string",
+               "property_values": [
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Unknown",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.On",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Off"
+               ]
+           }
+      }]
+    },
+    {
+       "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme9",
+       "effecters" : [{
+           "set" : {
+               "id" : 257,
+               "size" : 1,
+               "states" : [0,1,4]
+           },
+           "dbus" : {
+               "path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dasd_backplane/nvme9",
+               "interface": "xyz.openbmc_project.State.Decorator.PowerState",
+               "property_name": "PowerState",
+               "property_type": "string",
+               "property_values": [
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Unknown",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.On",
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Off"
+               ]
+           }
+      }]
     }]
   }]
 }
