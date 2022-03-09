@@ -73,6 +73,13 @@ void generateNumericEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
                 pdr->entity_type = e.value("type", 0);
                 pdr->entity_instance = e.value("instance", 0);
                 pdr->container_id = e.value("container", 0);
+
+                // do not create the PDR when the FRU or the entity path is not
+                // present
+                if (!pdr->entity_type)
+                {
+                    continue;
+                }
             }
         }
         catch (const std::exception& ex)
