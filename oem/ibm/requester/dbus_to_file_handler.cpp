@@ -47,8 +47,8 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
     std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
                                     PLDM_NEW_FILE_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
-    // Need to revisit this logic at the time of multiple resource dump support
-    uint32_t fileHandle = 1;
+    uint32_t fileHandle =
+        atoi(fs::path((std::string)resDumpCurrentObjPath).filename().c_str());
 
     auto rc =
         encode_new_file_req(instanceId, PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS,
@@ -143,14 +143,14 @@ void DbusToFileHandler::processNewResourceDump(
         fs::create_directories(resDumpDirPath);
     }
 
-    // Need to reconsider this logic to set the value as "1" when we have the
-    // support to handle multiple resource dumps
-    fs::path resDumpFilePath = resDumpDirPath / "1";
+    uint32_t fileHandle =
+        atoi(fs::path((std::string)resDumpCurrentObjPath).filename().c_str());
+    fs::path resDumpFilePath = resDumpDirPath / std::to_string(fileHandle);
 
-    std::ofstream fileHandle;
-    fileHandle.open(resDumpFilePath, std::ios::out | std::ofstream::binary);
+    std::ofstream fileHandleFd;
+    fileHandleFd.open(resDumpFilePath, std::ios::out | std::ofstream::binary);
 
-    if (!fileHandle)
+    if (!fileHandleFd)
     {
         std::cerr << "resource dump file open error: " << resDumpFilePath
                   << "\n";
@@ -171,10 +171,10 @@ void DbusToFileHandler::processNewResourceDump(
     }
 
     // Fill up the file with resource dump parameters and respective sizes
-    auto fileFunc = [&fileHandle](auto& paramBuf) {
+    auto fileFunc = [&fileHandleFd](auto& paramBuf) {
         uint32_t paramSize = paramBuf.size();
-        fileHandle.write((char*)&paramSize, sizeof(paramSize));
-        fileHandle << paramBuf;
+        fileHandleFd.write((char*)&paramSize, sizeof(paramSize));
+        fileHandleFd << paramBuf;
     };
     fileFunc(vspString);
     fileFunc(resDumpReqPass);
@@ -195,7 +195,7 @@ void DbusToFileHandler::processNewResourceDump(
     }
     fileFunc(str);
 
-    fileHandle.close();
+    fileHandleFd.close();
     size_t fileSize = fs::file_size(resDumpFilePath);
 
     sendNewFileAvailableCmd(fileSize);
