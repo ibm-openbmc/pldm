@@ -46,8 +46,8 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
     std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
                                     PLDM_NEW_FILE_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
-    // Need to revisit this logic at the time of multiple resource dump support
-    uint32_t fileHandle = 1;
+    uint32_t fileHandle =
+        atoi(fs::path((std::string)resDumpCurrentObjPath).filename().c_str());
 
     auto rc =
         encode_new_file_req(instanceId, PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS,
