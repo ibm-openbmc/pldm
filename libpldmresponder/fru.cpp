@@ -754,7 +754,8 @@ void FruImpl::subscribeFruPresence(
         std::cerr << "could not subscribe for concurrent maintenance of fru: "
                   << fruInterface << " error " << e.what() << "\n";
         pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.pldm.CMsubscribeFailure");
+            "xyz.openbmc_project.bmc.pldm.CMsubscribeFailure",
+            pldm::PelSeverity::ERROR);
     }
 }
 
