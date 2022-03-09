@@ -205,6 +205,7 @@ int pldm::responder::oem_ibm_platform::Handler::
             {
                 if (stateField[currState].effecter_state == POWER_CYCLE_HARD)
                 {
+                    std::cout << "Got a Deep IPL request" << std::endl;
                     systemRebootEvent =
                         std::make_unique<sdeventplus::source::Defer>(
                             event,
@@ -903,7 +904,8 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
                         << "Failed to decode setStateEffecterStates response,"
                         << " rc " << rc << "\n";
                     pldm::utils::reportError(
-                        "xyz.openbmc_project.bmc.pldm.SetHostEffecterFailed");
+                        "xyz.openbmc_project.bmc.pldm.SetHostEffecterFailed",
+                        pldm::PelSeverity::ERROR);
                 }
                 if (completionCode)
                 {
@@ -912,7 +914,8 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
                         << ", cc=" << static_cast<unsigned>(completionCode)
                         << "\n";
                     pldm::utils::reportError(
-                        "xyz.openbmc_project.bmc.pldm.SetHostEffecterFailed");
+                        "xyz.openbmc_project.bmc.pldm.SetHostEffecterFailed",
+                        pldm::PelSeverity::ERROR);
                 }
             };
         rc = handler->registerRequest(
