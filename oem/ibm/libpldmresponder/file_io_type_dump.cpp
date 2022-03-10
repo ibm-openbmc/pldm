@@ -537,18 +537,134 @@ int DumpHandler::read(uint32_t offset, uint32_t& length, Response& response,
     return readFile(resDumpDirPath, offset, length, response);
 }
 
-int DumpHandler::fileAckWithMetaData(uint32_t metaDataValue1,
+int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
+                                     uint32_t metaDataValue1,
                                      uint32_t metaDataValue2,
                                      uint32_t /*metaDataValue3*/,
                                      uint32_t /*metaDataValue4*/)
 {
     auto path = findDumpObjPath(fileHandle);
-    uint8_t fileStatus = (uint8_t)metaDataValue2;
+    uint8_t statusCode = (uint8_t)metaDataValue2;
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
     {
+        DBusMapping dbusMapping;
+        dbusMapping.objectPath = "/xyz/openbmc_project/dump/resource/entry/" +
+                                 std::to_string(fileHandle);
+        dbusMapping.interface = "com.ibm.Dump.Entry.Resource";
+        dbusMapping.propertyName = "DumpRequestStatus";
+        dbusMapping.propertyType = "string";
+
         std::cout << "fileAckWithMetaData with token: " << metaDataValue1
                   << " and status: " << metaDataValue2 << std::endl;
-        if (fileStatus != PLDM_SUCCESS)
+        if (statusCode == DumpRequestStatus::ResourceSelectorInvalid)
+        {
+            pldm::utils::PropertyValue value =
+                "com.ibm.Dump.Entry.Resource.HostResponse.ResourceSelectorInvalid";
+            try
+            {
+                pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr
+                    << "failed to set DumpRequestStatus property for resource dump entry, "
+                       "ERROR="
+                    << e.what() << "\n";
+                return PLDM_ERROR;
+            }
+        }
+        else if (statusCode == DumpRequestStatus::AcfFileInvalid)
+        {
+            pldm::utils::PropertyValue value =
+                "com.ibm.Dump.Entry.Resource.HostResponse.AcfFileInvalid";
+            try
+            {
+                pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr
+                    << "failed to set DumpRequestStatus property for resource dump entry, "
+                       "ERROR="
+                    << e.what() << "\n";
+                return PLDM_ERROR;
+            }
+        }
+        else if (statusCode == DumpRequestStatus::PasswordInvalid)
+        {
+            pldm::utils::PropertyValue value =
+                "com.ibm.Dump.Entry.Resource.HostResponse.PasswordInvalid";
+            try
+            {
+                pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr
+                    << "failed to set DumpRequestStatus property for resource dump entry, "
+                       "ERROR="
+                    << e.what() << "\n";
+                return PLDM_ERROR;
+            }
+        }
+        else if (statusCode == DumpRequestStatus::PermissionDenied)
+        {
+            pldm::utils::PropertyValue value =
+                "com.ibm.Dump.Entry.Resource.HostResponse.PermissionDenied";
+            try
+            {
+                pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr
+                    << "failed to set DumpRequestStatus property for resource dump entry, "
+                       "ERROR="
+                    << e.what() << "\n";
+                return PLDM_ERROR;
+            }
+        }
+        else if (statusCode == PLDM_SUCCESS)
+        {
+            pldm::utils::PropertyValue value =
+                "com.ibm.Dump.Entry.Resource.HostResponse.Success";
+            try
+            {
+                pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr
+                    << "failed to set DumpRequestStatus property for resource dump entry, "
+                       "ERROR="
+                    << e.what() << "\n";
+                return PLDM_ERROR;
+            }
+
+            // Will be enabled after Dump Manager code for requestToken gets
+            // merged
+            /*DBusMapping dbusMapping;
+            dbusMapping.objectPath =
+                "/xyz/openbmc_project/dump/resource/entry/" +
+            std::to_string(fileHandle); dbusMapping.interface =
+            "com.ibm.Dump.Entry.Resource"; dbusMapping.propertyName =
+            "requestToken"; dbusMapping.propertyType = "uint32_t";
+
+            pldm::utils::PropertyValue value = metaDataValue1;
+
+            try
+            {
+                pldm::utils::DBusHandler().setDbusProperty(dbusMapping,
+                                                           value);
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "failed to set token for resource dump, ERROR="
+                          << e.what() << "\n";
+                return PLDM_ERROR;
+            }*/
+        }
+        if (statusCode != PLDM_SUCCESS)
         {
             std::cerr << "Failue in resource dump file ack with metadata"
                       << std::endl;
@@ -558,8 +674,10 @@ int DumpHandler::fileAckWithMetaData(uint32_t metaDataValue1,
 
             PropertyValue value{
                 "xyz.openbmc_project.Common.Progress.OperationStatus.Failed"};
-            DBusMapping dbusMapping{path, "xyz.openbmc_project.Common.Progress",
-                                    "Status", "string"};
+            DBusMapping dbusMapping{
+                "/xyz/openbmc_project/dump/resource/entry/" +
+                    std::to_string(fileHandle),
+                "xyz.openbmc_project.Common.Progress", "Status", "string"};
             try
             {
                 pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
@@ -572,31 +690,6 @@ int DumpHandler::fileAckWithMetaData(uint32_t metaDataValue1,
                     << e.what() << "\n";
             }
         }
-        // commented as the DBUS support is not yet in
-        /* else
-         {
-             DBusMapping dbusMapping;
-             dbusMapping.objectPath =
-                 "/xyz/openbmc_project/dump/resource/entry/";
-             dbusMapping.interface = "com.ibm.Dump.Entry.Resource";
-             dbusMapping.propertyName = "requestToken";
-             dbusMapping.propertyType = "uint32";
-
-             pldm::utils::PropertyValue value =
-                 "com.ibm.Dump.Entry.Resource.requestToken";
-
-             try
-             {
-                 pldm::utils::DBusHandler().setDbusProperty(dbusMapping,
-                                                            metaDataValue1);
-             }
-             catch (const std::exception& e)
-             {
-                 std::cerr << "failed to set token for resource dump, ERROR="
-                           << e.what() << "\n";
-                 return PLDM_ERROR;
-             }
-         }*/
 
         if (fs::exists(resDumpDirPath))
         {
@@ -638,13 +731,17 @@ int DumpHandler::fileAckWithMetaData(uint32_t metaDataValue1,
     return PLDM_ERROR;
 }
 
-int DumpHandler::newFileAvailableWithMetaData(uint64_t length, uint32_t token)
+int DumpHandler::newFileAvailableWithMetaData(uint64_t length,
+                                              uint32_t metaDataValue1,
+                                              uint32_t /*metaDataValue2*/,
+                                              uint32_t /*metaDataValue3*/,
+                                              uint32_t /*metaDataValue4*/)
 {
     static constexpr auto dumpInterface = "xyz.openbmc_project.Dump.NewDump";
     auto& bus = pldm::utils::DBusHandler::getBus();
 
     std::cout << "newFileAvailableWithMetaData for NewDump with token :"
-              << token << std::endl;
+              << metaDataValue1 << std::endl;
     auto notifyObjPath = dumpObjPath;
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
     {
@@ -657,9 +754,10 @@ int DumpHandler::newFileAvailableWithMetaData(uint64_t length, uint32_t token)
         auto service =
             pldm::utils::DBusHandler().getService(notifyObjPath, dumpInterface);
         using namespace sdbusplus::xyz::openbmc_project::Dump::server;
-        auto method = bus.new_method_call(service.c_str(), notifyObjPath,
-                                          dumpInterface, "Notify");
-        method.append(fileHandle, length);
+        auto method =
+            bus.new_method_call(service.c_str(), notifyObjPath, dumpInterface,
+                                "Notify"); //"NotifyWithToken");
+        method.append(fileHandle, length); //, metaDataValue1);
         bus.call(method);
     }
     catch (const std::exception& e)
