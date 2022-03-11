@@ -227,6 +227,12 @@ enum pldm_state_set_system_power_state_values {
 	PLDM_STATE_SET_SYS_POWER_STATE_OFF_HARD_GRACEFUL = 10,
 };
 
+enum pldm_state_set_device_power_state_values {
+	PLDM_STATE_SET_DEVICE_POWER_STATE_UNKNOWN = 0,
+	PLDM_STATE_SET_DEVICE_POWER_STATE_FULLY_ON = 1,
+	PLDM_STATE_SET_DEVICE_POWER_STATE_OFF = 4,
+};
+
 /* OEM ranges */
 #define PLDM_OEM_STATE_SET_ID_START 32768
 #define PLDM_OEM_STATE_SET_ID_END 65535
