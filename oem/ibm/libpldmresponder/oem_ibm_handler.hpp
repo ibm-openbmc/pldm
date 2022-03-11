@@ -44,6 +44,7 @@ using PendingAttributes = std::map<AttributeName, PendingObj>;
 static constexpr auto PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE = 24577;
 static constexpr auto PLDM_OEM_IBM_FRONT_PANEL_TRIGGER = 32837;
 static constexpr auto PLDM_OEM_IBM_ENTITY_REAL_SAI = 24581;
+static constexpr auto PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER = 24580;
 
 constexpr uint16_t ENTITY_INSTANCE_0 = 0;
 constexpr uint16_t ENTITY_INSTANCE_1 = 1;
@@ -414,6 +415,16 @@ class Handler : public oem_platform::Handler
 
     /** @brief update conatiner id of fault effecter and sensor LED PDRs*/
     void updateFaultEffecterAndSensorPDRs();
+
+    /** @brief To process the graceful shutdown, cycle chassis power, and boot
+     *  the host back up*/
+    void processPowerCycleOffSoftGraceful();
+
+    /** @brief To process powering down the host*/
+    void processPowerOffSoftGraceful();
+
+    /** @brief To process auto power restore policy*/
+    void processPowerOffHardGraceful();
 
     ~Handler() = default;
 
