@@ -222,7 +222,9 @@ enum pldm_state_set_boot_progress_state_values {
 /* @brief List of states for the System Power State set (ID 260).
  */
 enum pldm_state_set_system_power_state_values {
-	PLDM_STATE_SET_SYS_POWER_STATE_OFF_SOFT_GRACEFUL = 9
+	PLDM_STATE_SET_SYS_POWER_CYCLE_OFF_SOFT_GRACEFUL = 7,
+	PLDM_STATE_SET_SYS_POWER_STATE_OFF_SOFT_GRACEFUL = 9,
+	PLDM_STATE_SET_SYS_POWER_STATE_OFF_HARD_GRACEFUL = 10,
 };
 
 /* OEM ranges */
