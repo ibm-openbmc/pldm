@@ -48,7 +48,8 @@ class CertHandler : public FileHandler
 
     virtual int newFileAvailable(uint64_t length);
 
-    virtual int fileAckWithMetaData(uint8_t fileStatus, uint32_t metaDataValue1,
+    virtual int fileAckWithMetaData(uint8_t /*fileStatus*/,
+                                    uint32_t /*metaDataValue1*/,
                                     uint32_t /*metaDataValue2*/,
                                     uint32_t /*metaDataValue3*/,
                                     uint32_t /*metaDataValue4*/);
