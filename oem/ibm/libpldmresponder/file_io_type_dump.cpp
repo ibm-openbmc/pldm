@@ -487,8 +487,8 @@ int DumpHandler::readIntoMemory(uint32_t offset, uint32_t& length,
             auto filePath =
                 pldm::utils::DBusHandler().getDbusProperty<std::string>(
                     path.c_str(), "Path", dumpFilepathInterface);
-            auto rc = transferFileData(fs::path(filePath), false, offset,
-                                       length, address);
+            auto rc = transferFileData(fs::path(filePath), true, offset, length,
+                                       address);
             return rc;
         }
         catch (const std::exception& e)
