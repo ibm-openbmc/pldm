@@ -328,108 +328,94 @@ void CodeUpdate::setVersions()
                     {
                         auto propVal = dBusIntf->getDbusPropertyVariant(
                             imageObjPath, "Activation", imageInterface);
-                        const auto& imageProp = std::get<std::string>(propVal);
-                        if (imageProp == "xyz.openbmc_project.Software."
-                                         "Activation.Activations.Ready")
-                        {
-                            nonRunningVersion = path.str;
+                        nonRunningVersion = path.str;
 
-                            if (isCodeUpdateInProgress())
+                        if (isCodeUpdateInProgress())
+                        {
+                            // Inband update
+                            newImageId = path.str;
+                            if (!imageActivationMatch)
                             {
-                                // Inband update
-                                newImageId = path.str;
-                                if (!imageActivationMatch)
-                                {
-                                    imageActivationMatch = std::make_unique<
-                                        sdbusplus::bus::match::match>(
-                                        pldm::utils::DBusHandler::getBus(),
-                                        propertiesChanged(
-                                            newImageId, "xyz.openbmc_project."
-                                                        "Software.Activation"),
-                                        [this](
-                                            sdbusplus::message::message& msg) {
-                                            DbusChangedProps props;
-                                            std::string iface;
-                                            msg.read(iface, props);
-                                            const auto itr =
-                                                props.find("Activation");
-                                            if (itr != props.end())
+                                imageActivationMatch = std::make_unique<
+                                    sdbusplus::bus::match::match>(
+                                    pldm::utils::DBusHandler::getBus(),
+                                    propertiesChanged(newImageId,
+                                                      "xyz.openbmc_project."
+                                                      "Software.Activation"),
+                                    [this](sdbusplus::message::message& msg) {
+                                        DbusChangedProps props;
+                                        std::string iface;
+                                        msg.read(iface, props);
+                                        const auto itr =
+                                            props.find("Activation");
+                                        if (itr != props.end())
+                                        {
+                                            PropertyValue value = itr->second;
+                                            auto propVal =
+                                                std::get<std::string>(value);
+                                            if (propVal ==
+                                                "xyz.openbmc_project.Software."
+                                                "Activation.Activations.Active")
                                             {
-                                                PropertyValue value =
-                                                    itr->second;
-                                                auto propVal =
-                                                    std::get<std::string>(
-                                                        value);
-                                                if (propVal ==
-                                                    "xyz.openbmc_project.Software."
-                                                    "Activation.Activations.Active")
-                                                {
-                                                    CodeUpdateState state =
-                                                        CodeUpdateState::END;
-                                                    setCodeUpdateProgress(
-                                                        false);
-                                                    auto sensorId =
-                                                        getFirmwareUpdateSensor();
-                                                    sendStateSensorEvent(
-                                                        sensorId,
-                                                        PLDM_STATE_SENSOR_STATE,
-                                                        0, uint8_t(state),
-                                                        uint8_t(
-                                                            CodeUpdateState::
+                                                CodeUpdateState state =
+                                                    CodeUpdateState::END;
+                                                setCodeUpdateProgress(false);
+                                                auto sensorId =
+                                                    getFirmwareUpdateSensor();
+                                                sendStateSensorEvent(
+                                                    sensorId,
+                                                    PLDM_STATE_SENSOR_STATE, 0,
+                                                    uint8_t(state),
+                                                    uint8_t(CodeUpdateState::
                                                                 START));
-                                                    newImageId.clear();
-                                                }
-                                                else if (
-                                                    propVal ==
-                                                        "xyz.openbmc_project."
-                                                        "Software.Activation."
-                                                        "Activations.Failed" ||
-                                                    propVal ==
-                                                        "xyz.openbmc_"
-                                                        "project.Software."
-                                                        "Activation."
-                                                        "Activations."
-                                                        "Invalid")
-                                                {
-                                                    CodeUpdateState state =
-                                                        CodeUpdateState::FAIL;
-                                                    setCodeUpdateProgress(
-                                                        false);
-                                                    auto sensorId =
-                                                        getFirmwareUpdateSensor();
-                                                    sendStateSensorEvent(
-                                                        sensorId,
-                                                        PLDM_STATE_SENSOR_STATE,
-                                                        0, uint8_t(state),
-                                                        uint8_t(
-                                                            CodeUpdateState::
-                                                                START));
-                                                    newImageId.clear();
-                                                }
+                                                newImageId.clear();
                                             }
-                                        });
-                                }
-                                auto rc = setRequestedActivation();
-                                if (rc != PLDM_SUCCESS)
-                                {
-                                    CodeUpdateState state =
-                                        CodeUpdateState::FAIL;
-                                    setCodeUpdateProgress(false);
-                                    auto sensorId = getFirmwareUpdateSensor();
-                                    sendStateSensorEvent(
-                                        sensorId, PLDM_STATE_SENSOR_STATE, 0,
-                                        uint8_t(state),
-                                        uint8_t(CodeUpdateState::START));
-                                    std::cerr
-                                        << "could not set RequestedActivation \n";
-                                }
-                                break;
+                                            else if (propVal ==
+                                                         "xyz.openbmc_project."
+                                                         "Software.Activation."
+                                                         "Activations.Failed" ||
+                                                     propVal ==
+                                                         "xyz.openbmc_"
+                                                         "project.Software."
+                                                         "Activation."
+                                                         "Activations."
+                                                         "Invalid")
+                                            {
+                                                CodeUpdateState state =
+                                                    CodeUpdateState::FAIL;
+                                                setCodeUpdateProgress(false);
+                                                auto sensorId =
+                                                    getFirmwareUpdateSensor();
+                                                sendStateSensorEvent(
+                                                    sensorId,
+                                                    PLDM_STATE_SENSOR_STATE, 0,
+                                                    uint8_t(state),
+                                                    uint8_t(CodeUpdateState::
+                                                                START));
+                                                newImageId.clear();
+                                            }
+                                        }
+                                    });
                             }
-                            else
+                            auto rc = setRequestedActivation();
+                            if (rc != PLDM_SUCCESS)
                             {
-                                // Out of band update
-                                processRenameEvent();
+                                CodeUpdateState state = CodeUpdateState::FAIL;
+                                setCodeUpdateProgress(false);
+                                auto sensorId = getFirmwareUpdateSensor();
+                                sendStateSensorEvent(
+                                    sensorId, PLDM_STATE_SENSOR_STATE, 0,
+                                    uint8_t(state),
+                                    uint8_t(CodeUpdateState::START));
+                                std::cerr
+                                    << "could not set RequestedActivation \n";
                             }
+                            break;
+                        }
+                        else
+                        {
+                            // Out of band update
+                            processRenameEvent();
                         }
                     }
                     catch (const sdbusplus::exception::exception& e)
