@@ -851,6 +851,9 @@ void pldm::responder::oem_ibm_platform::Handler::updateOemDbusPaths(
 void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
     sdeventplus::source::EventBase& /*source */)
 {
+    BiosAttributeList biosAttrList;
+    biosAttrList.push_back(std::make_pair("pvm_boot_initiator", "Host"));
+    setBiosAttr(biosAttrList);
     pldm::utils::PropertyValue value =
         "xyz.openbmc_project.State.Chassis.Transition.Off";
     pldm::utils::DBusMapping dbusMapping{"/xyz/openbmc_project/state/chassis0",
@@ -1267,7 +1270,8 @@ void pldm::responder::oem_ibm_platform::Handler::handleBootTypesAtPowerOn()
     BiosAttributeList biosAttrList;
     auto bootInitiator = getBiosAttrValue("pvm_boot_initiator_current");
     std::string restartCause;
-    if (bootInitiator != "HMC" && !bootInitiator.empty())
+    if (((bootInitiator != "HMC") || (bootInitiator != "Host")) &&
+        !bootInitiator.empty())
     {
         try
         {
@@ -1321,30 +1325,7 @@ void pldm::responder::oem_ibm_platform::Handler::handleBootTypesAtChassisOff()
             << "ERROR in fetching the pvm_boot_initiator and pvm_boot_type BIOS attribute values\n";
         return;
     }
-    else if ((bootInitiator == "Auto") && (bootType == "IPL"))
-    {
-        std::cerr << "Setting the APR to AlwaysOn as pvm_boot_initiator="
-                  << bootInitiator << " and pvm_boot_type=" << bootType
-                  << std::endl;
-        pldm::utils::DBusMapping dbusMapping{
-            "/xyz/openbmc_project/control/host0/"
-            "power_restore_policy/one_time",
-            "xyz.openbmc_project.Control.Power.RestorePolicy",
-            "PowerRestorePolicy", "string"};
-        PropertyValue value = "xyz.openbmc_project.Control.Power.RestorePolicy."
-                              "Policy.AlwaysOn";
-        try
-        {
-            pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
-        }
-        catch (const std::exception& e)
-        {
-            std::cerr << "Setting one-time restore policy failed,"
-                      << "unable to set property PowerRestorePolicy"
-                      << "ERROR=" << e.what() << "\n";
-        }
-    }
-    else
+    else if (bootInitiator != "Host")
     {
         biosAttrList.push_back(std::make_pair("pvm_boot_initiator", "User"));
         biosAttrList.push_back(std::make_pair("pvm_boot_type", "IPL"));
