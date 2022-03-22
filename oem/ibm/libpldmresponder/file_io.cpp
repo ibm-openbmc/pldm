@@ -296,7 +296,7 @@ Response Handler::readFileIntoMemory(const pldm_msg* request,
         length = fileSize - offset;
     }
 
-    if (length % dma::minSize)
+    if ((length == 0) && (length % dma::minSize))
     {
         std::cerr << "Read length is not a multiple of DMA minSize, LENGTH="
                   << length << "\n";
@@ -335,7 +335,7 @@ Response Handler::writeFileFromMemory(const pldm_msg* request,
     decode_rw_file_memory_req(request, payloadLength, &fileHandle, &offset,
                               &length, &address);
 
-    if (length % dma::minSize)
+    if ((length == 0) || (length % dma::minSize))
     {
         std::cerr << "Write length is not a multiple of DMA minSize, LENGTH="
                   << length << "\n";
@@ -630,7 +630,7 @@ Response rwFileByTypeIntoMemory(uint8_t cmd, const pldm_msg* request,
                                            responsePtr);
         return response;
     }
-    if (length % dma::minSize)
+    if ((length == 0) || (length % dma::minSize))
     {
         std::cerr << "Length is not a multiple of DMA minSize, LENGTH="
                   << length << "\n";

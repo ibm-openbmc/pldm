@@ -163,10 +163,6 @@ class Handler : public oem_platform::Handler
                     interfaces;
                 msg.read(path, interfaces);
 
-                for (auto interface : interfaces)
-                {
-                    std::cout << interface.first;
-                }
                 if (!interfaces.contains("xyz.openbmc_project.State.Host"))
                 {
                     return;
