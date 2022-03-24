@@ -197,6 +197,34 @@ int DumpHandler::newFileAvailable(uint64_t length)
     return PLDM_SUCCESS;
 }
 
+void DumpHandler::resetOffloadUri()
+{
+    auto path = findDumpObjPath(fileHandle);
+    if (path.empty())
+    {
+        return;
+    }
+
+    std::cout << "DumpHandler::resetOffloadUri path = " << path.c_str()
+              << " fileHandle = " << fileHandle << std::endl;
+    PropertyValue offloadUriValue{""};
+    DBusMapping dbusMapping{path, dumpEntry, "OffloadUri", "string"};
+    try
+    {
+        pldm::utils::DBusHandler().setDbusProperty(dbusMapping,
+                                                   offloadUriValue);
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Failed to set the OffloadUri dbus property, ERROR="
+                  << e.what() << "\n";
+        pldm::utils::reportError(
+            "xyz.openbmc_project.bmc.PLDM.fileAck.DumpEntryOffloadUriSetFail",
+            pldm::PelSeverity::ERROR);
+    }
+    return;
+}
+
 std::string DumpHandler::getOffloadUri(uint32_t fileHandle)
 {
     auto path = findDumpObjPath(fileHandle);
@@ -243,6 +271,7 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
                 << "DumpHandler::writeFromMemory: setupUnixSocket() failed"
                 << std::endl;
             std::remove(socketInterface.c_str());
+            resetOffloadUri();
             return PLDM_ERROR;
         }
 
@@ -259,6 +288,7 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
                 DumpHandler::fd = -1;
             }
             std::remove(socketInterface.c_str());
+            resetOffloadUri();
             return PLDM_ERROR;
         }
         return rc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
@@ -276,6 +306,7 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
         }
         auto socketInterface = getOffloadUri(fileHandle);
         std::remove(socketInterface.c_str());
+        resetOffloadUri();
         return PLDM_ERROR;
     }
     else if (socketWriteStatus == InProgress || socketWriteStatus == NotReady)
@@ -296,6 +327,7 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
         }
         auto socketInterface = getOffloadUri(fileHandle);
         std::remove(socketInterface.c_str());
+        resetOffloadUri();
         return PLDM_ERROR;
     }
     return rc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
@@ -314,6 +346,7 @@ int DumpHandler::write(const char* buffer, uint32_t, uint32_t& length,
         close(fd);
         auto socketInterface = getOffloadUri(fileHandle);
         std::remove(socketInterface.c_str());
+        resetOffloadUri();
         return PLDM_ERROR;
     }
     else if (socketWriteStatus == InProgress)
@@ -329,6 +362,7 @@ int DumpHandler::write(const char* buffer, uint32_t, uint32_t& length,
         close(fd);
         auto socketInterface = getOffloadUri(fileHandle);
         std::remove(socketInterface.c_str());
+        resetOffloadUri();
         return PLDM_ERROR;
     }
 
@@ -451,6 +485,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
                 pldm::utils::reportError(
                     "xyz.openbmc_project.bmc.PLDM.fileAck.DumpEntryOffloadedSetFail",
                     pldm::PelSeverity::ERROR);
+                resetOffloadUri();
                 return PLDM_ERROR;
             }
 
@@ -461,6 +496,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
                 DumpHandler::fd = -1;
             }
             std::remove(socketInterface.c_str());
+            resetOffloadUri();
         }
         return PLDM_SUCCESS;
     }
@@ -678,6 +714,7 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
             auto socketInterface = getOffloadUri(fileHandle);
             std::remove(socketInterface.c_str());
             DumpHandler::fd = -1;
+            resetOffloadUri();
         }
         return PLDM_SUCCESS;
     }
