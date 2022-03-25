@@ -1355,8 +1355,8 @@ int pldm::responder::oem_ibm_platform::Handler::checkBMCState()
                 "/xyz/openbmc_project/state/bmc0", "CurrentBMCState",
                 "xyz.openbmc_project.State.BMC");
 
-        if (std::get<std::string>(propertyValue) ==
-            "xyz.openbmc_project.State.BMC.BMCState.NotReady")
+        if (std::get<std::string>(propertyValue) !=
+            "xyz.openbmc_project.State.BMC.BMCState.Ready")
         {
             std::cerr << "GetPDR : PLDM stack is not ready for PDR exchange"
                       << std::endl;
