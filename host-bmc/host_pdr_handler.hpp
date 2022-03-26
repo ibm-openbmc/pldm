@@ -183,6 +183,10 @@ class HostPDRHandler
      */
     bool isHostPdrModified = false;
 
+    /** @brief counter to count the number of modified records sent from host
+     */
+    uint8_t modifiedCounter = 0;
+
     /** @brief map that captures various terminus information **/
     TLPDRMap tlPDRInfo;
 

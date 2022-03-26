@@ -759,7 +759,7 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                 }
                 else
                 {
-                    if (isHostPdrModified)
+                    if ((isHostPdrModified == true) || !(modifiedCounter == 0))
                     {
                         bool recFound =
                             pldm_pdr_find_prev_record_handle(repo, rh, &prevRh);
@@ -806,11 +806,27 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                             }
                         }
                     }
-                    else
+                    // We need to look for an optimal solution for this, we are
+                    // unexpectedly entering this path when we receive multiple
+                    // modified PDR repo change events
+                    else if ((isHostPdrModified != true) &&
+                             (modifiedCounter == 0))
                     {
+                        bool recFound =
+                            pldm_pdr_find_prev_record_handle(repo, rh, &prevRh);
+                        if (recFound)
+                        {
+                            pldm_delete_by_record_handle(repo, rh, true);
 
-                        pldm_pdr_add(repo, pdr.data(), respCount, rh, true,
-                                     pdrTerminusHandle);
+                            pldm_pdr_add_after_prev_record(
+                                repo, pdr.data(), respCount, rh, true, prevRh,
+                                pdrTerminusHandle);
+                        }
+                        else
+                        {
+                            pldm_pdr_add(repo, pdr.data(), respCount, rh, true,
+                                         pdrTerminusHandle);
+                        }
                     }
                 }
             }
