@@ -178,6 +178,14 @@ class HostPDRHandler
      */
     bool isHostUp();
 
+    /** @brief Update objectPathMaps, if path does not exist, you need to add,
+     *         if it exists, replace
+     *
+     * @param[in] path - object path
+     * @param[in] node - pldm entity node pointer
+     */
+    void updateObjectPathMaps(const std::string& path, pldm_entity_node* node);
+
     /** @brief whether we received PLDM_RECORDS_MODIFIED event data operation
      *  from host
      */
@@ -391,6 +399,9 @@ class HostPDRHandler
     bool timeOut;
     /** @brief request message instance id */
     uint8_t insId;
+
+    /** @brief Restore the identity of the object */
+    bool isRestoreDBusObj = false;
 
     /** @brief maps an object path to pldm_entity from the BMC's entity
      *         association tree

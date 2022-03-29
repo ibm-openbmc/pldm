@@ -12,7 +12,7 @@ void CustomDBus::setLocationCode(const std::string& path, std::string value)
     if (location.find(path) == location.end())
     {
         location.emplace(path,
-                         std::make_unique<LocationIntf>(
+                         std::make_unique<LocationCode>(
                              pldm::utils::DBusHandler::getBus(), path.c_str()));
     }
 
@@ -31,15 +31,17 @@ std::string CustomDBus::getLocationCode(const std::string& path) const
 
 void CustomDBus::setSoftwareVersion(const std::string& path, std::string value)
 {
-    if (version.find(path) == version.end())
+    if (softWareVersion.find(path) == softWareVersion.end())
     {
-        version.emplace(path,
-                        std::make_unique<SoftwareVersion>(
-                            pldm::utils::DBusHandler::getBus(), path.c_str()));
+        softWareVersion.emplace(
+            path, std::make_unique<SoftWareVersion>(
+                      pldm::utils::DBusHandler::getBus(), path.c_str()));
     }
 
-    version.at(path)->version(value);
-    version.at(path)->purpose(VersionPurpose::Other);
+    softWareVersion.at(path)->version(value);
+    softWareVersion.at(path)->purpose(
+        sdbusplus::xyz::openbmc_project::Software::server::Version::
+            VersionPurpose::Other);
 }
 
 void CustomDBus::setOperationalStatus(const std::string& path, bool status,
@@ -53,10 +55,11 @@ void CustomDBus::setOperationalStatus(const std::string& path, bool status,
             associations{{"health_rollup", "critical", parentChassis}};
         setAssociations(path, associations);
     }
+
     if (operationalStatus.find(path) == operationalStatus.end())
     {
         operationalStatus.emplace(
-            path, std::make_unique<OperationalStatusIntf>(
+            path, std::make_unique<OperationalStatus>(
                       pldm::utils::DBusHandler::getBus(), path.c_str()));
     }
 
@@ -79,8 +82,8 @@ void CustomDBus::updateItemPresentStatus(const std::string& path,
     if (presentStatus.find(path) == presentStatus.end())
     {
         presentStatus.emplace(
-            path, std::make_unique<ItemIntf>(pldm::utils::DBusHandler::getBus(),
-                                             path.c_str()));
+            path, std::make_unique<InventoryItem>(
+                      pldm::utils::DBusHandler::getBus(), path.c_str()));
         std::filesystem::path ObjectPath(path);
 
         // Hardcode the present dbus property to true
@@ -112,7 +115,7 @@ void CustomDBus::implementPCIeSlotInterface(const std::string& path)
     if (pcieSlot.find(path) == pcieSlot.end())
     {
         pcieSlot.emplace(
-            path, std::make_unique<ItemSlot>(pldm::utils::DBusHandler::getBus(),
+            path, std::make_unique<PCIeSlot>(pldm::utils::DBusHandler::getBus(),
                                              path.c_str()));
     }
 }
@@ -122,7 +125,7 @@ void CustomDBus::implementMotherboardInterface(const std::string& path)
     if (motherboard.find(path) == motherboard.end())
     {
         motherboard.emplace(
-            path, std::make_unique<ItemMotherboard>(
+            path, std::make_unique<Motherboard>(
                       pldm::utils::DBusHandler::getBus(), path.c_str()));
     }
 }
@@ -131,7 +134,7 @@ void CustomDBus::implementPowerSupplyInterface(const std::string& path)
     if (powersupply.find(path) == powersupply.end())
     {
         powersupply.emplace(
-            path, std::make_unique<ItemPowerSupply>(
+            path, std::make_unique<PowerSupply>(
                       pldm::utils::DBusHandler::getBus(), path.c_str()));
     }
 }
@@ -140,9 +143,9 @@ void CustomDBus::implementFanInterface(const std::string& path)
 {
     if (fan.find(path) == fan.end())
     {
-        fan.emplace(
-            path, std::make_unique<ItemFan>(pldm::utils::DBusHandler::getBus(),
-                                            path.c_str()));
+        fan.emplace(path,
+                    std::make_unique<Fan>(pldm::utils::DBusHandler::getBus(),
+                                          path.c_str()));
     }
 }
 
@@ -151,7 +154,7 @@ void CustomDBus::implementConnecterInterface(const std::string& path)
     if (connector.find(path) == connector.end())
     {
         connector.emplace(
-            path, std::make_unique<ItemConnector>(
+            path, std::make_unique<Connector>(
                       pldm::utils::DBusHandler::getBus(), path.c_str()));
     }
 }
@@ -160,9 +163,9 @@ void CustomDBus::implementVRMInterface(const std::string& path)
 {
     if (vrm.find(path) == vrm.end())
     {
-        vrm.emplace(
-            path, std::make_unique<ItemVRM>(pldm::utils::DBusHandler::getBus(),
-                                            path.c_str()));
+        vrm.emplace(path,
+                    std::make_unique<VRM>(pldm::utils::DBusHandler::getBus(),
+                                          path.c_str()));
     }
 }
 
@@ -171,9 +174,8 @@ void CustomDBus::implementCpuCoreInterface(const std::string& path)
     if (cpuCore.find(path) == cpuCore.end())
     {
         cpuCore.emplace(
-            path, std::make_unique<CoreIntf>(pldm::utils::DBusHandler::getBus(),
-                                             path.c_str()));
-        implementObjectEnableIface(path);
+            path, std::make_unique<CPUCore>(pldm::utils::DBusHandler::getBus(),
+                                            path.c_str()));
     }
 }
 
@@ -182,7 +184,7 @@ void CustomDBus::implementFabricAdapter(const std::string& path)
     if (fabricAdapter.find(path) == fabricAdapter.end())
     {
         fabricAdapter.emplace(
-            path, std::make_unique<ItemFabricAdapter>(
+            path, std::make_unique<FabricAdapter>(
                       pldm::utils::DBusHandler::getBus(), path.c_str()));
     }
 }
@@ -191,20 +193,20 @@ void CustomDBus::implementBoard(const std::string& path)
 {
     if (board.find(path) == board.end())
     {
-        board.emplace(path,
-                      std::make_unique<ItemBoard>(
-                          pldm::utils::DBusHandler::getBus(), path.c_str()));
+        board.emplace(
+            path, std::make_unique<Board>(pldm::utils::DBusHandler::getBus(),
+                                          path.c_str()));
     }
 }
 
-void CustomDBus::implementObjectEnableIface(const std::string& path)
+void CustomDBus::implementObjectEnableIface(const std::string& path, bool value)
 {
     if (_enabledStatus.find(path) == _enabledStatus.end())
     {
         _enabledStatus.emplace(
-            path, std::make_unique<EnableIface>(
-                      pldm::utils::DBusHandler::getBus(), path.c_str()));
-        _enabledStatus.at(path)->enabled(false);
+            path, std::make_unique<Enable>(pldm::utils::DBusHandler::getBus(),
+                                           path.c_str()));
+        _enabledStatus.at(path)->enabled(value);
     }
 }
 
@@ -212,9 +214,9 @@ void CustomDBus::implementGlobalInterface(const std::string& path)
 {
     if (global.find(path) == global.end())
     {
-        global.emplace(path,
-                       std::make_unique<ItemGlobal>(
-                           pldm::utils::DBusHandler::getBus(), path.c_str()));
+        global.emplace(
+            path, std::make_unique<Global>(pldm::utils::DBusHandler::getBus(),
+                                           path.c_str()));
     }
 }
 
@@ -227,9 +229,9 @@ void CustomDBus::implementLicInterfaces(
 {
     if (codLic.find(path) == codLic.end())
     {
-        codLic.emplace(
-            path, std::make_unique<LicIntf>(pldm::utils::DBusHandler::getBus(),
-                                            path.c_str()));
+        codLic.emplace(path,
+                       std::make_unique<LicenseEntry>(
+                           pldm::utils::DBusHandler::getBus(), path.c_str()));
     }
 
     codLic.at(path)->authDeviceNumber(authdevno);
@@ -246,7 +248,7 @@ void CustomDBus::setAvailabilityState(const std::string& path,
     if (availabilityState.find(path) == availabilityState.end())
     {
         availabilityState.emplace(
-            path, std::make_unique<AvailabilityIntf>(
+            path, std::make_unique<Availability>(
                       pldm::utils::DBusHandler::getBus(), path.c_str()));
     }
 
@@ -260,13 +262,12 @@ void CustomDBus::setAsserted(
     if (ledGroup.find(path) == ledGroup.end())
     {
         ledGroup.emplace(
-            path, std::make_unique<Group>(pldm::utils::DBusHandler::getBus(),
-                                          path.c_str(), hostEffecterParser,
-                                          entity, mctpEid));
+            path, std::make_unique<LEDGroup>(pldm::utils::DBusHandler::getBus(),
+                                             path.c_str(), hostEffecterParser,
+                                             entity, mctpEid));
     }
 
     ledGroup.at(path)->setStateEffecterStatesFlag(isTriggerStateEffecterStates);
-
     ledGroup.at(path)->asserted(value);
 }
 
@@ -280,67 +281,7 @@ bool CustomDBus::getAsserted(const std::string& path) const
     return false;
 }
 
-bool Group::asserted() const
-{
-    return sdbusplus::xyz::openbmc_project::Led::server::Group::asserted();
-}
-
-bool Group::updateAsserted(bool value)
-{
-    return sdbusplus::xyz::openbmc_project::Led::server::Group::asserted(value);
-}
-
-bool Group::asserted(bool value)
-{
-    std::vector<set_effecter_state_field> stateField;
-
-    if (value ==
-        sdbusplus::xyz::openbmc_project::Led::server::Group::asserted())
-    {
-        stateField.push_back({PLDM_NO_CHANGE, 0});
-    }
-    else
-    {
-        uint8_t state = value ? PLDM_STATE_SET_IDENTIFY_STATE_ASSERTED
-                              : PLDM_STATE_SET_IDENTIFY_STATE_UNASSERTED;
-
-        stateField.push_back({PLDM_REQUEST_SET, state});
-    }
-
-    if (isTriggerStateEffecterStates)
-    {
-        if (hostEffecterParser)
-        {
-            uint16_t effecterId = pldm::utils::findStateEffecterId(
-                hostEffecterParser->getPldmPDR(), entity.entity_type,
-                entity.entity_instance_num, entity.entity_container_id,
-                PLDM_STATE_SET_IDENTIFY_STATE, false);
-
-            hostEffecterParser->sendSetStateEffecterStates(
-                mctpEid, effecterId, 1, stateField,
-                std::bind(std::mem_fn(&pldm::dbus::Group::updateAsserted), this,
-                          std::placeholders::_1),
-                value);
-            isTriggerStateEffecterStates = true;
-            return value;
-        }
-    }
-
-    isTriggerStateEffecterStates = true;
-    return sdbusplus::xyz::openbmc_project::Led::server::Group::asserted(value);
-}
-
-const std::vector<std::tuple<std::string, std::string, std::string>>
-    CustomDBus::getAssociations(const std::string& path)
-{
-    if (associations.find(path) != associations.end())
-    {
-        return associations.at(path)->associations();
-    }
-    return {};
-}
-
-void CustomDBus::setAssociations(const std::string& path, Associations assoc)
+void CustomDBus::setAssociations(const std::string& path, AssociationsObj assoc)
 {
     using PropVariant = sdbusplus::xyz::openbmc_project::Association::server::
         Definitions::PropertiesVariant;
@@ -351,7 +292,7 @@ void CustomDBus::setAssociations(const std::string& path, Associations assoc)
         std::map<std::string, PropVariant> properties;
         properties.emplace("Associations", std::move(value));
 
-        associations.emplace(path, std::make_unique<AssociationsIntf>(
+        associations.emplace(path, std::make_unique<Associations>(
                                        pldm::utils::DBusHandler::getBus(),
                                        path.c_str(), properties));
     }
@@ -359,8 +300,7 @@ void CustomDBus::setAssociations(const std::string& path, Associations assoc)
     {
         // object already created , so just update the associations
         auto currentAssociations = getAssociations(path);
-        std::vector<std::tuple<std::string, std::string, std::string>>
-            newAssociations;
+        AssociationsObj newAssociations;
         newAssociations.reserve(currentAssociations.size() + assoc.size());
         newAssociations.insert(newAssociations.end(),
                                currentAssociations.begin(),
@@ -369,6 +309,26 @@ void CustomDBus::setAssociations(const std::string& path, Associations assoc)
                                assoc.end());
         associations.at(path)->associations(newAssociations);
     }
+}
+
+const AssociationsObj CustomDBus::getAssociations(const std::string& path)
+{
+    if (associations.find(path) != associations.end())
+    {
+        return associations.at(path)->associations();
+    }
+    return {};
+}
+
+void CustomDBus::setMicrocode(const std::string& path, uint32_t value)
+{
+    if (cpuCore.find(path) == cpuCore.end())
+    {
+        cpuCore.emplace(
+            path, std::make_unique<CPUCore>(pldm::utils::DBusHandler::getBus(),
+                                            path.c_str()));
+    }
+    cpuCore.at(path)->microcode(value);
 }
 
 } // namespace dbus

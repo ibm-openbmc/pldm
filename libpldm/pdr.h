@@ -576,6 +576,21 @@ void pldm_entity_association_pdr_extract(const uint8_t *pdr, uint16_t pdr_len,
 pldm_entity pldm_get_entity_from_record_handle(const pldm_pdr *repo,
 					       uint32_t record_handle);
 
+/** @brief Initialize the pldm_entity_node structure, just for deserialization
+ *
+ *  @param[in] entity - node of pldm entity
+ *  @param[in] parent - parent of pldm entity
+ *  @param[in] host_container_id - host container id
+ *  @param[in] first_child - first child of pldm entity
+ *  @param[in] next_sibling - net sibling of pldm entity
+ *  @param[in] association_type - association type
+ */
+pldm_entity_node *init_pldm_entity_node(pldm_entity entity, pldm_entity parent,
+					uint16_t host_container_id,
+					pldm_entity_node *first_child,
+					pldm_entity_node *next_sibling,
+					uint8_t association_type);
+
 #ifdef __cplusplus
 }
 #endif

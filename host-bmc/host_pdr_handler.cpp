@@ -7,7 +7,9 @@
 #include "libpldm/state_set.h"
 #include "oem/ibm/libpldm/fru.h"
 
-#include "custom_dbus.hpp"
+#include "dbus/custom_dbus.hpp"
+#include "dbus/serialize.hpp"
+#include "host-bmc/dbus/deserialize.hpp"
 
 #include <assert.h>
 
@@ -148,7 +150,7 @@ HostPDRHandler::HostPDRHandler(
             const auto itr = props.find("CurrentHostState");
             if (itr != props.end())
             {
-                PropertyValue value = itr->second;
+                utils::PropertyValue value = itr->second;
                 auto propVal = std::get<std::string>(value);
                 if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
                 {
@@ -209,7 +211,7 @@ HostPDRHandler::HostPDRHandler(
             const auto itr = props.find("CurrentPowerState");
             if (itr != props.end())
             {
-                PropertyValue value = itr->second;
+                utils::PropertyValue value = itr->second;
                 auto propVal = std::get<std::string>(value);
                 if (propVal ==
                     "xyz.openbmc_project.State.Chassis.PowerState.Off")
@@ -821,6 +823,9 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
         pldm::hostbmc::utils::updateEntityAssociation(
             entityAssociations, entityTree, objPathMap, oemPlatformHandler);
 
+        pldm::serialize::Serialize::getSerialize().setObjectPathMaps(
+            objPathMap);
+
         if (oemPlatformHandler != nullptr)
         {
             pldm::hostbmc::utils::setCoreCount(entityAssociations);
@@ -928,6 +933,12 @@ void HostPDRHandler::setHostFirmwareCondition()
                   << std::showbase
                   << static_cast<uint16_t>(response->payload[0]) << "\n";
         this->responseReceived = true;
+
+        if (!this->isRestoreDBusObj)
+        {
+            this->isRestoreDBusObj = true;
+            pldm::deserialize::restoreDbusObj(this);
+        }
     };
     rc = handler->registerRequest(mctp_eid, instanceId, PLDM_BASE,
                                   PLDM_GET_PLDM_VERSION, std::move(requestMsg),
@@ -1574,6 +1585,8 @@ void HostPDRHandler::createDbusObjects(const PDRList& fruRecordSetPDRs)
             case 32903:
                 CustomDBus::getCustomDBus().implementCpuCoreInterface(
                     entity.first);
+                CustomDBus::getCustomDBus().implementObjectEnableIface(
+                    entity.first, false);
                 break;
             case PLDM_ENTITY_SYSTEM_CHASSIS:
                 CustomDBus::getCustomDBus().implementChassisInterface(
@@ -1684,6 +1697,12 @@ void HostPDRHandler::deletePDRFromRepo(PDRRecordHandles&& recordHandles)
         this->setRecordPresent(recordHandle);
         pldm_delete_by_record_handle(repo, recordHandle, true);
     }
+}
+
+void HostPDRHandler::updateObjectPathMaps(const std::string& path,
+                                          pldm_entity_node* node)
+{
+    objPathMap[path] = node;
 }
 
 } // namespace pldm
