@@ -761,7 +761,7 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                 }
                 else
                 {
-                    if (isHostPdrModified)
+                    if ((isHostPdrModified == true) || !(modifiedCounter == 0))
                     {
                         bool recFound =
                             pldm_pdr_find_prev_record_handle(repo, rh, &prevRh);
@@ -806,13 +806,29 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                                     }
                                 }
                             }
+                            modifiedCounter--;
                         }
                     }
-                    else
+                    else if ((isHostPdrModified != true) &&
+                             (modifiedCounter == 0))
                     {
+                        bool recFound =
+                            pldm_pdr_find_prev_record_handle(repo, rh, &prevRh);
+                        if (recFound)
+                        {
+                            pldm_delete_by_record_handle(repo, rh, true);
 
-                        pldm_pdr_add(repo, pdr.data(), respCount, rh, true,
-                                     pdrTerminusHandle);
+                            pldm_pdr_add_after_prev_record(
+                                repo, pdr.data(), respCount, rh, true, prevRh,
+                                pdrTerminusHandle);
+                        }
+                        else
+                        {
+                            std::cout << "In the add path rh and nextRh=" << rh
+                                      << " " << nextRecordHandle << std::endl;
+                            pldm_pdr_add(repo, pdr.data(), respCount, rh, true,
+                                         pdrTerminusHandle);
+                        }
                     }
                 }
             }
@@ -895,7 +911,7 @@ void HostPDRHandler::_processFetchPDREvent(
         nextRecordHandle = this->pdrRecordHandles.front();
         this->pdrRecordHandles.pop_front();
     }
-    if (isHostPdrModified && (!this->modifiedPDRRecordHandles.empty()))
+    else if (isHostPdrModified && (!this->modifiedPDRRecordHandles.empty()))
     {
         nextRecordHandle = this->modifiedPDRRecordHandles.front();
         this->modifiedPDRRecordHandles.pop_front();

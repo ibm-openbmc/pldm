@@ -171,15 +171,18 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
 
 Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
 {
-    if (oemPlatformHandler != nullptr)
+    if (hostPDRHandler)
     {
-        //  we assume that the entity manager
-        // already sends the system type information before we
-        // reach BMC ready state.
-        auto rc = oemPlatformHandler->checkBMCState();
-        if (rc != PLDM_SUCCESS)
+        if (hostPDRHandler->isHostUp() && oemPlatformHandler != nullptr)
         {
-            return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
+            // When host is up, we assume that the entity manager
+            // already sends the system type information before we
+            // reach BMC ready state.
+            auto rc = oemPlatformHandler->checkBMCState();
+            if (rc != PLDM_SUCCESS)
+            {
+                return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
+            }
         }
     }
 
@@ -561,6 +564,9 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
             if (eventDataOperation == PLDM_RECORDS_ADDED ||
                 eventDataOperation == PLDM_RECORDS_DELETED)
             {
+                std::cerr
+                    << "Got a repo change event with event data operation as PLDM_RECORDS_ADDED"
+                    << std::endl;
                 rc = getPDRRecordHandles(
                     reinterpret_cast<const ChangeEntry*>(changeRecordData +
                                                          dataOffset),
@@ -582,11 +588,18 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                     changeRecordDataSize - dataOffset,
                     static_cast<size_t>(numberOfChangeEntries),
                     pdrRecordHandles);
+                std::cout
+                    << "inside repo change event PLDM_RECORDS_MODIFIED, size of pdrRecordHandles="
+                    << pdrRecordHandles.size() << std::endl;
 
                 if (rc != PLDM_SUCCESS)
                 {
                     return rc;
                 }
+                hostPDRHandler->modifiedCounter += pdrRecordHandles.size();
+                std::cout
+                    << "Inside repo change event PLDM_RECORDS_MODIFIED, hostPDRHandler->modifiedCounter="
+                    << (uint16_t)hostPDRHandler->modifiedCounter << std::endl;
             }
 
             changeRecordData +=
@@ -602,6 +615,8 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
         // have the matched Terminus handle
         if (eventDataFormat == REFRESH_ENTIRE_REPOSITORY)
         {
+            std::cout << "Inside eventDataFormat == REFRESH_ENTIRE_REPOSITORY"
+                      << std::endl;
             // We cannot get the Repo change event from the Terminus
             // that is not already added to the BMC repository
 
