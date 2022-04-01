@@ -1438,10 +1438,7 @@ void pldm::responder::oem_ibm_platform::Handler::handleBootTypesAtPowerOn()
             setBootTypesBiosAttr(restartCause);
         }
         catch (const std::exception& e)
-        {
-            std::cerr << "Failed to fetch the restartCause, ERROR=" << e.what()
-                      << "\n";
-        }
+        {}
     }
 }
 
