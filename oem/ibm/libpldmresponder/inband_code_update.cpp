@@ -212,6 +212,8 @@ void CodeUpdate::setVersions()
             writeBootSideFile(pldmBootSideData);
             biosAttrList.push_back(std::make_pair(
                 bootSideAttrName, pldmBootSideData.current_boot_side));
+            biosAttrList.push_back(std::make_pair(
+                bootNextSideAttrName, pldmBootSideData.next_boot_side));
             setBiosAttr(biosAttrList);
         }
         else
@@ -236,6 +238,8 @@ void CodeUpdate::setVersions()
                 writeBootSideFile(pldmBootSideData);
                 biosAttrList.push_back(
                     std::make_pair(bootSideAttrName, current_boot_side));
+                biosAttrList.push_back(std::make_pair(
+                    bootNextSideAttrName, pldmBootSideData.next_boot_side));
                 setBiosAttr(biosAttrList);
             }
             else
@@ -246,6 +250,8 @@ void CodeUpdate::setVersions()
                 pldm_boot_side_data pldmBootSideData = readBootSideFile();
                 biosAttrList.push_back(std::make_pair(
                     bootSideAttrName, pldmBootSideData.current_boot_side));
+                biosAttrList.push_back(std::make_pair(
+                    bootNextSideAttrName, pldmBootSideData.next_boot_side));
                 setBiosAttr(biosAttrList);
             }
         }
@@ -439,6 +445,8 @@ void CodeUpdate::processRenameEvent()
     writeBootSideFile(pldmBootSideData);
     biosAttrList.push_back(
         std::make_pair(bootSideAttrName, pldmBootSideData.current_boot_side));
+    biosAttrList.push_back(
+        std::make_pair(bootNextSideAttrName, pldmBootSideData.next_boot_side));
     setBiosAttr(biosAttrList);
 }
 
