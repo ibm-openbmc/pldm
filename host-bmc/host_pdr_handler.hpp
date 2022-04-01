@@ -162,11 +162,6 @@ class HostPDRHandler
      */
     void setHostSensorState(const PDRList& stateSensorPDRs);
 
-    /** @brief whether we received PLDM_RECORDS_MODIFIED event data operation
-     *  from host
-     */
-    bool isHostPdrModified = false;
-
     /** @brief check whether Host is running when pldmd starts
      */
     bool isHostUp();
@@ -174,7 +169,11 @@ class HostPDRHandler
     /** @brief whether we received PLDM_RECORDS_MODIFIED event data operation
      *  from host
      */
-    bool isHostPdrModified;
+    bool isHostPdrModified = false;
+
+    /** @brief counter to count the number of modified records sent from host
+     */
+    uint8_t modifiedCounter = 0;
 
     /** @brief map that captures various terminus information **/
     TLPDRMap tlPDRInfo;
