@@ -587,8 +587,8 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                 {
                     return rc;
                 }
+                hostPDRHandler->modifiedCounter += pdrRecordHandles.size();
             }
-
             changeRecordData +=
                 dataOffset + (numberOfChangeEntries * sizeof(ChangeEntry));
             changeRecordDataSize -=
