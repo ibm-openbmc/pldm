@@ -257,5 +257,30 @@ void restoreDbusObj(HostPDRHandler* hostPDRHandler)
     }
 }
 
+void reSerialize(std::vector<uint16_t> types)
+{
+    if (types.empty())
+    {
+        return;
+    }
+
+    if (!pldm::serialize::Serialize::getSerialize().deserialize())
+    {
+        return;
+    }
+
+    auto savedObjs = pldm::serialize::Serialize::getSerialize().getSavedObjs();
+    for (const auto& type : types)
+    {
+        if (savedObjs.contains(type))
+        {
+            savedObjs.erase(savedObjs.find(type));
+        }
+    }
+
+    pldm::serialize::Serialize::getSerialize().reSerialize(
+        std::move(savedObjs));
+}
+
 } // namespace deserialize
 } // namespace pldm

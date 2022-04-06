@@ -100,5 +100,20 @@ void Serialize::setObjectPathMaps(const ObjectPathMaps& maps)
     }
 }
 
+void Serialize::reSerialize(dbus::SavedObjs&& savedObjs)
+{
+    this->savedObjs = std::move(savedObjs);
+
+    auto dir = filePath.parent_path();
+    if (!fs::exists(dir))
+    {
+        fs::create_directories(dir);
+    }
+
+    std::ofstream os(filePath.c_str(), std::ios::binary);
+    cereal::JSONOutputArchive oarchive(os);
+    oarchive(this->savedObjs);
+}
+
 } // namespace serialize
 } // namespace pldm

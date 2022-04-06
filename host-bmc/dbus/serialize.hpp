@@ -56,6 +56,8 @@ class Serialize
 
     void setObjectPathMaps(const ObjectPathMaps& maps);
 
+    void reSerialize(dbus::SavedObjs&& savedObjs);
+
   private:
     dbus::SavedObjs savedObjs;
     fs::path filePath{PERSISTENT_FILE};

@@ -962,6 +962,10 @@ void HostPDRHandler::setHostFirmwareCondition()
                                   std::move(getPLDMVersionHandler));
     if (rc)
     {
+        // Since the Host is off, remove all cores in the persist file
+        std::vector<uint16_t> types = {32903};
+        pldm::deserialize::reSerialize(types);
+
         std::cerr << "Failed to discover Host state. Assuming Host as off \n";
     }
 }

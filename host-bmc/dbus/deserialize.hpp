@@ -14,5 +14,7 @@ namespace deserialize
 
 void restoreDbusObj(HostPDRHandler* hostPDRHandler);
 
+void reSerialize(std::vector<uint16_t> type);
+
 } // namespace deserialize
 } // namespace pldm
