@@ -152,14 +152,15 @@ class LidHandler : public FileHandler
                       << "\n";
             return PLDM_ERROR;
         }
-        close(fd);
-
         rc = transferFileData(lidPath, false, offset, length, address);
         if (rc != PLDM_SUCCESS)
         {
             std::cerr << "writeFileFromMemory failed with rc= " << rc << " \n";
             return rc;
         }
+        fsync(fd);
+        close(fd);
+
         if (lidType == PLDM_FILE_TYPE_LID_MARKER)
         {
             markerLIDremainingSize -= length;
@@ -267,6 +268,7 @@ class LidHandler : public FileHandler
         {
             rc = PLDM_ERROR;
         }
+        fsync(fd);
         close(fd);
 
         if (lidType == PLDM_FILE_TYPE_LID_MARKER)
