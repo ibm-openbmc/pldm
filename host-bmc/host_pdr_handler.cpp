@@ -967,12 +967,6 @@ void HostPDRHandler::setHostFirmwareCondition()
                   << std::showbase
                   << static_cast<uint16_t>(response->payload[0]) << "\n";
         this->responseReceived = true;
-
-        if (!this->isRestoreDBusObj)
-        {
-            this->isRestoreDBusObj = true;
-            pldm::deserialize::restoreDbusObj(this);
-        }
     };
     rc = handler->registerRequest(mctp_eid, instanceId, PLDM_BASE,
                                   PLDM_GET_PLDM_VERSION, std::move(requestMsg),
