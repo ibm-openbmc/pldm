@@ -263,7 +263,7 @@ class FruImpl
     uint8_t mctp_eid;
     sdeventplus::Event& event;
 
-    std::map<dbus::ObjectPath, pldm_entity_node*> objToEntityNode{};
+    std::map<dbus::ObjectPath, pldm_entity> objToEntityNode{};
     dbus::ObjectPathToRSIMap objectPathToRSIMap{};
 
     /** @brief populateRecord builds the FRU records for an instance of FRU and

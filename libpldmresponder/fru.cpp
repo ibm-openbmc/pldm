@@ -85,9 +85,12 @@ void FruImpl::updateAssociationTree(const dbus::ObjectValueTree& objects,
     {
         if (objToEntityNode.contains(tmpObjPaths[i]))
         {
-            pldm_entity node =
-                pldm_entity_extract(objToEntityNode.at(tmpObjPaths[i]));
-            if (pldm_entity_association_tree_find(entityTree, &node, false))
+            pldm_entity_node* node = nullptr;
+            pldm_find_entity_ref_in_tree(
+                entityTree, objToEntityNode.at(tmpObjPaths[i]), &node);
+            pldm_entity node_entity = pldm_entity_extract(node);
+            if (pldm_entity_association_tree_find(entityTree, &node_entity,
+                                                  false))
             {
                 continue;
             }
@@ -103,7 +106,7 @@ void FruImpl::updateAssociationTree(const dbus::ObjectValueTree& objects,
 
             for (auto& it : objToEntityNode)
             {
-                pldm_entity node = pldm_entity_extract(it.second);
+                pldm_entity node = it.second;
                 if (node.entity_type == entity.entity_type)
                 {
                     entity.entity_instance_num = node.entity_instance_num + 1;
@@ -116,17 +119,20 @@ void FruImpl::updateAssociationTree(const dbus::ObjectValueTree& objects,
                 auto node = pldm_entity_association_tree_add(
                     entityTree, &entity, 0xFFFF, nullptr,
                     PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true);
-                objToEntityNode[tmpObjPaths[i]] = node;
+                objToEntityNode[tmpObjPaths[i]] = pldm_entity_extract(node);
             }
             else
             {
                 if (objToEntityNode.contains(tmpObjPaths[i + 1]))
                 {
+                    pldm_entity_node* parent_node = nullptr;
+                    pldm_find_entity_ref_in_tree(
+                        entityTree, objToEntityNode[tmpObjPaths[i + 1]],
+                        &parent_node);
                     auto node = pldm_entity_association_tree_add(
-                        entityTree, &entity, 0xFFFF,
-                        objToEntityNode[tmpObjPaths[i + 1]],
+                        entityTree, &entity, 0xFFFF, parent_node,
                         PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true);
-                    objToEntityNode[tmpObjPaths[i]] = node;
+                    objToEntityNode[tmpObjPaths[i]] = pldm_entity_extract(node);
                 }
             }
         }
@@ -197,9 +203,10 @@ void FruImpl::buildFRUTable()
                     pldm_entity entity{};
                     if (objToEntityNode.contains(object.first.str))
                     {
-                        pldm_entity_node* node =
-                            objToEntityNode.at(object.first.str);
-
+                        pldm_entity_node* node = nullptr;
+                        pldm_find_entity_ref_in_tree(
+                            entityTree, objToEntityNode.at(object.first.str),
+                            &node);
                         entity = pldm_entity_extract(node);
                     }
 
@@ -403,7 +410,12 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
     // sm00
     pldm_entity_association_tree_delete_node(bmcEntityTree, removeEntity);
     objectPathToRSIMap.erase(fruObjPath);
-    objToEntityNode.erase(fruObjPath);     // sm00
+    objToEntityNode.erase(fruObjPath); // sm00
+    std::cerr << "Removing Individual FRU "
+              << "[ " << fruObjPath << " ] "
+              << "with entityid [ " << removeEntity.entity_type << ","
+              << removeEntity.entity_instance_num << ","
+              << removeEntity.entity_container_id << " ]\n";
     associatedEntityMap.erase(fruObjPath); // sm00
 
     /* if (table
@@ -427,13 +439,13 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
         std::move(std::vector<ChangeEntry>(1, deleteRecordHdl)),
         std::move(std::vector<uint8_t>(1, PLDM_RECORDS_DELETED))); // need to
     //  send both remote and local records. Phyp keeps track of bmc only records
-    if (bmcEventDataOps != PLDM_INVALID_OP)
+    if (bmcEventDataOps != PLDM_INVALID_OP && updateRecordHdlBmc != 0)
     {
         sendPDRRepositoryChgEventbyPDRHandles(
             std::move(std::vector<ChangeEntry>(1, updateRecordHdlBmc)),
             std::move(std::vector<uint8_t>(1, bmcEventDataOps)));
     }
-    if (hostEventDataOps != PLDM_INVALID_OP)
+    if (hostEventDataOps != PLDM_INVALID_OP && updateRecordHdlHost != 0)
     {
         sendPDRRepositoryChgEventbyPDRHandles(
             std::move(std::vector<ChangeEntry>(1, updateRecordHdlHost)),
@@ -448,7 +460,7 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
     // An exception will be thrown by getRecordInfo, if the item
     // D-Bus interface name specified in FRU_Master.json does
     // not have corresponding config jsons
-    pldm_entity_node* parent = nullptr;
+    pldm_entity parent = {};
     pldm_entity entity{};
     pldm_entity parentEntity{};
     uint32_t newRecordHdl{};
@@ -474,10 +486,21 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
          free(out);*/
         // sm00
 
+        pldm_entity_node* parent_node = nullptr;
+        pldm_find_entity_ref_in_tree(entityTree, parent, &parent_node);
         auto node = pldm_entity_association_tree_add(
-            entityTree, &entity, 0xFFFF, parent,
+            entityTree, &entity, 0xFFFF, parent_node,
             PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true);
-        objToEntityNode[fruObjectPath] = node;
+        pldm_entity node_entity = pldm_entity_extract(node);
+        objToEntityNode[fruObjectPath] = node_entity;
+        std::cerr << " Building Individual FRU "
+                  << "[ " << fruObjectPath << " ] "
+                  << "with entityid [ " << node_entity.entity_type << ","
+                  << node_entity.entity_instance_num << ","
+                  << node_entity.entity_container_id << " ] "
+                  << "Parent :[ " << parent.entity_type << ","
+                  << parent.entity_instance_num << ","
+                  << parent.entity_container_id << " ]\n";
         auto recordInfos = parser.getRecordInfo(fruInterface);
 
         // sm00
@@ -488,7 +511,7 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
         // sm00
 
         memcpy(reinterpret_cast<void*>(&parentEntity),
-               reinterpret_cast<void*>(parent), sizeof(pldm_entity));
+               reinterpret_cast<void*>(parent_node), sizeof(pldm_entity));
         pldm_entity_node* bmcTreeParentNode = nullptr;
         pldm_find_entity_ref_in_tree(bmcEntityTree, parentEntity,
                                      &bmcTreeParentNode);
@@ -539,12 +562,18 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
             std::move(std::vector<ChangeEntry>(1, ids)),
             std::move(std::vector<uint8_t>(1, PLDM_RECORDS_ADDED)));
     }
-    sendPDRRepositoryChgEventbyPDRHandles(
-        std::move(std::vector<ChangeEntry>(1, updatedRecordHdlBmc)),
-        std::move(std::vector<uint8_t>(1, bmcEventDataOps)));
-    sendPDRRepositoryChgEventbyPDRHandles(
-        std::move(std::vector<ChangeEntry>(1, updatedRecordHdlHost)),
-        std::move(std::vector<uint8_t>(1, hostEventDataOps)));
+    if (updatedRecordHdlBmc != 0)
+    {
+        sendPDRRepositoryChgEventbyPDRHandles(
+            std::move(std::vector<ChangeEntry>(1, updatedRecordHdlBmc)),
+            std::move(std::vector<uint8_t>(1, bmcEventDataOps)));
+    }
+    if (updatedRecordHdlHost != 0)
+    {
+        sendPDRRepositoryChgEventbyPDRHandles(
+            std::move(std::vector<ChangeEntry>(1, updatedRecordHdlHost)),
+            std::move(std::vector<uint8_t>(1, hostEventDataOps)));
+    }
 }
 
 void FruImpl::reGenerateStatePDR(const std::string& fruObjectPath,
