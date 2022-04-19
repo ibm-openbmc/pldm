@@ -32,7 +32,7 @@ class LEDGroup : public AssertedIntf
     LEDGroup(sdbusplus::bus::bus& bus, const std::string& objPath,
              pldm::host_effecters::HostEffecterParser* hostEffecterParser,
              const pldm_entity entity, uint8_t mctpEid) :
-        AssertedIntf(bus, objPath.c_str(), true),
+        AssertedIntf(bus, objPath.c_str(), AssertedIntf::action::defer_emit),
         hostEffecterParser(hostEffecterParser), entity(entity), mctpEid(mctpEid)
     {
         // Emit deferred signal.

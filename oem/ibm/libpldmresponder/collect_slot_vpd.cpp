@@ -11,7 +11,11 @@ namespace responder
 using namespace oem_ibm_platform;
 void SlotHandler::timeOutHandler()
 {
-    std::cerr << "Timer expired waiting for Event from Inventory" << std::endl;
+    std::cerr
+        << "Timer expired waiting for Event from Inventory on following pldm_entity: [ "
+        << current_on_going_slot_entity.entity_type << ","
+        << current_on_going_slot_entity.entity_instance_num << ","
+        << current_on_going_slot_entity.entity_container_id << "]" << std::endl;
 
     // Disable the timer
     timer.setEnabled(false);
@@ -33,6 +37,7 @@ void SlotHandler::enableSlot(uint16_t effecterId,
                              uint8_t stateFileValue)
 
 {
+    std::cerr << "CM: slot enable effecter id: " << effecterId << std::endl;
     const pldm_entity entity = getEntityIDfromEffecterID(effecterId);
 
     for (const auto& [key, value] : fruAssociationMap)
@@ -55,6 +60,8 @@ void SlotHandler::processSlotOperations(const std::string& slotObjectPath,
                                         const pldm_entity& entity,
                                         uint8_t stateFiledValue)
 {
+    std::cerr << "CM: processing the slot operations, SlotObject: "
+              << slotObjectPath << std::endl;
 
     std::string adapterObjPath;
     try
@@ -67,6 +74,8 @@ void SlotHandler::processSlotOperations(const std::string& slotObjectPath,
         return;
     }
 
+    std::cerr << "CM: Found an adapter under the slot, adapter object:"
+              << adapterObjPath << std::endl;
     // create a presence match for the adpter present property
     createPresenceMatch(adapterObjPath, entity, stateFiledValue);
 
@@ -193,6 +202,9 @@ void SlotHandler::processPropertyChangeFromVPD(
             sensorOpState = uint8_t(SLOT_STATE_DISABLED);
         }
     }
+    std::cerr
+        << "CM: processing the property change from VPD Present value and sensor opState:"
+        << presentValue << "and" << (unsigned)sensorOpState << std::endl;
     // set the sensor state based on the stateFieldValue
     this->sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
                                sensorOpState, uint8_t(SLOT_STATE_UNKOWN));
