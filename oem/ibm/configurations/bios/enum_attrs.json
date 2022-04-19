@@ -194,11 +194,10 @@
          "possible_values":[
             "AIX",
             "Linux",
-            "IBM I",
-            "Default"
+            "IBM I"
          ],
          "default_values":[
-            "Default"
+            "AIX"
          ],
          "helpText" : "CEC Primary OS",
          "displayName" : "CEC Primary OS"
@@ -208,11 +207,10 @@
          "possible_values":[
             "AIX",
             "Linux",
-            "IBM I",
-            "Default"
+            "IBM I"
          ],
          "default_values":[
-            "Default"
+            "AIX"
          ],
          "helpText" : "Specifies the current CEC Primary OS type. Do not set this attribute directly; set pvm_default_os_type instead.",
          "displayName" : "CEC Primary OS (current)"
