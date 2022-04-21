@@ -90,8 +90,6 @@ int CertHandler::read(uint32_t offset, uint32_t& length, Response& response,
 int CertHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
                        oem_platform::Handler* /*oemPlatformHandler*/)
 {
-    std::cout << "Client certificate write, file handle: " << fileHandle
-              << std::endl;
     auto it = certMap.find(certType);
     if (it == certMap.end())
     {

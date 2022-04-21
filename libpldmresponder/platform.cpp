@@ -515,6 +515,8 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                                        uint8_t /*formatVersion*/, uint8_t tid,
                                        size_t eventDataOffset)
 {
+    std::cerr << "Got a repo change event from TID: " << (unsigned)tid
+              << std::endl;
     uint8_t eventDataFormat{};
     uint8_t eventDataOperation{};
     uint8_t numberOfChangeRecords{};

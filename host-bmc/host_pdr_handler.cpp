@@ -492,6 +492,9 @@ void HostPDRHandler::mergeEntityAssociations(const std::vector<uint8_t>& pdr)
 void HostPDRHandler::sendPDRRepositoryChgEvent(std::vector<uint8_t>&& pdrTypes,
                                                uint8_t eventDataFormat)
 {
+    std::cerr
+        << "Sending the repo change event after merging the PDRs, MCTP_ID:"
+        << (unsigned)mctp_eid << std::endl;
     assert(eventDataFormat == FORMAT_IS_PDR_HANDLES);
 
     // Extract from the PDR repo record handles of PDRs we want the host
@@ -707,6 +710,12 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
 
                     terminusHandle = tlpdr->terminus_handle;
                     tid = tlpdr->tid;
+                    std::cerr
+                        << "Got a terminus Locator PDR with TID:"
+                        << (unsigned)tid
+                        << " and Terminus handle:" << terminusHandle
+                        << " with Valid bit as:" << (unsigned)tlpdr->validity
+                        << std::endl;
                     auto terminus_locator_type = tlpdr->terminus_locator_type;
                     if (terminus_locator_type ==
                         PLDM_TERMINUS_LOCATOR_TYPE_MCTP_EID)
@@ -837,6 +846,13 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
     }
     if (!nextRecordHandle)
     {
+        pldm_pdr_record* firstRecord = repo->first;
+        pldm_pdr_record* lastRecord = repo->last;
+        std::cerr << "First Record in the repo after PDR exchange is: "
+                  << firstRecord->record_handle << std::endl;
+        std::cerr << "Last Record in the repo after PDR exchange is:"
+                  << lastRecord->record_handle << std::endl;
+
         pldm::hostbmc::utils::updateEntityAssociation(
             entityAssociations, entityTree, objPathMap, oemPlatformHandler);
 
