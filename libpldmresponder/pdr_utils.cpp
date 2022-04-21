@@ -277,7 +277,8 @@ std::vector<uint8_t> fetchBitMap(const std::vector<std::vector<uint8_t>>& pdrs)
                 tempStream << std::setfill('0') << std::setw(2) << std::hex
                            << byte << " ";
             }
-            std::cout << tempStream.str() << std::endl;
+            std::cout << "Panel:BitMap received: " << tempStream.str()
+                      << std::endl;
             if (compEffCount)
             {
                 statesPtr += sizeof(state_effecter_possible_states) +
