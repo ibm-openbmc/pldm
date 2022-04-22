@@ -21,6 +21,7 @@ test_sources = [
   '../dbus/serialize.cpp',
   '../dbus/custom_dbus.cpp',
   '../dbus/software_version.cpp',
+  '../dbus/pcie_topology.cpp',
 ]
 
 tests = [

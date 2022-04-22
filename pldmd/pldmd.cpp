@@ -241,6 +241,14 @@ int main(int argc, char** argv)
     std::unique_ptr<oem_platform::Handler> oemPlatformHandler{};
     std::unique_ptr<oem_fru::Handler> oemFruHandler{};
 
+    if (hostEID)
+    {
+        hostEffecterParser =
+            std::make_unique<pldm::host_effecters::HostEffecterParser>(
+                &dbusImplReq, sockfd, pdrRepo.get(), &dbusHandler,
+                HOST_JSONS_DIR, &reqHandler);
+    }
+
 #ifdef OEM_IBM
     std::unique_ptr<pldm::responder::CodeUpdate> codeUpdate =
         std::make_unique<pldm::responder::CodeUpdate>(&dbusHandler);
@@ -249,7 +257,8 @@ int main(int argc, char** argv)
     codeUpdate->clearDirPath(LID_STAGING_DIR);
     oemPlatformHandler = std::make_unique<oem_ibm_platform::Handler>(
         &dbusHandler, codeUpdate.get(), slotHandler.get(), sockfd, hostEID,
-        dbusImplReq, event, pdrRepo.get(), &reqHandler, bmcEntityTree.get());
+        dbusImplReq, event, pdrRepo.get(), &reqHandler, bmcEntityTree.get(),
+        hostEffecterParser.get());
     oemFruHandler =
         std::make_unique<oem_ibm_fru::Handler>(&dbusHandler, pdrRepo.get());
     codeUpdate->setOemPlatformHandler(oemPlatformHandler.get());
@@ -269,10 +278,6 @@ int main(int argc, char** argv)
         associationsParser =
             std::make_unique<pldm::host_associations::HostAssociationsParser>(
                 HOST_JSONS_DIR);
-        hostEffecterParser =
-            std::make_unique<pldm::host_effecters::HostEffecterParser>(
-                &dbusImplReq, sockfd, pdrRepo.get(), &dbusHandler,
-                HOST_JSONS_DIR, &reqHandler);
         hostPDRHandler = std::make_shared<HostPDRHandler>(
             sockfd, hostEID, event, pdrRepo.get(), EVENTS_JSONS_DIR,
             entityTree.get(), bmcEntityTree.get(), hostEffecterParser.get(),

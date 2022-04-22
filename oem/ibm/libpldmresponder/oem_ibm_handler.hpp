@@ -70,16 +70,19 @@ class Handler : public oem_platform::Handler
             uint8_t mctp_eid, pldm::dbus_api::Requester& requester,
             sdeventplus::Event& event, pldm_pdr* repo,
             pldm::requester::Handler<pldm::requester::Request>* handler,
-            pldm_entity_association_tree* bmcEntityTree) :
+            pldm_entity_association_tree* bmcEntityTree,
+            pldm::host_effecters::HostEffecterParser* hostEffecterParser) :
         oem_platform::Handler(dBusIntf),
         codeUpdate(codeUpdate), slotHandler(slotHandler),
         platformHandler(nullptr), mctp_fd(mctp_fd), mctp_eid(mctp_eid),
         requester(requester), event(event), pdrRepo(repo), handler(handler),
-        bmcEntityTree(bmcEntityTree)
+        bmcEntityTree(bmcEntityTree), hostEffecterParser(hostEffecterParser)
     {
         codeUpdate->setVersions();
         pldm::responder::utils::clearLicenseStatus();
         setEventReceiverCnt = 0;
+        pldm::responder::utils::hostPCIETopologyIntf(mctp_eid,
+                                                     hostEffecterParser);
 
         using namespace sdbusplus::bus::match::rules;
         hostOffMatch = std::make_unique<sdbusplus::bus::match::match>(
@@ -474,6 +477,9 @@ class Handler : public oem_platform::Handler
 
     /** @brief Pointer to BMC's entity association tree */
     pldm_entity_association_tree* bmcEntityTree;
+
+    /** @brief Pointer to host effecter parser */
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser;
 
     /** @brief D-Bus property changed signal match */
     std::unique_ptr<sdbusplus::bus::match::match> hostOffMatch;

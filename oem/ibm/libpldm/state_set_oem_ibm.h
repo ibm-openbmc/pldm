@@ -19,6 +19,7 @@ enum ibm_oem_pldm_state_set_ids {
 	PLDM_OEM_IBM_PANEL_TRIGGER_STATE = 32778,
 	PLDM_OEM_IBM_SLOT_ENABLE_EFFECTER_STATE = 32779,
 	PLDM_OEM_IBM_SLOT_ENABLE_SENSOR_STATE = 32780,
+	PLDM_OEM_IBM_PCIE_TOPOLOGY_ACTIONS = 32781,
 };
 
 enum ibm_slot_enable_effecter_state {
@@ -72,6 +73,12 @@ enum ibm_oem_pldm_state_set_sbe_hreset_state_values {
 	SBE_HRESET_NOT_READY = 0x1,
 	SBE_HRESET_READY = 0x2,
 	SBE_HRESET_FAILED = 0x3,
+};
+
+enum pldm_oem_pcie_topology_actions {
+	GET_PCIE_TOPOLOGY = 0x1,
+	GET_CABLE_INFO = 0x2,
+	SAVE_PCIE_TOPLOGY = 0x03,
 };
 
 #ifdef __cplusplus

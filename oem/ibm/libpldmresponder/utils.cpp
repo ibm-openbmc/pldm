@@ -493,6 +493,14 @@ bool checkFruPresence(const char* objPath)
     return isPresent;
 }
 
+void hostPCIETopologyIntf(
+    uint8_t mctp_eid,
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser)
+{
+    CustomDBus::getCustomDBus().implementPcieTopologyInterface(
+        "/xyz/openbmc_project/pldm", mctp_eid, hostEffecterParser);
+}
+
 } // namespace utils
 } // namespace responder
 } // namespace pldm
