@@ -253,6 +253,12 @@ class CustomDBus
      */
     void updateTopologyProperty(bool value);
 
+    /** @brief Remove DBus objects from cache
+     *
+     *  @param[in] types  - entity type
+     */
+    void removeDBus(const std::vector<uint16_t> types);
+
   private:
     std::unordered_map<ObjectPath, std::unique_ptr<LocationCode>> location;
     std::unordered_map<ObjectPath, std::unique_ptr<OperationalStatus>>
@@ -280,6 +286,12 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<SoftWareVersion>>
         softWareVersion;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIETopology>> pcietopology;
+
+    /** @brief Remove all DBus object paths from cache
+     *
+     *  @param[in] types  - entity type
+     */
+    void deleteObject(const std::string& path);
 };
 
 } // namespace dbus

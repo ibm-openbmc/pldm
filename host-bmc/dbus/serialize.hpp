@@ -56,6 +56,10 @@ class Serialize
 
     void setObjectPathMaps(const ObjectPathMaps& maps);
 
+    void deleteObjsFromType(uint16_t type);
+
+    void reSerialize(const std::vector<uint16_t> types);
+
   private:
     dbus::SavedObjs savedObjs;
     fs::path filePath{PERSISTENT_FILE};

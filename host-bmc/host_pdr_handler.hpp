@@ -404,9 +404,6 @@ class HostPDRHandler
     /** @brief request message instance id */
     uint8_t insId;
 
-    /** @brief Restore the identity of the object */
-    bool isRestoreDBusObj = false;
-
     /** @brief maps an object path to pldm_entity from the BMC's entity
      *         association tree
      */

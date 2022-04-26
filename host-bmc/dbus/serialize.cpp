@@ -100,5 +100,33 @@ void Serialize::setObjectPathMaps(const ObjectPathMaps& maps)
     }
 }
 
+void Serialize::reSerialize(const std::vector<uint16_t> types)
+{
+    if (types.empty())
+    {
+        return;
+    }
+
+    for (const auto& type : types)
+    {
+        if (savedObjs.contains(type))
+        {
+            std::cerr << "Removing objects of type : " << (unsigned)type
+                      << " from the persistent cache\n";
+            savedObjs.erase(savedObjs.find(type));
+        }
+    }
+
+    auto dir = filePath.parent_path();
+    if (!fs::exists(dir))
+    {
+        fs::create_directories(dir);
+    }
+
+    std::ofstream os(filePath.c_str(), std::ios::binary);
+    cereal::JSONOutputArchive oarchive(os);
+    oarchive(this->savedObjs);
+}
+
 } // namespace serialize
 } // namespace pldm

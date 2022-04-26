@@ -2,6 +2,9 @@
 
 #include "libpldm/state_set.h"
 
+#include "serialize.hpp"
+#include "type.hpp"
+
 namespace pldm
 {
 namespace dbus
@@ -350,6 +353,133 @@ void CustomDBus::updateTopologyProperty(bool value)
     {
         pcietopology.at("/xyz/openbmc_project/pldm")
             ->pcIeTopologyRefresh(value);
+    }
+}
+
+void CustomDBus::deleteObject(const std::string& path)
+{
+    if (location.contains(path))
+    {
+        location.erase(location.find(path));
+    }
+
+    if (operationalStatus.contains(path))
+    {
+        operationalStatus.erase(operationalStatus.find(path));
+    }
+
+    if (presentStatus.contains(path))
+    {
+        presentStatus.erase(presentStatus.find(path));
+    }
+
+    if (chassis.contains(path))
+    {
+        chassis.erase(chassis.find(path));
+    }
+
+    if (cpuCore.contains(path))
+    {
+        cpuCore.erase(cpuCore.find(path));
+    }
+
+    if (fan.contains(path))
+    {
+        fan.erase(fan.find(path));
+    }
+
+    if (connector.contains(path))
+    {
+        connector.erase(connector.find(path));
+    }
+
+    if (vrm.contains(path))
+    {
+        vrm.erase(vrm.find(path));
+    }
+
+    if (global.contains(path))
+    {
+        global.erase(global.find(path));
+    }
+
+    if (powersupply.contains(path))
+    {
+        powersupply.erase(powersupply.find(path));
+    }
+
+    if (board.contains(path))
+    {
+        board.erase(board.find(path));
+    }
+
+    if (fabricAdapter.contains(path))
+    {
+        fabricAdapter.erase(fabricAdapter.find(path));
+    }
+
+    if (motherboard.contains(path))
+    {
+        motherboard.erase(motherboard.find(path));
+    }
+
+    if (availabilityState.contains(path))
+    {
+        availabilityState.erase(availabilityState.find(path));
+    }
+
+    if (_enabledStatus.contains(path))
+    {
+        _enabledStatus.erase(_enabledStatus.find(path));
+    }
+
+    if (pcieSlot.contains(path))
+    {
+        pcieSlot.erase(pcieSlot.find(path));
+    }
+
+    if (codLic.contains(path))
+    {
+        codLic.erase(codLic.find(path));
+    }
+
+    if (associations.contains(path))
+    {
+        associations.erase(associations.find(path));
+    }
+
+    if (ledGroup.contains(path))
+    {
+        ledGroup.erase(ledGroup.find(path));
+    }
+
+    if (softWareVersion.contains(path))
+    {
+        softWareVersion.erase(softWareVersion.find(path));
+    }
+}
+
+void CustomDBus::removeDBus(const std::vector<uint16_t> types)
+{
+    if (types.empty())
+    {
+        return;
+    }
+
+    auto savedObjs = pldm::serialize::Serialize::getSerialize().getSavedObjs();
+    for (const auto& type : types)
+    {
+        if (!savedObjs.contains(type))
+        {
+            continue;
+        }
+
+        std::cerr << "Deleting the dbus objects of type : " << (unsigned)type
+                  << std::endl;
+        for (const auto& [path, entites] : savedObjs.at(type))
+        {
+            deleteObject(path);
+        }
     }
 }
 
