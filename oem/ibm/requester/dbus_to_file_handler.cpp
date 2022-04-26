@@ -22,7 +22,9 @@ static constexpr auto resDumpProgressIntf =
     "xyz.openbmc_project.Common.Progress";
 static constexpr auto resDumpStatus =
     "xyz.openbmc_project.Common.Progress.OperationStatus.Failed";
-
+static constexpr auto certFilePath = "/var/lib/ibm/bmcweb/";
+constexpr auto certObjPath = "/xyz/openbmc_project/certs/ca/entry/";
+constexpr auto certEntryIntf = "xyz.openbmc_project.Certs.Entry";
 DbusToFileHandler::DbusToFileHandler(
     int mctp_fd, uint8_t mctp_eid, dbus_api::Requester* requester,
     sdbusplus::message::object_path resDumpCurrentObjPath,
@@ -275,7 +277,7 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
 {
     if (requester == NULL)
     {
-        std::cerr << "Failed to send file to host.";
+        std::cerr << "newFileAvailableSendToHost:Failed to send file to host.";
         pldm::utils::reportError(
             "xyz.openbmc_project.bmc.pldm.SendFileToHostFail",
             pldm::PelSeverity::ERROR);
@@ -291,18 +293,50 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
     if (rc != PLDM_SUCCESS)
     {
         requester->markFree(mctp_eid, instanceId);
-        std::cerr << "Failed to encode_new_file_req, rc = " << rc << std::endl;
+        std::cerr
+            << "newFileAvailableSendToHost:Failed to encode_new_file_req, rc = "
+            << rc << std::endl;
         return;
     }
-    std::cout << "Sending Sign CSR request to Host for fileHandle: "
-              << fileHandle << std::endl;
-    auto newFileAvailableRespHandler = [](mctp_eid_t /*eid*/,
-                                          const pldm_msg* response,
-                                          size_t respMsgLen) {
+    std::cout
+        << "newFileAvailableSendToHost:Sending Sign CSR request to Host for fileHandle: "
+        << fileHandle << std::endl;
+    auto newFileAvailableRespHandler = [fileHandle,
+                                        type](mctp_eid_t /*eid*/,
+                                              const pldm_msg* response,
+                                              size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             std::cerr << "Failed to receive response for NewFileAvailable "
                          "command\n";
+            if (type == PLDM_FILE_TYPE_CERT_SIGNING_REQUEST)
+            {
+                std::string filePath = certFilePath;
+                filePath += "CSR_" + std::to_string(fileHandle);
+                fs::remove(filePath);
+
+                DBusMapping dbusMapping{certObjPath +
+                                            std::to_string(fileHandle),
+                                        certEntryIntf, "Status", "string"};
+                PropertyValue value =
+                    "xyz.openbmc_project.Certs.Entry.State.Pending";
+                try
+                {
+                    pldm::utils::DBusHandler().setDbusProperty(dbusMapping,
+                                                               value);
+                }
+                catch (const std::exception& e)
+                {
+                    std::cerr
+                        << "newFileAvailableSendToHost:Failed to set status property of certicate entry, "
+                           "ERROR="
+                        << e.what() << "\n";
+                }
+
+                pldm::utils::reportError(
+                    "xyz.openbmc_project.bmc.pldm.SendFileToHostFail",
+                    pldm::PelSeverity::ERROR);
+            }
             return;
         }
         uint8_t completionCode{};
@@ -327,7 +361,8 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
         std::move(requestMsg), std::move(newFileAvailableRespHandler));
     if (rc)
     {
-        std::cerr << "Failed to send NewFileAvailable Request to Host\n";
+        std::cerr
+            << "newFileAvailableSendToHost:Failed to send NewFileAvailable Request to Host\n";
         pldm::utils::reportError(
             "xyz.openbmc_project.bmc.NewFileAvailableRequestFail",
             pldm::PelSeverity::ERROR);
