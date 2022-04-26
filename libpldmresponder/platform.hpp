@@ -468,6 +468,7 @@ class Handler : public CmdHandler
     bool pdrCreated;
     std::vector<fs::path> pdrJsonsDir;
     std::unique_ptr<sdeventplus::source::Defer> deferredGetPDREvent;
+    bool isFirstGetPDR = true;
 };
 
 /** @brief Function to check if the effecter falls in OEM range
