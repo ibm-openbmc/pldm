@@ -314,9 +314,12 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
                       << " rc=" << rc
                       << ", cc=" << static_cast<unsigned>(completionCode)
                       << "\n";
-            pldm::utils::reportError(
-                "xyz.openbmc_project.bmc.pldm.DecodeNewFileResponseFail",
-                pldm::PelSeverity::ERROR);
+            if (rc)
+            {
+                pldm::utils::reportError(
+                    "xyz.openbmc_project.bmc.pldm.DecodeNewFileResponseFail",
+                    pldm::PelSeverity::ERROR);
+            }
         }
     };
     rc = handler->registerRequest(
