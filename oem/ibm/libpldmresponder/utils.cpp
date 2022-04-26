@@ -377,7 +377,7 @@ int createOrUpdateLicenseObjs()
     {
         auto licId = entry.value("Id", empty);
         fs::path l_path = path / licId;
-        licJsonMap.emplace(l_path, entry);
+        licJsonMap.insert_or_assign(l_path, entry);
     }
 
     int rc = createOrUpdateLicenseDbusPaths(createLic);

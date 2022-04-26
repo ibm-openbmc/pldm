@@ -343,14 +343,17 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
         auto rc = decode_new_file_resp(response, respMsgLen, &completionCode);
         if (rc || completionCode)
         {
-            std::cerr
-                << "newFileAvailableSendToHost:Failed to decode_new_file_resp for file, or"
-                << " Host returned error for new_file_available"
-                << " rc=" << rc
-                << ", cc=" << static_cast<unsigned>(completionCode) << "\n";
-            pldm::utils::reportError(
-                "xyz.openbmc_project.bmc.pldm.DecodeNewFileResponseFail",
-                pldm::PelSeverity::ERROR);
+            std::cerr << "Failed to decode_new_file_resp for file, or"
+                      << " Host returned error for new_file_available"
+                      << " rc=" << rc
+                      << ", cc=" << static_cast<unsigned>(completionCode)
+                      << "\n";
+            if (rc)
+            {
+                pldm::utils::reportError(
+                    "xyz.openbmc_project.bmc.pldm.DecodeNewFileResponseFail",
+                    pldm::PelSeverity::ERROR);
+            }
         }
     };
     rc = handler->registerRequest(
