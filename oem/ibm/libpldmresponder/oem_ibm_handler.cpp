@@ -1672,7 +1672,7 @@ void pldm::responder::oem_ibm_platform::Handler::
     processPowerCycleOffSoftGraceful()
 {
     pldm::utils::PropertyValue value =
-        "xyz.openbmc_project.State.Host.Transition.Reboot";
+        "xyz.openbmc_project.State.Host.Transition.ForceWarmReboot";
     pldm::utils::DBusMapping dbusMapping{"/xyz/openbmc_project/state/host0",
                                          "xyz.openbmc_project.State.Host",
                                          "RequestedHostTransition", "string"};
@@ -1683,7 +1683,7 @@ void pldm::responder::oem_ibm_platform::Handler::
     catch (const std::exception& e)
     {
         std::cerr
-            << "Error to do a graceful shutdown, cycle chassis power, and boot the host back up. Unable to set property RequestedHostTransition. ERROR="
+            << "Error to do a ForceWarmReboot, chassis power remains on, and boot the host back up. Unable to set property RequestedHostTransition. ERROR="
             << e.what() << "\n";
     }
 }
