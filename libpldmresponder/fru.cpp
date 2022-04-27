@@ -1292,6 +1292,11 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
             sensorDbusObjMapsRef.emplace(
                 sensorId, std::make_tuple(std::move(dbusMappings),
                                           std::move(dbusValMaps)));
+
+            // creating a match for the newly added sensor
+            dbusToPLDMEventHandler->sendStateSensorEvent(sensorId,
+                                                         sensorDbusObjMapsRef);
+
             pldm::responder::pdr_utils::PdrEntry pdrEntry{};
             pdrEntry.data = entry.data();
             pdrEntry.size = pdrSize;
