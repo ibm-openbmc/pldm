@@ -43,6 +43,12 @@ using InternalFailure =
 
 using LicJsonObjMap = std::map<fs::path, nlohmann::json>;
 LicJsonObjMap licJsonMap;
+using PropertyValue =
+    std::variant<bool, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t,
+                 uint64_t, double, std::string, std::vector<uint8_t>>;
+using PropertyMap = std::map<std::string, PropertyValue>;
+using InterfaceMap = std::map<std::string, PropertyMap>;
+using ObjectValueTree = std::map<sdbusplus::message::object_path, InterfaceMap>;
 
 int setupUnixSocket(const std::string& socketInterface)
 {
@@ -499,6 +505,48 @@ void hostPCIETopologyIntf(
 {
     CustomDBus::getCustomDBus().implementPcieTopologyInterface(
         "/xyz/openbmc_project/pldm", mctp_eid, hostEffecterParser);
+}
+
+std::string getObjectPathByLocationCode(const std::string& locationCode,
+                                        const std::string& inventoryItemType)
+{
+    std::string locationIface(
+        "xyz.openbmc_project.Inventory.Decorator.LocationCode");
+
+    std::string path;
+    ObjectValueTree objects;
+    try
+    {
+        objects = pldm::utils::DBusHandler::getInventoryObjects();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Look up of inventory objects failed for location "
+                  << locationCode << std::endl;
+        return path;
+    }
+
+    for (const auto& objPath : objects)
+    {
+        InterfaceMap interfaces = objPath.second;
+        if (interfaces.contains(inventoryItemType) &&
+            interfaces.contains(locationIface))
+        {
+            PropertyMap properties = interfaces[locationIface];
+            if (properties.contains("LocationCode"))
+            {
+                if (get<std::string>(properties["LocationCode"]) ==
+                    locationCode)
+                {
+                    path = objPath.first.str;
+                    return path;
+                }
+            }
+        }
+    }
+    std::cerr << "Location not found " << locationCode << "for Item type "
+              << inventoryItemType << std::endl;
+    return path;
 }
 
 } // namespace utils
