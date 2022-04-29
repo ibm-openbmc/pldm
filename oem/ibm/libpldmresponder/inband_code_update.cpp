@@ -516,12 +516,13 @@ void CodeUpdate::setOemPlatformHandler(
 
 void CodeUpdate::clearDirPath(const std::string& dirPath)
 {
-    if (!fs::exists(dirPath))
+    if (std::filesystem::is_directory(dirPath))
     {
-        std::cerr << dirPath << " does not exists, nothing to clear \n";
-        return;
+        for (const auto& iter : std::filesystem::directory_iterator(dirPath))
+        {
+            std::filesystem::remove_all(iter);
+        }
     }
-    fs::remove_all(dirPath);
 }
 
 void CodeUpdate::sendStateSensorEvent(
