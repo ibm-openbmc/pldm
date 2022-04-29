@@ -409,6 +409,7 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
     free(out);*/
     // sm00
     pldm_entity_association_tree_delete_node(bmcEntityTree, removeEntity);
+
     objectPathToRSIMap.erase(fruObjPath);
     objToEntityNode.erase(fruObjPath); // sm00
     std::cerr << "Removing Individual FRU "
@@ -437,8 +438,42 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
      }*/
     sendPDRRepositoryChgEventbyPDRHandles(
         std::move(std::vector<ChangeEntry>(1, deleteRecordHdl)),
-        std::move(std::vector<uint8_t>(1, PLDM_RECORDS_DELETED))); // need to
-    //  send both remote and local records. Phyp keeps track of bmc only records
+        std::move(std::vector<uint8_t>(1, PLDM_RECORDS_DELETED)));
+
+    std::vector<uint16_t> effecterIDs = findEffecterIds(
+        pdrRepo, 0 /*tid*/, removeEntity.entity_type,
+        removeEntity.entity_instance_num, removeEntity.entity_container_id);
+
+    for (const auto& ids : effecterIDs)
+    {
+        auto delEffecterHdl = pldm_delete_by_effecter_id(pdrRepo, ids, false);
+        effecterDbusObjMaps.erase(ids);
+        if (delEffecterHdl != 0)
+        {
+            sendPDRRepositoryChgEventbyPDRHandles(
+                std::move(std::vector<ChangeEntry>(1, delEffecterHdl)),
+                std::move(std::vector<uint8_t>(1, PLDM_RECORDS_DELETED)));
+        }
+    }
+
+    std::vector<uint16_t> sensorIDs = findSensorIds(
+        pdrRepo, 0 /*tid*/, removeEntity.entity_type,
+        removeEntity.entity_instance_num, removeEntity.entity_container_id);
+
+    for (const auto& ids : sensorIDs)
+    {
+        auto delSensorHdl = pldm_delete_by_sensor_id(pdrRepo, ids, false);
+        sensorDbusObjMaps.erase(ids);
+        if (delSensorHdl != 0)
+        {
+            sendPDRRepositoryChgEventbyPDRHandles(
+                std::move(std::vector<ChangeEntry>(1, delSensorHdl)),
+                std::move(std::vector<uint8_t>(1, PLDM_RECORDS_DELETED)));
+        }
+    }
+
+    // need to
+    // send both remote and local records. Phyp keeps track of bmc only records
     if (bmcEventDataOps != PLDM_INVALID_OP && updateRecordHdlBmc != 0)
     {
         sendPDRRepositoryChgEventbyPDRHandles(

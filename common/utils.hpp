@@ -428,5 +428,59 @@ std::string getBiosAttrValue(const std::string& dbusAttrName);
  *             to be set
  */
 void setBiosAttr(const BiosAttributeList& biosAttrList);
+
+/** @brief Method to find all state effecter PDRs
+ *
+ *  @param[in] tid - Terminus ID
+ *  @param[in] entityType - the entity type
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *
+ *  @return vector of vector of all state effecter PDRs
+ */
+std::vector<std::vector<pldm::pdr::Pdr_t>>
+    getStateEffecterPDRsByType(uint8_t /*tid*/, uint16_t entityType,
+                               const pldm_pdr* repo);
+
+/** @brief Method to find all state sensor PDRs
+ *
+ *  @param[in] tid - terminus ID
+ *  @param[in] entityType - the entity type
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *
+ *  @return vector of vector of all state sensor PDRs
+ */
+std::vector<std::vector<pldm::pdr::Pdr_t>>
+    getStateSensorPDRsByType(uint8_t /*tid*/, uint16_t entityType,
+                             const pldm_pdr* repo);
+
+/** @brief method to find effecter IDs based on the pldm_entity
+ *
+ *  @param[in] pdrRepo - opaque pointer acting as a PDR repo handle
+ *  @param[in] tid - terminus ID
+ *  @param[in] entityType - the entity type
+ *  @param[in] entityInstance - the entity instance number
+ *  @param[in] containerId - the container ID
+ *
+ *  @return vector of all effecter IDs
+ */
+std::vector<pldm::pdr::EffecterID> findEffecterIds(const pldm_pdr* pdrRepo,
+                                                   uint8_t /*tid*/,
+                                                   uint16_t entityType,
+                                                   uint16_t entityInstance,
+                                                   uint16_t containerId);
+
+/** @brief method to find sensor IDs based on the pldm_entity
+ *
+ *  @param[in] pdrRepo - opaque pointer acting as a PDR repo handle
+ *  @param[in] tid - terminus ID
+ *  @param[in] entityType - the entity type
+ *  @param[in] entityInstance - the entity instance number
+ *  @param[in] containerId - the container ID
+ *
+ *  @return vector of all sensor IDs
+ */
+std::vector<pldm::pdr::SensorID>
+    findSensorIds(const pldm_pdr* pdrRepo, uint8_t /*tid*/, uint16_t entityType,
+                  uint16_t entityInstance, uint16_t containerId);
 } // namespace utils
 } // namespace pldm
