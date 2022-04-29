@@ -671,8 +671,25 @@ int processCodeUpdateLid(const std::string& filePath)
         return PLDM_ERROR;
     }
 
-    fs::create_directories(imageDirPath);
-    fs::create_directories(lidDirPath);
+    if (!fs::exists(imageDirPath))
+    {
+        fs::create_directories(imageDirPath);
+    }
+    if (!fs::exists(lidDirPath))
+    {
+        fs::create_directories(lidDirPath);
+
+        // Set the lid directory permissions to 777
+        std::error_code ec;
+        fs::permissions(lidDirPath, fs::perms::all, fs::perm_options::replace,
+                        ec);
+        if (ec)
+        {
+            std::cerr << "Failed to set the lid directory permissions: "
+                      << ec.message() << std::endl;
+            return PLDM_ERROR;
+        }
+    }
 
     constexpr auto bmcClass = 0x2000;
     if (htons(header.lidClass) == bmcClass)
@@ -696,6 +713,18 @@ int processCodeUpdateLid(const std::string& filePath)
         ofs << ifs.rdbuf();
         ofs.flush();
         ofs.close();
+
+        // Set the lid file permissions to 440
+        std::error_code ec;
+        fs::permissions(lidNoHeaderPath,
+                        fs::perms::owner_read | fs::perms::group_read,
+                        fs::perm_options::replace, ec);
+        if (ec)
+        {
+            std::cerr << "Failed to set the lid file permissions: "
+                      << ec.message() << std::endl;
+            return PLDM_ERROR;
+        }
     }
 
     ifs.close();
@@ -716,7 +745,8 @@ int CodeUpdate::assembleCodeUpdateImage()
             // header
             auto rc = executeCmd("/usr/sbin/mksquashfs", lidDirPath.c_str(),
                                  hostfwImagePath.c_str(), "-all-root",
-                                 "-no-recovery");
+                                 "-no-recovery", "-no-xattrs", "-noI",
+                                 "-mkfs-time", "0", "-all-time", "0");
             if (rc < 0)
             {
                 std::cerr << "Error occurred during the mksqusquashfs call"
