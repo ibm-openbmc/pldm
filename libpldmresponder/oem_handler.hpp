@@ -116,14 +116,6 @@ class Handler : public CmdHandler
     /** @brief Interface to the process setEventReceiver*/
     virtual void processSetEventReceiver() = 0;
 
-    /** @brief Interface to monitor the surveillance pings from remote terminus
-     *
-     * @param[in] tid - TID of the remote terminus
-     * @param[in] value - true or false, to indicate if the timer is
-     *                   running or not
-     * */
-    virtual void setSurvTimer(uint8_t tid, bool value) = 0;
-
     /** @brief Interface to perform OEM actions*/
     virtual void modifyPDROemActions(uint16_t entityType,
                                      uint16_t stateSetId) = 0;
@@ -133,6 +125,13 @@ class Handler : public CmdHandler
 
     /** @brief To handle the boot types bios attributes at shutdown*/
     virtual void handleBootTypesAtChassisOff() = 0;
+
+    /** @brief Interface to monitor the surveillance pings from host
+     *
+     * @param[in] value - true or false, to indicate if the timer is
+     *                    running or not
+     */
+    virtual void setSurvTimer(bool value) = 0;
 
     virtual ~Handler() = default;
 

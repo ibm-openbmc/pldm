@@ -416,7 +416,7 @@ Response Handler::platformEventMessage(const pldm_msg* request,
             }
             else
             {
-                oemPlatformHandler->setSurvTimer(tid, true);
+                oemPlatformHandler->setSurvTimer(true);
             }
         }
     }

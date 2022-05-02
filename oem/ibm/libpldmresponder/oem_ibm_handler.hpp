@@ -86,9 +86,19 @@ static constexpr auto PLDM_OEM_IBM_FRONT_PANEL_TRIGGER = 32837;
 constexpr uint16_t ENTITY_INSTANCE_0 = 0;
 constexpr uint16_t ENTITY_INSTANCE_1 = 1;
 
+<<<<<<< HEAD
 const pldm::pdr::TerminusID HYPERVISOR_TID = 208;
 
 static constexpr uint8_t HEARTBEAT_TIMEOUT_DELTA = 10;
+=======
+static constexpr uint8_t HEARTBEAT_TIMEOUT_DELTA = 10;
+struct InstanceInfo
+{
+    uint8_t procId;
+    uint8_t dcmId;
+};
+using HostEffecterInstanceMap = std::map<pldm::pdr::EffecterID, InstanceInfo>;
+>>>>>>> af349d9f (PLDM: Implement timer for Surveillance Pings (#227))
 
 enum SetEventReceiverCount
 {
@@ -108,11 +118,19 @@ class Handler : public oem_platform::Handler
         oem_platform::Handler(dBusIntf),
         codeUpdate(codeUpdate), slotHandler(slotHandler),
         platformHandler(nullptr), mctp_fd(mctp_fd), mctp_eid(mctp_eid),
+<<<<<<< HEAD
         instanceIdDb(instanceIdDb), event(event), pdrRepo(repo),
         handler(handler), bmcEntityTree(bmcEntityTree),
         timer(event, std::bind(std::mem_fn(&Handler::setSurvTimer), this,
                                HYPERVISOR_TID, false)),
         hostTransitioningToOff(true)
+=======
+        requester(requester), event(event), pdrRepo(repo), handler(handler),
+        bmcEntityTree(bmcEntityTree), hostEffecterParser(hostEffecterParser),
+        timer(event,
+              std::bind(std::mem_fn(&Handler::setSurvTimer), this, false))
+
+>>>>>>> af349d9f (PLDM: Implement timer for Surveillance Pings (#227))
     {
         codeUpdate->setVersions();
         pldm::responder::utils::clearLicenseStatus();
@@ -474,11 +492,10 @@ void processPowerOffHardGraceful();
  *  the surveillance ping and logs informational error if remote terminus
  *  fails to send the surveillance pings
  *
- * @param[in] tid - TID of the remote terminus
  * @param[in] value - true or false, to indicate if the timer is
  *                    running or not
  */
-void setSurvTimer(uint8_t tid, bool value);
+void setSurvTimer(bool value);
 
 /** @brief To turn off Real SAI effecter*/
 void turnOffRealSAIEffecter();
@@ -529,6 +546,8 @@ void handleBootTypesAtChassisOff();
 ~Handler() = default;
 
 pldm::responder::CodeUpdate* codeUpdate;   //!< pointer to CodeUpdate object
+
+    ~Handler() = default;
 
 pldm::responder::SlotHandler* slotHandler; //!< pointer to SlotHandler object
 
@@ -588,8 +607,22 @@ std::unique_ptr<sdbusplus::bus::match_t> hostOffMatch;
 /** @brief D-Bus property changed signal match */
 std::unique_ptr<sdbusplus::bus::match_t> powerStateOffMatch;
 
+<<<<<<< HEAD
 /** @brief D-Bus Interface added signal match for virtual platform SAI */
 std::unique_ptr<sdbusplus::bus::match_t> platformSAIMatch;
+=======
+    /** @brief D-Bus property changed signal match */
+    std::unique_ptr<sdbusplus::bus::match::match> hostOffMatch;
+    std::unique_ptr<sdbusplus::bus::match::match> updateBIOSMatch;
+    /** @brief D-Bus Interfaced added signal match for Entity Manager */
+    std::unique_ptr<sdbusplus::bus::match::match> ibmCompatibleMatch;
+    /** @brief D-Bus Interfaced added signal match for State Manager */
+    std::unique_ptr<sdbusplus::bus::match::match> stateManagerMatch;
+    /** @brief D-Bus property Changed Signal match for bootProgress*/
+    std::unique_ptr<sdbusplus::bus::match::match> bootProgressMatch;
+    /** @brief Timer used for monitoring surveillance pings from host */
+    sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic> timer;
+>>>>>>> af349d9f (PLDM: Implement timer for Surveillance Pings (#227))
 
 /** @brief D-Bus Interface added signal match for virtual partition SAI */
 std::unique_ptr<sdbusplus::bus::match_t> partitionSAIMatch;
