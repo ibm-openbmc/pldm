@@ -377,7 +377,7 @@ int createOrUpdateLicenseObjs()
     {
         auto licId = entry.value("Id", empty);
         fs::path l_path = path / licId;
-        licJsonMap.emplace(l_path, entry);
+        licJsonMap.insert_or_assign(l_path, entry);
     }
 
     int rc = createOrUpdateLicenseDbusPaths(createLic);
@@ -491,6 +491,14 @@ bool checkFruPresence(const char* objPath)
     catch (const sdbusplus::exception::SdBusError& e)
     {}
     return isPresent;
+}
+
+void hostPCIETopologyIntf(
+    uint8_t mctp_eid,
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser)
+{
+    CustomDBus::getCustomDBus().implementPcieTopologyInterface(
+        "/xyz/openbmc_project/pldm", mctp_eid, hostEffecterParser);
 }
 
 } // namespace utils

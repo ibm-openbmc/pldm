@@ -54,7 +54,6 @@ class DbusToPLDMEvent
         const pldm::responder::pdr_utils::Repo& repo,
         const pldm::responder::pdr_utils::DbusObjMaps& dbusMaps);
 
-  private:
     /** @brief Send state sensor event msg when a D-Bus property changes
      *  @param[in] sensorId - sensor id
      */
@@ -62,6 +61,7 @@ class DbusToPLDMEvent
         SensorId sensorId,
         const pldm::responder::pdr_utils::DbusObjMaps& dbusMaps);
 
+  private:
     /** @brief Send all of sensor event
      *  @param[in] eventType - PLDM Event types
      *  @param[in] eventDataVec - std::vector, contains send event data

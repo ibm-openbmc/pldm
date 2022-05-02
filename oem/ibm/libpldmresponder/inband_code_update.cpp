@@ -497,6 +497,11 @@ void CodeUpdate::processPriorityChangeNotification(
                                                               : "Temp");
     writeBootSideFile(pldmBootSideData);
     nextBootSide = (pldmBootSideData.next_boot_side == "Temp" ? Tside : Pside);
+    std::string currNextBootSide = getBiosAttrValue(bootNextSideAttrName);
+    if (currNextBootSide == nextBootSide)
+    {
+        return;
+    }
     BiosAttributeList biosAttrList;
     biosAttrList.push_back(
         std::make_pair(bootNextSideAttrName, pldmBootSideData.next_boot_side));

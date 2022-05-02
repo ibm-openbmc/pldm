@@ -21,6 +21,7 @@
 #include "motherboard.hpp"
 #include "operational_status.hpp"
 #include "pcie_slot.hpp"
+#include "pcie_topology.hpp"
 #include "power_supply.hpp"
 #include "software_version.hpp"
 #include "vrm.hpp"
@@ -144,6 +145,18 @@ class CustomDBus
      *
      * @param[in] path - The object path to implement Enable interface
      */
+
+    /** @brief Implement PCIE Topology interface
+     *
+     *  @param[in] path - The object path
+     *  @param[in] mctpEid - mctp endpoint
+     *  @param[in] hostEffecterParser - Pointer to host effecter parser
+     *
+     */
+    void implementPcieTopologyInterface(
+        const std::string& path, uint8_t mctpEid,
+        pldm::host_effecters::HostEffecterParser* hostEffecterParser);
+
     void implementObjectEnableIface(const std::string& path, bool value);
     /** @brief Set the Asserted property
      *
@@ -234,6 +247,18 @@ class CustomDBus
      */
     void setMicrocode(const std::string& path, uint32_t value);
 
+    /** @brief update topology property
+     *
+     *  @param[in] value - topology value
+     */
+    void updateTopologyProperty(bool value);
+
+    /** @brief Remove DBus objects from cache
+     *
+     *  @param[in] types  - entity type
+     */
+    void removeDBus(const std::vector<uint16_t> types);
+
   private:
     std::unordered_map<ObjectPath, std::unique_ptr<LocationCode>> location;
     std::unordered_map<ObjectPath, std::unique_ptr<OperationalStatus>>
@@ -260,6 +285,13 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<LEDGroup>> ledGroup;
     std::unordered_map<ObjectPath, std::unique_ptr<SoftWareVersion>>
         softWareVersion;
+    std::unordered_map<ObjectPath, std::unique_ptr<PCIETopology>> pcietopology;
+
+    /** @brief Remove all DBus object paths from cache
+     *
+     *  @param[in] types  - entity type
+     */
+    void deleteObject(const std::string& path);
 };
 
 } // namespace dbus

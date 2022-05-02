@@ -10,6 +10,7 @@
 #include "file_io_type_dump.hpp"
 #include "file_io_type_lic.hpp"
 #include "file_io_type_lid.hpp"
+#include "file_io_type_pcie.hpp"
 #include "file_io_type_pel.hpp"
 #include "file_io_type_progress_src.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
@@ -175,6 +176,11 @@ std::unique_ptr<FileHandler> getHandlerByType(uint16_t fileType,
         case PLDM_FILE_TYPE_PROGRESS_SRC:
         {
             return std::make_unique<ProgressCodeHandler>(fileHandle);
+        }
+        case PLDM_FILE_TYPE_PCIE_TOPOLOGY:
+        case PLDM_FILE_TYPE_CABLE_INFO:
+        {
+            return std::make_unique<PCIeInfoHandler>(fileHandle, fileType);
         }
         default:
         {

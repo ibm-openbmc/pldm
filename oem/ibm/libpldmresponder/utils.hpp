@@ -1,5 +1,7 @@
 #pragma once
 
+#include "host-bmc/dbus_to_host_effecters.hpp"
+
 #include <nlohmann/json.hpp>
 
 #include <filesystem>
@@ -122,6 +124,15 @@ bool checkFruPresence(const char* objPath);
  */
 void findPortObjects(const std::string& cardObjPath,
                      std::vector<std::string>& portObjects);
+
+/** @brief host PCIE Topology Interface
+ *  @param[in] mctp_eid - MCTP Endpoint ID
+ *  @param[in] hostEffecterParser - Pointer to host effecter parser
+ */
+void hostPCIETopologyIntf(
+    uint8_t mctp_eid,
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser);
+
 } // namespace utils
 } // namespace responder
 } // namespace pldm

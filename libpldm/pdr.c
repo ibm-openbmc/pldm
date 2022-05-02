@@ -1282,10 +1282,11 @@ uint32_t pldm_entity_association_pdr_remove_contained_entity(
 	*event_data_op = PLDM_RECORDS_MODIFIED;
 	updated_hdl =
 	    find_record_handle_by_contained_entity(repo, entity, is_remote);
-	if (!updated_hdl) {
+	if (!updated_hdl || !entity.entity_type) {
 		*event_data_op = PLDM_INVALID_OP;
 		return updated_hdl;
 	}
+
 	/*	printf("\npldm_entity_association_pdr_remove_contained_entity
 	   found " "the record handle to delete %d", updated_hdl);*/
 

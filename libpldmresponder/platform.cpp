@@ -6,6 +6,8 @@
 #include "common/types.hpp"
 #include "common/utils.hpp"
 #include "event_parser.hpp"
+#include "host-bmc/dbus/custom_dbus.hpp"
+#include "host-bmc/dbus/serialize.hpp"
 #include "pdr.hpp"
 #include "pdr_numeric_effecter.hpp"
 #include "pdr_state_effecter.hpp"
@@ -228,6 +230,15 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
     if (payloadLength != PLDM_GET_PDR_REQ_BYTES)
     {
         return CmdHandler::ccOnlyResponse(request, PLDM_ERROR_INVALID_LENGTH);
+    }
+
+    if (isFirstGetPDR && hostPDRHandler && !hostPDRHandler->isHostUp())
+    {
+        isFirstGetPDR = false;
+        // Since the Host is off, remove all cores in the persist file
+        std::vector<uint16_t> types = {32903};
+        pldm::dbus::CustomDBus::getCustomDBus().removeDBus(types);
+        pldm::serialize::Serialize::getSerialize().reSerialize(types);
     }
 
     uint32_t recordHandle{};
@@ -522,6 +533,8 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                                        uint8_t /*formatVersion*/, uint8_t tid,
                                        size_t eventDataOffset)
 {
+    std::cerr << "Got a repo change event from TID: " << (unsigned)tid
+              << std::endl;
     uint8_t eventDataFormat{};
     uint8_t eventDataOperation{};
     uint8_t numberOfChangeRecords{};
