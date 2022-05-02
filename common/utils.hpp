@@ -143,6 +143,8 @@ T decimalToBcd(T decimal)
 
 constexpr auto dbusProperties = "org.freedesktop.DBus.Properties";
 constexpr auto mapperService = "xyz.openbmc_project.ObjectMapper";
+constexpr auto inventoryService = "xyz.openbmc_project.Inventory.Manager";
+constexpr auto inventoryPath = "/xyz/openbmc_project/inventory";
 
 struct DBusMapping
 {
@@ -166,6 +168,9 @@ using MapperServiceMap =
 using MapperGetSubTreeResponse =
     std::vector<std::pair<std::string, MapperServiceMap>>;
 using BiosAttributeList = std::vector<std::pair<std::string, std::string>>;
+using PropertyMap = std::map<std::string, PropertyValue>;
+using InterfaceMap = std::map<std::string, PropertyMap>;
+using ObjectValueTree = std::map<sdbusplus::message::object_path, InterfaceMap>;
 
 /**
  * @brief The interface for DBusHandler
@@ -273,6 +278,29 @@ class DBusHandler : public DBusHandlerInterface
      */
     void setDbusProperty(const DBusMapping& dBusMap,
                          const PropertyValue& value) const override;
+
+    /** @brief This function will returns all the objectspaths under the service
+     * root path, with their interfaces and the properties under those
+     * interfaces     *
+     *  @param[in] service - Service name
+     *  @param[in] value - The root path of the service
+     *
+     *  @return map <objectPath, map<interfaces,map<properyName, value>>>
+     *  @throw sdbusplus::exception::exception when it fails
+     */
+    static ObjectValueTree getManagedObj(const char* service, const char* path);
+
+    /** @brief This function will returns all the objectspaths under inventory
+     * service
+     *
+     *  @return map <objectPath, map<interfaces,map<properyName, value>>>
+     */
+    static auto& getInventoryObjects()
+    {
+        static ObjectValueTree object =
+            getManagedObj(inventoryService, inventoryPath);
+        return object;
+    }
 };
 
 /** @brief Fetch parent D-Bus object based on pathname
