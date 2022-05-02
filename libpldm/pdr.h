@@ -272,6 +272,23 @@ void pldm_change_instance_number_of_effecter(const pldm_pdr *repo,
 void pldm_change_instance_number_of_sensor(const pldm_pdr *repo,
 					   uint16_t sensorId,
 					   uint16_t instanceNumber);
+/** @brief delete the pdr by effecter id
+ *
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *  @param[in] effecter_id - effecter ID
+ *  @param[in] is_remote - indicates which PDR to remove, local or remote
+ */
+uint16_t pldm_delete_by_effecter_id(pldm_pdr *repo, uint16_t effecter_id,
+				    bool is_remote);
+
+/** @brief delete the pdr by sensor id
+ *
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *  @param[in] sensor_id - sensor ID
+ *  @param[in] is_remote - indicates which PDR to remove, local or remote
+ */
+uint16_t pldm_delete_by_sensor_id(pldm_pdr *repo, uint16_t sensor_id,
+				  bool is_remote);
 
 /* ======================= */
 /* FRU Record Set PDR APIs */

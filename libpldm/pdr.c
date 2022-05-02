@@ -724,6 +724,96 @@ void pldm_change_instance_number_of_sensor(const pldm_pdr *repo,
 	}
 }
 
+uint16_t pldm_delete_by_effecter_id(pldm_pdr *repo, uint16_t effecter_id,
+				    bool is_remote)
+{
+	assert(repo != NULL);
+
+	uint32_t delete_handle = 0;
+	pldm_pdr_record *record = repo->first;
+	pldm_pdr_record *prev = NULL;
+	while (record != NULL) {
+		pldm_pdr_record *next = record->next;
+		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
+		if ((record->is_remote == is_remote) &&
+		    hdr->type == PLDM_STATE_EFFECTER_PDR) {
+			struct pldm_state_effecter_pdr *pdr =
+			    (struct pldm_state_effecter_pdr *)((uint8_t *)record
+								   ->data);
+			if (pdr->effecter_id == effecter_id) {
+				delete_handle = hdr->record_handle;
+				if (repo->first == record) {
+					repo->first = next;
+				} else {
+					prev->next = next;
+				}
+				if (repo->last == record) {
+					repo->last = prev;
+					prev->next = NULL;
+				}
+				--repo->record_count;
+				repo->size -= record->size;
+				if (record->data) {
+					free(record->data);
+				}
+				free(record);
+				break;
+			} else {
+				prev = record;
+			}
+		} else {
+			prev = record;
+		}
+		record = next;
+	}
+	return delete_handle;
+}
+
+uint16_t pldm_delete_by_sensor_id(pldm_pdr *repo, uint16_t sensor_id,
+				  bool is_remote)
+{
+	assert(repo != NULL);
+
+	uint32_t delete_handle = 0;
+	pldm_pdr_record *record = repo->first;
+	pldm_pdr_record *prev = NULL;
+	while (record != NULL) {
+		pldm_pdr_record *next = record->next;
+		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
+		if ((record->is_remote == is_remote) &&
+		    hdr->type == PLDM_STATE_SENSOR_PDR) {
+			struct pldm_state_sensor_pdr *pdr =
+			    (struct pldm_state_sensor_pdr *)((uint8_t *)
+								 record->data);
+			if (pdr->sensor_id == sensor_id) {
+				delete_handle = hdr->record_handle;
+				if (repo->first == record) {
+					repo->first = next;
+				} else {
+					prev->next = next;
+				}
+				if (repo->last == record) {
+					repo->last = prev;
+					prev->next = NULL;
+				}
+				--repo->record_count;
+				repo->size -= record->size;
+				if (record->data) {
+					free(record->data);
+				}
+				free(record);
+				break;
+			} else {
+				prev = record;
+			}
+		} else {
+			prev = record;
+		}
+		record = next;
+	}
+	return delete_handle;
+}
+
 typedef struct pldm_entity_association_tree {
 	pldm_entity_node *root;
 	uint16_t last_used_container_id;

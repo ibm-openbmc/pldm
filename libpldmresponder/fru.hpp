@@ -271,6 +271,9 @@ class FruImpl
     std::map<dbus::ObjectPath, pldm_entity> objToEntityNode{};
     dbus::ObjectPathToRSIMap objectPathToRSIMap{};
 
+    pdr_utils::DbusObjMaps effecterDbusObjMaps{};
+    pdr_utils::DbusObjMaps sensorDbusObjMaps{};
+
     /** @brief populateRecord builds the FRU records for an instance of FRU and
      *         updates the FRU table with the FRU records.
      *
