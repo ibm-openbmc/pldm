@@ -49,6 +49,7 @@ static constexpr auto PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER = 24580;
 constexpr uint16_t ENTITY_INSTANCE_0 = 0;
 constexpr uint16_t ENTITY_INSTANCE_1 = 1;
 
+static constexpr uint8_t HEARTBEAT_TIMEOUT_DELTA = 10;
 struct InstanceInfo
 {
     uint8_t procId;
@@ -76,7 +77,10 @@ class Handler : public oem_platform::Handler
         codeUpdate(codeUpdate), slotHandler(slotHandler),
         platformHandler(nullptr), mctp_fd(mctp_fd), mctp_eid(mctp_eid),
         requester(requester), event(event), pdrRepo(repo), handler(handler),
-        bmcEntityTree(bmcEntityTree), hostEffecterParser(hostEffecterParser)
+        bmcEntityTree(bmcEntityTree), hostEffecterParser(hostEffecterParser),
+        timer(event,
+              std::bind(std::mem_fn(&Handler::setSurvTimer), this, false))
+
     {
         codeUpdate->setVersions();
         pldm::responder::utils::clearLicenseStatus();
@@ -425,6 +429,14 @@ class Handler : public oem_platform::Handler
     /** @brief To process auto power restore policy*/
     void processPowerOffHardGraceful();
 
+    /** @brief Method to Enable/Disable timer to see if host sends the
+     * surveillance ping and logs informational error if host fails to send the
+     * surveillance pings
+     *
+     * @param[in] value - true or false, to indicate if the timer is
+     *                    running or not*/
+    void setSurvTimer(bool value);
+
     ~Handler() = default;
 
     pldm::responder::CodeUpdate* codeUpdate; //!< pointer to CodeUpdate object
@@ -490,6 +502,8 @@ class Handler : public oem_platform::Handler
     std::unique_ptr<sdbusplus::bus::match::match> stateManagerMatch;
     /** @brief D-Bus property Changed Signal match for bootProgress*/
     std::unique_ptr<sdbusplus::bus::match::match> bootProgressMatch;
+    /** @brief Timer used for monitoring surveillance pings from host */
+    sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic> timer;
 
     bool hostOff = true;
 
