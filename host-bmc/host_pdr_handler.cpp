@@ -1049,7 +1049,13 @@ void HostPDRHandler::_setHostSensorState()
                     std::cerr << "Failed to receive response for "
                                  "getStateSensorReading command for sensor id="
                               << sensorId << std::endl;
-                    return;
+                    ++sensorIndex;
+                    if (sensorIndex == stateSensorPDRs.end())
+                    {
+                        sensorIndex = stateSensorPDRs.begin();
+                        return;
+                    }
+                    _setHostSensorState();
                 }
                 std::array<get_sensor_state_field, 8> stateField{};
                 uint8_t completionCode = 0;
@@ -1066,6 +1072,13 @@ void HostPDRHandler::_setHostSensorState()
                               << rc
                               << " cc=" << static_cast<unsigned>(completionCode)
                               << " SensorId=" << sensorId << std::endl;
+                    ++sensorIndex;
+                    if (sensorIndex == stateSensorPDRs.end())
+                    {
+                        sensorIndex = stateSensorPDRs.begin();
+                        return;
+                    }
+                    _setHostSensorState();
                 }
 
                 uint8_t eventState;
@@ -1104,6 +1117,7 @@ void HostPDRHandler::_setHostSensorState()
                         {
                             std::cerr << "No mapping for the events"
                                       << std::endl;
+                            continue;
                         }
                     }
 
@@ -1112,7 +1126,7 @@ void HostPDRHandler::_setHostSensorState()
                         std::cerr
                             << " Error Invalid data, Invalid sensor offset,"
                             << " SensorId=" << sensorId << std::endl;
-                        return;
+                        continue;
                     }
 
                     const auto& possibleStates =
@@ -1121,7 +1135,7 @@ void HostPDRHandler::_setHostSensorState()
                     {
                         std::cerr << " Error invalid_data, Invalid event state,"
                                   << " SensorId=" << sensorId << std::endl;
-                        return;
+                        continue;
                     }
                     const auto& [containerId, entityType, entityInstance] =
                         entityInfo;
@@ -1132,6 +1146,7 @@ void HostPDRHandler::_setHostSensorState()
                     handleStateSensorEvent(stateSetIds, stateSensorEntry,
                                            eventState);
                 }
+                ++sensorIndex;
                 if (sensorIndex == stateSensorPDRs.end())
                 {
                     sensorIndex = stateSensorPDRs.begin();
@@ -1139,7 +1154,6 @@ void HostPDRHandler::_setHostSensorState()
                         << "Completed get_state_sensor_reading commands on all the host sensors\n";
                     return;
                 }
-                sensorIndex++;
                 _setHostSensorState();
             };
 
