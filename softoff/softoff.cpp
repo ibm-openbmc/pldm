@@ -38,11 +38,9 @@ pldm::pdr::TerminusID TID = 0;
 namespace sdbusRule = sdbusplus::bus::match::rules;
 
 SoftPowerOff::SoftPowerOff(sdbusplus::bus_t& bus, sd_event* event,
-                           pldm::InstanceIdDb& instanceIdDb,
-                           bool noTimeOut) :
+                           pldm::InstanceIdDb& instanceIdDb, bool noTimeOut) :
     bus(bus),
-    timer(event), instanceIdDb(instanceIdDb),
-    noTimeOut(noTimeOut)
+    timer(event), instanceIdDb(instanceIdDb), noTimeOut(noTimeOut)
 {
     auto jsonData = parseConfig();
 
@@ -374,7 +372,7 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
         }
 
         info("Got the response for set effecter states command, PLDM RC = {RC}",
-              "RC", lg2::hex, static_cast<uint16_t>(response->payload[0]));
+             "RC", lg2::hex, static_cast<uint16_t>(response->payload[0]));
         std::vector<uint8_t> responseMessage;
         responseMessage.resize(responseMsgSize);
         memcpy(responseMessage.data(), responseMsg, responseMessage.size());
@@ -393,15 +391,15 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
             if (ret < 0)
             {
                 error(
-                     "Failure to start Host soft off wait timer, ERRNO = {RET}. Exit the pldm-softpoweroff",
-                     "RET", ret);
+                    "Failure to start Host soft off wait timer, ERRNO = {RET}. Exit the pldm-softpoweroff",
+                    "RET", ret);
                 exit(-1);
             }
             else
             {
                 error(
-                     "Timer started waiting for host soft off, TIMEOUT_IN_SEC = {TIMEOUT_SEC}",
-                     "TIMEOUT_SEC", SOFTOFF_TIMEOUT_SECONDS);
+                    "Timer started waiting for host soft off, TIMEOUT_IN_SEC = {TIMEOUT_SEC}",
+                    "TIMEOUT_SEC", SOFTOFF_TIMEOUT_SECONDS);
             }
         }
         return;
