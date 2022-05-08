@@ -103,6 +103,7 @@ HostPDRHandler::HostPDRHandler(
     associationsParser(associationsParser),
     oemPlatformHandler(oemPlatformHandler)
 {
+    isHostOff = false;
     mergedHostParents = false;
     fs::path hostFruJson(fs::path(HOST_JSONS_DIR) / fruJson);
     if (fs::exists(hostFruJson))
@@ -188,10 +189,12 @@ HostPDRHandler::HostPDRHandler(
                     {
                         this->objPathMap[element.first] = nullptr;
                     }
+                    isHostOff = true;
                 }
                 else if (propVal ==
                          "xyz.openbmc_project.State.Host.HostState.Running")
                 {
+                    isHostOff = false;
                     if (oemPlatformHandler != nullptr)
                     {
                         oemPlatformHandler->handleBootTypesAtPowerOn();
@@ -1359,6 +1362,14 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
                 << sensorId << std::endl;
             // even when for some reason , if we fail to get a response
             // to one sensor, try all the dbus objects
+
+            if (this->isHostOff)
+            {
+                std::cerr
+                    << "Host is off, stopped sending sensor states command\n";
+                return;
+            }
+
             ++sensorMapIndex;
             if (sensorMapIndex == sensorMap.end())
             {
@@ -1514,6 +1525,13 @@ void HostPDRHandler::setLocationCode(
 }
 void HostPDRHandler::setOperationStatus()
 {
+    if (isHostOff)
+    {
+        // If host is off, then no need to
+        // proceed further
+        return;
+    }
+
     if (objMapIndex != objPathMap.end())
     {
 
