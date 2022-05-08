@@ -1186,6 +1186,8 @@ void HostPDRHandler::getFRURecordTableMetadataByHost(
         {
             std::cerr << "Failed to receive response for the Get FRU Record "
                          "Table Metadata\n";
+            // update xyz.openbmc_project.State.Decorator.OperationalStatus
+            setOperationStatus();
             return;
         }
 
@@ -1206,6 +1208,8 @@ void HostPDRHandler::getFRURecordTableMetadataByHost(
             std::cerr << "Faile to decode get fru record table metadata resp, "
                          "Message Error: "
                       << "rc=" << rc << ",cc=" << (int)cc << std::endl;
+            // update xyz.openbmc_project.State.Decorator.OperationalStatus
+            setOperationStatus();
             return;
         }
 
@@ -1262,6 +1266,8 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records,
         {
             std::cerr << "Failed to receive response for the Get FRU Record "
                          "Table\n";
+            // update xyz.openbmc_project.State.Decorator.OperationalStatus
+            setOperationStatus();
             return;
         }
 
@@ -1281,6 +1287,8 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records,
             std::cerr
                 << "Failed to decode get fru record table resp, Message Error: "
                 << "rc=" << rc << ",cc=" << (int)cc << std::endl;
+            // update xyz.openbmc_project.State.Decorator.OperationalStatus
+            setOperationStatus();
             return;
         }
 
@@ -1511,6 +1519,9 @@ void HostPDRHandler::setLocationCode(
             }
         }
     }
+
+    // update xyz.openbmc_project.State.Decorator.OperationalStatus
+    setOperationStatus();
 }
 void HostPDRHandler::setOperationStatus()
 {
@@ -1613,13 +1624,11 @@ void HostPDRHandler::setAvailabilityState(const std::string& path)
 
 void HostPDRHandler::createDbusObjects(const PDRList& fruRecordSetPDRs)
 {
-    getFRURecordTableMetadataByHost(fruRecordSetPDRs);
+    std::cerr << "Refreshing dbus hosted by pldm Started \n";
+
     objMapIndex = objPathMap.begin();
 
     sensorMapIndex = sensorMap.begin();
-
-    // update xyz.openbmc_project.State.Decorator.OperationalStatus
-    setOperationStatus();
 
     for (const auto& entity : objPathMap)
     {
@@ -1677,6 +1686,8 @@ void HostPDRHandler::createDbusObjects(const PDRList& fruRecordSetPDRs)
         }
     }
     this->setFRUDynamicAssociations();
+    getFRURecordTableMetadataByHost(fruRecordSetPDRs);
+    std::cerr << "Refreshing dbus hosted by pldm Completed \n";
 }
 void HostPDRHandler::setFRUDynamicAssociations()
 {
