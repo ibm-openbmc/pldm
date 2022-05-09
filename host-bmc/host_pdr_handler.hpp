@@ -431,6 +431,9 @@ class HostPDRHandler
     /** @brief Object path and entity association and is only loaded once
      */
     bool objPathEntityAssociation;
+
+    /** @brief variable to capture the host state */
+    bool isHostOff;
 };
 
 } // namespace pldm
