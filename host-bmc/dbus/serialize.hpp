@@ -60,9 +60,12 @@ class Serialize
 
     void reSerialize(const std::vector<uint16_t> types);
 
+    void setEntityTypes(const std::set<uint16_t>& storeEntities);
+
   private:
     dbus::SavedObjs savedObjs;
     fs::path filePath{PERSISTENT_FILE};
+    std::set<uint16_t> storeEntityTypes;
     std::map<ObjectPath, pldm_entity> entityPathMaps;
 };
 

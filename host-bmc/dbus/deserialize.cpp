@@ -178,15 +178,17 @@ std::unordered_map<std::string, callback> ibmDbusHandler{
                                                                     version);
      }}};
 
-std::set<uint16_t> getEntityTypes(const fs::path& path)
+std::pair<std::set<uint16_t>, std::set<uint16_t>>
+    getEntityTypes(const fs::path& path)
 {
-    std::set<uint16_t> entityTypes{};
+    std::set<uint16_t> restoreTypes{};
+    std::set<uint16_t> storeTypes{};
 
     if (!fs::exists(path) || fs::is_empty(path))
     {
         std::cerr << "The file does not exist or is empty, FILE_PATH = " << path
                   << std::endl;
-        return entityTypes;
+        return std::make_pair(restoreTypes, storeTypes);
     }
 
     try
@@ -196,9 +198,18 @@ std::set<uint16_t> getEntityTypes(const fs::path& path)
 
         // define the default JSON as empty
         const std::set<uint16_t> empty{};
-        auto objectPaths = json.value("entityTypes", empty);
-        std::ranges::transform(objectPaths,
-                               std::inserter(entityTypes, entityTypes.begin()),
+        const Json emptyjson{};
+        auto restorePaths = json.value("restore", emptyjson);
+        auto storePaths = json.value("store", emptyjson);
+        auto restoreobjectPaths = restorePaths.value("entityTypes", empty);
+        auto storeobjectPaths = storePaths.value("entityTypes", empty);
+
+        std::ranges::transform(
+            restoreobjectPaths,
+            std::inserter(restoreTypes, restoreTypes.begin()),
+            [](const auto& i) { return i; });
+        std::ranges::transform(storeobjectPaths,
+                               std::inserter(storeTypes, storeTypes.begin()),
                                [](const auto& i) { return i; });
     }
     catch (const std::exception& e)
@@ -207,7 +218,7 @@ std::set<uint16_t> getEntityTypes(const fs::path& path)
                   << ", ERROR = " << e.what() << std::endl;
     }
 
-    return entityTypes;
+    return std::make_pair(restoreTypes, storeTypes);
 }
 
 void restoreDbusObj(HostPDRHandler* hostPDRHandler)
@@ -217,17 +228,20 @@ void restoreDbusObj(HostPDRHandler* hostPDRHandler)
         return;
     }
 
+    auto entityTypes = getEntityTypes(DBUS_JSON_FILE);
+    pldm::serialize::Serialize::getSerialize().setEntityTypes(
+        entityTypes.second);
+
     if (!pldm::serialize::Serialize::getSerialize().deserialize())
     {
         return;
     }
 
-    auto entityTypes = getEntityTypes(DBUS_JSON_FILE);
     auto savedObjs = pldm::serialize::Serialize::getSerialize().getSavedObjs();
 
     for (auto& [type, objs] : savedObjs)
     {
-        if (!entityTypes.contains(type))
+        if (!entityTypes.first.contains(type))
         {
             continue;
         }

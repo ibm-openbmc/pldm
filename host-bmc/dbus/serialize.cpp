@@ -2,7 +2,7 @@
 
 #include "type.hpp"
 
-#include <cereal/archives/json.hpp>
+#include <cereal/archives/binary.hpp>
 #include <cereal/types/map.hpp>
 #include <cereal/types/string.hpp>
 #include <cereal/types/tuple.hpp>
@@ -36,6 +36,11 @@ void Serialize::serialize(const std::string& path, const std::string& intf,
         return;
     }
 
+    if (!storeEntityTypes.contains(entityPathMaps[path].entity_type))
+    {
+        return;
+    }
+
     uint16_t type = entityPathMaps[path].entity_type;
     uint16_t num = entityPathMaps[path].entity_instance_num;
     uint16_t cid = entityPathMaps[path].entity_container_id;
@@ -49,7 +54,27 @@ void Serialize::serialize(const std::string& path, const std::string& intf,
     else
     {
         auto& [num, cid, objs] = savedObjs[type][path];
-        objs[intf][name] = value;
+
+        if (objs.empty())
+        {
+            objs[intf][name] = value;
+        }
+        else
+        {
+            if (value != objs[intf][name])
+            {
+                // The value is changed and is not equal to
+                // the value in the in-memory cache, so update it
+                // and update the persistent cache file
+                objs[intf][name] = value;
+            }
+            else
+            {
+                // The value in memory cache is same as the new value
+                // so no need to serialise it again
+                return;
+            }
+        }
     }
 
     auto dir = filePath.parent_path();
@@ -59,7 +84,7 @@ void Serialize::serialize(const std::string& path, const std::string& intf,
     }
 
     std::ofstream os(filePath.c_str(), std::ios::binary);
-    cereal::JSONOutputArchive oarchive(os);
+    cereal::BinaryOutputArchive oarchive(os);
     oarchive(savedObjs);
 }
 
@@ -76,7 +101,7 @@ bool Serialize::deserialize()
     {
         savedObjs.clear();
         std::ifstream is(filePath.c_str(), std::ios::in | std::ios::binary);
-        cereal::JSONInputArchive iarchive(is);
+        cereal::BinaryInputArchive iarchive(is);
         iarchive(savedObjs);
 
         return true;
@@ -89,6 +114,11 @@ bool Serialize::deserialize()
     }
 
     return false;
+}
+
+void Serialize::setEntityTypes(const std::set<uint16_t>& storeEntities)
+{
+    storeEntityTypes = storeEntities;
 }
 
 void Serialize::setObjectPathMaps(const ObjectPathMaps& maps)
@@ -124,7 +154,7 @@ void Serialize::reSerialize(const std::vector<uint16_t> types)
     }
 
     std::ofstream os(filePath.c_str(), std::ios::binary);
-    cereal::JSONOutputArchive oarchive(os);
+    cereal::BinaryOutputArchive oarchive(os);
     oarchive(this->savedObjs);
 }
 
