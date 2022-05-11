@@ -49,6 +49,8 @@ static constexpr auto PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER = 24580;
 constexpr uint16_t ENTITY_INSTANCE_0 = 0;
 constexpr uint16_t ENTITY_INSTANCE_1 = 1;
 
+const pldm::pdr::TerminusID HYPERVISOR_TID = 208;
+
 static constexpr uint8_t HEARTBEAT_TIMEOUT_DELTA = 10;
 struct InstanceInfo
 {
@@ -78,8 +80,8 @@ class Handler : public oem_platform::Handler
         platformHandler(nullptr), mctp_fd(mctp_fd), mctp_eid(mctp_eid),
         requester(requester), event(event), pdrRepo(repo), handler(handler),
         bmcEntityTree(bmcEntityTree), hostEffecterParser(hostEffecterParser),
-        timer(event,
-              std::bind(std::mem_fn(&Handler::setSurvTimer), this, false))
+        timer(event, std::bind(std::mem_fn(&Handler::setSurvTimer), this,
+                               HYPERVISOR_TID, false))
 
     {
         codeUpdate->setVersions();
@@ -433,9 +435,10 @@ class Handler : public oem_platform::Handler
      * surveillance ping and logs informational error if host fails to send the
      * surveillance pings
      *
+     * @param[in] tid - TID of the host
      * @param[in] value - true or false, to indicate if the timer is
      *                    running or not*/
-    void setSurvTimer(bool value);
+    void setSurvTimer(uint8_t tid, bool value);
 
     ~Handler() = default;
 
