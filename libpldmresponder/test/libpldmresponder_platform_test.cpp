@@ -620,7 +620,7 @@ TEST(getStateSensorReadingsHandler, testGoodRequest)
     ASSERT_EQ(rc, 0);
     ASSERT_EQ(compSensorCnt, 1);
     ASSERT_EQ(stateField[0].sensor_op_state, PLDM_SENSOR_UNAVAILABLE);
-    ASSERT_EQ(stateField[0].present_state, PLDM_SENSOR_NORMAL);
+    ASSERT_EQ(stateField[0].present_state, PLDM_SENSOR_UNKNOWN);
     ASSERT_EQ(stateField[0].previous_state, PLDM_SENSOR_UNKNOWN);
     ASSERT_EQ(stateField[0].event_state, PLDM_SENSOR_UNKNOWN);
 

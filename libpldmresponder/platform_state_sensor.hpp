@@ -153,8 +153,8 @@ int getStateSensorReadingsHandler(
                 opState = PLDM_SENSOR_UNAVAILABLE;
             }
 
-            stateField.push_back({opState, PLDM_SENSOR_NORMAL,
-                                  PLDM_SENSOR_UNKNOWN, sensorEvent});
+            stateField.push_back(
+                {opState, sensorEvent, PLDM_SENSOR_UNKNOWN, sensorEvent});
         }
     }
     catch (const std::out_of_range& e)
