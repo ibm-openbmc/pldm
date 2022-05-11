@@ -236,8 +236,7 @@
             "SavedList",
             "SmsMenu",
             "OkPrompt",
-            "DefaultList",
-            "PblBootLid"
+            "DefaultList"
          ],
          "default_values":[
             "Normal"
@@ -252,8 +251,7 @@
             "SavedList",
             "SmsMenu",
             "OkPrompt",
-            "DefaultList",
-            "PblBootLid"
+            "DefaultList"
          ],
          "default_values":[
             "Normal"
