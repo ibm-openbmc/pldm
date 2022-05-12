@@ -1222,8 +1222,6 @@ void HostPDRHandler::getFRURecordTableMetadataByHost(
         {
             std::cerr << "Failed to receive response for the Get FRU Record "
                          "Table Metadata\n";
-            // update xyz.openbmc_project.State.Decorator.OperationalStatus
-            setOperationStatus();
             return;
         }
 
@@ -1244,8 +1242,6 @@ void HostPDRHandler::getFRURecordTableMetadataByHost(
             std::cerr << "Faile to decode get fru record table metadata resp, "
                          "Message Error: "
                       << "rc=" << rc << ",cc=" << (int)cc << std::endl;
-            // update xyz.openbmc_project.State.Decorator.OperationalStatus
-            setOperationStatus();
             return;
         }
 
@@ -1302,8 +1298,6 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records,
         {
             std::cerr << "Failed to receive response for the Get FRU Record "
                          "Table\n";
-            // update xyz.openbmc_project.State.Decorator.OperationalStatus
-            setOperationStatus();
             return;
         }
 
@@ -1323,8 +1317,6 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records,
             std::cerr
                 << "Failed to decode get fru record table resp, Message Error: "
                 << "rc=" << rc << ",cc=" << (int)cc << std::endl;
-            // update xyz.openbmc_project.State.Decorator.OperationalStatus
-            setOperationStatus();
             return;
         }
 
@@ -1563,9 +1555,6 @@ void HostPDRHandler::setLocationCode(
             }
         }
     }
-
-    // update xyz.openbmc_project.State.Decorator.OperationalStatus
-    setOperationStatus();
 }
 void HostPDRHandler::setOperationStatus()
 {
@@ -1738,6 +1727,9 @@ void HostPDRHandler::createDbusObjects(const PDRList& fruRecordSetPDRs)
     }
     this->setFRUDynamicAssociations();
     getFRURecordTableMetadataByHost(fruRecordSetPDRs);
+
+    // update xyz.openbmc_project.State.Decorator.OperationalStatus
+    setOperationStatus();
     std::cerr << "Refreshing dbus hosted by pldm Completed \n";
 }
 void HostPDRHandler::setFRUDynamicAssociations()
