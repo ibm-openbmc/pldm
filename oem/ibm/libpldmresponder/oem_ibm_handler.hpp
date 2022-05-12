@@ -87,10 +87,15 @@ constexpr uint16_t ENTITY_INSTANCE_0 = 0;
 constexpr uint16_t ENTITY_INSTANCE_1 = 1;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 const pldm::pdr::TerminusID HYPERVISOR_TID = 208;
 
 static constexpr uint8_t HEARTBEAT_TIMEOUT_DELTA = 10;
 =======
+=======
+const pldm::pdr::TerminusID HYPERVISOR_TID = 208;
+
+>>>>>>> 4dc9723a (PLDM: Log RecvSurveillancePingFail only if PHYP fails to send surveillance pings (#236))
 static constexpr uint8_t HEARTBEAT_TIMEOUT_DELTA = 10;
 struct InstanceInfo
 {
@@ -127,8 +132,8 @@ class Handler : public oem_platform::Handler
 =======
         requester(requester), event(event), pdrRepo(repo), handler(handler),
         bmcEntityTree(bmcEntityTree), hostEffecterParser(hostEffecterParser),
-        timer(event,
-              std::bind(std::mem_fn(&Handler::setSurvTimer), this, false))
+        timer(event, std::bind(std::mem_fn(&Handler::setSurvTimer), this,
+                               HYPERVISOR_TID, false))
 
 >>>>>>> af349d9f (PLDM: Implement timer for Surveillance Pings (#227))
     {
@@ -488,14 +493,14 @@ void processPowerOffSoftGraceful();
 /** @brief To process auto power restore policy*/
 void processPowerOffHardGraceful();
 
-/** @brief Method to Enable/Disable timer to see if remote terminus sends
- *  the surveillance ping and logs informational error if remote terminus
- *  fails to send the surveillance pings
+/** @brief Method to Enable/Disable timer to see if host sends the
+ *  surveillance ping and logs informational error if host fails to send the
+ *  surveillance pings
  *
- * @param[in] value - true or false, to indicate if the timer is
- *                    running or not
- */
-void setSurvTimer(bool value);
+ *  @param[in] tid - TID of the host
+ *  @param[in] value - true or false, to indicate if the timer is
+ *                     running or not*/
+void setSurvTimer(uint8_t tid, bool value);
 
 /** @brief To turn off Real SAI effecter*/
 void turnOffRealSAIEffecter();
