@@ -264,7 +264,6 @@ class Handler : public oem_platform::Handler
                     std::get<std::string>(attributevalue);
                 codeUpdate->setNextBootSide(nextBootSide);
             }
-<<<<<<< HEAD
         });
 
         partitionSAIMatch = std::make_unique<sdbusplus::bus::match_t>(
