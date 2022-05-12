@@ -1351,6 +1351,21 @@ void pldm::responder::oem_ibm_platform::Handler::handleBootTypesAtChassisOff()
     }
 }
 
+                reinterpret_cast<pldm_state_sensor_pdr*>(faultSensorPDR.data());
+            if (instanceNumber == (pdr->entity_instance) - 1)
+            {
+                uint16_t newContainerID = pldm_find_container_id(
+                    pdrRepo, PLDM_ENTITY_PROC_MODULE, value.dcmId);
+                pldm_change_container_id_of_sensor(pdrRepo, pdr->sensor_id,
+                                                   newContainerID);
+                pldm_change_instance_number_of_sensor(pdrRepo, pdr->sensor_id,
+                                                      (instanceNumber % 2));
+                break;
+            }
+        }
+    }
+}
+
 } // namespace oem_ibm_platform
 } // namespace responder
 } // namespace pldm
