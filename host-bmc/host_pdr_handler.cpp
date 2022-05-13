@@ -1787,9 +1787,17 @@ void HostPDRHandler::setRecordPresent(uint32_t recordHandle)
                 recordEntity.entity_instance_num &&
             dbusEntity.entity_container_id == recordEntity.entity_container_id)
         {
+            std::cerr << "Removing Host FRU "
+                      << "[ " << path << " ]  with entityid [ "
+                      << recordEntity.entity_type << ","
+                      << recordEntity.entity_instance_num << ","
+                      << recordEntity.entity_container_id << "]" << std::endl;
             // if the record has the same entity id, mark that dbus object as
             // not present
             CustomDBus::getCustomDBus().updateItemPresentStatus(path, false);
+            CustomDBus::getCustomDBus().setOperationalStatus(
+                path, false, getParentChassis(path));
+            return;
         }
     }
 }
@@ -1798,6 +1806,7 @@ void HostPDRHandler::deletePDRFromRepo(PDRRecordHandles&& recordHandles)
 {
     for (auto& recordHandle : recordHandles)
     {
+        std::cerr << "Record handle deleted: " << recordHandle << std::endl;
         this->setRecordPresent(recordHandle);
         pldm_delete_by_record_handle(repo, recordHandle, true);
     }

@@ -263,7 +263,9 @@ uint8_t SlotHandler::fetchSlotSensorState(const std::string& slotObjectPath)
     }
     catch (const std::bad_optional_access& e)
     {
-        std::cerr << e.what() << '\n';
+        std::cerr
+            << "Failed to get the adapterObjectPath from slotObjectPath : "
+            << slotObjectPath << e.what() << '\n';
         return uint8_t(SLOT_STATE_UNKOWN);
     }
 

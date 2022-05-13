@@ -240,6 +240,7 @@ void Handler::processSetEventReceiver(
 
 Response Handler::getTID(const pldm_msg* request, size_t /*payloadLength*/)
 {
+    std::cerr << "Got a getTID request " << std::endl;
     // assigned 1 to the bmc as the PLDM terminus
     uint8_t tid = 1;
 
