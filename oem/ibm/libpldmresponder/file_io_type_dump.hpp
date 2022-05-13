@@ -6,7 +6,6 @@ namespace pldm
 {
 namespace responder
 {
-
 /** @class DumpHandler
  *
  *  @brief Inherits and implements FileHandler. This class is used
@@ -59,8 +58,8 @@ class DumpHandler : public FileHandler
     ~DumpHandler()
     {}
 
+    static int fd; //!< fd to manage the dump offload to bmc
   private:
-    static int fd;     //!< fd to manage the dump offload to bmc
     uint16_t dumpType; //!< type of the dump
     std::string
         resDumpRequestDirPath; //!< directory where the resource

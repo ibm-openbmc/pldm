@@ -40,7 +40,6 @@ static constexpr auto sbeDumpObjPath = "/xyz/openbmc_project/dump/sbe/entry";
 static constexpr auto hardwareDumpObjPath =
     "/xyz/openbmc_project/dump/hardware/entry";
 
-int DumpHandler::fd = -1;
 namespace fs = std::filesystem;
 extern SocketWriteStatus socketWriteStatus;
 

@@ -3,6 +3,7 @@
 #include "libpldm/base.h"
 
 #include "common/utils.hpp"
+#include "file_io_type_dump.hpp"
 #include "host-bmc/dbus/custom_dbus.hpp"
 
 #include <sys/mman.h>
@@ -23,7 +24,7 @@ namespace pldm
 using namespace pldm::dbus;
 namespace responder
 {
-
+int DumpHandler::fd = -1;
 std::atomic<SocketWriteStatus> socketWriteStatus = Free;
 std::mutex lockMutex;
 
@@ -176,6 +177,7 @@ void writeToUnixSocket(const int sock, const char* buf,
                 std::cerr << "writeToUnixSocket: Failed to write " << errno
                           << std::endl;
                 close(sock);
+                DumpHandler::fd = -1;
                 socketWriteStatus = Error;
                 return;
             }
