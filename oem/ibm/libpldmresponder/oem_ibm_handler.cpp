@@ -1671,6 +1671,7 @@ void pldm::responder::oem_ibm_platform::Handler::updateContainerIDofProcLed()
 void pldm::responder::oem_ibm_platform::Handler::
     processPowerCycleOffSoftGraceful()
 {
+    std::cerr << "Received soft graceful power cycle request" << std::endl;
     pldm::utils::PropertyValue value =
         "xyz.openbmc_project.State.Host.Transition.ForceWarmReboot";
     pldm::utils::DBusMapping dbusMapping{"/xyz/openbmc_project/state/host0",
@@ -1690,6 +1691,7 @@ void pldm::responder::oem_ibm_platform::Handler::
 
 void pldm::responder::oem_ibm_platform::Handler::processPowerOffSoftGraceful()
 {
+    std::cerr << "Received soft power off graceful request" << std::endl;
     pldm::utils::PropertyValue value =
         "xyz.openbmc_project.State.Chassis.Transition.Off";
     pldm::utils::DBusMapping dbusMapping{"/xyz/openbmc_project/state/chassis0",
@@ -1709,6 +1711,7 @@ void pldm::responder::oem_ibm_platform::Handler::processPowerOffSoftGraceful()
 
 void pldm::responder::oem_ibm_platform::Handler::processPowerOffHardGraceful()
 {
+    std::cerr << "Received hard power off graceful request" << std::endl;
     pldm::utils::PropertyValue value =
         "xyz.openbmc_project.Control.Power.RestorePolicy.Policy.AlwaysOn";
     pldm::utils::DBusMapping dbusMapping{
@@ -1725,6 +1728,7 @@ void pldm::responder::oem_ibm_platform::Handler::processPowerOffHardGraceful()
             << "Setting one-time restore policy failed, Unable to set property PowerRestorePolicy. ERROR="
             << e.what() << "\n";
     }
+    processPowerOffSoftGraceful();
 }
 
 void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
