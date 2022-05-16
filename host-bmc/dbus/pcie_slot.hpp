@@ -56,6 +56,15 @@ class PCIeSlot : public ItemSlot
     /** Set value of HotPluggable */
     bool hotPluggable(bool value) override;
 
+    /** Get busId */
+    size_t busId() const override;
+
+    /** Set busId */
+    size_t busId(size_t value) override;
+
+    /** Set linkStatus */
+    Status linkStatus(Status value) override;
+
   private:
     std::string path;
 };

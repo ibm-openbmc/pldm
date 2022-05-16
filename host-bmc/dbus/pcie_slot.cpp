@@ -17,6 +17,12 @@ auto PCIeSlot::generation(Generations value) -> Generations
         generation(value);
 }
 
+auto PCIeSlot::linkStatus(Status value) -> Status
+{
+    return sdbusplus::xyz::openbmc_project::Inventory::Item::server::PCIeSlot::
+        linkStatus(value);
+}
+
 size_t PCIeSlot::lanes() const
 {
     return sdbusplus::xyz::openbmc_project::Inventory::Item::server::PCIeSlot::
@@ -51,6 +57,17 @@ bool PCIeSlot::hotPluggable(bool value)
 {
     return sdbusplus::xyz::openbmc_project::Inventory::Item::server::PCIeSlot::
         hotPluggable(value);
+}
+size_t PCIeSlot::busId() const
+{
+    return sdbusplus::xyz::openbmc_project::Inventory::Item::server::PCIeSlot::
+        busId();
+}
+
+size_t PCIeSlot::busId(size_t value)
+{
+    return sdbusplus::xyz::openbmc_project::Inventory::Item::server::PCIeSlot::
+        busId(value);
 }
 
 } // namespace dbus

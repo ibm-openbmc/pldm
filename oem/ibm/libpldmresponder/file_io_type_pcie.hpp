@@ -19,22 +19,41 @@ namespace responder
 /* Topology enum definitions*/
 
 static std::map<uint8_t, std::string> link_state_map{
-    {0x00, "Operational"}, {0x01, "Degraded"}, {0x02, "Unused1"},
-    {0x03, "Unused2"},     {0x04, "Failed"},   {0x05, "Open"},
-    {0x06, "Inactive"},    {0x07, "Unused3"},  {0xFF, "Unknown"}};
+    {0x00, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Status.Operational"},
+    {0x01, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Status.Degraded"},
+    {0x02, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Status.Unused"},
+    {0x03, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Status.Unused"},
+    {0x04, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Status.Failed"},
+    {0x05, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Status.Open"},
+    {0x06, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Status.Inactive"},
+    {0x07, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Status.Unused"},
+    {0xFF, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Status.Unknown"}};
 
-static std::map<uint8_t, std::string> link_type{{0x00, "Primary"},
-                                                {0x01, "Secondary"},
-                                                {0x02, "OpenCAPI"},
-                                                {0xFF, "Unknown"}};
+enum link_type
+{
+    Primary = 0x0,
+    Secondary = 0x1,
+    OpenCAPI = 0x2,
+    Unknown = 0xFF
+};
 
 static std::map<uint8_t, std::string> link_speed{
-    {0x00, "Gen1"}, {0x01, "Gen2"}, {0x02, "Gen3"},   {0x03, "Gen4"},
-    {0x04, "Gen5"}, {0x10, "OC25"}, {0xFF, "Unknown"}};
+    {0x00, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen1"},
+    {0x01, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen2"},
+    {0x02, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen3"},
+    {0x03, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen4"},
+    {0x04, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Gen5"},
+    {0x10,
+     "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Unknown"}, // OC25
+                                                                         // is
+                                                                         // not
+                                                                         // supported
+                                                                         // on
+                                                                         // BMC
+    {0xFF, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Unknown"}};
 
-static std::map<uint8_t, std::string> link_width{
-    {0x01, "x1"}, {0x02, "x2"},  {0x04, "x4"},
-    {0x08, "x8"}, {0x10, "x16"}, {0xFF, "Unknown"}};
+static std::map<uint8_t, uint32_t> link_width{{0x01, 1}, {0x02, 2},  {0x04, 4},
+                                              {0x08, 8}, {0x10, 16}, {0xFF, 0}};
 
 struct SlotLocCode_t
 {
@@ -87,9 +106,9 @@ struct topology_blob
 
 using linkId_t = uint16_t;
 using linkStatus_t = std::string;
-using linkType_t = std::string;
-using linkSpeed_t = std::string;
-using linkWidth_t = std::string;
+using linkType_t = uint8_t;
+using linkSpeed_t = uint8_t;
+using linkWidth_t = uint32_t;
 using pcieHostBidgeloc_t = std::string;
 using localport_top_t = std::string;
 using localport_bot_t = std::string;
@@ -101,23 +120,24 @@ using io_slot_location_t = std::vector<std::string>;
 
 /* Cable Attributes Info */
 
-static std::map<uint8_t, std::string> cable_length_map{
-    {0x00, "0m"},  {0x01, "2m"},  {0x02, "3m"},
-    {0x03, "10m"}, {0x04, "20m"}, {0xFF, "Unknown"}};
+static std::map<uint8_t, double> cable_length_map{
+    {0x00, 0},  {0x01, 2},  {0x02, 3},
+    {0x03, 10}, {0x04, 20}, {0xFF, std::numeric_limits<double>::quiet_NaN()}};
 
 static std::map<uint8_t, std::string> cable_type_map{
     {0x00, "optical"}, {0x01, "copper"}, {0xFF, "Unknown"}};
 
-static std::map<uint8_t, std::string> cable_status_map{{0x00, "inactive"},
-                                                       {0x01, "running"},
-                                                       {0x02, "powered off"},
-                                                       {0xFF, "Unknown"}};
+static std::map<uint8_t, std::string> cable_status_map{
+    {0x00, "xyz.openbmc_project.Inventory.Item.Cable.Status.Inactive"},
+    {0x01, "xyz.openbmc_project.Inventory.Item.Cable.Status.Running"},
+    {0x02, "xyz.openbmc_project.Inventory.Item.Cable.Status.PoweredOff"},
+    {0xFF, "xyz.openbmc_project.Inventory.Item.Cable.Status.Unknown"}};
 
 using cable_link_no_t = unsigned short int;
 using local_port_loc_code_t = std::string;
 using io_slot_location_code_t = std::string;
 using cable_part_no_t = std::string;
-using cable_length_t = std::string;
+using cable_length_t = double;
 using cable_type_t = std::string;
 using cable_status_t = std::string;
 
@@ -200,6 +220,41 @@ class PCIeInfoHandler : public FileHandler
     /** @brief method to clear the topology cache */
     virtual void clearTopologyInfo();
 
+    virtual void setTopologyAttrsOnDbus();
+
+    virtual void getMexObjects();
+
+    virtual void parsePrimaryLink(uint8_t linkType,
+                                  const io_slot_location_t& ioSlotLocationCode,
+                                  const localport_t& localPortLocation,
+                                  const uint32_t& linkId,
+                                  const std::string& linkStatus,
+                                  uint8_t linkSpeed, uint32_t linkWidth,
+                                  uint8_t parentLinkId);
+    virtual void parseSecondaryLink(
+        uint8_t linkType, const io_slot_location_t& ioSlotLocationCode,
+        const localport_t& localPortLocation, const uint32_t& linkId,
+        const std::string& linkStatus, uint8_t linkSpeed, uint32_t linkWidth);
+    virtual void setTopologyOnSlotAndAdapter(
+        uint8_t linkType,
+        const std::pair<std::string, std::string>& slotAndAdapter,
+        const uint32_t& linkId, const std::string& linkStatus,
+        uint8_t linkSpeed, uint32_t linkWidth, bool isHostedByPLDM);
+
+    virtual void setProperty(const std::string& objPath,
+                             const std::string& propertyName,
+                             const pldm::utils::PropertyValue& propertyValue,
+                             const std::string& interfaceName,
+                             const std::string& propertyType);
+    virtual std::string
+        getMexObjectFromLocationCode(const std::string& locationCode,
+                                     uint16_t entityType);
+    virtual std::string getAdapterFromSlot(const std::string& mexSlotObject);
+
+    virtual std::string
+        getDownStreamChassis(const std::string& slotOrConnecterPath);
+    virtual void parseSpeciallink(linkId_t linkId, linkId_t parentLinkId);
+
     /** @brief PCIeInfoHandler destructor
      */
     ~PCIeInfoHandler()
@@ -211,7 +266,7 @@ class PCIeInfoHandler : public FileHandler
     static std::unordered_map<
         linkId_t, std::tuple<linkStatus_t, linkType_t, linkSpeed_t, linkWidth_t,
                              pcieHostBidgeloc_t, localport_t, remoteport_t,
-                             io_slot_location_t>>
+                             io_slot_location_t, linkId_t>>
         topologyInformation;
     static std::unordered_map<
         cable_link_no_t,
@@ -219,6 +274,11 @@ class PCIeInfoHandler : public FileHandler
                    cable_part_no_t, cable_length_t, cable_type_t,
                    cable_status_t>>
         cableInformation;
+    static std::map<std::string, std::tuple<uint16_t, std::string,
+                                            std::optional<std::string>>>
+        mexObjectMap;
+    static std::vector<std::string> cables;
+    static std::vector<std::pair<linkId_t, linkId_t>> needPostProcessing;
 };
 
 } // namespace responder

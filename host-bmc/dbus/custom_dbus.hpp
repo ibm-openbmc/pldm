@@ -3,9 +3,11 @@
 #include "libpldm/pdr.h"
 
 #include "../dbus_to_host_effecters.hpp"
+#include "asset.hpp"
 #include "associations.hpp"
 #include "availability.hpp"
 #include "board.hpp"
+#include "cable.hpp"
 #include "chassis.hpp"
 #include "common/utils.hpp"
 #include "connector.hpp"
@@ -17,9 +19,11 @@
 #include "inventory_item.hpp"
 #include "led_group.hpp"
 #include "license_entry.hpp"
+#include "linkreset.hpp"
 #include "location_code.hpp"
 #include "motherboard.hpp"
 #include "operational_status.hpp"
+#include "pcie_device.hpp"
 #include "pcie_slot.hpp"
 #include "pcie_topology.hpp"
 #include "power_supply.hpp"
@@ -139,7 +143,13 @@ class CustomDBus
 
     void implementBoard(const std::string& path);
 
+    void implementPCIeDeviceInterface(const std::string& path);
+
     void implementGlobalInterface(const std::string& path);
+
+    void implementCableInterface(const std::string& path);
+
+    void implementAssetInterface(const std::string& path);
     /**
      * @brief Implement the xyz.openbmc_project.Object.Enable interface
      *
@@ -259,6 +269,33 @@ class CustomDBus
      */
     void removeDBus(const std::vector<uint16_t> types);
 
+    /** @brief Remove all DBus object paths from cache
+     *
+     *  @param[in] types  - entity type
+     */
+    void deleteObject(const std::string& path);
+
+    /** @brief set properties  on slots */
+    void setSlotProperties(const std::string& path, const uint32_t& value,
+                           const std::string& linkState);
+
+    /** @brief set pcie device properties */
+    void setPCIeDeviceProps(const std::string& path, size_t lanesInuse,
+                            const std::string& value);
+
+    /** @brief set cable attributes */
+    void setCableAttributes(const std::string& path, double length,
+                            const std::string& cableDescription,
+                            const std::string& cableStatus);
+
+    /* @brief set partNumber */
+    void setPartNumber(const std::string& path, const std::string& partNumber);
+
+    void setSlotType(const std::string& path, const std::string& slotType);
+
+    /** set reset link value*/
+    void setlinkreset(const std::string& path, bool value);
+
   private:
     std::unordered_map<ObjectPath, std::unique_ptr<LocationCode>> location;
     std::unordered_map<ObjectPath, std::unique_ptr<OperationalStatus>>
@@ -286,12 +323,10 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<SoftWareVersion>>
         softWareVersion;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIETopology>> pcietopology;
-
-    /** @brief Remove all DBus object paths from cache
-     *
-     *  @param[in] types  - entity type
-     */
-    void deleteObject(const std::string& path);
+    std::unordered_map<ObjectPath, std::unique_ptr<PCIeDevice>> pcieDevice;
+    std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
+    std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
+    std::unordered_map<ObjectPath, std::unique_ptr<Itemlink>> link;
 };
 
 } // namespace dbus

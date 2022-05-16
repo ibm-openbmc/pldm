@@ -79,6 +79,16 @@ bool CustomDBus::getOperationalStatus(const std::string& path) const
     return false;
 }
 
+void CustomDBus::implementCableInterface(const std::string& path)
+{
+    if (!cable.contains(path))
+    {
+        cable.emplace(
+            path, std::make_unique<Cable>(pldm::utils::DBusHandler::getBus(),
+                                          path.c_str()));
+    }
+}
+
 void CustomDBus::updateItemPresentStatus(const std::string& path,
                                          bool isPresent)
 {
@@ -120,6 +130,94 @@ void CustomDBus::implementPCIeSlotInterface(const std::string& path)
         pcieSlot.emplace(
             path, std::make_unique<PCIeSlot>(pldm::utils::DBusHandler::getBus(),
                                              path.c_str()));
+    }
+}
+
+void CustomDBus::setSlotProperties(const std::string& path,
+                                   const uint32_t& value,
+                                   const std::string& linkState)
+{
+    auto linkStatus = pldm::dbus::PCIeSlot::convertStatusFromString(linkState);
+    if (pcieSlot.contains(path))
+    {
+        pcieSlot.at(path)->busId(value);
+        pcieSlot.at(path)->linkStatus(linkStatus);
+    }
+}
+void CustomDBus::setlinkreset(const std::string& path, bool value)
+{
+    if (!link.contains(path))
+    {
+        link.emplace(
+            path, std::make_unique<Itemlink>(pldm::utils::DBusHandler::getBus(),
+                                             path.c_str()));
+    }
+    link.at(path)->linkReset(value);
+}
+
+void CustomDBus::setSlotType(const std::string& path,
+                             const std::string& slotType)
+{
+    auto slottype = pldm::dbus::PCIeSlot::convertSlotTypesFromString(slotType);
+    if (pcieSlot.contains(path))
+    {
+        pcieSlot.at(path)->slotType(slottype);
+    }
+}
+
+void CustomDBus::implementPCIeDeviceInterface(const std::string& path)
+{
+    if (!pcieDevice.contains(path))
+    {
+        pcieDevice.emplace(
+            path, std::make_unique<PCIeDevice>(
+                      pldm::utils::DBusHandler::getBus(), path.c_str()));
+    }
+}
+
+void CustomDBus::setPCIeDeviceProps(const std::string& path, size_t lanesInuse,
+                                    const std::string& value)
+{
+    Generations generationsInuse =
+        pldm::dbus::PCIeSlot::convertGenerationsFromString(value);
+
+    if (pcieDevice.contains(path))
+    {
+        pcieDevice.at(path)->lanesInUse(lanesInuse);
+        pcieDevice.at(path)->generationInUse(generationsInuse);
+    }
+}
+
+void CustomDBus::setCableAttributes(const std::string& path, double length,
+                                    const std::string& cableDescription,
+                                    const std::string& status)
+{
+    pldm::dbus::ItemCable::Status cableStatus =
+        pldm::dbus::Cable::convertStatusFromString(status);
+    if (cable.contains(path))
+    {
+        cable.at(path)->length(length);
+        cable.at(path)->cableTypeDescription(cableDescription);
+        cable.at(path)->cableStatus(cableStatus);
+    }
+}
+
+void CustomDBus::setPartNumber(const std::string& path,
+                               const std::string& partNumber)
+{
+    if (asset.contains(path))
+    {
+        asset.at(path)->partNumber(partNumber);
+    }
+}
+
+void CustomDBus::implementAssetInterface(const std::string& path)
+{
+    if (!asset.contains(path))
+    {
+        asset.emplace(
+            path, std::make_unique<Asset>(pldm::utils::DBusHandler::getBus(),
+                                          path.c_str()));
     }
 }
 
@@ -456,6 +554,15 @@ void CustomDBus::deleteObject(const std::string& path)
     if (softWareVersion.contains(path))
     {
         softWareVersion.erase(softWareVersion.find(path));
+    }
+
+    if (cable.contains(path))
+    {
+        cable.erase(cable.find(path));
+    }
+    if (asset.contains(path))
+    {
+        asset.erase(asset.find(path));
     }
 }
 

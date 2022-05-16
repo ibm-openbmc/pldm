@@ -499,6 +499,16 @@ bool checkFruPresence(const char* objPath)
     return isPresent;
 }
 
+std::pair<std::string, std::string>
+    getSlotAndAdapter(const std::string& portLocationCode)
+{
+    std::filesystem::path portPath =
+        pldm::responder::utils::getObjectPathByLocationCode(
+            portLocationCode, "xyz.openbmc_project.Inventory.Item.Connector");
+    return std::make_pair(portPath.parent_path().parent_path(),
+                          portPath.parent_path());
+}
+
 void hostPCIETopologyIntf(
     uint8_t mctp_eid,
     pldm::host_effecters::HostEffecterParser* hostEffecterParser)
@@ -544,7 +554,7 @@ std::string getObjectPathByLocationCode(const std::string& locationCode,
             }
         }
     }
-    std::cerr << "Location not found " << locationCode << "for Item type "
+    std::cerr << "Location not found " << locationCode << " for Item type "
               << inventoryItemType << std::endl;
     return path;
 }

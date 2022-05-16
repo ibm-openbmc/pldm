@@ -144,6 +144,9 @@ void hostPCIETopologyIntf(
 std::string getObjectPathByLocationCode(const std::string& locationCode,
                                         const std::string& inventoryItemType);
 
+std::pair<std::string, std::string>
+    getSlotAndAdapter(const std::string& portLocationCode);
+
 } // namespace utils
 } // namespace responder
 } // namespace pldm
