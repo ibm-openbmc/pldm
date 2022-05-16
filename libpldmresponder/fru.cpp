@@ -393,9 +393,7 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
      pldm_entity_association_tree_visit(entityTree,&out, &num);
      free(out);*/
     // sm00
-
     pldm_entity_association_tree_delete_node(entityTree, removeEntity);
-
     // sm00
     /*std::cout << "\nprinting the entityTree after deleting node\n";
     num = 0;
@@ -414,23 +412,8 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
               << removeEntity.entity_container_id << " ]\n";
     associatedEntityMap.erase(fruObjPath); // sm00
 
-    /* if (table
-             .size()) /// need to remove the entry from table before doing this
-                      // may be a separate commit to handle that. as of now it
-                      // does not create issue because the pdr repo is updated.
-                      // the fru record table is not. which means the pldmtool
-                      // fru commands will still show the old record. that may
-     be
-                      // fine since Host is not asking at this moment they are
-                      // getting the updated pdr (both fru and entity assoc pdr)
-                      // but eventually we need it because an add happened after
-                      // a remove will cause two fru records for the same fan
-     {
-         padBytes = pldm::utils::getNumPadBytes(table.size());
-         table.resize(table.size() + padBytes, 0);
-         // Calculate the checksum
-         checksum = crc32(table.data(), table.size());
-     }*/
+    deleteFruRecord(rsi);
+
     sendPDRRepositoryChgEventbyPDRHandles(
         std::move(std::vector<ChangeEntry>(1, deleteRecordHdl)),
         std::move(std::vector<uint8_t>(1, PLDM_RECORDS_DELETED)));
@@ -481,6 +464,49 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
             std::move(std::vector<ChangeEntry>(1, updateRecordHdlHost)),
             std::move(std::vector<uint8_t>(1, hostEventDataOps)));
     } // sm00 this can be RECORDS_DELETED also for adapter pdrs
+}
+
+void FruImpl::deleteFruRecord(uint16_t rsi)
+{
+    std::vector<uint8_t> updatedFruTbl;
+    const struct pldm_fru_record_data_format* recordSetSrc =
+        reinterpret_cast<const struct pldm_fru_record_data_format*>(
+            table.data());
+
+    const struct pldm_fru_record_tlv* tlv;
+    size_t pos = 0;
+
+    while ((table.size() > pos) && (recordSetSrc != nullptr))
+    {
+        size_t recordLen = sizeof(struct pldm_fru_record_data_format) -
+                           sizeof(struct pldm_fru_record_tlv);
+
+        tlv = recordSetSrc->tlvs;
+
+        for (uint8_t i = 0; i < recordSetSrc->num_fru_fields; i++)
+        {
+            size_t len = sizeof(*tlv) - 1 + tlv->length;
+            recordLen += len;
+            tlv = reinterpret_cast<const struct pldm_fru_record_tlv*>(
+                (char*)tlv + len);
+        }
+        if ((recordSetSrc->record_set_id != htole16(rsi) && rsi != 0))
+        {
+            std::copy(table.begin() + pos, table.begin() + pos + recordLen,
+                      std::back_inserter(updatedFruTbl));
+        }
+        else
+        {
+            numRecs--;
+        }
+
+        pos += recordLen;
+        recordSetSrc =
+            reinterpret_cast<const struct pldm_fru_record_data_format*>(tlv);
+    }
+
+    table.clear();
+    table = std::move(updatedFruTbl);
 }
 
 void FruImpl::buildIndividualFRU(const std::string& fruInterface,

@@ -335,6 +335,12 @@ class FruImpl
      */
     void removeIndividualFRU(const std::string& fruObjPath);
 
+    /** @brief Deletes a FRU record from record set table.
+     *  @param[in] rsi - the FRU Record Set Identifier
+     *  @return none
+     */
+    void deleteFruRecord(uint16_t rsi);
+
     void reGenerateStatePDR(const std::string& fruObjectPath,
                             std::vector<uint32_t>& recordHdlList);
 
