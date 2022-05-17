@@ -5,6 +5,7 @@
 
 #include "common/utils.hpp"
 #include "host-bmc/dbus/custom_dbus.hpp"
+#include "host-bmc/dbus/serialize.hpp"
 
 #include <stdint.h>
 
@@ -19,19 +20,28 @@ namespace responder
 static constexpr auto pciePath = "/var/lib/pldm/pcie-topology/";
 constexpr auto topologyFile = "topology";
 constexpr auto cableInfoFile = "cableinfo";
+constexpr auto itemPCIeSlot = "xyz.openbmc_project.Inventory.Item.PCIeSlot";
+constexpr auto itemPCIeDevice = "xyz.openbmc_project.Inventory.Item.PCIeDevice";
+constexpr auto itemConnector = "xyz.openbmc_project.Inventory.Item.Connector";
 
 namespace fs = std::filesystem;
 std::unordered_map<uint16_t, bool> PCIeInfoHandler::receivedFiles;
 std::unordered_map<linkId_t,
                    std::tuple<linkStatus_t, linkType_t, linkSpeed_t,
                               linkWidth_t, pcieHostBidgeloc_t, localport_t,
-                              remoteport_t, io_slot_location_t>>
+                              remoteport_t, io_slot_location_t, linkId_t>>
     PCIeInfoHandler::topologyInformation;
 std::unordered_map<
     cable_link_no_t,
     std::tuple<linkId_t, local_port_loc_code_t, io_slot_location_code_t,
                cable_part_no_t, cable_length_t, cable_type_t, cable_status_t>>
     PCIeInfoHandler::cableInformation;
+std::map<std::string,
+         std::tuple<uint16_t, std::string, std::optional<std::string>>>
+    PCIeInfoHandler::mexObjectMap;
+
+std::vector<std::string> PCIeInfoHandler::cables;
+std::vector<std::pair<linkId_t, linkId_t>> PCIeInfoHandler::needPostProcessing;
 
 PCIeInfoHandler::PCIeInfoHandler(uint32_t fileHandle, uint16_t fileType) :
     FileHandler(fileHandle), infoType(fileType)
@@ -119,6 +129,20 @@ int PCIeInfoHandler::fileAck(uint8_t /*fileStatus*/)
             // for further processing
             parseTopologyData();
 
+            getMexObjects();
+
+            // delete the cable dbus as the cable are dynamic
+
+            for (const auto& cable : cables)
+            {
+                std::cerr << "Removing cable object [ " << cable << " ]\n";
+                pldm::dbus::CustomDBus::getCustomDBus().deleteObject(cable);
+            }
+            cables.clear();
+
+            // set topology properties & host cable dbus objects
+            setTopologyAttrsOnDbus();
+
             // even when we fail to parse /set the topology infromation on to
             // the dbus, we need to set the property back to false - to allow
             // the redfish/user to be able to ask the topology information again
@@ -133,46 +157,534 @@ int PCIeInfoHandler::fileAck(uint8_t /*fileStatus*/)
     return PLDM_SUCCESS;
 }
 
-void PCIeInfoHandler::clearTopologyInfo()
+void PCIeInfoHandler::setProperty(
+    const std::string& objPath, const std::string& propertyName,
+    const pldm::utils::PropertyValue& propertyValue,
+    const std::string& interfaceName, const std::string& propertyType)
 {
-    std::cerr << "Topology information :\n";
-    for (const auto& [link, info] : topologyInformation)
+    pldm::utils::PropertyValue value = propertyValue;
+    pldm::utils::DBusMapping dbusMapping;
+    dbusMapping.objectPath = objPath;
+    dbusMapping.interface = interfaceName;
+    dbusMapping.propertyName = propertyName;
+    dbusMapping.propertyType = propertyType;
+    try
     {
-        std::cerr << "linkid :" << (unsigned)link << std::endl;
-        std::cerr << "link status : " << std::get<0>(info) << std::endl;
-        std::cerr << "link type :" << std::get<1>(info) << std::endl;
-        std::cerr << "link speed : " << std::get<2>(info) << std::endl;
-        std::cerr << "link wdith : " << std::get<3>(info) << std::endl;
-        std::cerr << "pcie host bridge loc code : " << std::get<4>(info)
+        pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Failed To set " << propertyName << "property"
+                  << "and path :" << objPath << "ERROR=" << e.what()
                   << std::endl;
-        std::cerr << "local port top loc code : " << std::get<5>(info).first
-                  << std::endl;
-        std::cerr << "local port bottom loc code : " << std::get<5>(info).second
-                  << std::endl;
-        std::cerr << "remote port top loc code : " << std::get<6>(info).first
-                  << std::endl;
-        std::cerr << "remote port bottom loc code : "
-                  << std::get<6>(info).second << std::endl;
-        for (const auto& slot : std::get<7>(info))
+    }
+}
+
+void PCIeInfoHandler::getMexObjects()
+{
+    // get the in memory cached copy of mex objects
+    auto savedObjs = pldm::serialize::Serialize::getSerialize().getSavedObjs();
+
+    // Find the PCIE slots & PCIeAdapters & Connecters & their location codes
+    std::set<uint16_t> neededEntityTypes = {PLDM_ENTITY_SLOT, PLDM_ENTITY_CARD,
+                                            PLDM_ENTITY_CONNECTOR,
+                                            PLDM_ENTITY_SYSTEM_CHASSIS};
+    std::set<std::string> neededProperties = {"locationCode"};
+
+    for (const auto& [entityType, objects] : savedObjs)
+    {
+        if (neededEntityTypes.contains(entityType))
         {
-            std::cerr << "io slot location code : " << slot << std::endl;
+            for (const auto& [objectPath, object] : objects)
+            {
+                const auto& [instanceId, conainerId, obj] = object;
+                for (const auto& [interfaces, propertyValue] : obj)
+                {
+                    for (const auto& [propertyName, value] : propertyValue)
+                    {
+                        if (neededProperties.contains(propertyName))
+                        {
+                            if (propertyName == "locationCode")
+                            {
+
+                                mexObjectMap.insert_or_assign(
+                                    objectPath,
+                                    std::make_tuple(
+                                        entityType, propertyName,
+                                        std::get<std::string>(value)));
+                            }
+                        }
+                        else
+                        {
+                            if (propertyName == "present" &&
+                                entityType == PLDM_ENTITY_CARD)
+                            {
+
+                                mexObjectMap.insert_or_assign(
+                                    objectPath,
+                                    std::make_tuple(entityType, propertyName,
+                                                    std::nullopt));
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
-    topologyInformation.clear();
+}
 
-    std::cerr << "Cable iformation : \n";
+std::string PCIeInfoHandler::getMexObjectFromLocationCode(
+    const std::string& locationCode, uint16_t entityType)
+{
+    for (const auto& [objectPath, obj] : mexObjectMap)
+    {
+        if (std::get<0>(obj) == entityType &&
+            (std::get<1>(obj) == "locationCode"))
+        {
+            if ((std::get<2>(obj)).has_value() &&
+                (std::get<2>(obj)).value() == locationCode)
+            {
+                return objectPath;
+            }
+        }
+    }
+    return "";
+}
+
+std::string
+    PCIeInfoHandler::getAdapterFromSlot(const std::string& mexSlotObject)
+{
+    for (const auto& [objectPath, obj] : mexObjectMap)
+    {
+        if (objectPath.find(mexSlotObject) != std::string::npos)
+        {
+            if (std::get<0>(obj) == PLDM_ENTITY_CARD)
+            {
+                return objectPath;
+            }
+        }
+    }
+    return "";
+}
+
+std::string PCIeInfoHandler::getDownStreamChassis(
+    const std::string& slotOrConnecterPath)
+{
+    for (const auto& [objectPath, obj] : mexObjectMap)
+    {
+        if (slotOrConnecterPath.find(objectPath) != std::string::npos)
+        {
+            // found objectpath in slot or connecter
+            if (std::get<0>(obj) == PLDM_ENTITY_SYSTEM_CHASSIS)
+            {
+                return objectPath;
+            }
+        }
+    }
+    return "";
+}
+
+void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
+    uint8_t linkType, const std::pair<std::string, std::string>& slotAndAdapter,
+    const uint32_t& linkId, const std::string& linkStatus, uint8_t linkSpeed,
+    uint32_t linkWidth, bool isHostedByPLDM)
+{
+    if (!slotAndAdapter.first.empty())
+    {
+        if (linkType == Primary)
+        {
+            // we got the slot dbus object, set linkid, linkstatus on it
+            // set the busid on the respective slots
+            setProperty(slotAndAdapter.first, "BusId", linkId, itemPCIeSlot,
+                        "uint32_t");
+
+            // set the link status on the respective slots
+            setProperty(slotAndAdapter.first, "LinkStatus", linkStatus,
+                        itemPCIeSlot, "string");
+
+            std::filesystem::path slot(slotAndAdapter.first);
+
+            std::cerr << "Primary Link, "
+                      << " BusId - [" << std::hex << std::showbase << linkId
+                      << "] LinkStatus - [" << linkStatus << "] on [ "
+                      << slot.filename() << "] \n";
+        }
+        else
+        {
+            if (isHostedByPLDM)
+            {
+                // its a secondary link so update the busid & link status on the
+                // mex slot hosted object by pldm
+                pldm::dbus::CustomDBus::getCustomDBus().setSlotProperties(
+                    slotAndAdapter.first, linkId, linkStatus);
+            }
+            else
+            {
+                std::cerr << "is hosted by pldm is : false\n";
+                std::cerr << "slot : " << slotAndAdapter.first << std::endl;
+                std::cerr << "adapter : " << slotAndAdapter.second << std::endl;
+                // its a secondary link , but its an nvme slot hosted by
+                // inventory manager
+                setProperty(slotAndAdapter.first, "BusId", linkId, itemPCIeSlot,
+                            "uint32_t");
+
+                // set the link status on the respective slots
+                setProperty(slotAndAdapter.first, "LinkStatus", linkStatus,
+                            itemPCIeSlot, "string");
+            }
+
+            std::filesystem::path slot(slotAndAdapter.first);
+            std::filesystem::path printSlot = slot.parent_path().filename();
+            printSlot /= slot.filename();
+
+            std::cerr << "Secondary Link, "
+                      << " BusId - [ " << std::hex << std::showbase << linkId
+                      << " ] LinkStatus - [" << linkStatus << "] on [ "
+                      << printSlot << "] \n";
+        }
+    }
+    if (!slotAndAdapter.second.empty())
+    {
+        if (linkType == Primary)
+        {
+            // we got the adapter dbus object, set linkspeed & linkwidth on it
+            setProperty(slotAndAdapter.second, "GenerationInUse",
+                        link_speed[linkSpeed], itemPCIeDevice, "string");
+
+            // set link width
+            setProperty(slotAndAdapter.second, "LanesInUse", linkWidth,
+                        itemPCIeDevice, "uint32_t");
+            std::filesystem::path adapter(slotAndAdapter.second);
+
+            std::cerr << "Primary Link, "
+                      << " GenerationInUse - [" << link_speed[linkSpeed]
+                      << "] LanesInUse - [" << linkWidth << "] on [ "
+                      << adapter.filename() << "]\n";
+        }
+        else
+        {
+            if (isHostedByPLDM)
+            {
+                // std::cerr << "secondary link not empty adapter \n";
+                //  its a secondary link so update the link speed on mex adapter
+                if (linkStatus ==
+                        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Status.Open" ||
+                    linkStatus ==
+                        "xyz.openbmc_project.Inventory.Item.PCIeSlot.Status.Unknown")
+                {
+                    // There is no adapter plugged in so set the adapter present
+                    // property to false
+                    pldm::dbus::CustomDBus::getCustomDBus()
+                        .updateItemPresentStatus(slotAndAdapter.second, false);
+                }
+                else if (
+                    linkStatus ==
+                    "xyz.openbmc_project.Inventory.Item.PCIeSlot.Status.Operational")
+                {
+                    // Thre is adapter plugged in , its powered on and is
+                    // operational, so change the present property of the
+                    // adapter to true
+                    pldm::dbus::CustomDBus::getCustomDBus()
+                        .updateItemPresentStatus(slotAndAdapter.second, true);
+                }
+                pldm::dbus::CustomDBus::getCustomDBus().setPCIeDeviceProps(
+                    slotAndAdapter.second, linkWidth, link_speed[linkSpeed]);
+            }
+            else
+            {
+                // we got the adapter dbus object, set linkspeed & linkwidth on
+                // it
+                setProperty(slotAndAdapter.second, "GenerationInUse",
+                            link_speed[linkSpeed], itemPCIeDevice, "string");
+
+                // set link width
+                setProperty(slotAndAdapter.second, "LanesInUse", linkWidth,
+                            itemPCIeDevice, "uint32_t");
+            }
+
+            std::filesystem::path adapter(slotAndAdapter.second);
+            std::filesystem::path printAdapter =
+                adapter.parent_path().parent_path().filename();
+            printAdapter /= adapter.parent_path().filename();
+            printAdapter /= adapter.filename();
+
+            std::cerr << "Secondary Link, GenerationInUse - ["
+                      << link_speed[linkSpeed] << "] LanesInUse - ["
+                      << linkWidth << "] on [ " << printAdapter << "]\n";
+        }
+    }
+}
+void PCIeInfoHandler::parsePrimaryLink(
+    uint8_t linkType, const io_slot_location_t& ioSlotLocationCode,
+    const localport_t& localPortLocation, const uint32_t& linkId,
+    const std::string& linkStatus, uint8_t linkSpeed, uint32_t linkWidth,
+    uint8_t parentLinkId)
+{
+    // Check the io_slot_location_code size
+    if (!ioSlotLocationCode.size())
+    {
+        // If there is no io slot location code populated
+        // then its a cable card that in plugged into one of the
+        // cec slots , but the other end is not plugged into the
+        // mex drawer.
+
+        // check the local port and from there obtain the
+        // pcie slot information
+        if (!localPortLocation.first.empty())
+        {
+            // the local port field can be filled up with slot location
+            // code (for the links that have connections to flett)
+            if (localPortLocation.first.find("-T") != std::string::npos)
+            {
+                // the top local port is populated with the connector
+                auto slotAndAdapter = pldm::responder::utils::getSlotAndAdapter(
+                    localPortLocation.first);
+                setTopologyOnSlotAndAdapter(linkType, slotAndAdapter, linkId,
+                                            linkStatus, linkSpeed, linkWidth,
+                                            false);
+            }
+            else
+            {
+                // the slot location code is present in the local port
+                // location code field
+                std::string slotObjectPath =
+                    pldm::responder::utils::getObjectPathByLocationCode(
+                        localPortLocation.first, itemPCIeSlot);
+
+                // get the adapter with the same location code
+                std::string adapterObjPath =
+                    pldm::responder::utils::getObjectPathByLocationCode(
+                        localPortLocation.first, itemPCIeDevice);
+
+                // set topology info on both the slot and adapter object
+                setTopologyOnSlotAndAdapter(
+                    linkType, std::make_pair(slotObjectPath, adapterObjPath),
+                    linkId, linkStatus, linkSpeed, linkWidth, false);
+            }
+        }
+    }
+    else if (ioSlotLocationCode.size() == 1)
+    {
+        // If there is just a single slot location code populated
+        // then its a clean link that tells that something is
+        // plugged into a CEC PCIeSlot
+        std::string slotObjectPath =
+            pldm::responder::utils::getObjectPathByLocationCode(
+                ioSlotLocationCode[0], itemPCIeSlot);
+
+        // get the adapter with the same location code
+        std::string adapterObjPath =
+            pldm::responder::utils::getObjectPathByLocationCode(
+                ioSlotLocationCode[0], itemPCIeDevice);
+
+        // set topology info on both the slot and adapter object
+        setTopologyOnSlotAndAdapter(
+            linkType, std::make_pair(slotObjectPath, adapterObjPath), linkId,
+            linkStatus, linkSpeed, linkWidth, false);
+    }
+    else
+    {
+        // if we enter here, that means its a primary link that involves pcie
+        // slot connected to a pcie switch This link would need additional
+        // processing - as we need to check the parent link of this to figure
+        // out the slot and the adapter
+        if (!localPortLocation.first.empty())
+        {
+            // we have a io slot location code (probably mex), but its a primary
+            // link and if we have local ports , then figure out which slot it
+            // is connected to
+            auto slotAndAdapter = pldm::responder::utils::getSlotAndAdapter(
+                localPortLocation.first);
+
+            setTopologyOnSlotAndAdapter(linkType, slotAndAdapter, linkId,
+                                        linkStatus, linkSpeed, linkWidth,
+                                        false);
+        }
+        else
+        {
+            // If there is no local port populated & the io slots are multiple,
+            // we would need futher processing for this link
+            needPostProcessing.emplace_back(linkId, parentLinkId);
+        }
+    }
+}
+void PCIeInfoHandler::parseSecondaryLink(
+    uint8_t linkType, const io_slot_location_t& ioSlotLocationCode,
+    const localport_t& /*localPortLocation*/, const uint32_t& linkId,
+    const std::string& linkStatus, uint8_t linkSpeed, uint32_t linkWidth)
+{
+    if (ioSlotLocationCode.size() == 1)
+    {
+        // if the slot location code is present, it can be either a mex slot or
+        // an nvme slot
+        std::string mexSlotpath = getMexObjectFromLocationCode(
+            ioSlotLocationCode[0], PLDM_ENTITY_SLOT);
+
+        if (!mexSlotpath.empty())
+        {
+            std::string mexAdapterpath = getAdapterFromSlot(mexSlotpath);
+            if (!mexAdapterpath.empty())
+            {
+                setTopologyOnSlotAndAdapter(
+                    linkType, std::make_pair(mexSlotpath, mexAdapterpath),
+                    linkId, linkStatus, linkSpeed, linkWidth, true);
+            }
+        }
+        else
+        {
+            // its not a mex slot , check if it matches with any of the CEC nvme
+            // slots
+            std::string slotObjectPath =
+                pldm::responder::utils::getObjectPathByLocationCode(
+                    ioSlotLocationCode[0], itemPCIeSlot);
+
+            // get the adapter with the same location code
+            std::string adapterObjPath =
+                pldm::responder::utils::getObjectPathByLocationCode(
+                    ioSlotLocationCode[0], itemPCIeDevice);
+
+            // set topology info on both the slot and adapter object
+            setTopologyOnSlotAndAdapter(
+                linkType, std::make_pair(slotObjectPath, adapterObjPath),
+                linkId, linkStatus, linkSpeed, linkWidth, false);
+        }
+    }
+}
+
+void PCIeInfoHandler::parseSpeciallink(linkId_t linkId,
+                                       linkId_t /*parentLinkId*/)
+{
+    auto linkInfo = topologyInformation[linkId];
+    for (const auto& [link, info] : topologyInformation)
+    {
+        // if any link has linkId(that link that needs post processing) as the
+        // parent link id, then check if that link has local port location codes
+        // populated
+        if (std::get<8>(info) == linkId)
+        {
+            auto localPortLocCode = std::get<5>(info);
+            if (!localPortLocCode.first.empty())
+            {
+                // local port location code is present, using the port to find
+                // out the slot
+                auto slotAndAdapter = pldm::responder::utils::getSlotAndAdapter(
+                    localPortLocCode.first);
+                std::cerr << "Special processing for link - [ " << linkId
+                          << " ] \n";
+                setTopologyOnSlotAndAdapter(
+                    std::get<1>(linkInfo), slotAndAdapter, linkId,
+                    std::get<0>(linkInfo), std::get<2>(linkInfo),
+                    std::get<3>(linkInfo), false);
+            }
+        }
+    }
+}
+
+void PCIeInfoHandler::setTopologyAttrsOnDbus()
+{
+    // Core Topology Algorithm
+    // Iterate through each link and set the link attributes
+    for (const auto& [link, info] : topologyInformation)
+    {
+        // Link type can be either Primary/Secondary/Unkown
+        switch (std::get<1>(info))
+        {
+            // If the link is primary
+            case Primary:
+                parsePrimaryLink(std::get<1>(info), std::get<7>(info),
+                                 std::get<5>(info), static_cast<uint32_t>(link),
+                                 std::get<0>(info), std::get<2>(info),
+                                 std::get<3>(info), std::get<8>(info));
+                break;
+            case Secondary:
+                parseSecondaryLink(
+                    std::get<1>(info), std::get<7>(info), std::get<5>(info),
+                    static_cast<uint32_t>(link), std::get<0>(info),
+                    std::get<2>(info), std::get<3>(info));
+                break;
+            case Unknown:
+                // its just no-op
+                break;
+        }
+    }
+
+    // There are few special links that needs post processing
+    for (const auto& link : needPostProcessing)
+    {
+        parseSpeciallink(link.first, link.second);
+    }
+
+    std::filesystem::path cableBasePath =
+        "/xyz/openbmc_project/inventory/system";
+    // Create Cable Dbus objects
     for (const auto& [cable_no, info] : cableInformation)
     {
-        std::cerr << "cable no : " << (unsigned)cable_no << std::endl;
-        std::cerr << "link id : " << (unsigned)std::get<0>(info) << std::endl;
-        std::cerr << "local port loc code : " << std::get<1>(info) << std::endl;
-        std::cerr << "io slot loc code : " << std::get<2>(info) << std::endl;
-        std::cerr << "cable part no : " << std::get<3>(info) << std::endl;
-        std::cerr << "cable length : " << std::get<4>(info) << std::endl;
-        std::cerr << "cable type : " << std::get<5>(info) << std::endl;
-        std::cerr << "cable status :" << std::get<6>(info) << std::endl;
+        std::filesystem::path cableObjectPath(cableBasePath);
+        cableObjectPath /= "external_cable_" + std::to_string(cable_no);
+
+        // Implement Item.Cable Interface on it
+        pldm::dbus::CustomDBus::getCustomDBus().implementCableInterface(
+            cableObjectPath.string());
+
+        // Implement Inventory.Item Interface on it
+        pldm::dbus::CustomDBus::getCustomDBus().updateItemPresentStatus(
+            cableObjectPath.string(), true);
+
+        // Implement Inventory.Decorator.Asset on it
+        pldm::dbus::CustomDBus::getCustomDBus().implementAssetInterface(
+            cableObjectPath.string());
+
+        // set the part Number on the asset interface
+        pldm::dbus::CustomDBus::getCustomDBus().setPartNumber(
+            cableObjectPath.string(), std::get<3>(info));
+
+        // Set all the cable attributes on the object
+        pldm::dbus::CustomDBus::getCustomDBus().setCableAttributes(
+            cableObjectPath.string(), std::get<4>(info), std::get<5>(info),
+            std::get<6>(info));
+
+        // Frame the necessary associations on each cable
+        // upstream port - connecter on CEC pcie adapter
+        // downstream port - connecter on mex io module
+        // downstream chassis - the mex chassis this cable is plugged into
+        auto upstreamInformation =
+            pldm::responder::utils::getObjectPathByLocationCode(
+                std::get<1>(info), itemConnector);
+        auto downstreamInformation = getMexObjectFromLocationCode(
+            std::get<2>(info), PLDM_ENTITY_CONNECTOR);
+        auto downstreamChassis = getDownStreamChassis(downstreamInformation);
+        std::vector<std::tuple<std::string, std::string, std::string>>
+            associations{
+                {"upstream_connector", "attached_cables", upstreamInformation},
+                {"downstream_connector", "attached_cables",
+                 downstreamInformation},
+                {"downstream_chassis", "attached_cables", downstreamChassis}};
+
+        pldm::dbus::CustomDBus::getCustomDBus().setAssociations(
+            cableObjectPath.string(), associations);
+
+        std::cerr << "Hosted Cable [ " << cable_no << " ] Length - [ "
+                  << std::get<4>(info) << " ] Type - [ " << std::get<5>(info)
+                  << " ] Status - [ " << std::get<6>(info) << " ] PN - [ "
+                  << std::get<3>(info) << " ]\n";
+        std::cerr << "Hosted Cable [ " << cable_no << " ] UPConnector - [ "
+                  << upstreamInformation << " ] DNConnector - [ "
+                  << downstreamInformation << " ] DChassis - [ "
+                  << downstreamChassis << " ]\n";
+
+        cables.push_back(cableObjectPath.string());
     }
+}
+
+void PCIeInfoHandler::clearTopologyInfo()
+{
+    topologyInformation.clear();
+
     cableInformation.clear();
+
+    mexObjectMap.clear();
+
+    needPostProcessing.clear();
 }
 
 void PCIeInfoHandler::parseTopologyData()
@@ -240,6 +752,9 @@ void PCIeInfoHandler::parseTopologyData()
 
         // get the link id
         auto linkid = htobe16(single_entry_data->link_id);
+
+        // get parent link id
+        auto parentLinkId = htobe16(single_entry_data->parent_link_id);
 
         // get link status
         auto linkStatus = single_entry_data->link_status;
@@ -372,15 +887,14 @@ void PCIeInfoHandler::parseTopologyData()
         }
 
         // store the information into a map
-        topologyInformation[linkid] =
-            std::make_tuple(link_state_map[linkStatus], link_type[linkType],
-                            link_speed[linkSpeed], link_width[linkWidth],
-                            pcie_host_bridge_location_code,
-                            std::make_pair(local_top_port_location_code,
-                                           local_bottom_port_location_code),
-                            std::make_pair(remote_top_port_location_code,
-                                           remote_bottom_port_location_code),
-                            slot_final_location_code);
+        topologyInformation[linkid] = std::make_tuple(
+            link_state_map[linkStatus], linkType, linkSpeed,
+            link_width[linkWidth], pcie_host_bridge_location_code,
+            std::make_pair(local_top_port_location_code,
+                           local_bottom_port_location_code),
+            std::make_pair(remote_top_port_location_code,
+                           remote_bottom_port_location_code),
+            slot_final_location_code, parentLinkId);
 
         // move the pointer to next link
         single_entry_data =

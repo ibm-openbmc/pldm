@@ -1710,6 +1710,7 @@ void HostPDRHandler::createDbusObjects(const PDRList& fruRecordSetPDRs)
             case PLDM_ENTITY_SLOT:
                 CustomDBus::getCustomDBus().implementPCIeSlotInterface(
                     entity.first);
+                CustomDBus::getCustomDBus().setlinkreset(entity.first, false);
                 break;
             case PLDM_ENTITY_CONNECTOR:
                 CustomDBus::getCustomDBus().implementConnecterInterface(
@@ -1718,9 +1719,21 @@ void HostPDRHandler::createDbusObjects(const PDRList& fruRecordSetPDRs)
             case PLDM_ENTITY_MODULE:
                 CustomDBus::getCustomDBus().implementBoard(entity.first);
                 break;
+            case PLDM_ENTITY_CARD:
+                CustomDBus::getCustomDBus().implementPCIeDeviceInterface(
+                    entity.first);
+                break;
             case PLDM_ENTITY_IO_MODULE:
                 CustomDBus::getCustomDBus().implementFabricAdapter(
                     entity.first);
+                break;
+            case 32954:
+                CustomDBus::getCustomDBus().implementPCIeSlotInterface(
+                    entity.first);
+                CustomDBus::getCustomDBus().setSlotType(
+                    entity.first,
+                    "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.OEM");
+                break;
             default:
                 break;
         }

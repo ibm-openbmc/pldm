@@ -36,11 +36,6 @@ void Serialize::serialize(const std::string& path, const std::string& intf,
         return;
     }
 
-    if (!storeEntityTypes.contains(entityPathMaps[path].entity_type))
-    {
-        return;
-    }
-
     uint16_t type = entityPathMaps[path].entity_type;
     uint16_t num = entityPathMaps[path].entity_instance_num;
     uint16_t cid = entityPathMaps[path].entity_container_id;
@@ -75,6 +70,11 @@ void Serialize::serialize(const std::string& path, const std::string& intf,
                 return;
             }
         }
+    }
+
+    if (!storeEntityTypes.contains(entityPathMaps[path].entity_type))
+    {
+        return;
     }
 
     auto dir = filePath.parent_path();

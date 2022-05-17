@@ -37,7 +37,9 @@ const std::map<EntityType, EntityName> entityMaps = {
     {PLDM_ENTITY_SYS_MGMT_MODULE, "system_management_module"},
     {PLDM_ENTITY_POWER_CONVERTER, "power_converter"},
     {PLDM_ENTITY_SLOT, "slot"},
-    {PLDM_ENTITY_CONNECTOR, "connector"}};
+    {PLDM_ENTITY_CONNECTOR, "connector"},
+    {PLDM_ENTITY_CARD, "adapter"},
+    {PLDM_ENTITY_SLOT | 0x8000, "logical_slot"}};
 
 namespace hostbmc
 {
