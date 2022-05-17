@@ -388,6 +388,7 @@ void CodeUpdate::setVersions()
                                                                 START));
                                                 newImageId.clear();
                                             }
+                                            imageActivationMatch.reset();
                                         }
                                     });
                             }

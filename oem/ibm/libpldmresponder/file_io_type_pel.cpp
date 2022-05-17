@@ -230,8 +230,6 @@ int PelHandler::fileAck(uint8_t /*fileStatus*/)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "HostAck D-Bus call failed on PEL ID 0x" << std::hex
-                  << fileHandle << ", error = " << e.what() << "\n";
         return PLDM_ERROR;
     }
 
