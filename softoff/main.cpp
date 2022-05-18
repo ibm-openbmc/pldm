@@ -63,7 +63,7 @@ int main(int argc, char* argv[])
     if (softPower.isTimerExpired() && softPower.isReceiveResponse())
     {
         pldm::utils::reportError(
-            "pldm soft off: Waiting for the host soft off timeout",
+            "xyz.openbmc_project.PLDM.Error.SoftPowerOff.HostSoftOffTimeOut",
             pldm::PelSeverity::ERROR);
 
         auto method = bus.new_method_call(

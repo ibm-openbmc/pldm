@@ -41,7 +41,7 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
         std::cerr << "Failed to send resource dump parameters as requester is "
                      "not set";
         pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.PLDM.sendNewFileAvailableCmd.SendDumpParametersFail",
+            "xyz.openbmc_project.PLDM.Error.sendNewFileAvailableCmd.SendDumpParametersFail",
             pldm::PelSeverity::ERROR);
         return;
     }
@@ -96,7 +96,7 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
 void DbusToFileHandler::reportResourceDumpFailure(std::string str)
 {
     std::string s =
-        "xyz.openbmc_project.bmc.PLDM.ReportResourceDumpFail." + str;
+        "xyz.openbmc_project.PLDM.Error.ReportResourceDumpFail." + str;
 
     pldm::utils::reportError(s.c_str(), pldm::PelSeverity::WARNING);
 
@@ -279,7 +279,7 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
     {
         std::cerr << "newFileAvailableSendToHost:Failed to send file to host.";
         pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.pldm.SendFileToHostFail",
+            "xyz.openbmc_project.PLDM.Error.SendFileToHostFail",
             pldm::PelSeverity::ERROR);
         return;
     }
@@ -334,7 +334,7 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
                 }
 
                 pldm::utils::reportError(
-                    "xyz.openbmc_project.bmc.pldm.SendFileToHostFail",
+                    "xyz.openbmc_project.PLDM.Error.SendFileToHostFail",
                     pldm::PelSeverity::ERROR);
             }
             return;
@@ -351,7 +351,7 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
             if (rc)
             {
                 pldm::utils::reportError(
-                    "xyz.openbmc_project.bmc.pldm.DecodeNewFileResponseFail",
+                    "xyz.openbmc_project.PLDM.Error.DecodeNewFileResponseFail",
                     pldm::PelSeverity::ERROR);
             }
         }
@@ -364,7 +364,7 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
         std::cerr
             << "newFileAvailableSendToHost:Failed to send NewFileAvailable Request to Host\n";
         pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.NewFileAvailableRequestFail",
+            "xyz.openbmc_project.PLDM.Error.NewFileAvailableRequestFail",
             pldm::PelSeverity::ERROR);
     }
 }
