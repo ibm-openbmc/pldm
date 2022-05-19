@@ -52,8 +52,9 @@ static std::map<uint8_t, std::string> link_speed{
                                                                          // BMC
     {0xFF, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Unknown"}};
 
-static std::map<uint8_t, uint32_t> link_width{{0x01, 1}, {0x02, 2},  {0x04, 4},
-                                              {0x08, 8}, {0x10, 16}, {0xFF, 0}};
+static std::map<uint8_t, int64_t> link_width{{0x01, 1}, {0x02, 2},  {0x04, 4},
+                                             {0x08, 8}, {0x10, 16}, {0xFF, -1},
+                                             {0x00, 0}};
 
 struct SlotLocCode_t
 {
@@ -108,7 +109,7 @@ using linkId_t = uint16_t;
 using linkStatus_t = std::string;
 using linkType_t = uint8_t;
 using linkSpeed_t = uint8_t;
-using linkWidth_t = uint32_t;
+using linkWidth_t = int64_t;
 using pcieHostBidgeloc_t = std::string;
 using localport_top_t = std::string;
 using localport_bot_t = std::string;
@@ -229,17 +230,17 @@ class PCIeInfoHandler : public FileHandler
                                   const localport_t& localPortLocation,
                                   const uint32_t& linkId,
                                   const std::string& linkStatus,
-                                  uint8_t linkSpeed, uint32_t linkWidth,
+                                  uint8_t linkSpeed, int64_t linkWidth,
                                   uint8_t parentLinkId);
     virtual void parseSecondaryLink(
         uint8_t linkType, const io_slot_location_t& ioSlotLocationCode,
         const localport_t& localPortLocation, const uint32_t& linkId,
-        const std::string& linkStatus, uint8_t linkSpeed, uint32_t linkWidth);
+        const std::string& linkStatus, uint8_t linkSpeed, int64_t linkWidth);
     virtual void setTopologyOnSlotAndAdapter(
         uint8_t linkType,
         const std::pair<std::string, std::string>& slotAndAdapter,
         const uint32_t& linkId, const std::string& linkStatus,
-        uint8_t linkSpeed, uint32_t linkWidth, bool isHostedByPLDM);
+        uint8_t linkSpeed, int64_t linkWidth, bool isHostedByPLDM);
 
     virtual void setProperty(const std::string& objPath,
                              const std::string& propertyName,
