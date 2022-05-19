@@ -287,7 +287,7 @@ std::string PCIeInfoHandler::getDownStreamChassis(
 void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
     uint8_t linkType, const std::pair<std::string, std::string>& slotAndAdapter,
     const uint32_t& linkId, const std::string& linkStatus, uint8_t linkSpeed,
-    uint32_t linkWidth, bool isHostedByPLDM)
+    int64_t linkWidth, bool isHostedByPLDM)
 {
     if (!slotAndAdapter.first.empty())
     {
@@ -353,7 +353,7 @@ void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
 
             // set link width
             setProperty(slotAndAdapter.second, "LanesInUse", linkWidth,
-                        itemPCIeDevice, "uint32_t");
+                        itemPCIeDevice, "int64_t");
             std::filesystem::path adapter(slotAndAdapter.second);
 
             std::cerr << "Primary Link, "
@@ -399,7 +399,7 @@ void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
 
                 // set link width
                 setProperty(slotAndAdapter.second, "LanesInUse", linkWidth,
-                            itemPCIeDevice, "uint32_t");
+                            itemPCIeDevice, "int64_t");
             }
 
             std::filesystem::path adapter(slotAndAdapter.second);
@@ -417,7 +417,7 @@ void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
 void PCIeInfoHandler::parsePrimaryLink(
     uint8_t linkType, const io_slot_location_t& ioSlotLocationCode,
     const localport_t& localPortLocation, const uint32_t& linkId,
-    const std::string& linkStatus, uint8_t linkSpeed, uint32_t linkWidth,
+    const std::string& linkStatus, uint8_t linkSpeed, int64_t linkWidth,
     uint8_t parentLinkId)
 {
     // Check the io_slot_location_code size
@@ -511,7 +511,7 @@ void PCIeInfoHandler::parsePrimaryLink(
 void PCIeInfoHandler::parseSecondaryLink(
     uint8_t linkType, const io_slot_location_t& ioSlotLocationCode,
     const localport_t& /*localPortLocation*/, const uint32_t& linkId,
-    const std::string& linkStatus, uint8_t linkSpeed, uint32_t linkWidth)
+    const std::string& linkStatus, uint8_t linkSpeed, int64_t linkWidth)
 {
     if (ioSlotLocationCode.size() == 1)
     {
