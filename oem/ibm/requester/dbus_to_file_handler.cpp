@@ -335,7 +335,8 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
 
                 pldm::utils::reportError(
                     "xyz.openbmc_project.PLDM.Error.SendFileToHostFail",
-                    pldm::PelSeverity::ERROR);
+                    pldm::PelSeverity::INFORMATIONAL);
+
             }
             return;
         }

@@ -36,10 +36,10 @@ class PCIeDevice : public ItemDevice
     }
 
     /** Get lanes in use */
-    size_t lanesInUse() const override;
+    int64_t lanesInUse() const override;
 
     /** Set lanes in use */
-    size_t lanesInUse(size_t value) override;
+    int64_t lanesInUse(int64_t value) override;
 
     /** Get Generation in use */
     Generations generationInUse() const override;
