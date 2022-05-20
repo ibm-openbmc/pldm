@@ -116,6 +116,13 @@ class Handler : public oem_platform::Handler
                              "xyz.openbmc_project.State.Host.HostState.Running")
                     {
                         hostOff = false;
+                        hostTransitioningToOff = false;
+                    }
+                    else if (
+                        propVal ==
+                        "xyz.openbmc_project.State.Host.HostState.TransitioningToOff")
+                    {
+                        hostTransitioningToOff = true;
                     }
                 }
             });
@@ -509,6 +516,8 @@ class Handler : public oem_platform::Handler
     sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic> timer;
 
     bool hostOff = true;
+
+    bool hostTransitioningToOff = true;
 
     int setEventReceiverCnt = 0;
 

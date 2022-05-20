@@ -1734,7 +1734,7 @@ void pldm::responder::oem_ibm_platform::Handler::processPowerOffHardGraceful()
 void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
                                                               bool value)
 {
-    if (tid != HYPERVISOR_TID)
+    if (hostOff || hostTransitioningToOff || tid != HYPERVISOR_TID)
     {
         return;
     }
