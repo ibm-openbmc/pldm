@@ -592,6 +592,18 @@
         "displayName" : "pvm_keep_and_clear"
      },
      {
+        "attribute_name":"pvm_clear_nvram",
+        "possible_values":[
+           "Disabled",
+           "Enabled"
+        ],
+        "default_values":[
+           "Disabled"
+        ],
+        "helpText" : "Specifies if the hypervisor needs to clear PHYP NVRAM",
+        "displayName" : "pvm_clear_nvram"
+     },
+     {
         "attribute_name":"hb_lateral_cast_out_mode",
         "possible_values":[
            "Disabled",
