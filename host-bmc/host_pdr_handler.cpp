@@ -1358,8 +1358,8 @@ pdr::EID HostPDRHandler::getMctpEID(const pldm::pdr::TerminusID& tid)
 
 void HostPDRHandler::getPresentStateBySensorReadigs(
     const pldm::pdr::TerminusID& tid, uint16_t sensorId, uint16_t type,
-    uint16_t instance, uint16_t containerId, uint8_t state,
-    const std::string& path, pldm::pdr::StateSetId stateSetId)
+    uint16_t instance, uint16_t containerId, const std::string& path,
+    pldm::pdr::StateSetId stateSetId)
 {
     auto mctpEid = getMctpEID(tid);
     auto instanceId = requester.getInstanceId(mctpEid);
@@ -1376,15 +1376,12 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
         requester.markFree(mctpEid, instanceId);
         std::cerr << "Failed to encode_get_state_sensor_readings_req, rc = "
                   << rc << std::endl;
-        state = PLDM_OPERATIONAL_NON_RECOVERABLE_ERROR;
         return;
     }
 
-    state = PLDM_SENSOR_UNKNOWN;
     auto getStateSensorReadingsResponseHandler = [this, path, type, instance,
-                                                  containerId, &state,
-                                                  stateSetId, mctpEid,
-                                                  sensorId](
+                                                  containerId, stateSetId,
+                                                  mctpEid, sensorId](
                                                      mctp_eid_t /*eid*/,
                                                      const pldm_msg* response,
                                                      size_t respMsgLen) {
@@ -1416,6 +1413,7 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
 
         uint8_t cc = 0;
         uint8_t sensorCnt = 0;
+        uint8_t state = PLDM_SENSOR_UNKNOWN;
         std::array<get_sensor_state_field, 8> stateField{};
         auto responsePtr = reinterpret_cast<const struct pldm_msg*>(response);
         auto rc = decode_get_state_sensor_readings_resp(
@@ -1426,7 +1424,14 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
             std::cerr << "Faile to decode get state sensor readings resp, "
                          "Message Error: "
                       << "rc=" << rc << ",cc=" << (int)cc << std::endl;
-            state = PLDM_OPERATIONAL_NON_RECOVERABLE_ERROR;
+            ++sensorMapIndex;
+            if (sensorMapIndex == sensorMap.end())
+            {
+                ++objMapIndex;
+                sensorMapIndex = sensorMap.begin();
+            }
+
+            setOperationStatus();
             return;
         }
 
@@ -1587,7 +1592,6 @@ void HostPDRHandler::setOperationStatus()
                 if ((stateSetIds[0] == PLDM_STATE_SET_HEALTH_STATE ||
                      stateSetIds[0] == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS))
                 {
-                    uint8_t state = 0;
                     // set the dbus property only when its not a
                     // composite sensor and the state set it
                     // PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS Get
@@ -1597,20 +1601,26 @@ void HostPDRHandler::setOperationStatus()
                     getPresentStateBySensorReadigs(
                         sensorMapIndex->first.terminusID,
                         sensorMapIndex->first.sensorID, entityType,
-                        entityInstance, containerId, state, objMapIndex->first,
+                        entityInstance, containerId, objMapIndex->first,
                         stateSetIds[0]);
                     return;
                 }
                 if (stateSetIds[0] == PLDM_STATE_SET_IDENTIFY_STATE)
                 {
-                    uint8_t state = 0;
                     getPresentStateBySensorReadigs(
                         sensorMapIndex->first.terminusID,
                         sensorMapIndex->first.sensorID, entityType,
-                        entityInstance, containerId, state, objMapIndex->first,
+                        entityInstance, containerId, objMapIndex->first,
                         stateSetIds[0]);
                     return;
                 }
+                ++sensorMapIndex;
+                if (sensorMapIndex == sensorMap.end())
+                {
+                    ++objMapIndex;
+                    sensorMapIndex = sensorMap.begin();
+                }
+                setOperationStatus();
             }
             else
             {
