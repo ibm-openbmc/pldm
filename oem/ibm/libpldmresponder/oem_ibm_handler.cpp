@@ -978,7 +978,7 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
                         << "Failed to decode setStateEffecterStates response,"
                         << " rc " << rc << "\n";
                     pldm::utils::reportError(
-                        "xyz.openbmc_project.bmc.pldm.SetHostEffecterFailed",
+                        "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
                         pldm::PelSeverity::ERROR);
                 }
                 if (completionCode)
@@ -988,7 +988,7 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
                         << ", cc=" << static_cast<unsigned>(completionCode)
                         << "\n";
                     pldm::utils::reportError(
-                        "xyz.openbmc_project.bmc.pldm.SetHostEffecterFailed",
+                        "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
                         pldm::PelSeverity::ERROR);
                 }
             };
@@ -1747,7 +1747,7 @@ void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
     {
         timer.setEnabled(false);
         pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.PLDM.setSurvTimer.RecvSurveillancePingFail",
+            "xyz.openbmc_project.PLDM.Error.setSurvTimer.RecvSurveillancePingFail",
             pldm::PelSeverity::INFORMATIONAL);
     }
 }
