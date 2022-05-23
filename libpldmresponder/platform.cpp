@@ -661,6 +661,10 @@ int Handler::getPDRRecordHandles(const ChangeEntry* changeEntryData,
     {
         pdrRecordHandles.push_back(changeEntryData[i]);
     }
+    for (const auto& i : pdrRecordHandles)
+    {
+        std::cerr << "Record handles sent down to BMC: " << i << std::endl;
+    }
     return PLDM_SUCCESS;
 }
 

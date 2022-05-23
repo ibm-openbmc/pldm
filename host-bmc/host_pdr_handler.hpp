@@ -290,14 +290,13 @@ class HostPDRHandler
      *  @param[in] instance     - entity instance num
      *  @param[in] containerId  - entity container id
      *
-     *  @param[out] state     - pldm operational fault status
      *  @param[in] path       - object path
      *  @param[in] stateSetId - state set Id
      */
     void getPresentStateBySensorReadigs(const pldm::pdr::TerminusID& tid,
                                         uint16_t sensorId, uint16_t type,
                                         uint16_t instance, uint16_t containerId,
-                                        uint8_t state, const std::string& path,
+                                        const std::string& path,
                                         pldm::pdr::StateSetId stateSetId);
 
     /** @brief Obtain the mctp_eid for a particular sensor
