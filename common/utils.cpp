@@ -291,10 +291,82 @@ void reportError(const char* errorMsg, const Severity& sev)
 void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
                                   const PropertyValue& value) const
 {
-    auto setDbusValue = [&dBusMap, this](const auto& variant) {
+    auto setDbusValue = [&dBusMap, &value, this](const auto& variant) {
         auto& bus = getBus();
         auto service =
             getService(dBusMap.objectPath.c_str(), dBusMap.interface.c_str());
+        if (service == "xyz.openbmc_project.Inventory.Manager")
+        {
+            std::cout << "Inside setDbusProperty: ObjectPath="
+                      << dBusMap.objectPath.c_str() << std::endl;
+            std::cout << "Inside setDbusProperty: Interface="
+                      << dBusMap.interface.c_str() << std::endl;
+
+            ObjectValueTree objectValueTree;
+            InterfaceMap interfaceMap;
+            PropertyMap propertyMap;
+            std::cout << "value=" << std::get<0>(variant) << std::endl;
+            if (dBusMap.propertyType == "uint8_t")
+            {
+                propertyMap.emplace(dBusMap.propertyName.c_str(),
+                                    std::get<uint8_t>(value));
+            }
+            else if (dBusMap.propertyType == "bool")
+            {
+                propertyMap.emplace(dBusMap.propertyName.c_str(),
+                                    std::get<bool>(value));
+            }
+            else if (dBusMap.propertyType == "int16_t")
+            {
+                propertyMap.emplace(dBusMap.propertyName.c_str(),
+                                    std::get<int16_t>(value));
+            }
+            else if (dBusMap.propertyType == "uint16_t")
+            {
+                propertyMap.emplace(dBusMap.propertyName.c_str(),
+                                    std::get<uint16_t>(value));
+            }
+            else if (dBusMap.propertyType == "int32_t")
+            {
+                propertyMap.emplace(dBusMap.propertyName.c_str(),
+                                    std::get<int32_t>(value));
+            }
+            else if (dBusMap.propertyType == "uint32_t")
+            {
+                propertyMap.emplace(dBusMap.propertyName.c_str(),
+                                    std::get<uint32_t>(value));
+            }
+            else if (dBusMap.propertyType == "int64_t")
+            {
+                propertyMap.emplace(dBusMap.propertyName.c_str(),
+                                    std::get<int64_t>(value));
+            }
+            else if (dBusMap.propertyType == "uint64_t")
+            {
+                propertyMap.emplace(dBusMap.propertyName.c_str(),
+                                    std::get<uint64_t>(value));
+            }
+            else if (dBusMap.propertyType == "double")
+            {
+                propertyMap.emplace(dBusMap.propertyName.c_str(),
+                                    std::get<double>(value));
+            }
+            else if (dBusMap.propertyType == "std::string")
+            {
+                propertyMap.emplace(dBusMap.propertyName.c_str(),
+                                    std::get<std::string>(value));
+            }
+            interfaceMap.emplace(dBusMap.interface.c_str(), propertyMap);
+            objectValueTree.emplace(std::move(dBusMap.objectPath.c_str()),
+                                    std::move(interfaceMap));
+            auto service1 = getService("/xyz/openbmc_project/inventory",
+                                       "xyz.openbmc_project.Inventory.Manager");
+            auto method = bus.new_method_call(
+                service1.c_str(), "/xyz/openbmc_project/inventory",
+                "xyz.openbmc_project.Inventory.Manager", "Notify");
+            method.append(std::move(objectValueTree));
+            bus.call_noreply(method);
+        }
         auto method = bus.new_method_call(
             service.c_str(), dBusMap.objectPath.c_str(), dbusProperties, "Set");
         if (dBusMap.objectPath ==
