@@ -345,6 +345,10 @@ class Handler : public CmdHandler
                     {
                         pldm::utils::PropertyValue licStrVal{prop.second};
                         licenseStr = std::get<std::string>(licStrVal);
+                        if (licenseStr.empty())
+                        {
+                            return;
+                        }
                         dbusToFileHandlers
                             .emplace_back(
                                 std::make_unique<pldm::requester::oem_ibm::
