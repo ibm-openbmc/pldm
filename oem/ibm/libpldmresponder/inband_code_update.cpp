@@ -448,6 +448,7 @@ void CodeUpdate::processRenameEvent()
 
 void CodeUpdate::writeBootSideFile(const pldm_boot_side_data& pldmBootSideData)
 {
+    fs::create_directories(bootSideDirPath.parent_path());
     std::ofstream writeFile(bootSideDirPath.string(),
                             std::ios::out | std::ios::binary);
     if (writeFile)
