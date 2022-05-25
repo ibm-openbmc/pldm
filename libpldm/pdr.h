@@ -5,35 +5,7 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-
-typedef struct pldm_pdr_record {
-	uint32_t record_handle;
-	uint32_t size;
-	uint8_t *data;
-	struct pldm_pdr_record *next;
-	bool is_remote;
-	uint16_t terminus_handle;
-} pldm_pdr_record;
-
-typedef struct pldm_pdr {
-	uint32_t record_count;
-	uint32_t size;
-	pldm_pdr_record *first;
-	pldm_pdr_record *last;
-} pldm_pdr;
-
-/** @struct pldm_pdr
- *  opaque structure that acts as a handle to a PDR repository
- */
-typedef struct pldm_pdr pldm_pdr;
-
-/** @struct pldm_pdr_record
- *  opaque structure that acts as a handle to a PDR record
- */
-typedef struct pldm_pdr_record pldm_pdr_record;
+#include "pdr_data.h"
 
 /* ====================== */
 /* Common PDR access APIs */
@@ -485,10 +457,14 @@ void pldm_entity_association_pdr_add(pldm_entity_association_tree *tree,
  *  @param[in] repo - PDR repo where entity association records should be added
  *  @param[in] is_remote  - if true, then the PDR is not from this terminus
  *  @param[in] terminus_handle - terminus handle of the terminus
+ *  @param[in] record_handle - is used to decide in which range pdr will be
+ * added 0 - Added next to recently added PDR in the repository 0xFFFFFFFF -
+ * Added in BMC range
  */
 void pldm_entity_association_pdr_add_from_node(
     pldm_entity_node *node, pldm_pdr *repo, pldm_entity **entities,
-    size_t num_entities, bool is_remote, uint16_t terminus_handle);
+    size_t num_entities, bool is_remote, uint16_t terminus_handle,
+    uint32_t record_handle);
 
 /** @brief Remove a contained entity from an entity association PDR
  *  @param[in] repo - opaque pointer to pldm PDR repo

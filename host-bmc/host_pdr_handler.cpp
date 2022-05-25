@@ -486,8 +486,11 @@ void HostPDRHandler::mergeEntityAssociations(const std::vector<uint8_t>& pdr)
         }
         else
         {
+            // Record Handle is 0xFFFFFFFF(max value uint32_t), for merging
+            // entity association pdr to bmc range
             pldm_entity_association_pdr_add_from_node(
-                node, repo, &entities, numEntities, true, TERMINUS_HANDLE);
+                node, repo, &entities, numEntities, true, TERMINUS_HANDLE,
+                0xFFFFFFFF);
         }
     }
     free(entities);
