@@ -260,66 +260,28 @@
         }]
     },
     {
-        "type" : 135,
+        "type" : 190,
+        "instance" : 0,
+        "container" : 3,
+        "effecters" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/cpu0_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 190,
         "instance" : 1,
-        "container" : 4,
-        "effecters" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu0_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 135,
-        "instance" : 2,
-        "container" : 4,
-        "effecters" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu0_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 135,
-        "instance" : 3,
-        "container" : 4,
-        "effecters" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu1_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 135,
-        "instance" : 4,
-        "container" : 4,
+        "container" : 3,
         "effecters" : [{
             "set" : {
                 "id" : 17,
@@ -404,8 +366,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 1,
+        "type" : 65,
+        "instance" : 0,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -423,8 +385,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 2,
+        "type" : 65,
+        "instance" : 1,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -442,8 +404,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 3,
+        "type" : 65,
+        "instance" : 2,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -461,8 +423,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 4,
+        "type" : 65,
+        "instance" : 3,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -480,8 +442,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 5,
+        "type" : 65,
+        "instance" : 4,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -499,8 +461,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 6,
+        "type" : 65,
+        "instance" : 5,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -518,8 +480,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 7,
+        "type" : 65,
+        "instance" : 6,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -537,8 +499,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 8,
+        "type" : 65,
+        "instance" : 7,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -556,8 +518,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 9,
+        "type" : 65,
+        "instance" : 8,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -575,8 +537,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 10,
+        "type" : 65,
+        "instance" : 9,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -594,8 +556,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 11,
+        "type" : 65,
+        "instance" : 10,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -613,8 +575,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 12,
+        "type" : 65,
+        "instance" : 11,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -632,8 +594,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 13,
+        "type" : 65,
+        "instance" : 12,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -651,8 +613,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 14,
+        "type" : 65,
+        "instance" : 13,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -670,8 +632,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 15,
+        "type" : 65,
+        "instance" : 14,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -689,8 +651,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 16,
+        "type" : 65,
+        "instance" : 15,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -708,8 +670,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 17,
+        "type" : 65,
+        "instance" : 16,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -727,8 +689,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 18,
+        "type" : 65,
+        "instance" : 17,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -746,8 +708,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 19,
+        "type" : 65,
+        "instance" : 18,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -765,8 +727,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 20,
+        "type" : 65,
+        "instance" : 19,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -784,8 +746,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 21,
+        "type" : 65,
+        "instance" : 20,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -803,8 +765,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 22,
+        "type" : 65,
+        "instance" : 21,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -822,8 +784,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 23,
+        "type" : 65,
+        "instance" : 22,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -841,8 +803,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 24,
+        "type" : 65,
+        "instance" : 23,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -860,8 +822,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 25,
+        "type" : 65,
+        "instance" : 24,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -879,8 +841,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 26,
+        "type" : 65,
+        "instance" : 25,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -898,8 +860,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 27,
+        "type" : 65,
+        "instance" : 26,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -917,8 +879,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 28,
+        "type" : 65,
+        "instance" : 27,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -936,8 +898,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 29,
+        "type" : 65,
+        "instance" : 28,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -955,8 +917,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 30,
+        "type" : 65,
+        "instance" : 29,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -974,8 +936,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 31,
+        "type" : 65,
+        "instance" : 30,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -993,8 +955,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 32,
+        "type" : 65,
+        "instance" : 31,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -1949,9 +1911,9 @@
         }]
     },
     {
-        "type" : 135,
-        "instance" : 1,
-        "container" : 4,
+        "type" : 190,
+        "instance" : 0,
+        "container" : 3,
         "effecters" : [{
             "set" : {
                 "id" : 10,
@@ -1968,28 +1930,9 @@
         }]
     },
     {
-        "type" : 135,
-        "instance" : 2,
-        "container" : 4,
-        "effecters" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dcm0/cpu1",
-                "interface": "xyz.openbmc_project.State.Decorator.OperationalStatus",
-                "property_name": "Functional",
-                "property_type": "bool",
-                "property_values" : [true, false]
-             }
-        }]
-    },
-    {
-        "type" : 135,
-        "instance" : 3,
-        "container" : 4,
+        "type" : 190,
+        "instance" : 1,
+        "container" : 3,
         "effecters" : [{
             "set" : {
                 "id" : 10,
@@ -1998,25 +1941,6 @@
             },
             "dbus" : {
                 "path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dcm1/cpu0",
-                "interface": "xyz.openbmc_project.State.Decorator.OperationalStatus",
-                "property_name": "Functional",
-                "property_type": "bool",
-                "property_values" : [true, false]
-             }
-        }]
-    },
-    {
-        "type" : 135,
-        "instance" : 4,
-        "container" : 4,
-        "effecters" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dcm1/cpu1",
                 "interface": "xyz.openbmc_project.State.Decorator.OperationalStatus",
                 "property_name": "Functional",
                 "property_type": "bool",
@@ -2093,8 +2017,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 1,
+        "type" : 65,
+        "instance" : 0,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2112,8 +2036,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 2,
+        "type" : 65,
+        "instance" : 1,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2131,8 +2055,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 3,
+        "type" : 65,
+        "instance" : 2,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2150,8 +2074,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 4,
+        "type" : 65,
+        "instance" : 3,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2169,8 +2093,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 5,
+        "type" : 65,
+        "instance" : 4,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2188,8 +2112,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 6,
+        "type" : 65,
+        "instance" : 5,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2207,8 +2131,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 7,
+        "type" : 65,
+        "instance" : 6,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2226,8 +2150,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 8,
+        "type" : 65,
+        "instance" : 7,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2245,8 +2169,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 9,
+        "type" : 65,
+        "instance" : 8,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2264,8 +2188,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 10,
+        "type" : 65,
+        "instance" : 9,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2283,8 +2207,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 11,
+        "type" : 65,
+        "instance" : 10,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2302,8 +2226,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 12,
+        "type" : 65,
+        "instance" : 11,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2321,8 +2245,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 13,
+        "type" : 65,
+        "instance" : 12,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2340,8 +2264,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 14,
+        "type" : 65,
+        "instance" : 13,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2359,8 +2283,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 15,
+        "type" : 65,
+        "instance" : 14,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2378,8 +2302,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 16,
+        "type" : 65,
+        "instance" : 15,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2397,8 +2321,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 17,
+        "type" : 65,
+        "instance" : 16,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2416,8 +2340,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 18,
+        "type" : 65,
+        "instance" : 17,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2435,8 +2359,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 19,
+        "type" : 65,
+        "instance" : 18,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2454,8 +2378,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 20,
+        "type" : 65,
+        "instance" : 19,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2473,8 +2397,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 21,
+        "type" : 65,
+        "instance" : 20,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2492,8 +2416,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 22,
+        "type" : 65,
+        "instance" : 21,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2511,8 +2435,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 23,
+        "type" : 65,
+        "instance" : 22,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2530,8 +2454,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 24,
+        "type" : 65,
+        "instance" : 23,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2549,8 +2473,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 25,
+        "type" : 65,
+        "instance" : 24,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2568,8 +2492,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 26,
+        "type" : 65,
+        "instance" : 25,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2587,8 +2511,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 27,
+        "type" : 65,
+        "instance" : 26,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2606,8 +2530,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 28,
+        "type" : 65,
+        "instance" : 27,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2625,8 +2549,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 29,
+        "type" : 65,
+        "instance" : 28,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2644,8 +2568,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 30,
+        "type" : 65,
+        "instance" : 29,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2663,8 +2587,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 31,
+        "type" : 65,
+        "instance" : 30,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -2682,8 +2606,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 32,
+        "type" : 65,
+        "instance" : 31,
         "container" : 3,
         "effecters" : [{
             "set" : {

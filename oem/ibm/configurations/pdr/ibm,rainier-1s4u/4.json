@@ -229,28 +229,9 @@
         }]
     },
     {
-        "type" : 135,
-        "instance" : 1,
-        "container" : 4,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu0_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 135,
-        "instance" : 2,
-        "container" : 4,
+        "type" : 190,
+        "instance" : 0,
+        "container" : 3,
         "sensors" : [{
             "set" : {
                 "id" : 17,
@@ -318,8 +299,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 1,
+        "type" : 65,
+        "instance" : 0,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -337,8 +318,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 2,
+        "type" : 65,
+        "instance" : 1,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -356,8 +337,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 3,
+        "type" : 65,
+        "instance" : 2,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -375,8 +356,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 4,
+        "type" : 65,
+        "instance" : 3,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -394,8 +375,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 5,
+        "type" : 65,
+        "instance" : 4,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -413,8 +394,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 6,
+        "type" : 65,
+        "instance" : 5,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -432,8 +413,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 7,
+        "type" : 65,
+        "instance" : 6,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -451,8 +432,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 8,
+        "type" : 65,
+        "instance" : 7,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -1162,27 +1143,8 @@
         }]
     },
     {
-        "type" : 135,
-        "instance" : 1,
-        "container" : 4,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu0_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 135,
-        "instance" : 2,
+        "type" : 190,
+        "instance" : 0,
         "container" : 4,
         "sensors" : [{
             "set" : {
@@ -1251,8 +1213,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 1,
+        "type" : 65,
+        "instance" : 0,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -1270,8 +1232,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 2,
+        "type" : 65,
+        "instance" : 1,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -1289,8 +1251,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 3,
+        "type" : 65,
+        "instance" : 2,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -1308,8 +1270,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 4,
+        "type" : 65,
+        "instance" : 3,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -1327,8 +1289,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 5,
+        "type" : 65,
+        "instance" : 4,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -1346,8 +1308,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 6,
+        "type" : 65,
+        "instance" : 5,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -1365,8 +1327,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 7,
+        "type" : 65,
+        "instance" : 6,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -1384,8 +1346,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 8,
+        "type" : 65,
+        "instance" : 7,
         "container" : 3,
         "sensors" : [{
             "set" : {
