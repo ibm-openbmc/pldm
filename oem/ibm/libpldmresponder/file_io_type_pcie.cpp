@@ -320,9 +320,6 @@ void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
             }
             else
             {
-                std::cerr << "is hosted by pldm is : false\n";
-                std::cerr << "slot : " << slotAndAdapter.first << std::endl;
-                std::cerr << "adapter : " << slotAndAdapter.second << std::endl;
                 // its a secondary link , but its an nvme slot hosted by
                 // inventory manager
                 setProperty(slotAndAdapter.first, "BusId", linkId, itemPCIeSlot,

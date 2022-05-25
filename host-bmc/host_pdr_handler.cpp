@@ -182,6 +182,7 @@ HostPDRHandler::HostPDRHandler(
                     this->mergedHostParents = false;
                     this->objMapIndex = objPathMap.begin();
                     this->sensorIndex = stateSensorPDRs.begin();
+                    fruRecordSetPDRs.clear();
 
                     // After a power off , the remote notes will be deleted
                     // from the entity association tree, making the nodes point
@@ -411,6 +412,14 @@ int HostPDRHandler::handleStateSensorEvent(
 
             break;
         }
+        else if (stateSetId[0] == PLDM_STATE_SET_VERSION)
+        {
+            // There is a version changed on any of the dbus objects
+            std::cout
+                << "Got a signal from Host about a possible change in Version\n";
+            createDbusObjects();
+            return PLDM_SUCCESS;
+        }
     }
 
     auto rc = stateSensorHandler.eventAction(entry, state);
@@ -627,8 +636,6 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                                      size_t respMsgLen)
 {
     static bool merged = false;
-    static PDRList fruRecordSetPDRs{};
-
     uint32_t nextRecordHandle{};
     uint32_t prevRh{};
     uint8_t tlEid = 0;
@@ -870,14 +877,13 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
 
         /*received last record*/
         this->parseStateSensorPDRs();
-        this->createDbusObjects(fruRecordSetPDRs);
+        this->createDbusObjects();
         if (isHostUp())
         {
             std::cout << "Host is UP & Completed the PDR Exchange with host\n";
             this->setHostSensorState();
         }
 
-        fruRecordSetPDRs.clear();
         entityAssociations.clear();
         mergedHostParents = false;
 
@@ -1194,8 +1200,7 @@ void HostPDRHandler::_setHostSensorState()
     }
 }
 
-void HostPDRHandler::getFRURecordTableMetadataByHost(
-    const PDRList& fruRecordSetPDRs)
+void HostPDRHandler::getFRURecordTableMetadataByHost()
 {
     auto instanceId = requester.getInstanceId(mctp_eid);
     std::vector<uint8_t> requestMsg(
@@ -1213,11 +1218,10 @@ void HostPDRHandler::getFRURecordTableMetadataByHost(
         return;
     }
 
-    auto getFruRecordTableMetadataResponseHandler = [this, fruRecordSetPDRs](
-                                                        mctp_eid_t /*eid*/,
-                                                        const pldm_msg*
-                                                            response,
-                                                        size_t respMsgLen) {
+    auto getFruRecordTableMetadataResponseHandler = [this](mctp_eid_t /*eid*/,
+                                                           const pldm_msg*
+                                                               response,
+                                                           size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             std::cerr << "Failed to receive response for the Get FRU Record "
@@ -1246,7 +1250,7 @@ void HostPDRHandler::getFRURecordTableMetadataByHost(
         }
 
         // pass total to getFRURecordTableByHost
-        this->getFRURecordTableByHost(total, fruRecordSetPDRs);
+        this->getFRURecordTableByHost(total);
     };
 
     rc = handler->registerRequest(
@@ -1262,8 +1266,7 @@ void HostPDRHandler::getFRURecordTableMetadataByHost(
     return;
 }
 
-void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records,
-                                             const PDRList& fruRecordSetPDRs)
+void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records)
 {
     fruRecordData.clear();
 
@@ -1289,11 +1292,10 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records,
         return;
     }
 
-    auto getFruRecordTableResponseHandler = [total_table_records, this,
-                                             fruRecordSetPDRs](
-                                                mctp_eid_t /*eid*/,
-                                                const pldm_msg* response,
-                                                size_t respMsgLen) {
+    auto getFruRecordTableResponseHandler = [total_table_records,
+                                             this](mctp_eid_t /*eid*/,
+                                                   const pldm_msg* response,
+                                                   size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             std::cerr << "Failed to receive response for the Get FRU Record "
@@ -1331,7 +1333,7 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records,
             return;
         }
 
-        this->setLocationCode(fruRecordSetPDRs, fruRecordData);
+        this->setLocationCode(fruRecordData);
     };
 
     rc = handler->registerRequest(
@@ -1490,8 +1492,7 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
     return;
 }
 
-uint16_t HostPDRHandler::getRSI(const PDRList& fruRecordSetPDRs,
-                                const pldm_entity& entity)
+uint16_t HostPDRHandler::getRSI(const pldm_entity& entity)
 {
     uint16_t fruRSI = 0;
 
@@ -1513,13 +1514,12 @@ uint16_t HostPDRHandler::getRSI(const PDRList& fruRecordSetPDRs,
 }
 
 void HostPDRHandler::setLocationCode(
-    const PDRList& fruRecordSetPDRs,
     const std::vector<responder::pdr_utils::FruRecordDataFormat>& fruRecordData)
 {
     for (auto& entity : objPathMap)
     {
         pldm_entity node = pldm_entity_extract(entity.second);
-        auto fruRSI = getRSI(fruRecordSetPDRs, node);
+        auto fruRSI = getRSI(node);
 
         for (auto& data : fruRecordData)
         {
@@ -1550,6 +1550,11 @@ void HostPDRHandler::setLocationCode(
                     if (tlv.fruFieldType == PLDM_FRU_FIELD_TYPE_VERSION &&
                         node.entity_type == PLDM_ENTITY_SYSTEM_CHASSIS)
                     {
+                        std::cout << "Refreshing the mex firmware version : "
+                                  << std::string(reinterpret_cast<const char*>(
+                                                     tlv.fruFieldValue.data()),
+                                                 tlv.fruFieldLen)
+                                  << std::endl;
                         CustomDBus::getCustomDBus().setSoftwareVersion(
                             entity.first,
                             std::string(reinterpret_cast<const char*>(
@@ -1672,7 +1677,7 @@ void HostPDRHandler::setAvailabilityState(const std::string& path)
     CustomDBus::getCustomDBus().setAvailabilityState(path, true);
 }
 
-void HostPDRHandler::createDbusObjects(const PDRList& fruRecordSetPDRs)
+void HostPDRHandler::createDbusObjects()
 {
     std::cerr << "Refreshing dbus hosted by pldm Started \n";
 
@@ -1749,7 +1754,7 @@ void HostPDRHandler::createDbusObjects(const PDRList& fruRecordSetPDRs)
         }
     }
     this->setFRUDynamicAssociations();
-    getFRURecordTableMetadataByHost(fruRecordSetPDRs);
+    getFRURecordTableMetadataByHost();
 
     // update xyz.openbmc_project.State.Decorator.OperationalStatus
     setOperationStatus();

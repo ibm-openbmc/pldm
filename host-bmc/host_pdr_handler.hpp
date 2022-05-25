@@ -246,42 +246,38 @@ class HostPDRHandler
                                sdeventplus::source::EventBase& source);
 
     /** @brief Get FRU record table metadata by host
-     *
-     *  @param[out] uint16_t    - total table records
      */
-    void getFRURecordTableMetadataByHost(const PDRList& fruRecordSetPDRs);
+    void getFRURecordTableMetadataByHost();
 
     /** @brief Set Location Code in the dbus objects
      *
-     *  @param[in] fruRecordSetPDRs - the Fru Record set PDR's
      *  @param[in] fruRecordData - the Fru Record Data
      */
 
     void setLocationCode(
-        const PDRList& fruRecordSetPDRs,
         const std::vector<responder::pdr_utils::FruRecordDataFormat>&
             fruRecordData);
     void setFRUDynamicAssociations();
 
     /** @brief Get FRU record table by host
      *
+     *  @param[in] uint16_t    - total table records
+     *
      *  @return
      */
-    void getFRURecordTableByHost(uint16_t& total,
-                                 const PDRList& fruRecordSetPDRs);
+    void getFRURecordTableByHost(uint16_t& total);
 
     /** @brief Create DBUS objects
      *
      * @ return
      */
-    void createDbusObjects(const PDRList& fruRecordSetPDRs);
+    void createDbusObjects();
 
     /** @brief Get FRU Record Set Identifier from FRU Record data Format
-     *  @param[in] fruRecordSetPDRs - fru record set pdr
      *  @param[in] entity           - PLDM entity information
      *  @return
      */
-    uint16_t getRSI(const PDRList& fruRecordSetPDRs, const pldm_entity& entity);
+    uint16_t getRSI(const pldm_entity& entity);
 
     /** @brief Get present state from state sensor readings
      *  @param[in] tid          - terminus id
@@ -433,6 +429,9 @@ class HostPDRHandler
 
     /** @brief variable to capture the host state */
     bool isHostOff;
+
+    /** cache the fru record set PDR's */
+    PDRList fruRecordSetPDRs{};
 };
 
 } // namespace pldm

@@ -39,12 +39,12 @@ void CustomDBus::setSoftwareVersion(const std::string& path, std::string value)
         softWareVersion.emplace(
             path, std::make_unique<SoftWareVersion>(
                       pldm::utils::DBusHandler::getBus(), path.c_str()));
+        softWareVersion.at(path)->purpose(
+            sdbusplus::xyz::openbmc_project::Software::server::Version::
+                VersionPurpose::Other);
     }
 
     softWareVersion.at(path)->version(value);
-    softWareVersion.at(path)->purpose(
-        sdbusplus::xyz::openbmc_project::Software::server::Version::
-            VersionPurpose::Other);
 }
 
 void CustomDBus::setOperationalStatus(const std::string& path, bool status,
@@ -415,13 +415,23 @@ void CustomDBus::setAssociations(const std::string& path, AssociationsObj assoc)
         // object already created , so just update the associations
         auto currentAssociations = getAssociations(path);
         AssociationsObj newAssociations;
-        newAssociations.reserve(currentAssociations.size() + assoc.size());
-        newAssociations.insert(newAssociations.end(),
-                               currentAssociations.begin(),
-                               currentAssociations.end());
-        newAssociations.insert(newAssociations.end(), assoc.begin(),
-                               assoc.end());
-        associations.at(path)->associations(newAssociations);
+
+        for (const auto& association : assoc)
+        {
+            if (std::find(currentAssociations.begin(),
+                          currentAssociations.end(),
+                          association) != currentAssociations.end())
+            {
+                // association is present in current associations
+                // do nothing
+            }
+            else
+            {
+                currentAssociations.push_back(association);
+            }
+        }
+
+        associations.at(path)->associations(currentAssociations);
     }
 }
 
