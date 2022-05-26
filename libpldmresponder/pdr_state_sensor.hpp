@@ -4,6 +4,10 @@
 
 #include "libpldmresponder/pdr_utils.hpp"
 
+#ifdef OEM_IBM
+#include "oem/ibm/libpldm/pdr_oem_ibm.h"
+#endif
+
 namespace pldm
 {
 
@@ -132,10 +136,17 @@ void generateStateSensorPDR(const DBusInterface& dBusIntf, const Json& json,
                     pldm_entity_association_tree_add(
                         bmcEntityTree, &child_entity, pdr->entity_instance,
                         parent_node, PLDM_ENTITY_ASSOCIAION_PHYSICAL, false,
-                        false);
+                        false, 0xFFFF);
+                    uint32_t bmc_record_handle = 0;
+#ifdef OEM_IBM
+                    auto lastLocalRecord =
+                        pldm_pdr_find_last_local_record(repo.getPdr());
+                    bmc_record_handle = lastLocalRecord->record_handle;
+#endif
+
                     pldm_entity_association_pdr_add_contained_entity(
                         repo.getPdr(), child_entity, parent_entity,
-                        &bmcEventDataOps, false);
+                        &bmcEventDataOps, false, bmc_record_handle);
                 }
             }
         }

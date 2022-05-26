@@ -9,6 +9,7 @@ headers = [
   'state_set.h',
   'fru.h',
   'utils.h',
+  'pdr_data.h',
   'pdr.h',
   'firmware_update.h'
 ]

@@ -1,11 +1,14 @@
 #include "pdr.h"
 #include "platform.h"
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <stdio.h>
+
+#ifdef OEM_IBM
+#include "oem/ibm/libpldm/pdr_oem_ibm.h"
+#endif
 
 static inline uint32_t get_next_record_handle(const pldm_pdr *repo,
 					      const pldm_pdr_record *record)
@@ -120,8 +123,20 @@ static pldm_pdr_record *make_new_record(const pldm_pdr *repo,
 
 	pldm_pdr_record *record = malloc(sizeof(pldm_pdr_record));
 	assert(record != NULL);
-	record->record_handle =
-	    record_handle == 0 ? get_new_record_handle(repo) : record_handle;
+	if (record_handle == 0) {
+		record->record_handle = get_new_record_handle(repo);
+	}
+#ifdef OEM_IBM
+	else if (record_handle == 0xFFFFFFFF) {
+		pldm_pdr_record *rec = pldm_pdr_find_last_local_record(repo);
+		if (record != NULL) {
+			record->record_handle = rec->record_handle + 1;
+		}
+	}
+#endif
+	else {
+		record->record_handle = record_handle;
+	}
 	record->size = size;
 	record->is_remote = is_remote;
 	record->terminus_handle = terminus_handle;
@@ -828,7 +843,7 @@ typedef struct pldm_entity_node {
 	uint8_t association_type;
 } pldm_entity_node;
 
-static inline uint16_t next_container_id(pldm_entity_association_tree *tree)
+uint16_t next_container_id(pldm_entity_association_tree *tree)
 {
 	assert(tree != NULL);
 	assert(tree->last_used_container_id != UINT16_MAX);
@@ -900,7 +915,8 @@ find_insertion_at(pldm_entity_node *start,
 pldm_entity_node *pldm_entity_association_tree_add(
     pldm_entity_association_tree *tree, pldm_entity *entity,
     uint16_t entity_instance_number, pldm_entity_node *parent,
-    uint8_t association_type, bool is_remote, bool is_update_contanier_id)
+    uint8_t association_type, bool is_remote, bool is_update_contanier_id,
+    uint16_t container_id)
 {
 	/*printf("\nenter pldm_entity_association_tree_add"); */
 	if (parent) {
@@ -950,16 +966,31 @@ pldm_entity_node *pldm_entity_association_tree_add(
 		node->parent = parent->entity;
 		if (is_remote) {
 			node->host_container_id = entity->entity_container_id;
-			node->entity.entity_container_id =
-			    is_update_contanier_id
-				? next_container_id(tree)
-				: entity->entity_container_id;
-
+			if (is_update_contanier_id) {
+				if (container_id != 0xFFFF) {
+					node->entity.entity_container_id =
+					    container_id;
+				} else {
+					node->entity.entity_container_id =
+					    next_container_id(tree);
+				}
+			} else {
+				node->entity.entity_container_id =
+				    entity->entity_container_id;
+			}
 		} else {
-			node->entity.entity_container_id =
-			    is_update_contanier_id
-				? next_container_id(tree)
-				: entity->entity_container_id;
+			if (is_update_contanier_id) {
+				if (container_id != 0xFFFF) {
+					node->entity.entity_container_id =
+					    container_id;
+				} else {
+					node->entity.entity_container_id =
+					    next_container_id(tree);
+				}
+			} else {
+				node->entity.entity_container_id =
+				    entity->entity_container_id;
+			}
 			node->host_container_id =
 			    node->entity.entity_container_id;
 		}
@@ -1175,12 +1206,10 @@ bool pldm_is_current_parent_child(pldm_entity_node *parent, pldm_entity *node)
 	return false;
 }
 
-static void _entity_association_pdr_add_entry(pldm_entity_node *curr,
-					      pldm_pdr *repo, uint16_t size,
-					      uint8_t contained_count,
-					      uint8_t association_type,
-					      bool is_remote,
-					      uint16_t terminus_handle)
+static void _entity_association_pdr_add_entry(
+    pldm_entity_node *curr, pldm_pdr *repo, uint16_t size,
+    uint8_t contained_count, uint8_t association_type, bool is_remote,
+    uint16_t terminus_handle, uint32_t record_handle)
 {
 	uint8_t pdr[size];
 	uint8_t *start = pdr;
@@ -1222,12 +1251,14 @@ static void _entity_association_pdr_add_entry(pldm_entity_node *curr,
 		node = node->next_sibling;
 	}
 
-	pldm_pdr_add(repo, pdr, size, 0, is_remote, terminus_handle);
+	pldm_pdr_add(repo, pdr, size, record_handle, is_remote,
+		     terminus_handle);
 }
 
 static void entity_association_pdr_add_entry(pldm_entity_node *curr,
 					     pldm_pdr *repo, bool is_remote,
-					     uint16_t terminus_handle)
+					     uint16_t terminus_handle,
+					     uint32_t record_handle)
 {
 	uint8_t num_logical_children =
 	    pldm_entity_get_num_children(curr, PLDM_ENTITY_ASSOCIAION_LOGICAL);
@@ -1241,7 +1272,8 @@ static void entity_association_pdr_add_entry(pldm_entity_node *curr,
 		    (num_logical_children * sizeof(pldm_entity));
 		_entity_association_pdr_add_entry(
 		    curr, repo, logical_pdr_size, num_logical_children,
-		    PLDM_ENTITY_ASSOCIAION_LOGICAL, is_remote, terminus_handle);
+		    PLDM_ENTITY_ASSOCIAION_LOGICAL, is_remote, terminus_handle,
+		    record_handle);
 	}
 
 	if (num_physical_children) {
@@ -1251,8 +1283,8 @@ static void entity_association_pdr_add_entry(pldm_entity_node *curr,
 		    (num_physical_children * sizeof(pldm_entity));
 		_entity_association_pdr_add_entry(
 		    curr, repo, physical_pdr_size, num_physical_children,
-		    PLDM_ENTITY_ASSOCIAION_PHYSICAL, is_remote,
-		    terminus_handle);
+		    PLDM_ENTITY_ASSOCIAION_PHYSICAL, is_remote, terminus_handle,
+		    record_handle);
 	}
 }
 
@@ -1274,7 +1306,8 @@ bool is_present(pldm_entity entity, pldm_entity **entities, size_t num_entities)
 static void entity_association_pdr_add(pldm_entity_node *curr, pldm_pdr *repo,
 				       pldm_entity **entities,
 				       size_t num_entities, bool is_remote,
-				       uint16_t terminus_handle)
+				       uint16_t terminus_handle,
+				       uint32_t record_handle)
 {
 	if (curr == NULL) {
 		return;
@@ -1282,13 +1315,15 @@ static void entity_association_pdr_add(pldm_entity_node *curr, pldm_pdr *repo,
 	bool to_add = true;
 	to_add = is_present(curr->entity, entities, num_entities);
 	if (to_add) {
-		entity_association_pdr_add_entry(curr, repo, is_remote,
-						 terminus_handle);
+		entity_association_pdr_add_entry(
+		    curr, repo, is_remote, terminus_handle, record_handle);
 	}
 	entity_association_pdr_add(curr->next_sibling, repo, entities,
-				   num_entities, is_remote, terminus_handle);
+				   num_entities, is_remote, terminus_handle,
+				   record_handle);
 	entity_association_pdr_add(curr->first_child, repo, entities,
-				   num_entities, is_remote, terminus_handle);
+				   num_entities, is_remote, terminus_handle,
+				   record_handle);
 }
 
 void pldm_entity_association_pdr_add(pldm_entity_association_tree *tree,
@@ -1299,17 +1334,18 @@ void pldm_entity_association_pdr_add(pldm_entity_association_tree *tree,
 	assert(repo != NULL);
 
 	entity_association_pdr_add(tree->root, repo, NULL, 0, is_remote,
-				   terminus_handle);
+				   terminus_handle, 0);
 }
 
 void pldm_entity_association_pdr_add_from_node(
     pldm_entity_node *node, pldm_pdr *repo, pldm_entity **entities,
-    size_t num_entities, bool is_remote, uint16_t terminus_handle)
+    size_t num_entities, bool is_remote, uint16_t terminus_handle,
+    uint32_t record_handle)
 {
 	assert(repo != NULL);
 
 	entity_association_pdr_add(node, repo, entities, num_entities,
-				   is_remote, terminus_handle);
+				   is_remote, terminus_handle, record_handle);
 }
 
 uint32_t find_record_handle_by_contained_entity(pldm_pdr *repo,
@@ -1530,7 +1566,7 @@ uint32_t pldm_entity_association_pdr_remove_contained_entity(
 
 uint32_t pldm_entity_association_pdr_add_contained_entity(
     pldm_pdr *repo, pldm_entity entity, pldm_entity parent,
-    uint8_t *event_data_op, bool is_remote)
+    uint8_t *event_data_op, bool is_remote, uint32_t bmc_record_handle)
 {
 	/*printf("\nenter pldm_entity_association_pdr_add_contained_entity
       entity type=%d entity ins=%d container id=%d", entity.entity_type,
@@ -1664,7 +1700,7 @@ uint32_t pldm_entity_association_pdr_add_contained_entity(
 		prev = repo->first;
 		pldm_pdr_record *curr = repo->first;
 		while (curr != NULL) {
-			if (!prev->is_remote && curr->is_remote) {
+			if (curr->record_handle == bmc_record_handle) {
 				// printf("\nfound the place \n");
 				break;
 			}
@@ -1677,11 +1713,11 @@ uint32_t pldm_entity_association_pdr_add_contained_entity(
 					sizeof(pldm_entity) + sizeof(uint8_t) +
 					num_children * sizeof(pldm_entity);
 		new_record->data = malloc(new_pdr_size);
-		new_record->record_handle = prev->record_handle + 1;
+		new_record->record_handle = bmc_record_handle + 1;
 		new_record->size = new_pdr_size;
 		new_record->is_remote = false;
-		new_record->next = prev->next;
-		prev->next = new_record;
+		new_record->next = curr->next;
+		curr->next = new_record;
 		if (repo->last == prev) {
 			repo->last = new_record;
 		}
