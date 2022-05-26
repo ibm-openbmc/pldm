@@ -95,6 +95,7 @@ int pldm::responder::oem_ibm_platform::Handler::
                 if (stateField[currState].effecter_state ==
                     uint8_t(CodeUpdateState::START))
                 {
+                    std::cout << "Received Start Update Request From PHYP\n";
                     codeUpdate->setCodeUpdateProgress(true);
                     startUpdateEvent =
                         std::make_unique<sdeventplus::source::Defer>(
@@ -106,6 +107,7 @@ int pldm::responder::oem_ibm_platform::Handler::
                 else if (stateField[currState].effecter_state ==
                          uint8_t(CodeUpdateState::END))
                 {
+                    std::cout << "Received End Update Request From PHYP\n";
                     rc = PLDM_SUCCESS;
                     assembleImageEvent = std::make_unique<
                         sdeventplus::source::Defer>(
@@ -120,6 +122,7 @@ int pldm::responder::oem_ibm_platform::Handler::
                 else if (stateField[currState].effecter_state ==
                          uint8_t(CodeUpdateState::ABORT))
                 {
+                    std::cout << "Received Abort Update Request From PHYP\n";
                     codeUpdate->setCodeUpdateProgress(false);
                     codeUpdate->clearDirPath(LID_STAGING_DIR);
                     auto sensorId = codeUpdate->getFirmwareUpdateSensor();
@@ -795,6 +798,7 @@ void pldm::responder::oem_ibm_platform::Handler::_processEndUpdate(
     sdeventplus::source::EventBase& /*source */)
 {
     assembleImageEvent.reset();
+    std::cout << "Starting assembleCodeUpdateImage \n";
     int retc = codeUpdate->assembleCodeUpdateImage();
     if (retc != PLDM_SUCCESS)
     {
@@ -818,6 +822,7 @@ void pldm::responder::oem_ibm_platform::Handler::_processStartUpdate(
         state = CodeUpdateState::FAIL;
     }
     auto sensorId = codeUpdate->getFirmwareUpdateSensor();
+    std::cout << "Sending Start Update sensor event to PHYP\n";
     sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0, uint8_t(state),
                          uint8_t(CodeUpdateState::END));
 }
@@ -861,6 +866,7 @@ void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
                                          "RequestedPowerTransition", "string"};
     try
     {
+        std::cout << "InbandCodeUpdate: ChassifOff the host\n";
         dBusIntf->setDbusProperty(dbusMapping, value);
     }
     catch (const std::exception& e)
@@ -895,28 +901,40 @@ void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
                         "Policy.AlwaysOn";
                 try
                 {
-                    dBusIntf->setDbusProperty(dbusMapping, value);
-                }
-                catch (const std::exception& e)
-                {
-                    error(
-                        "Failure in setting one-time restore policy, unable to set property PowerRestorePolicy, error - {ERROR}",
-                        "ERROR", e);
-                }
-                dbusMapping = pldm::utils::DBusMapping{
-                    "/xyz/openbmc_project/state/bmc0",
-                    "xyz.openbmc_project.State.BMC", "RequestedBMCTransition",
-                    "string"};
-                value = "xyz.openbmc_project.State.BMC.Transition.Reboot";
-                try
-                {
-                    dBusIntf->setDbusProperty(dbusMapping, value);
-                }
-                catch (const std::exception& e)
-                {
-                    error(
-                        "Failure in BMC state transition to reboot, unable to set property RequestedBMCTransition , error - {ERROR}",
-                        "ERROR", e);
+                    pldm::utils::DBusMapping dbusMapping{
+                        "/xyz/openbmc_project/control/host0/"
+                        "power_restore_policy/one_time",
+                        "xyz.openbmc_project.Control.Power.RestorePolicy",
+                        "PowerRestorePolicy", "string"};
+                    value = "xyz.openbmc_project.Control.Power.RestorePolicy."
+                            "Policy.AlwaysOn";
+                    try
+                    {
+                        info("InbandCodeUpdate: Setting the one time APR policy");
+                        dBusIntf->setDbusProperty(dbusMapping, value);
+                    }
+                    catch (const std::exception& e)
+                    {
+                        error(
+                        "Setting one-time restore policy failed, unable to set property PowerRestorePolicy ERROR={ERR_EXCEP}",
+                        "ERR_EXCEP", e.what());
+                    }
+                    dbusMapping = pldm::utils::DBusMapping{
+                        "/xyz/openbmc_project/state/bmc0",
+                        "xyz.openbmc_project.State.BMC",
+                        "RequestedBMCTransition", "string"};
+                    value = "xyz.openbmc_project.State.BMC.Transition.Reboot";
+                    try
+                    {
+                        info("InbandCodeUpdate: Rebooting the BMC");
+                        dBusIntf->setDbusProperty(dbusMapping, value);
+                    }
+                    catch (const std::exception& e)
+                    {
+                        error(
+                        "BMC state transition to reboot failed, unable to set property RequestedBMCTransition ERROR={ERR_EXCEP}",
+                        "ERR_EXCEP", e);
+                    }
                 }
             }
         }
