@@ -34,7 +34,7 @@ const std::map<EntityType, EntityName> entityMaps = {
     {PLDM_ENTITY_PROC | 0x8000, "core"},
     {PLDM_ENTITY_IO_MODULE, "io_module"},
     {PLDM_ENTITY_FAN, "fan"},
-    {PLDM_ENTITY_SYS_MGMT_MODULE, "system_management_module"},
+    {PLDM_ENTITY_MODULE, "system_management_module"},
     {PLDM_ENTITY_POWER_CONVERTER, "power_converter"},
     {PLDM_ENTITY_SLOT, "slot"},
     {PLDM_ENTITY_CONNECTOR, "connector"},
