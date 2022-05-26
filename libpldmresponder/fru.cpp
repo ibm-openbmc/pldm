@@ -118,7 +118,7 @@ void FruImpl::updateAssociationTree(const dbus::ObjectValueTree& objects,
             {
                 auto node = pldm_entity_association_tree_add(
                     entityTree, &entity, 0xFFFF, nullptr,
-                    PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true);
+                    PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true, 0xFFFF);
                 objToEntityNode[tmpObjPaths[i]] = pldm_entity_extract(node);
             }
             else
@@ -131,7 +131,7 @@ void FruImpl::updateAssociationTree(const dbus::ObjectValueTree& objects,
                         &parent_node);
                     auto node = pldm_entity_association_tree_add(
                         entityTree, &entity, 0xFFFF, parent_node,
-                        PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true);
+                        PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true, 0xFFFF);
                     objToEntityNode[tmpObjPaths[i]] = pldm_entity_extract(node);
                 }
             }
@@ -519,6 +519,7 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
     pldm_entity parent = {};
     pldm_entity entity{};
     pldm_entity parentEntity{};
+    static uint32_t last_bmc_record_handle = 0;
     uint32_t newRecordHdl{};
     try
     {
@@ -544,9 +545,10 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
 
         pldm_entity_node* parent_node = nullptr;
         pldm_find_entity_ref_in_tree(entityTree, parent, &parent_node);
+        uint16_t last_container_id = next_container_id(entityTree);
         auto node = pldm_entity_association_tree_add(
             entityTree, &entity, 0xFFFF, parent_node,
-            PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true);
+            PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true, last_container_id);
         pldm_entity node_entity = pldm_entity_extract(node);
         objToEntityNode[fruObjectPath] = node_entity;
         std::cerr << " Building Individual FRU "
@@ -574,7 +576,7 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
 
         pldm_entity_association_tree_add(
             bmcEntityTree, &entity, 0xFFFF, bmcTreeParentNode,
-            PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true);
+            PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true, last_container_id);
 
         for (const auto& object : objects)
         {
@@ -594,16 +596,26 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
                   << " in concurrent add path "
                   << "interface type, interface = " << fruInterface << "\n";
     }
+#ifdef OEM_IBM
+    auto lastLocalRecord = pldm_pdr_find_last_local_record(pdrRepo);
+    last_bmc_record_handle = lastLocalRecord->record_handle;
+#endif
 
     uint8_t bmcEventDataOps = PLDM_INVALID_OP;
     auto updatedRecordHdlBmc = pldm_entity_association_pdr_add_contained_entity(
-        pdrRepo, entity, parentEntity, &bmcEventDataOps, false);
+        pdrRepo, entity, parentEntity, &bmcEventDataOps, false,
+        last_bmc_record_handle);
+#ifdef OEM_IBM
+    auto lastBMCRecord = pldm_pdr_find_last_local_record(pdrRepo);
+    last_bmc_record_handle = lastBMCRecord->record_handle;
+#endif
 
     uint8_t hostEventDataOps = PLDM_INVALID_OP;
 
     auto updatedRecordHdlHost =
         pldm_entity_association_pdr_add_contained_entity(
-            pdrRepo, entity, parentEntity, &hostEventDataOps, true);
+            pdrRepo, entity, parentEntity, &hostEventDataOps, true,
+            last_bmc_record_handle);
 
     // create the relevant state effecter and sensor PDRs for the new fru record
     std::vector<uint32_t> recordHdlList;

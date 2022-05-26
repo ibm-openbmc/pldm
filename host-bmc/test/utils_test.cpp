@@ -39,29 +39,32 @@ TEST(EntityAssociation, addObjectPathEntityAssociations1)
 
     auto l1 = pldm_entity_association_tree_add(tree, &entities[0], 1, nullptr,
                                                PLDM_ENTITY_ASSOCIAION_PHYSICAL,
-                                               true, true);
+                                               true, true, 0xFFFF);
 
-    auto l2 = pldm_entity_association_tree_add(
-        tree, &entities[1], 1, l1, PLDM_ENTITY_ASSOCIAION_PHYSICAL, true, true);
+    auto l2 = pldm_entity_association_tree_add(tree, &entities[1], 1, l1,
+                                               PLDM_ENTITY_ASSOCIAION_PHYSICAL,
+                                               true, true, 0xFFFF);
 
-    auto l3a = pldm_entity_association_tree_add(
-        tree, &entities[2], 0, l2, PLDM_ENTITY_ASSOCIAION_PHYSICAL, true, true);
-    auto l3b = pldm_entity_association_tree_add(
-        tree, &entities[3], 1, l2, PLDM_ENTITY_ASSOCIAION_PHYSICAL, true, true);
+    auto l3a = pldm_entity_association_tree_add(tree, &entities[2], 0, l2,
+                                                PLDM_ENTITY_ASSOCIAION_PHYSICAL,
+                                                true, true, 0xFFFF);
+    auto l3b = pldm_entity_association_tree_add(tree, &entities[3], 1, l2,
+                                                PLDM_ENTITY_ASSOCIAION_PHYSICAL,
+                                                true, true, 0xFFFF);
 
     auto l4a = pldm_entity_association_tree_add(tree, &entities[4], 0, l3a,
                                                 PLDM_ENTITY_ASSOCIAION_PHYSICAL,
-                                                true, true);
+                                                true, true, 0xFFFF);
     auto l4b = pldm_entity_association_tree_add(tree, &entities[5], 1, l3a,
                                                 PLDM_ENTITY_ASSOCIAION_PHYSICAL,
-                                                true, true);
+                                                true, true, 0xFFFF);
 
     auto l5a = pldm_entity_association_tree_add(tree, &entities[6], 0, l3b,
                                                 PLDM_ENTITY_ASSOCIAION_PHYSICAL,
-                                                true, true);
+                                                true, true, 0xFFFF);
     auto l5b = pldm_entity_association_tree_add(tree, &entities[7], 1, l3b,
                                                 PLDM_ENTITY_ASSOCIAION_PHYSICAL,
-                                                true, true);
+                                                true, true, 0xFFFF);
 
     EntityAssociations entityAssociations = {
         {l1, l2}, {l2, l3a, l3b}, {l3a, l4a, l4b}, {l3b, l5a, l5b}};
