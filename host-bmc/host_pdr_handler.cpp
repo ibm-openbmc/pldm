@@ -223,6 +223,7 @@ HostPDRHandler::HostPDRHandler(
                 {
                     if (oemPlatformHandler)
                     {
+                        oemPlatformHandler->startStopTimer(false);
                         oemPlatformHandler->handleBootTypesAtChassisOff();
                     }
                     static constexpr auto searchpath =

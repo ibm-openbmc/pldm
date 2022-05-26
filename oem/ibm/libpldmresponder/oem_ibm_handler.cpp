@@ -1738,13 +1738,8 @@ void pldm::responder::oem_ibm_platform::Handler::processPowerOffHardGraceful()
     processPowerOffSoftGraceful();
 }
 
-void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
-                                                              bool value)
+void pldm::responder::oem_ibm_platform::Handler::startStopTimer(bool value)
 {
-    if (hostOff || hostTransitioningToOff || tid != HYPERVISOR_TID)
-    {
-        return;
-    }
     if (value)
     {
         timer.restart(
@@ -1752,7 +1747,35 @@ void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
     }
     else
     {
-        timer.setEnabled(false);
+        timer.setEnabled(value);
+    }
+}
+
+void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
+                                                              bool value)
+{
+    std::cout << "setSurvTimer:hostOff=" << (bool)hostOff
+              << " hostTransitioningToOff=" << (bool)hostTransitioningToOff
+              << " tid=" << (uint16_t)tid << std::endl;
+    if ((hostOff == true) || (hostTransitioningToOff == true) ||
+        (tid != HYPERVISOR_TID))
+    {
+        if (timer.isEnabled())
+        {
+            startStopTimer(false);
+        }
+        return;
+    }
+    if (value)
+    {
+        startStopTimer(true);
+    }
+    else if (!value && timer.isEnabled())
+    {
+        std::cout << "setSurvTimer:LogginPel:hostOff=" << (bool)hostOff
+                  << " hostTransitioningToOff=" << (bool)hostTransitioningToOff
+                  << " tid=" << (uint16_t)tid << std::endl;
+        startStopTimer(false);
         pldm::utils::reportError(
             "xyz.openbmc_project.PLDM.Error.setSurvTimer.RecvSurveillancePingFail",
             pldm::PelSeverity::INFORMATIONAL);
