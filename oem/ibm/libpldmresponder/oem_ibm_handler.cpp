@@ -146,6 +146,7 @@ int pldm::responder::oem_ibm_platform::Handler::
                 if (stateField[currState].effecter_state ==
                     uint8_t(CodeUpdateState::START))
                 {
+                    std::cout << "Received Start Update Request From PHYP\n";
                     codeUpdate->setCodeUpdateProgress(true);
                     startUpdateEvent =
                         std::make_unique<sdeventplus::source::Defer>(
@@ -157,6 +158,7 @@ int pldm::responder::oem_ibm_platform::Handler::
                 else if (stateField[currState].effecter_state ==
                          uint8_t(CodeUpdateState::END))
                 {
+                    std::cout << "Received End Update Request From PHYP\n";
                     rc = PLDM_SUCCESS;
                     assembleImageEvent = std::make_unique<
                         sdeventplus::source::Defer>(
@@ -171,6 +173,7 @@ int pldm::responder::oem_ibm_platform::Handler::
                 else if (stateField[currState].effecter_state ==
                          uint8_t(CodeUpdateState::ABORT))
                 {
+                    std::cout << "Received Abort Update Request From PHYP\n";
                     codeUpdate->setCodeUpdateProgress(false);
                     codeUpdate->clearDirPath(LID_STAGING_DIR);
                     auto sensorId = codeUpdate->getFirmwareUpdateSensor();
@@ -1142,6 +1145,7 @@ void pldm::responder::oem_ibm_platform::Handler::_processEndUpdate(
     sdeventplus::source::EventBase& /*source */)
 {
     assembleImageEvent.reset();
+    std::cout << "Starting assembleCodeUpdateImage \n";
     int retc = codeUpdate->assembleCodeUpdateImage();
     if (retc != PLDM_SUCCESS)
     {
@@ -1165,6 +1169,7 @@ void pldm::responder::oem_ibm_platform::Handler::_processStartUpdate(
         state = CodeUpdateState::FAIL;
     }
     auto sensorId = codeUpdate->getFirmwareUpdateSensor();
+    std::cout << "Sending Start Update sensor event to PHYP\n";
     sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0, uint8_t(state),
                          uint8_t(CodeUpdateState::END));
 }
@@ -1198,6 +1203,7 @@ void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
                                          "RequestedPowerTransition", "string"};
     try
     {
+        std::cout << "InbandCodeUpdate: ChassifOff the host\n";
         dBusIntf->setDbusProperty(dbusMapping, value);
     }
     catch (const std::exception& e)
@@ -1234,6 +1240,8 @@ void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
                             "Policy.AlwaysOn";
                     try
                     {
+                        std::cout
+                            << "InbandCodeUpdate: Setting the one time APR policy\n";
                         dBusIntf->setDbusProperty(dbusMapping, value);
                     }
                     catch (const std::exception& e)
@@ -1249,6 +1257,7 @@ void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
                     value = "xyz.openbmc_project.State.BMC.Transition.Reboot";
                     try
                     {
+                        std::cout << "InbandCodeUpdate: Rebooting the BMC\n";
                         dBusIntf->setDbusProperty(dbusMapping, value);
                     }
                     catch (const std::exception& e)
