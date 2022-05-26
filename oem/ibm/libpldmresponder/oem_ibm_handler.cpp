@@ -655,12 +655,19 @@ void attachOemEntityToEntityAssociationPDR(
                       << " not found in the BMC Entity Association tree\n";
             return;
         }
+        uint32_t bmc_record_handle = 0;
+#ifdef OEM_IBM
+        auto lastLocalRecord = pldm_pdr_find_last_local_record(repo.getPdr());
+        bmc_record_handle = lastLocalRecord->record_handle;
+#endif
         pldm_entity_association_tree_add(
             bmcEntityTree, &childEntity, 0xFFFF, parent_node,
-            PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, false);
+            PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, false, 0xFFFF);
+
         uint8_t bmcEventDataOps = PLDM_INVALID_OP;
         pldm_entity_association_pdr_add_contained_entity(
-            repo.getPdr(), childEntity, parent_entity, &bmcEventDataOps, false);
+            repo.getPdr(), childEntity, parent_entity, &bmcEventDataOps, false,
+            bmc_record_handle);
     }
 }
 

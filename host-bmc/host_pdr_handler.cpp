@@ -468,7 +468,7 @@ void HostPDRHandler::mergeEntityAssociations(const std::vector<uint8_t>& pdr)
             auto node = pldm_entity_association_tree_add(
                 entityTree, &entities[i], entities[i].entity_instance_num,
                 pNode, entityPdr->association_type, true,
-                !(entities[i].entity_container_id & 0x8000));
+                !(entities[i].entity_container_id & 0x8000), 0xFFFF);
             if (!node)
             {
                 continue;
@@ -495,8 +495,11 @@ void HostPDRHandler::mergeEntityAssociations(const std::vector<uint8_t>& pdr)
         }
         else
         {
+            // Record Handle is 0xFFFFFFFF(max value uint32_t), for merging
+            // entity association pdr to bmc range
             pldm_entity_association_pdr_add_from_node(
-                node, repo, &entities, numEntities, true, TERMINUS_HANDLE);
+                node, repo, &entities, numEntities, true, TERMINUS_HANDLE,
+                0xFFFFFFFF);
         }
     }
     free(entities);
