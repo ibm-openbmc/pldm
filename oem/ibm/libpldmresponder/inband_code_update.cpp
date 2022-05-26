@@ -326,6 +326,7 @@ void CodeUpdate::setVersions()
 
                         if (isCodeUpdateInProgress())
                         {
+                            std::cout << "Inband Code update is InProgress\n";
                             // Inband update
                             newImageId = path.str;
                             if (!imageActivationMatch)
@@ -351,6 +352,10 @@ void CodeUpdate::setVersions()
                                                 "xyz.openbmc_project.Software."
                                                 "Activation.Activations.Active")
                                             {
+                                                std::cout
+                                                    << "Received Active signal, Sending "
+                                                    << "success on End update sensor event "
+                                                    << "to PHYP\n";
                                                 CodeUpdateState state =
                                                     CodeUpdateState::END;
                                                 setCodeUpdateProgress(false);
@@ -363,6 +368,7 @@ void CodeUpdate::setVersions()
                                                     uint8_t(CodeUpdateState::
                                                                 START));
                                                 newImageId.clear();
+                                                imageActivationMatch.reset();
                                             }
                                             else if (propVal ==
                                                          "xyz.openbmc_project."
@@ -375,6 +381,10 @@ void CodeUpdate::setVersions()
                                                          "Activations."
                                                          "Invalid")
                                             {
+                                                std::cout
+                                                    << "Image activation Failed or image "
+                                                    << "Invalid, sending Failure on End "
+                                                    << "update to PHYP\n";
                                                 CodeUpdateState state =
                                                     CodeUpdateState::FAIL;
                                                 setCodeUpdateProgress(false);
@@ -387,8 +397,8 @@ void CodeUpdate::setVersions()
                                                     uint8_t(CodeUpdateState::
                                                                 START));
                                                 newImageId.clear();
+                                                imageActivationMatch.reset();
                                             }
-                                            imageActivationMatch.reset();
                                         }
                                     });
                             }
@@ -744,37 +754,58 @@ int CodeUpdate::assembleCodeUpdateImage()
         pid_t nextPid = fork();
         if (nextPid == 0)
         {
+            auto rc = 0;
             // Create the hostfw squashfs image from the LID files without
             // header
-            auto rc = executeCmd("/usr/sbin/mksquashfs", lidDirPath.c_str(),
-                                 hostfwImagePath.c_str(), "-all-root",
-                                 "-no-recovery", "-no-xattrs", "-noI",
-                                 "-mkfs-time", "0", "-all-time", "0");
-            if (rc < 0)
+            try
             {
-                std::cerr << "Error occurred during the mksqusquashfs call"
-                          << std::endl;
-                setCodeUpdateProgress(false);
-                auto sensorId = getFirmwareUpdateSensor();
-                sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
-                                     uint8_t(CodeUpdateState::FAIL),
-                                     uint8_t(CodeUpdateState::START));
-                exit(EXIT_FAILURE);
+                rc = executeCmd("/usr/sbin/mksquashfs", lidDirPath.c_str(),
+                                hostfwImagePath.c_str(), "-all-root",
+                                "-no-recovery", "-no-xattrs", "-noI",
+                                "-mkfs-time", "0", "-all-time", "0");
+                if (rc < 0)
+                {
+                    std::cerr << "Error occurred during the mksqusquashfs call"
+                              << std::endl;
+                    setCodeUpdateProgress(false);
+                    auto sensorId = getFirmwareUpdateSensor();
+                    sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
+                                         uint8_t(CodeUpdateState::FAIL),
+                                         uint8_t(CodeUpdateState::START));
+                    exit(EXIT_FAILURE);
+                }
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "Failed during the mksqusquashfs call, "
+                             "ERROR="
+                          << e.what() << "\n";
+                return PLDM_ERROR;
             }
 
             fs::create_directories(updateDirPath);
 
             // Extract the BMC tarball content
-            rc = executeCmd("/bin/tar", "-xf", tarImagePath.c_str(), "-C",
-                            updateDirPath);
-            if (rc < 0)
+            try
             {
-                setCodeUpdateProgress(false);
-                auto sensorId = getFirmwareUpdateSensor();
-                sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
-                                     uint8_t(CodeUpdateState::FAIL),
-                                     uint8_t(CodeUpdateState::START));
-                exit(EXIT_FAILURE);
+                rc = executeCmd("/bin/tar", "-xf", tarImagePath.c_str(), "-C",
+                                updateDirPath);
+                if (rc < 0)
+                {
+                    setCodeUpdateProgress(false);
+                    auto sensorId = getFirmwareUpdateSensor();
+                    sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
+                                         uint8_t(CodeUpdateState::FAIL),
+                                         uint8_t(CodeUpdateState::START));
+                    exit(EXIT_FAILURE);
+                }
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "Failed to Extract the BMC tarball content, "
+                             "ERROR="
+                          << e.what() << "\n";
+                return PLDM_ERROR;
             }
 
             // Add the hostfw image to the directory where the contents were
@@ -786,19 +817,30 @@ int CodeUpdate::assembleCodeUpdateImage()
             // Remove the tarball file, then re-generate it with so that the
             // hostfw image becomes part of the tarball
             fs::remove(tarImagePath);
-            rc = executeCmd("/bin/tar", "-cf", tarImagePath, ".", "-C",
-                            updateDirPath);
-            if (rc < 0)
+            try
+            {
+                rc = executeCmd("/bin/tar", "-cf", tarImagePath, ".", "-C",
+                                updateDirPath);
+                if (rc < 0)
+                {
+                    std::cerr
+                        << "Error occurred during the generation of the tarball"
+                        << std::endl;
+                    setCodeUpdateProgress(false);
+                    auto sensorId = getFirmwareUpdateSensor();
+                    sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
+                                         uint8_t(CodeUpdateState::FAIL),
+                                         uint8_t(CodeUpdateState::START));
+                    exit(EXIT_FAILURE);
+                }
+            }
+            catch (const std::exception& e)
             {
                 std::cerr
-                    << "Error occurred during the generation of the tarball"
-                    << std::endl;
-                setCodeUpdateProgress(false);
-                auto sensorId = getFirmwareUpdateSensor();
-                sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
-                                     uint8_t(CodeUpdateState::FAIL),
-                                     uint8_t(CodeUpdateState::START));
-                exit(EXIT_FAILURE);
+                    << "Failed to Remove the tarball file, then re-generate it, "
+                       "ERROR="
+                    << e.what() << "\n";
+                return PLDM_ERROR;
             }
 
             // Copy the tarball to the update directory to trigger the
