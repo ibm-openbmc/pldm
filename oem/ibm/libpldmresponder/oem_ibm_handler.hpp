@@ -439,6 +439,12 @@ class Handler : public oem_platform::Handler
     /** @brief To process auto power restore policy*/
     void processPowerOffHardGraceful();
 
+    /** @brief Method to reset or stop the surveillance timer
+     *
+     *  @param[in] value - true or false, to indicate if the timer
+     *                     should be reset or turned off*/
+    void startStopTimer(bool value);
+
     /** @brief Method to Enable/Disable timer to see if host sends the
      * surveillance ping and logs informational error if host fails to send the
      * surveillance pings

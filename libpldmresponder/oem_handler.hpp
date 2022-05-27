@@ -143,6 +143,11 @@ class Handler : public CmdHandler
     /** @brief To update container ID of Proc LED PDRs */
     virtual void updateContainerIDofProcLed() = 0;
 
+    /** @brief Interface to reset or stop the surveillance timer
+     *  @param[in] value - true or false, to indicate if the timer
+     *                     should be reset or turned off*/
+    virtual void startStopTimer(bool value) = 0;
+
     /** @brief Interface to monitor the surveillance pings from host
      *
      * @param[in] tid - TID of the host
