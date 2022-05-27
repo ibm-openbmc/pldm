@@ -145,10 +145,6 @@ HostPDRHandler::HostPDRHandler(
                 isHostRunning = false;
                 this->sensorIndex = stateSensorPDRs.begin();
                 this->modifiedCounter = 0;
-                if (oemPlatformHandler != nullptr)
-                {
-                    oemPlatformHandler->startStopTimer(false);
-                }
 
                 // After a power off , the remote nodes will be deleted
                 // from the entity association tree, making the nodes point
@@ -158,21 +154,21 @@ HostPDRHandler::HostPDRHandler(
                     pldm_entity obj{};
                     this->objPathMap[element.first] = obj;
                 }
-               }
-                else if (propVal ==
+            }
+            else if (propVal ==
                      "xyz.openbmc_project.State.Host.HostState.Running")
-                {
+            {
                 isHostRunning = true;
                 isHostOff = false;
                 if (oemPlatformHandler)
                 {
                     oemPlatformHandler->handleBootTypesAtPowerOn();
                 }
-                }
-                else
-                {
+            }
+            else
+            {
                 isHostRunning = false;
-                }
+            }
         }
     });
 }

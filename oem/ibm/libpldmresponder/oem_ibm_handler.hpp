@@ -175,7 +175,6 @@ class Handler : public oem_platform::Handler
                 }
             });
 
-
     powerStateOffMatch = std::make_unique<sdbusplus::bus::match::match>(
         pldm::utils::DBusHandler::getBus(),
         propertiesChanged("/xyz/openbmc_project/state/chassis0",
@@ -255,6 +254,21 @@ class Handler : public oem_platform::Handler
         }
     });
 
+    partitionSAIMatch = std::make_unique<sdbusplus::bus::match_t>(
+            pldm::utils::DBusHandler::getBus(),
+            propertiesChanged(
+                "/xyz/openbmc_project/led/groups/platform_system_attention_indicator",
+                "xyz.openbmc_project.Led.Group"),
+            [this](sdbusplus::message_t& msg) {
+            pldm::utils::DbusChangedProps props{};
+            std::string intf;
+            msg.read(intf, props);
+            const auto itr = props.find("Asserted");
+            if (itr != props.end())
+            {
+                processSAIUpdate();
+            }
+        });
         updateBIOSMatch = std::make_unique<sdbusplus::bus::match::match>(
             pldm::utils::DBusHandler::getBus(),
             propertiesChanged("/xyz/openbmc_project/bios_config/manager",
@@ -569,13 +583,6 @@ class Handler : public oem_platform::Handler
     sdeventplus::Event& event;
 
   private:
-    /** @brief Method to reset or stop the surveillance timer
-     *
-     * @param[in] value - true or false, to indicate if the timer
-     *                    should be reset or turned off
-     */
-    void startStopTimer(bool value);
-
     /*@brief Host restart cause*/
     std::string restartCause;
 
@@ -623,6 +630,12 @@ class Handler : public oem_platform::Handler
     uint16_t realSAISensorId;
 
     std::unique_ptr<pldm::responder::oem_fileio::Handler> dbusToFileioIntf;
+
+    /** @brief Method to reset or stop the surveillance timer
+    *
+    *   @param[in] value - true or false, to indicate if the timer
+    *                     should be reset or turned off*/
+    void startStopTimer(bool value);
 };
 
 /** @brief Method to encode code update event msg

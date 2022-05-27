@@ -1062,43 +1062,6 @@ void Handler::processSetEventReceiver()
     this->setEventReceiver();
 }
 
-void pldm::responder::oem_ibm_platform::Handler::startStopTimer(bool value)
-{
-    if (value)
-    {
-        timer.restart(
-            std::chrono::seconds(HEARTBEAT_TIMEOUT + HEARTBEAT_TIMEOUT_DELTA));
-    }
-    else
-    {
-        timer.setEnabled(value);
-    }
-}
-
-void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
-                                                              bool value)
-{
-    if ((hostOff || hostTransitioningToOff || (tid != HYPERVISOR_TID)) &&
-        timer.isEnabled())
-    {
-        startStopTimer(false);
-        return;
-    }
-    if (value)
-    {
-        startStopTimer(value);
-    }
-    else if (timer.isEnabled())
-    {
-        info(
-            "Failed to stop surveillance timer while remote terminus status is ‘{HOST_TRANST_OFF}’ with Terminus ID ‘{TID}’ ",
-            "HOST_TRANST_OFF", hostTransitioningToOff, "TID", tid);
-        startStopTimer(value);
-        pldm::utils::reportError(
-            "xyz.openbmc_project.PLDM.Error.setSurvTimer.RecvSurveillancePingFail");
-    }
-}
-
 void pldm::responder::oem_ibm_platform::Handler::
     processPowerCycleOffSoftGraceful()
 {
@@ -1351,18 +1314,44 @@ void pldm::responder::oem_ibm_platform::Handler::handleBootTypesAtChassisOff()
     }
 }
 
-                reinterpret_cast<pldm_state_sensor_pdr*>(faultSensorPDR.data());
-            if (instanceNumber == (pdr->entity_instance) - 1)
-            {
-                uint16_t newContainerID = pldm_find_container_id(
-                    pdrRepo, PLDM_ENTITY_PROC_MODULE, value.dcmId);
-                pldm_change_container_id_of_sensor(pdrRepo, pdr->sensor_id,
-                                                   newContainerID);
-                pldm_change_instance_number_of_sensor(pdrRepo, pdr->sensor_id,
-                                                      (instanceNumber % 2));
-                break;
-            }
+void pldm::responder::oem_ibm_platform::Handler::startStopTimer(bool value)
+{
+    if (value)
+    {
+        timer.restart(
+            std::chrono::seconds(HEARTBEAT_TIMEOUT + HEARTBEAT_TIMEOUT_DELTA));
+    }
+    else
+    {
+        timer.setEnabled(value);
+    }
+}
+
+void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
+                                                              bool value)
+{
+    if ((hostOff == true) || (hostTransitioningToOff == true) ||
+        (tid != HYPERVISOR_TID))
+    {
+        if (timer.isEnabled())
+        {
+            startStopTimer(false);
         }
+        return;
+    }
+    if (value)
+    {
+        startStopTimer(true);
+    }
+    else if (!value && timer.isEnabled())
+    {
+         info(
+            "setSurvTimer:LogginPel:hostOff={HOST_OFF} hostTransitioningToOff={HOST_TRANST_OFF} tid={TID}",
+            "HOST_OFF", (bool)hostOff, "HOST_TRANST_OFF",
+            (bool)hostTransitioningToOff, "TID", (uint16_t)tid);
+        startStopTimer(false);
+        pldm::utils::reportError(
+            "xyz.openbmc_project.bmc.PLDM.setSurvTimer.RecvSurveillancePingFail");
     }
 }
 
