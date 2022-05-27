@@ -226,9 +226,9 @@
         }]
     },
     {
-        "type" : 135,
-        "instance" : 1,
-        "container" : 4,
+        "type" : 190,
+        "instance" : 0,
+        "container" : 3,
         "effecters" : [{
             "set" : {
                 "id" : 17,
@@ -245,9 +245,9 @@
         }]
     },
     {
-        "type" : 135,
-        "instance" : 2,
-        "container" : 4,
+        "type" : 190,
+        "instance" : 1,
+        "container" : 3,
         "effecters" : [{
             "set" : {
                 "id" : 17,
@@ -255,7 +255,7 @@
                 "states" : [1,2]
             },
             "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu0_identify",
+                "path": "/xyz/openbmc_project/led/groups/cpu1_identify",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
@@ -315,7 +315,26 @@
         }]
     },
     {
-        "type" : 66,
+        "type" : 65,
+        "instance" : 0,
+        "container" : 3,
+        "effecters" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm16_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
         "instance" : 1,
         "container" : 3,
         "effecters" : [{
@@ -325,7 +344,7 @@
                 "states" : [1,2]
             },
             "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm0_identify",
+                "path": "/xyz/openbmc_project/led/groups/ddimm17_identify",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
@@ -334,7 +353,7 @@
         }]
     },
     {
-        "type" : 66,
+        "type" : 65,
         "instance" : 2,
         "container" : 3,
         "effecters" : [{
@@ -344,7 +363,7 @@
                 "states" : [1,2]
             },
             "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm1_identify",
+                "path": "/xyz/openbmc_project/led/groups/ddimm18_identify",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
@@ -353,7 +372,7 @@
         }]
     },
     {
-        "type" : 66,
+        "type" : 65,
         "instance" : 3,
         "container" : 3,
         "effecters" : [{
@@ -363,7 +382,7 @@
                 "states" : [1,2]
             },
             "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm2_identify",
+                "path": "/xyz/openbmc_project/led/groups/ddimm19_identify",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
@@ -372,7 +391,7 @@
         }]
     },
     {
-        "type" : 66,
+        "type" : 65,
         "instance" : 4,
         "container" : 3,
         "effecters" : [{
@@ -382,7 +401,7 @@
                 "states" : [1,2]
             },
             "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm3_identify",
+                "path": "/xyz/openbmc_project/led/groups/ddimm20_identify",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
@@ -391,7 +410,7 @@
         }]
     },
     {
-        "type" : 66,
+        "type" : 65,
         "instance" : 5,
         "container" : 3,
         "effecters" : [{
@@ -401,7 +420,7 @@
                 "states" : [1,2]
             },
             "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm4_identify",
+                "path": "/xyz/openbmc_project/led/groups/ddimm21_identify",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
@@ -410,7 +429,7 @@
         }]
     },
     {
-        "type" : 66,
+        "type" : 65,
         "instance" : 6,
         "container" : 3,
         "effecters" : [{
@@ -420,7 +439,7 @@
                 "states" : [1,2]
             },
             "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm5_identify",
+                "path": "/xyz/openbmc_project/led/groups/ddimm22_identify",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
@@ -429,7 +448,7 @@
         }]
     },
     {
-        "type" : 66,
+        "type" : 65,
         "instance" : 7,
         "container" : 3,
         "effecters" : [{
@@ -439,26 +458,7 @@
                 "states" : [1,2]
             },
             "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm6_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 8,
-        "container" : 3,
-        "effecters" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm7_identify",
+                "path": "/xyz/openbmc_project/led/groups/ddimm23_identify",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
@@ -1132,9 +1132,9 @@
         }]
     },
     {
-        "type" : 135,
-        "instance" : 1,
-        "container" : 4,
+        "type" : 190,
+        "instance" : 0,
+        "container" : 3,
         "effecters" : [{
             "set" : {
                 "id" : 10,
@@ -1151,9 +1151,9 @@
         }]
     },
     {
-        "type" : 135,
-        "instance" : 3,
-        "container" : 4,
+        "type" : 190,
+        "instance" : 1,
+        "container" : 3,
         "effecters" : [{
             "set" : {
                 "id" : 10,
@@ -1238,8 +1238,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 1,
+        "type" : 65,
+        "instance" : 0,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -1257,8 +1257,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 2,
+        "type" : 65,
+        "instance" : 1,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -1276,8 +1276,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 3,
+        "type" : 65,
+        "instance" : 2,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -1295,8 +1295,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 4,
+        "type" : 65,
+        "instance" : 3,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -1314,8 +1314,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 5,
+        "type" : 65,
+        "instance" : 4,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -1333,8 +1333,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 6,
+        "type" : 65,
+        "instance" : 5,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -1352,8 +1352,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 7,
+        "type" : 65,
+        "instance" : 6,
         "container" : 3,
         "effecters" : [{
             "set" : {
@@ -1371,8 +1371,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 8,
+        "type" : 65,
+        "instance" : 7,
         "container" : 3,
         "effecters" : [{
             "set" : {
