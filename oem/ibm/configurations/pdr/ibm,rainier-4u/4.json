@@ -331,66 +331,28 @@
         }]
     },
     {
-        "type" : 135,
+        "type" : 190,
+        "instance" : 0,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/cpu0_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 190,
         "instance" : 1,
-        "container" : 4,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu0_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 135,
-        "instance" : 2,
-        "container" : 4,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu0_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 135,
-        "instance" : 3,
-        "container" : 4,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu1_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 135,
-        "instance" : 4,
-        "container" : 4,
+        "container" : 3,
         "sensors" : [{
             "set" : {
                 "id" : 17,
@@ -475,312 +437,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 1,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm0_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 2,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm1_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 3,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm2_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 4,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm3_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 5,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm4_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 6,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm5_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 7,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm6_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 8,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm7_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 9,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm8_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 10,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm9_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 11,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm10_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 12,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm11_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 13,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm12_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 14,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm13_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 15,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm14_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 16,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 17,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm15_identify",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 17,
+        "type" : 65,
+        "instance" : 0,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -798,8 +456,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 18,
+        "type" : 65,
+        "instance" : 1,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -817,8 +475,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 19,
+        "type" : 65,
+        "instance" : 2,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -836,8 +494,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 20,
+        "type" : 65,
+        "instance" : 3,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -855,8 +513,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 21,
+        "type" : 65,
+        "instance" : 4,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -874,8 +532,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 22,
+        "type" : 65,
+        "instance" : 5,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -893,8 +551,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 23,
+        "type" : 65,
+        "instance" : 6,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -912,8 +570,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 24,
+        "type" : 65,
+        "instance" : 7,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -931,8 +589,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 25,
+        "type" : 65,
+        "instance" : 8,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -950,8 +608,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 26,
+        "type" : 65,
+        "instance" : 9,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -969,8 +627,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 27,
+        "type" : 65,
+        "instance" : 10,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -988,8 +646,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 28,
+        "type" : 65,
+        "instance" : 11,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -1007,8 +665,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 29,
+        "type" : 65,
+        "instance" : 12,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -1026,8 +684,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 30,
+        "type" : 65,
+        "instance" : 13,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -1045,8 +703,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 31,
+        "type" : 65,
+        "instance" : 14,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -1064,8 +722,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 32,
+        "type" : 65,
+        "instance" : 15,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -1075,6 +733,310 @@
             },
             "dbus" : {
                 "path": "/xyz/openbmc_project/led/groups/ddimm31_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 16,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm0_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 17,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm1_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 18,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm2_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 19,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm3_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 20,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm4_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 21,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm5_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 22,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm6_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 23,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm7_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 24,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm8_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 25,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm9_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 26,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm10_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 27,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm11_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 28,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm12_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 29,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm13_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 30,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm14_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 31,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm15_identify",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
@@ -2132,66 +2094,28 @@
         }]
     },
     {
-        "type" : 135,
+        "type" : 190,
+        "instance" : 0,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/cpu0_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 190,
         "instance" : 1,
-        "container" : 4,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu0_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 135,
-        "instance" : 2,
-        "container" : 4,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu0_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 135,
-        "instance" : 3,
-        "container" : 4,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu1_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 135,
-        "instance" : 4,
-        "container" : 4,
+        "container" : 3,
         "sensors" : [{
             "set" : {
                 "id" : 10,
@@ -2276,312 +2200,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 1,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm0_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 2,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm1_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 3,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm2_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 4,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm3_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 5,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm4_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 6,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm5_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 7,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm6_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 8,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm7_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 9,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm8_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 10,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm9_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 11,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm10_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 12,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm11_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 13,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm12_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 14,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm13_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 15,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm14_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 16,
-        "container" : 3,
-        "sensors" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/ddimm15_fault",
-                "interface": "xyz.openbmc_project.Led.Group",
-                "property_name": "Asserted",
-                "property_type": "bool",
-                "property_values" : [false, true]
-             }
-        }]
-    },
-    {
-        "type" : 66,
-        "instance" : 17,
+        "type" : 65,
+        "instance" : 0,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -2599,8 +2219,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 18,
+        "type" : 65,
+        "instance" : 1,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -2618,8 +2238,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 19,
+        "type" : 65,
+        "instance" : 2,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -2637,8 +2257,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 20,
+        "type" : 65,
+        "instance" : 3,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -2656,8 +2276,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 21,
+        "type" : 65,
+        "instance" : 4,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -2675,8 +2295,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 22,
+        "type" : 65,
+        "instance" : 5,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -2694,8 +2314,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 23,
+        "type" : 65,
+        "instance" : 6,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -2713,8 +2333,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 24,
+        "type" : 65,
+        "instance" : 7,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -2732,8 +2352,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 25,
+        "type" : 65,
+        "instance" : 8,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -2751,8 +2371,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 26,
+        "type" : 65,
+        "instance" : 9,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -2770,8 +2390,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 27,
+        "type" : 65,
+        "instance" : 10,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -2789,8 +2409,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 28,
+        "type" : 65,
+        "instance" : 11,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -2808,8 +2428,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 29,
+        "type" : 65,
+        "instance" : 12,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -2827,8 +2447,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 30,
+        "type" : 65,
+        "instance" : 13,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -2846,8 +2466,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 31,
+        "type" : 65,
+        "instance" : 14,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -2865,8 +2485,8 @@
         }]
     },
     {
-        "type" : 66,
-        "instance" : 32,
+        "type" : 65,
+        "instance" : 15,
         "container" : 3,
         "sensors" : [{
             "set" : {
@@ -2876,6 +2496,310 @@
             },
             "dbus" : {
                 "path": "/xyz/openbmc_project/led/groups/ddimm31_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 16,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm0_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 17,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm1_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 18,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm2_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 19,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm3_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 20,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm4_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 21,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm5_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 22,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm6_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 23,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm7_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 24,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm8_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 25,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm9_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 26,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm10_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 27,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm11_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 28,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm12_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 29,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm13_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 30,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm14_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 65,
+        "instance" : 31,
+        "container" : 3,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/ddimm15_fault",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",

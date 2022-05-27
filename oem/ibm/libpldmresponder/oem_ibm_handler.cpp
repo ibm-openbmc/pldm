@@ -9,6 +9,8 @@
 #include "libpldmresponder/file_io.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
 
+#include <regex>
+
 using namespace pldm::pdr;
 using namespace pldm::utils;
 
@@ -1195,6 +1197,12 @@ void pldm::responder::oem_ibm_platform::Handler::upadteOemDbusPaths(
     {
         size_t pos = dbusPath.find(toFind);
         dbusPath.replace(pos, toFind.length(), "system");
+    }
+    toFind = "socket";
+    if (dbusPath.find(toFind) != std::string::npos)
+    {
+        std::regex reg(R"(\/motherboard\/socket[0-9]+)");
+        dbusPath = regex_replace(dbusPath, reg, "/motherboard");
     }
 }
 void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
