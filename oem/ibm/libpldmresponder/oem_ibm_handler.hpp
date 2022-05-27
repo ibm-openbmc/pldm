@@ -145,16 +145,17 @@ class Handler : public oem_platform::Handler
                 }
                 else if (propVal ==
                          "xyz.openbmc_project.State.Host.HostState.Running")
+                {
                     hostTransitioningToOff = false;
+                }
+                else if (
+                    propVal ==
+                    "xyz.openbmc_project.State.Host.HostState.TransitioningToOff")
+                {
+                    hostTransitioningToOff = true;
+                }
             }
-            else if (
-                propVal ==
-                "xyz.openbmc_project.State.Host.HostState.TransitioningToOff")
-            {
-                hostTransitioningToOff = true;
-            }
-            }
-    });
+        });
 
     powerStateOffMatch = std::make_unique<sdbusplus::bus::match::match>(
         pldm::utils::DBusHandler::getBus(),
@@ -264,7 +265,12 @@ class Handler : public oem_platform::Handler
                     std::get<std::string>(attributevalue);
                 codeUpdate->setNextBootSide(nextBootSide);
             }
+<<<<<<< HEAD
         });
+=======
+        }
+    });
+>>>>>>> 54c96b16 (PLDM: Disable surveillance timer (#262))
 
         partitionSAIMatch = std::make_unique<sdbusplus::bus::match_t>(
             pldm::utils::DBusHandler::getBus(),
@@ -603,13 +609,6 @@ class Handler : public oem_platform::Handler
     sdeventplus::Event& event;
 
   private:
-    /** @brief Method to reset or stop the surveillance timer
-     *
-     * @param[in] value - true or false, to indicate if the timer
-     *                    should be reset or turned off
-     */
-    void startStopTimer(bool value);
-
     /*@brief Host restart cause*/
     std::string restartCause;
 
@@ -657,6 +656,12 @@ class Handler : public oem_platform::Handler
     uint16_t realSAISensorId;
 
     std::unique_ptr<pldm::responder::oem_fileio::Handler> dbusToFileioIntf;
+
+    /** @brief Method to reset or stop the surveillance timer
+    *
+    *   @param[in] value - true or false, to indicate if the timer
+    *                     should be reset or turned off*/
+    void startStopTimer(bool value);
 };
 
 /** @brief Method to encode code update event msg

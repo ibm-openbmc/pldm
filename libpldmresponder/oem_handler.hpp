@@ -115,6 +115,11 @@ class Handler : public CmdHandler
     virtual void processSetEventReceiver() = 0;
 
     /** @brief Interface to monitor the surveillance pings from remote terminus
+     *  @param[in] value - true or false, to indicate if the timer
+     *                     should be reset or turned off*/
+    virtual void startStopTimer(bool value) = 0;
+
+    /** @brief Interface to monitor the surveillance pings from remote terminus
      *
      * @param[in] tid - TID of the remote terminus
      * @param[in] value - true or false, to indicate if the timer is
