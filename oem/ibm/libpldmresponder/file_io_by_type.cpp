@@ -465,11 +465,6 @@ std::unique_ptr<FileHandler> getHandlerByType(uint16_t fileType,
         {
             return std::make_unique<LicenseHandler>(fileHandle, fileType);
         }
-        case PLDM_FILE_TYPE_LID_RUNNING:
-        {
-            return std::make_unique<LidHandler>(fileHandle, false,
-                                                PLDM_FILE_TYPE_LID_RUNNING);
-        }
         case PLDM_FILE_TYPE_PSPD_VPD_PDD_KEYWORD:
         {
             return std::make_unique<keywordHandler>(fileHandle, fileType);

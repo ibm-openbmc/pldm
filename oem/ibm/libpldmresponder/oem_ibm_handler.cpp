@@ -1070,43 +1070,6 @@ void Handler::processSetEventReceiver()
     this->setEventReceiver();
 }
 
-void pldm::responder::oem_ibm_platform::Handler::startStopTimer(bool value)
-{
-    if (value)
-    {
-        timer.restart(
-            std::chrono::seconds(HEARTBEAT_TIMEOUT + HEARTBEAT_TIMEOUT_DELTA));
-    }
-    else
-    {
-        timer.setEnabled(value);
-    }
-}
-
-void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
-                                                              bool value)
-{
-    if ((hostOff || hostTransitioningToOff || (tid != HYPERVISOR_TID)) &&
-        timer.isEnabled())
-    {
-        startStopTimer(false);
-        return;
-    }
-    if (value)
-    {
-        startStopTimer(value);
-    }
-    else if (timer.isEnabled())
-    {
-        info(
-            "Failed to stop surveillance timer while remote terminus status is ‘{HOST_TRANST_OFF}’ with Terminus ID ‘{TID}’ ",
-            "HOST_TRANST_OFF", hostTransitioningToOff, "TID", tid);
-        startStopTimer(value);
-        pldm::utils::reportError(
-            "xyz.openbmc_project.PLDM.Error.setSurvTimer.RecvSurveillancePingFail");
-    }
-}
-
 void pldm::responder::oem_ibm_platform::Handler::
     processPowerCycleOffSoftGraceful()
 {
@@ -1358,254 +1321,8 @@ void pldm::responder::oem_ibm_platform::Handler::handleBootTypesAtChassisOff()
     }
 }
 
-void pldm::responder::oem_ibm_platform::Handler::turnOffRealSAIEffecter()
+void pldm::responder::oem_ibm_platform::Handler::startStopTimer(bool value)
 {
-    try
-    {
-        pldm::utils::DBusMapping dbuspartitionMapping{
-            "/xyz/openbmc_project/led/groups/partition_system_attention_indicator",
-            "xyz.openbmc_project.Led.Group", "Asserted", "bool"};
-        pldm::utils::DBusHandler().setDbusProperty(dbuspartitionMapping, false);
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr << "Failed to turn off partition SAI effecter"
-                  << "ERROR=" << e.what() << "\n";
-    }
-    try
-    {
-        pldm::utils::DBusMapping dbusplatformMapping{
-            "/xyz/openbmc_project/led/groups/platform_system_attention_indicator",
-            "xyz.openbmc_project.Led.Group", "Asserted", "bool"};
-        pldm::utils::DBusHandler().setDbusProperty(dbusplatformMapping, false);
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr << "Failed to turn off platform SAI effecter"
-                  << "ERROR=" << e.what() << "\n";
-    }
-}
-
-uint8_t pldm::responder::oem_ibm_platform::Handler::fetchRealSAIStatus()
-{
-    static constexpr auto partitionSAIObjectPath =
-        "/xyz/openbmc_project/led/groups/partition_system_attention_indicator";
-    static constexpr auto platformSAIObjectPath =
-        "/xyz/openbmc_project/led/groups/platform_system_attention_indicator";
-    static constexpr auto saiInterface = "xyz.openbmc_project.Led.Group";
-    static constexpr auto saiPropertyName = "Asserted";
-    uint8_t isPartitionSAIOn = 0;
-    uint8_t isPlatformSAIOn = 0;
-
-    try
-    {
-        isPartitionSAIOn = pldm::utils::DBusHandler().getDbusProperty<bool>(
-            partitionSAIObjectPath, saiPropertyName, saiInterface);
-        isPlatformSAIOn = pldm::utils::DBusHandler().getDbusProperty<bool>(
-            platformSAIObjectPath, saiPropertyName, saiInterface);
-
-        if (isPartitionSAIOn || isPlatformSAIOn)
-        {
-            return PLDM_SENSOR_WARNING;
-        }
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr << "Failed to fetch Real SAI sensor status"
-                  << "ERROR=" << e.what() << "\n";
-    }
-    return PLDM_SENSOR_NORMAL;
-}
-
-void pldm::responder::oem_ibm_platform::Handler::
-    updateIdentifyEffecterAndSensorPDRs()
-{
-    pldm::pdr::EntityType entityType = PLDM_ENTITY_PROC;
-
-    auto stateEffecterPDRs = pldm::utils::findStateEffecterPDR(
-        mctp_eid, entityType,
-        static_cast<uint16_t>(PLDM_STATE_SET_IDENTIFY_STATE), pdrRepo);
-
-    if (stateEffecterPDRs.empty())
-    {
-        std::cerr << "The State effecter PDR cannot be found, entityType = "
-                  << entityType << std::endl;
-        return;
-    }
-
-    for (auto& effecterPDR : stateEffecterPDRs)
-    {
-        for (auto& [key, value] : instanceMap)
-        {
-            auto instNumber = (value.dcmId * 2) + value.procId;
-            auto pdr =
-                reinterpret_cast<pldm_state_effecter_pdr*>(effecterPDR.data());
-            if (instNumber == ((pdr->entity_instance) - 1))
-            {
-                uint16_t newContainerID = pldm_find_container_id(
-                    pdrRepo, PLDM_ENTITY_PROC_MODULE, value.dcmId);
-                pldm_change_container_id_of_effecter(pdrRepo, pdr->effecter_id,
-                                                     newContainerID);
-                pldm_change_instance_number_of_effecter(
-                    pdrRepo, pdr->effecter_id, (instNumber % 2));
-                break;
-            }
-        }
-    }
-
-    auto stateSensorIdentifyPDRs = findStateSensorPDR(
-        mctp_eid, entityType,
-        static_cast<uint16_t>(PLDM_STATE_SET_IDENTIFY_STATE), pdrRepo);
-    for (auto& identifySensorPDR : stateSensorIdentifyPDRs)
-    {
-        for (auto& [key, value] : instanceMap)
-        {
-            auto instanceNumber = (value.dcmId * 2) + value.procId;
-            auto pdr = reinterpret_cast<pldm_state_sensor_pdr*>(
-                identifySensorPDR.data());
-            if (instanceNumber == ((pdr->entity_instance) - 1))
-            {
-                uint16_t newContainerID = pldm_find_container_id(
-                    pdrRepo, PLDM_ENTITY_PROC_MODULE, value.dcmId);
-                pldm_change_container_id_of_sensor(pdrRepo, pdr->sensor_id,
-                                                   newContainerID);
-                pldm_change_instance_number_of_sensor(pdrRepo, pdr->sensor_id,
-                                                      (instanceNumber % 2));
-                break;
-            }
-        }
-    }
-}
-
-void pldm::responder::oem_ibm_platform::Handler::
-    updateFaultEffecterAndSensorPDRs()
-{
-    pldm::pdr::EntityType entityType = PLDM_ENTITY_PROC;
-    auto stateEffecterFaultPDRs = pldm::utils::findStateEffecterPDR(
-        mctp_eid, entityType,
-        static_cast<uint16_t>(PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS),
-        pdrRepo);
-    for (auto& faultEffecterPDR : stateEffecterFaultPDRs)
-    {
-        for (auto& [key, value] : instanceMap)
-        {
-            auto instanceNumber = (value.dcmId * 2) + value.procId;
-            auto pdr = reinterpret_cast<pldm_state_effecter_pdr*>(
-                faultEffecterPDR.data());
-            if (instanceNumber == (pdr->entity_instance) - 1)
-            {
-                uint16_t newContainerID = pldm_find_container_id(
-                    pdrRepo, PLDM_ENTITY_PROC_MODULE, value.dcmId);
-                pldm_change_container_id_of_effecter(pdrRepo, pdr->effecter_id,
-                                                     newContainerID);
-                pldm_change_instance_number_of_effecter(
-                    pdrRepo, pdr->effecter_id, (instanceNumber % 2));
-                break;
-            }
-        }
-    }
-
-    auto stateSensorFaultPDRs = findStateSensorPDR(
-        mctp_eid, entityType,
-        static_cast<uint16_t>(PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS),
-        pdrRepo);
-    for (auto& faultSensorPDR : stateSensorFaultPDRs)
-    {
-        for (auto& [key, value] : instanceMap)
-        {
-            auto instanceNumber = (value.dcmId * 2) + value.procId;
-            auto pdr =
-                reinterpret_cast<pldm_state_sensor_pdr*>(faultSensorPDR.data());
-            if (instanceNumber == (pdr->entity_instance) - 1)
-            {
-                uint16_t newContainerID = pldm_find_container_id(
-                    pdrRepo, PLDM_ENTITY_PROC_MODULE, value.dcmId);
-                pldm_change_container_id_of_sensor(pdrRepo, pdr->sensor_id,
-                                                   newContainerID);
-                pldm_change_instance_number_of_sensor(pdrRepo, pdr->sensor_id,
-                                                      (instanceNumber % 2));
-                break;
-            }
-        }
-    }
-}
-
-void pldm::responder::oem_ibm_platform::Handler::updateContainerIDofProcLed()
-{
-    if (update)
-    {
-        updateIdentifyEffecterAndSensorPDRs();
-        updateFaultEffecterAndSensorPDRs();
-        update = false;
-    }
-}
-
-void pldm::responder::oem_ibm_platform::Handler::
-    processPowerCycleOffSoftGraceful()
-{
-    pldm::utils::PropertyValue value =
-        "xyz.openbmc_project.State.Host.Transition.ForceWarmReboot";
-    pldm::utils::DBusMapping dbusMapping{"/xyz/openbmc_project/state/host0",
-                                         "xyz.openbmc_project.State.Host",
-                                         "RequestedHostTransition", "string"};
-    try
-    {
-        dBusIntf->setDbusProperty(dbusMapping, value);
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr
-            << "Error to do a ForceWarmReboot, chassis power remains on, and boot the host back up. Unable to set property RequestedHostTransition. ERROR="
-            << e.what() << "\n";
-    }
-}
-
-void pldm::responder::oem_ibm_platform::Handler::processPowerOffSoftGraceful()
-{
-    pldm::utils::PropertyValue value =
-        "xyz.openbmc_project.State.Chassis.Transition.Off";
-    pldm::utils::DBusMapping dbusMapping{"/xyz/openbmc_project/state/chassis0",
-                                         "xyz.openbmc_project.State.Chassis",
-                                         "RequestedPowerTransition", "string"};
-    try
-    {
-        dBusIntf->setDbusProperty(dbusMapping, value);
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr
-            << "Error in powering down the host. Unable to set property RequestedPowerTransition. ERROR="
-            << e.what() << "\n";
-    }
-}
-
-void pldm::responder::oem_ibm_platform::Handler::processPowerOffHardGraceful()
-{
-    pldm::utils::PropertyValue value =
-        "xyz.openbmc_project.Control.Power.RestorePolicy.Policy.AlwaysOn";
-    pldm::utils::DBusMapping dbusMapping{
-        "/xyz/openbmc_project/control/host0/power_restore_policy/one_time",
-        "xyz.openbmc_project.Control.Power.RestorePolicy", "PowerRestorePolicy",
-        "string"};
-    try
-    {
-        dBusIntf->setDbusProperty(dbusMapping, value);
-    }
-    catch (const std::exception& e)
-    {
-        std::cerr
-            << "Setting one-time restore policy failed, Unable to set property PowerRestorePolicy. ERROR="
-            << e.what() << "\n";
-    }
-}
-
-void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
-                                                              bool value)
-{
-    if (tid != HYPERVISOR_TID)
-    {
-        return;
-    }
     if (value)
     {
         timer.restart(
@@ -1613,7 +1330,33 @@ void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
     }
     else
     {
-        timer.setEnabled(false);
+        timer.setEnabled(value);
+    }
+}
+
+void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
+                                                              bool value)
+{
+    if ((hostOff == true) || (hostTransitioningToOff == true) ||
+        (tid != HYPERVISOR_TID))
+    {
+        if (timer.isEnabled())
+        {
+            startStopTimer(false);
+        }
+        return;
+    }
+    if (value)
+    {
+        startStopTimer(true);
+    }
+    else if (!value && timer.isEnabled())
+    {
+         info(
+            "setSurvTimer:LogginPel:hostOff={HOST_OFF} hostTransitioningToOff={HOST_TRANST_OFF} tid={TID}",
+            "HOST_OFF", (bool)hostOff, "HOST_TRANST_OFF",
+            (bool)hostTransitioningToOff, "TID", (uint16_t)tid);
+        startStopTimer(false);
         pldm::utils::reportError(
             "xyz.openbmc_project.bmc.PLDM.setSurvTimer.RecvSurveillancePingFail",
             pldm::PelSeverity::INFORMATIONAL);

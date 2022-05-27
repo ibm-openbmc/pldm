@@ -86,16 +86,8 @@ static constexpr auto PLDM_OEM_IBM_FRONT_PANEL_TRIGGER = 32837;
 constexpr uint16_t ENTITY_INSTANCE_0 = 0;
 constexpr uint16_t ENTITY_INSTANCE_1 = 1;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 const pldm::pdr::TerminusID HYPERVISOR_TID = 208;
 
-static constexpr uint8_t HEARTBEAT_TIMEOUT_DELTA = 10;
-=======
-=======
-const pldm::pdr::TerminusID HYPERVISOR_TID = 208;
-
->>>>>>> 4dc9723a (PLDM: Log RecvSurveillancePingFail only if PHYP fails to send surveillance pings (#236))
 static constexpr uint8_t HEARTBEAT_TIMEOUT_DELTA = 10;
 struct InstanceInfo
 {
@@ -103,7 +95,6 @@ struct InstanceInfo
     uint8_t dcmId;
 };
 using HostEffecterInstanceMap = std::map<pldm::pdr::EffecterID, InstanceInfo>;
->>>>>>> af349d9f (PLDM: Implement timer for Surveillance Pings (#227))
 
 enum SetEventReceiverCount
 {
@@ -123,19 +114,11 @@ class Handler : public oem_platform::Handler
         oem_platform::Handler(dBusIntf),
         codeUpdate(codeUpdate), slotHandler(slotHandler),
         platformHandler(nullptr), mctp_fd(mctp_fd), mctp_eid(mctp_eid),
-<<<<<<< HEAD
         instanceIdDb(instanceIdDb), event(event), pdrRepo(repo),
         handler(handler), bmcEntityTree(bmcEntityTree),
         timer(event, std::bind(std::mem_fn(&Handler::setSurvTimer), this,
                                HYPERVISOR_TID, false)),
         hostTransitioningToOff(true)
-=======
-        requester(requester), event(event), pdrRepo(repo), handler(handler),
-        bmcEntityTree(bmcEntityTree), hostEffecterParser(hostEffecterParser),
-        timer(event, std::bind(std::mem_fn(&Handler::setSurvTimer), this,
-                               HYPERVISOR_TID, false))
-
->>>>>>> af349d9f (PLDM: Implement timer for Surveillance Pings (#227))
     {
         codeUpdate->setVersions();
         pldm::responder::utils::clearLicenseStatus();
@@ -170,16 +153,17 @@ class Handler : public oem_platform::Handler
                 }
                 else if (propVal ==
                          "xyz.openbmc_project.State.Host.HostState.Running")
+                {
                     hostTransitioningToOff = false;
+                }
+                else if (
+                    propVal ==
+                    "xyz.openbmc_project.State.Host.HostState.TransitioningToOff")
+                {
+                    hostTransitioningToOff = true;
+                }
             }
-            else if (
-                propVal ==
-                "xyz.openbmc_project.State.Host.HostState.TransitioningToOff")
-            {
-                hostTransitioningToOff = true;
-            }
-            }
-    });
+        });
 
     powerStateOffMatch = std::make_unique<sdbusplus::bus::match::match>(
         pldm::utils::DBusHandler::getBus(),
@@ -291,13 +275,6 @@ class Handler : public oem_platform::Handler
             }
         }
     });
-    ibmCompatibleMatch = std::make_unique<sdbusplus::bus::match::match>(
-        pldm::utils::DBusHandler::getBus(),
-        sdbusplus::bus::match::rules::interfacesAdded() +
-            sdbusplus::bus::match::rules::sender(
-                "xyz.openbmc_project.EntityManager"),
-        std::bind(&Handler::ibmCompatibleAddedCallback, this,
-                  std::placeholders::_1));
 
     stateManagerMatch = std::make_unique<sdbusplus::bus::match::match>(
         pldm::utils::DBusHandler::getBus(),
@@ -502,6 +479,12 @@ void processPowerOffHardGraceful();
  *                     running or not*/
 void setSurvTimer(uint8_t tid, bool value);
 
+/** @brief Method to reset or stop the surveillance timer
+*
+*   @param[in] value - true or false, to indicate if the timer
+*                     should be reset or turned off*/
+void startStopTimer(bool value);
+
 /** @brief To turn off Real SAI effecter*/
 void turnOffRealSAIEffecter();
 
@@ -552,8 +535,6 @@ void handleBootTypesAtChassisOff();
 
 pldm::responder::CodeUpdate* codeUpdate;   //!< pointer to CodeUpdate object
 
-    ~Handler() = default;
-
 pldm::responder::SlotHandler* slotHandler; //!< pointer to SlotHandler object
 
 pldm::responder::platform::Handler*
@@ -583,13 +564,6 @@ std::unordered_map<uint16_t, std::string> effecterIdToDbusMap;
 sdeventplus::Event& event;
 
 private:
-/** @brief Method to reset or stop the surveillance timer
- *
- * @param[in] value - true or false, to indicate if the timer
- *                    should be reset or turned off
- */
-void startStopTimer(bool value);
-
 /*@brief Host restart cause*/
 std::string restartCause;
 
@@ -612,34 +586,19 @@ std::unique_ptr<sdbusplus::bus::match_t> hostOffMatch;
 /** @brief D-Bus property changed signal match */
 std::unique_ptr<sdbusplus::bus::match_t> powerStateOffMatch;
 
-<<<<<<< HEAD
 /** @brief D-Bus Interface added signal match for virtual platform SAI */
 std::unique_ptr<sdbusplus::bus::match_t> platformSAIMatch;
-=======
-    /** @brief D-Bus property changed signal match */
-    std::unique_ptr<sdbusplus::bus::match::match> hostOffMatch;
-    std::unique_ptr<sdbusplus::bus::match::match> updateBIOSMatch;
-    /** @brief D-Bus Interfaced added signal match for Entity Manager */
-    std::unique_ptr<sdbusplus::bus::match::match> ibmCompatibleMatch;
-    /** @brief D-Bus Interfaced added signal match for State Manager */
-    std::unique_ptr<sdbusplus::bus::match::match> stateManagerMatch;
-    /** @brief D-Bus property Changed Signal match for bootProgress*/
-    std::unique_ptr<sdbusplus::bus::match::match> bootProgressMatch;
-    /** @brief Timer used for monitoring surveillance pings from host */
-    sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic> timer;
->>>>>>> af349d9f (PLDM: Implement timer for Surveillance Pings (#227))
-
-/** @brief D-Bus Interface added signal match for virtual partition SAI */
-std::unique_ptr<sdbusplus::bus::match_t> partitionSAIMatch;
-
-/** @brief Timer used for monitoring surveillance pings from host */
-sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic> timer;
 /** @brief D-Bus Interfaced added signal match for Entity Manager */
 std::unique_ptr<sdbusplus::bus::match_t> ibmCompatibleMatch;
 /** @brief D-Bus Interfaced added signal match for State Manager */
 std::unique_ptr<sdbusplus::bus::match_t> stateManagerMatch;
 /** @brief D-Bus property Changed Signal match for bootProgress*/
 std::unique_ptr<sdbusplus::bus::match_t> bootProgressMatch;
+/** @brief Timer used for monitoring surveillance pings from host */
+sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic> timer;
+
+/** @brief D-Bus Interface added signal match for virtual partition SAI */
+std::unique_ptr<sdbusplus::bus::match_t> partitionSAIMatch;
 
 bool hostOff = true;
 
