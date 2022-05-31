@@ -559,6 +559,37 @@ std::string getObjectPathByLocationCode(const std::string& locationCode,
     return path;
 }
 
+uint32_t getLinkResetInstanceNumber(std::string& path)
+{
+    uint32_t id = pldm::dbus::CustomDBus::getCustomDBus().getBusId(path);
+    return id;
+}
+
+void findSlotObjects(const std::string& boardObjPath,
+                     std::vector<std::string>& slotObjects)
+{
+    static constexpr auto MAPPER_BUSNAME = "xyz.openbmc_project.ObjectMapper";
+    static constexpr auto MAPPER_PATH = "/xyz/openbmc_project/object_mapper";
+    static constexpr auto MAPPER_INTERFACE = "xyz.openbmc_project.ObjectMapper";
+    static constexpr auto slotInterface =
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot";
+
+    auto& bus = pldm::utils::DBusHandler::getBus();
+    try
+    {
+        auto method = bus.new_method_call(MAPPER_BUSNAME, MAPPER_PATH,
+                                          MAPPER_INTERFACE, "GetSubTreePaths");
+        method.append(boardObjPath);
+        method.append(0);
+        method.append(std::vector<std::string>({slotInterface}));
+        auto reply = bus.call(method);
+        reply.read(slotObjects);
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "no cec slots under motherboard" << boardObjPath << "\n";
+    }
+}
 } // namespace utils
 } // namespace responder
 } // namespace pldm

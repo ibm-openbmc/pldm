@@ -46,6 +46,7 @@ sources = [
   '../host-bmc/dbus/software_version.cpp',
   '../host-bmc/dbus/deserialize.cpp',
   '../host-bmc/dbus/pcie_topology.cpp',
+  '../host-bmc/dbus/linkreset.cpp',
   'event_parser.cpp'
 ]
 

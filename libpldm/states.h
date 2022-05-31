@@ -20,6 +20,12 @@ enum pldm_system_power_states {
 	PLDM_OFF_SOFT_GRACEFUL = 9,
 };
 
+/** @brief PLDM enums for availability states
+ */
+enum pldm_availability_states {
+	PLDM_RESETTING = 9,
+};
+
 #ifdef __cplusplus
 }
 #endif

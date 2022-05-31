@@ -1,6 +1,10 @@
 #pragma once
 
+#include "../dbus_to_host_effecters.hpp"
 #include "serialize.hpp"
+#ifdef OEM_IBM
+#include "oem/ibm/libpldmresponder/utils.hpp"
+#endif
 
 #include <com/ibm/Control/Host/PCIeLink/server.hpp>
 #include <sdbusplus/bus.hpp>
@@ -17,18 +21,21 @@ namespace dbus
 using Itemlink = sdbusplus::server::object::object<
     sdbusplus::com::ibm::Control::Host::server::PCIeLink>;
 
-class link : public Itemlink
+class Link : public Itemlink
 {
   public:
-    link() = delete;
-    ~link() = default;
-    link(const link&) = delete;
-    link& operator=(const link&) = delete;
-    link(link&&) = default;
-    link& operator=(link&&) = default;
+    Link() = delete;
+    ~Link() = default;
+    Link(const Link&) = delete;
+    Link& operator=(const Link&) = delete;
+    Link(Link&&) = default;
+    Link& operator=(Link&&) = default;
 
-    link(sdbusplus::bus::bus& bus, const std::string& objPath) :
-        Itemlink(bus, objPath.c_str()), path(objPath)
+    Link(sdbusplus::bus::bus& bus, const std::string& objPath,
+         pldm::host_effecters::HostEffecterParser* hostEffecterParser,
+         uint8_t mctpEid) :
+        Itemlink(bus, objPath.c_str()),
+        path(objPath), hostEffecterParser(hostEffecterParser), mctpEid(mctpEid)
     {
         // no need to save this in pldm memory
     }
@@ -39,8 +46,16 @@ class link : public Itemlink
     /** Get link reset state */
     bool linkReset() const override;
 
+    uint16_t getEffecterID();
+
   private:
     std::string path;
+
+    /** @brief Pointer to host effecter parser */
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser;
+
+    /** mctp endpoint id */
+    uint8_t mctpEid;
 };
 
 } // namespace dbus

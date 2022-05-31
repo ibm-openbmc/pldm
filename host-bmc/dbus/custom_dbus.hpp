@@ -110,6 +110,11 @@ class CustomDBus
      */
     void updateItemPresentStatus(const std::string& path, bool isPresent);
 
+    /** @brief get Bus ID
+     *  @param[in] path - The object path
+     */
+    size_t getBusId(const std::string& path) const;
+
     /** @brief Implement CpuCore Interface
      *  @param[in] path - The object path
      *
@@ -294,7 +299,10 @@ class CustomDBus
     void setSlotType(const std::string& path, const std::string& slotType);
 
     /** set reset link value*/
-    void setlinkreset(const std::string& path, bool value);
+    void setlinkreset(
+        const std::string& path, bool value,
+        pldm::host_effecters::HostEffecterParser* hostEffecterParser,
+        uint8_t instanceId);
 
   private:
     std::unordered_map<ObjectPath, std::unique_ptr<LocationCode>> location;
@@ -326,7 +334,8 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<PCIeDevice>> pcieDevice;
     std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
     std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
-    std::unordered_map<ObjectPath, std::unique_ptr<Itemlink>> link;
+    std::unordered_map<ObjectPath, std::unique_ptr<Link>> link;
+    uint8_t id = 0;
 };
 
 } // namespace dbus

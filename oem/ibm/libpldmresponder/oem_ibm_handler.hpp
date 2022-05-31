@@ -91,6 +91,8 @@ class Handler : public oem_platform::Handler
         pldm::responder::utils::hostPCIETopologyIntf(mctp_eid,
                                                      hostEffecterParser);
 
+        createMatches();
+
         using namespace sdbusplus::bus::match::rules;
         hostOffMatch = std::make_unique<sdbusplus::bus::match::match>(
             pldm::utils::DBusHandler::getBus(),
@@ -454,6 +456,20 @@ class Handler : public oem_platform::Handler
      *                    running or not*/
     void setSurvTimer(uint8_t tid, bool value);
 
+    /** @brief method to fetch the properties changed
+     *
+     *  @param[in] chProperties - list of properties which have changed
+     *  @param[in] objPath - path on which property is changed
+     */
+    void propertyChanged(const DbusChangedProps& chProperties, std::string objPath);
+
+    /** @brief method to trigger host effecter
+     *
+     *  @param[in] value - value to set
+     *  @param[in] path - path for which the effecter is set
+     */  
+    void triggerHostEffecter(bool value, std::string path);
+
     ~Handler() = default;
 
     pldm::responder::CodeUpdate* codeUpdate; //!< pointer to CodeUpdate object
@@ -522,6 +538,9 @@ class Handler : public oem_platform::Handler
     /** @brief Timer used for monitoring surveillance pings from host */
     sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic> timer;
 
+    /** @brief vector of DBus property changed signal match for linkReset*/
+    std::vector<std::unique_ptr<sdbusplus::bus::match::match>> matches;
+
     bool hostOff = true;
 
     bool hostTransitioningToOff = true;
@@ -533,6 +552,9 @@ class Handler : public oem_platform::Handler
     HostEffecterInstanceMap instanceMap;
 
     bool update = true; // to indicate if update is done
+
+    /** @brief method to create matches for the proeprty changed signal for link reset on all slot paths */
+    void createMatches();
 };
 
 /** @brief Method to encode code update event msg
