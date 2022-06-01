@@ -234,7 +234,8 @@ class PCIeInfoHandler : public FileHandler
                                   uint8_t parentLinkId);
     virtual void parseSecondaryLink(
         uint8_t linkType, const io_slot_location_t& ioSlotLocationCode,
-        const localport_t& localPortLocation, const uint32_t& linkId,
+        const localport_t& localPortLocation,
+        const remoteport_t& remotePortLocation, const uint32_t& linkId,
         const std::string& linkStatus, uint8_t linkSpeed, int64_t linkWidth);
     virtual void setTopologyOnSlotAndAdapter(
         uint8_t linkType,
@@ -251,6 +252,9 @@ class PCIeInfoHandler : public FileHandler
         getMexObjectFromLocationCode(const std::string& locationCode,
                                      uint16_t entityType);
     virtual std::string getAdapterFromSlot(const std::string& mexSlotObject);
+
+    virtual std::pair<std::string, std::string>
+        getMexSlotandAdapter(const std::filesystem::path& connector);
 
     virtual std::string
         getDownStreamChassis(const std::string& slotOrConnecterPath);

@@ -395,6 +395,16 @@ int HostPDRHandler::handleStateSensorEvent(
                 auto ledGroupPath = updateLedGroupPath(entity.first);
                 if (!ledGroupPath.empty())
                 {
+                    std::cout
+                        << "led state event for [ " << ledGroupPath << " ] , [ "
+                        << node_entity.entity_type << " ,"
+                        << node_entity.entity_instance_num << " ,"
+                        << node_entity.entity_container_id
+                        << " ] , current value : [ " << std::boolalpha
+                        << CustomDBus::getCustomDBus().getAsserted(ledGroupPath)
+                        << " ] new value : [ "
+                        << bool(state == PLDM_STATE_SET_IDENTIFY_STATE_ASSERTED)
+                        << " ]\n";
                     CustomDBus::getCustomDBus().setAsserted(
                         ledGroupPath, node_entity,
                         state == PLDM_STATE_SET_IDENTIFY_STATE_ASSERTED,
@@ -1743,6 +1753,8 @@ void HostPDRHandler::createDbusObjects()
                 break;
             case PLDM_ENTITY_IO_MODULE:
                 CustomDBus::getCustomDBus().implementFabricAdapter(
+                    entity.first);
+                CustomDBus::getCustomDBus().implementPCIeDeviceInterface(
                     entity.first);
                 break;
             case 32954:

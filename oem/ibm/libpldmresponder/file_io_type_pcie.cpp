@@ -284,6 +284,13 @@ std::string PCIeInfoHandler::getDownStreamChassis(
     return "";
 }
 
+std::pair<std::string, std::string> PCIeInfoHandler::getMexSlotandAdapter(
+    const std::filesystem::path& connector)
+{
+    return std::make_pair(connector.parent_path().parent_path(),
+                          connector.parent_path());
+}
+
 void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
     uint8_t linkType, const std::pair<std::string, std::string>& slotAndAdapter,
     const uint32_t& linkId, const std::string& linkStatus, uint8_t linkSpeed,
@@ -490,12 +497,32 @@ void PCIeInfoHandler::parsePrimaryLink(
             // we have a io slot location code (probably mex), but its a primary
             // link and if we have local ports , then figure out which slot it
             // is connected to
-            auto slotAndAdapter = pldm::responder::utils::getSlotAndAdapter(
-                localPortLocation.first);
+            if (localPortLocation.first.find("-T") != std::string::npos)
+            {
+                auto slotAndAdapter = pldm::responder::utils::getSlotAndAdapter(
+                    localPortLocation.first);
 
-            setTopologyOnSlotAndAdapter(linkType, slotAndAdapter, linkId,
-                                        linkStatus, linkSpeed, linkWidth,
-                                        false);
+                setTopologyOnSlotAndAdapter(linkType, slotAndAdapter, linkId,
+                                            linkStatus, linkSpeed, linkWidth,
+                                            false);
+            }
+            else
+            {
+                // if its a slot, then
+                std::string slotObjectPath =
+                    pldm::responder::utils::getObjectPathByLocationCode(
+                        ioSlotLocationCode[0], itemPCIeSlot);
+
+                // get the adapter with the same location code
+                std::string adapterObjPath =
+                    pldm::responder::utils::getObjectPathByLocationCode(
+                        ioSlotLocationCode[0], itemPCIeDevice);
+
+                // set topology info on both the slot and adapter object
+                setTopologyOnSlotAndAdapter(
+                    linkType, std::make_pair(slotObjectPath, adapterObjPath),
+                    linkId, linkStatus, linkSpeed, linkWidth, false);
+            }
         }
         else
         {
@@ -507,7 +534,8 @@ void PCIeInfoHandler::parsePrimaryLink(
 }
 void PCIeInfoHandler::parseSecondaryLink(
     uint8_t linkType, const io_slot_location_t& ioSlotLocationCode,
-    const localport_t& /*localPortLocation*/, const uint32_t& linkId,
+    const localport_t& /*localPortLocation*/,
+    const remoteport_t& remotePortLocation, const uint32_t& linkId,
     const std::string& linkStatus, uint8_t linkSpeed, int64_t linkWidth)
 {
     if (ioSlotLocationCode.size() == 1)
@@ -545,6 +573,22 @@ void PCIeInfoHandler::parseSecondaryLink(
                 linkType, std::make_pair(slotObjectPath, adapterObjPath),
                 linkId, linkStatus, linkSpeed, linkWidth, false);
         }
+    }
+    else if (ioSlotLocationCode.size() > 1)
+    {
+        // its a secondary link (first one that explains that the link is
+        // between a pcie switch in side the cable card to a mex drawer use the
+        // remote port location code to figure out the mex slot
+
+        std::string mexConnecterPath = getMexObjectFromLocationCode(
+            remotePortLocation.first, PLDM_ENTITY_CONNECTOR);
+
+        std::filesystem::path mexConnecter(mexConnecterPath);
+        auto mexSlotandAdapter = getMexSlotandAdapter(mexConnecter);
+
+        // set topology info on both the slot and adapter object
+        setTopologyOnSlotAndAdapter(linkType, mexSlotandAdapter, linkId,
+                                    linkStatus, linkSpeed, linkWidth, true);
     }
 }
 
@@ -596,8 +640,8 @@ void PCIeInfoHandler::setTopologyAttrsOnDbus()
             case Secondary:
                 parseSecondaryLink(
                     std::get<1>(info), std::get<7>(info), std::get<5>(info),
-                    static_cast<uint32_t>(link), std::get<0>(info),
-                    std::get<2>(info), std::get<3>(info));
+                    std::get<6>(info), static_cast<uint32_t>(link),
+                    std::get<0>(info), std::get<2>(info), std::get<3>(info));
                 break;
             case Unknown:
                 // its just no-op
