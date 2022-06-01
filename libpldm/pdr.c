@@ -39,8 +39,8 @@ static void add_record(pldm_pdr *repo, pldm_pdr_record *record)
 	++repo->record_count;
 }
 
-static void add_hotplug_record(pldm_pdr *repo, pldm_pdr_record *record,
-			       uint32_t prev_record_handle)
+static uint32_t add_hotplug_record(pldm_pdr *repo, pldm_pdr_record *record,
+				   uint32_t prev_record_handle)
 {
 	// the new record
 	// needs to be added after prev_record_handle
@@ -55,29 +55,33 @@ static void add_hotplug_record(pldm_pdr *repo, pldm_pdr_record *record,
 		pldm_pdr_record *curr = repo->first;
 		while (curr != NULL) {
 			if (curr->record_handle == prev_record_handle) {
-				break;
+				record->next = curr->next;
+				curr->next = record;
+				if (record->next == NULL) {
+					repo->last->next = record;
+					repo->last = record;
+				}
+				repo->size += record->size;
+				++repo->record_count;
+
+				return record->record_handle;
 			}
 			curr = curr->next;
 		}
+		// freeing record as it didn't get added to the repo
+		free(record);
 		// printf("\nadding the fru hotplug here
 		// curr->record_handle=%d",curr->record_handle);
 		// printf("repo-last=%x, curr=%x, curr-next=%x",(unsigned
 		// int)repo->last, (unsigned int)curr, (unsigned
 		// int)curr->next);
-		record->next = curr->next;
-		curr->next = record;
-		if (record->next == NULL) {
-			repo->last->next = record;
-			repo->last = record;
-		}
 	}
-	repo->size += record->size;
-	++repo->record_count;
+	return 0;
 }
 
-static void add_record_after_record_handle(pldm_pdr *repo,
-					   pldm_pdr_record *record,
-					   uint32_t prev_record_handle)
+static uint32_t add_record_after_record_handle(pldm_pdr *repo,
+					       pldm_pdr_record *record,
+					       uint32_t prev_record_handle)
 {
 	assert(repo != NULL);
 	assert(record != NULL);
@@ -89,18 +93,20 @@ static void add_record_after_record_handle(pldm_pdr *repo,
 		pldm_pdr_record *curr = repo->first;
 		while (curr != NULL) {
 			if (curr->record_handle == prev_record_handle) {
-				break;
+				record->next = curr->next;
+				curr->next = record;
+				if (record->next == NULL) {
+					repo->last = record;
+				}
+				repo->size += record->size;
+				++repo->record_count;
+				return record->record_handle;
 			}
 			curr = curr->next;
 		}
-		record->next = curr->next;
-		curr->next = record;
-		if (record->next == NULL) {
-			repo->last = record;
-		}
+		free(record);
 	}
-	repo->size += record->size;
-	++repo->record_count;
+	return 0;
 }
 
 static inline uint32_t get_new_record_handle(const pldm_pdr *repo)
@@ -129,9 +135,7 @@ static pldm_pdr_record *make_new_record(const pldm_pdr *repo,
 #ifdef OEM_IBM
 	else if (record_handle == 0xFFFFFFFF) {
 		pldm_pdr_record *rec = pldm_pdr_find_last_local_record(repo);
-		if (record != NULL) {
-			record->record_handle = rec->record_handle + 1;
-		}
+		record->record_handle = rec->record_handle + 1;
 	}
 #endif
 	else {
@@ -184,8 +188,8 @@ uint32_t pldm_pdr_add_hotplug_record(pldm_pdr *repo, const uint8_t *data,
 
 	pldm_pdr_record *record = make_new_record(
 	    repo, data, size, record_handle, is_remote, terminus_handle);
-	add_hotplug_record(repo, record, prev_record_handle);
-	return record->record_handle;
+	return (add_hotplug_record(repo, record, prev_record_handle));
+	// return record->record_handle;
 }
 
 uint32_t pldm_pdr_add_after_prev_record(pldm_pdr *repo, const uint8_t *data,
@@ -199,9 +203,10 @@ uint32_t pldm_pdr_add_after_prev_record(pldm_pdr *repo, const uint8_t *data,
 
 	pldm_pdr_record *record = make_new_record(
 	    repo, data, size, record_handle, is_remote, terminus_handle);
-	add_record_after_record_handle(repo, record, prev_record_handle);
+	return (
+	    add_record_after_record_handle(repo, record, prev_record_handle));
 
-	return record->record_handle;
+	// return record->record_handle;
 }
 
 pldm_pdr *pldm_pdr_init()
@@ -447,7 +452,7 @@ uint32_t pldm_pdr_remove_fru_record_set_by_rsi(pldm_pdr *repo, uint16_t fru_rsi,
 
 	uint32_t delete_hdl = 0;
 	pldm_pdr_record *record = repo->first;
-	pldm_pdr_record *prev = NULL;
+	pldm_pdr_record *prev = repo->first;
 	while (record != NULL) {
 		pldm_pdr_record *next = record->next;
 		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
@@ -459,14 +464,24 @@ uint32_t pldm_pdr_remove_fru_record_set_by_rsi(pldm_pdr *repo, uint16_t fru_rsi,
 				    sizeof(struct pldm_pdr_hdr));
 			if (fru->fru_rsi == fru_rsi) {
 				delete_hdl = hdr->record_handle;
-				if (repo->first == record) {
-					repo->first = next;
-				} else {
-					prev->next = next;
+				// only one element in the list
+				if ((repo->first == record) &&
+				    (repo->last == record)) {
+					repo->first = NULL;
+					repo->last = NULL;
 				}
-				if (repo->last == record) {
+				// delete the first record from the list
+				else if (repo->first == record) {
+					repo->first = next;
+				}
+				// delete last record from the list
+				else if (repo->last == record) {
 					repo->last = prev;
 					prev->next = NULL; // sm00
+				}
+				// delete middle record
+				else {
+					prev->next = next;
 				}
 				--repo->record_count;
 				repo->size -= record->size;
@@ -757,14 +772,25 @@ uint16_t pldm_delete_by_effecter_id(pldm_pdr *repo, uint16_t effecter_id,
 								   ->data);
 			if (pdr->effecter_id == effecter_id) {
 				delete_handle = hdr->record_handle;
-				if (repo->first == record) {
-					repo->first = next;
-				} else {
-					prev->next = next;
+
+				// only one element in the list
+				if ((repo->first == record) &&
+				    (repo->last == record)) {
+					repo->first = NULL;
+					repo->last = NULL;
 				}
-				if (repo->last == record) {
+				// delete the first record from the list
+				else if (repo->first == record) {
+					repo->first = next;
+				}
+				// delete last record from the list
+				else if (repo->last == record) {
 					repo->last = prev;
-					prev->next = NULL;
+					prev->next = NULL; // sm00
+				}
+				// delete middle record
+				else {
+					prev->next = next;
 				}
 				--repo->record_count;
 				repo->size -= record->size;
@@ -1103,6 +1129,10 @@ void pldm_entity_association_tree_delete_node(
 	//	printf("\nenter pldm_entity_association_tree_delete_node");
 	pldm_entity_node *node = NULL;
 	pldm_find_entity_ref_in_tree(tree, entity, &node);
+	if (node == NULL) {
+		printf("\nNode not found\n");
+		return;
+	}
 	// sm00
 	/* printf(
 		    "\nfound node to delete "
@@ -1112,6 +1142,10 @@ void pldm_entity_association_tree_delete_node(
 	pldm_entity_node *parent = NULL;
 	pldm_find_entity_ref_in_tree(tree, node->parent, &parent);
 	//	printf("\nfound parent");
+	if (parent == NULL) {
+		printf("\nParent not found\n");
+		return;
+	}
 	pldm_entity_node *start = parent->first_child;
 	pldm_entity_node *prev = parent->first_child;
 	while (start != NULL) {
@@ -1126,18 +1160,20 @@ void pldm_entity_association_tree_delete_node(
 			entity.entity_instance_num &&
 		    current_entity.entity_container_id ==
 			entity.entity_container_id) {
+
+			if (start == parent->first_child) {
+				parent->first_child = start->next_sibling;
+			} else {
+				prev->next_sibling = start->next_sibling;
+			}
+			start->next_sibling = NULL;
+			entity_association_tree_destroy(node);
+
 			break;
 		}
 		prev = start;
 		start = start->next_sibling;
 	}
-	if (start == parent->first_child) {
-		parent->first_child = start->next_sibling;
-	} else {
-		prev->next_sibling = start->next_sibling;
-	}
-	start->next_sibling = NULL;
-	entity_association_tree_destroy(node);
 }
 
 inline bool pldm_entity_is_node_parent(pldm_entity_node *node)
@@ -1706,6 +1742,12 @@ uint32_t pldm_entity_association_pdr_add_contained_entity(
 			}
 			prev = curr;
 			curr = curr->next;
+		}
+		if (curr == NULL) {
+			printf("Couldn't find bmc record handle %d\n",
+			       bmc_record_handle);
+			free(new_record);
+			return 0;
 		}
 
 		uint16_t new_pdr_size = sizeof(struct pldm_pdr_hdr) +
