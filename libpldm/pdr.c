@@ -9,7 +9,7 @@
 #ifdef OEM_IBM
 #include "oem/ibm/libpldm/pdr_oem_ibm.h"
 #endif
-
+// Checking for static Errors
 static inline uint32_t get_next_record_handle(const pldm_pdr *repo,
 					      const pldm_pdr_record *record)
 {
