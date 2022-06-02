@@ -271,28 +271,28 @@ int SoftPowerOff::getSensorInfo()
                 std::cerr << "Failed to get state sensor PDR.\n";
                 return PLDM_ERROR;
             }
-        }
 
-        sensorID = pdr->sensor_id;
+            sensorID = pdr->sensor_id;
 
-        auto compositeSensorCount = pdr->composite_sensor_count;
-        auto possibleStatesStart = pdr->possible_states;
+            auto compositeSensorCount = pdr->composite_sensor_count;
+            auto possibleStatesStart = pdr->possible_states;
 
-        for (auto offset = 0; offset < compositeSensorCount; offset++)
-        {
-            auto possibleStates =
-                reinterpret_cast<state_sensor_possible_states*>(
-                    possibleStatesStart);
-            auto setId = possibleStates->state_set_id;
-            auto possibleStateSize = possibleStates->possible_states_size;
-
-            if (setId == PLDM_STATE_SET_SW_TERMINATION_STATUS)
+            for (auto offset = 0; offset < compositeSensorCount; offset++)
             {
-                sensorOffset = offset;
-                break;
+                auto possibleStates =
+                    reinterpret_cast<state_sensor_possible_states*>(
+                        possibleStatesStart);
+                auto setId = possibleStates->state_set_id;
+                auto possibleStateSize = possibleStates->possible_states_size;
+
+                if (setId == PLDM_STATE_SET_SW_TERMINATION_STATUS)
+                {
+                    sensorOffset = offset;
+                    break;
+                }
+                possibleStatesStart += possibleStateSize + sizeof(setId) +
+                                       sizeof(possibleStateSize);
             }
-            possibleStatesStart +=
-                possibleStateSize + sizeof(setId) + sizeof(possibleStateSize);
         }
     }
     catch (const sdbusplus::exception::exception& e)
