@@ -1481,11 +1481,17 @@ void pldm::responder::oem_ibm_platform::Handler::setBootTypesBiosAttr(
         (restartCause ==
          "xyz.openbmc_project.State.Host.RestartCause.PowerPolicyAlwaysOn") ||
         (restartCause ==
-         "xyz.openbmc_project.State.Host.RestartCause.PowerPolicyPreviousState") ||
-        (restartCause ==
-         "xyz.openbmc_project.State.Host.RestartCause.HostCrash"))
+         "xyz.openbmc_project.State.Host.RestartCause.PowerPolicyPreviousState"))
     {
         biosAttrList.push_back(std::make_pair("pvm_boot_initiator", "Auto"));
+        setBiosAttr(biosAttrList);
+        stateManagerMatch.reset();
+    }
+    else if (restartCause ==
+             "xyz.openbmc_project.State.Host.RestartCause.HostCrash")
+    {
+        biosAttrList.push_back(std::make_pair("pvm_boot_initiator", "Auto"));
+        biosAttrList.push_back(std::make_pair("pvm_boot_type", "ReIPL"));
         setBiosAttr(biosAttrList);
         stateManagerMatch.reset();
     }
@@ -1771,9 +1777,6 @@ void pldm::responder::oem_ibm_platform::Handler::startStopTimer(bool value)
 void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
                                                               bool value)
 {
-    std::cout << "setSurvTimer:hostOff=" << (bool)hostOff
-              << " hostTransitioningToOff=" << (bool)hostTransitioningToOff
-              << " tid=" << (uint16_t)tid << std::endl;
     if ((hostOff == true) || (hostTransitioningToOff == true) ||
         (tid != HYPERVISOR_TID))
     {

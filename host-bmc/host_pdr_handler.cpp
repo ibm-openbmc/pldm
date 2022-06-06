@@ -155,6 +155,10 @@ HostPDRHandler::HostPDRHandler(
                 auto propVal = std::get<std::string>(value);
                 if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
                 {
+                    if (oemPlatformHandler != nullptr)
+                    {
+                        oemPlatformHandler->startStopTimer(false);
+                    }
 
                     for (auto it = this->tlPDRInfo.cbegin();
                          it != this->tlPDRInfo.cend();)
