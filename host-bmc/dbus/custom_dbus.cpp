@@ -79,6 +79,15 @@ bool CustomDBus::getOperationalStatus(const std::string& path) const
     return false;
 }
 
+size_t CustomDBus::getBusId(const std::string& path) const
+{
+    if (pcieSlot.find(path) != pcieSlot.end())
+    {
+        return pcieSlot.at(path)->busId();
+    }
+    return 0;
+}
+
 void CustomDBus::implementCableInterface(const std::string& path)
 {
     if (!cable.contains(path))
@@ -144,13 +153,16 @@ void CustomDBus::setSlotProperties(const std::string& path,
         pcieSlot.at(path)->linkStatus(linkStatus);
     }
 }
-void CustomDBus::setlinkreset(const std::string& path, bool value)
+void CustomDBus::setlinkreset(
+    const std::string& path, bool value,
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser,
+    uint8_t mctpEid)
 {
     if (!link.contains(path))
     {
-        link.emplace(
-            path, std::make_unique<Itemlink>(pldm::utils::DBusHandler::getBus(),
-                                             path.c_str()));
+        link.emplace(path, std::make_unique<Link>(
+                               pldm::utils::DBusHandler::getBus(), path.c_str(),
+                               hostEffecterParser, mctpEid));
     }
     link.at(path)->linkReset(value);
 }

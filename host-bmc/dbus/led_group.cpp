@@ -41,7 +41,13 @@ bool LEDGroup::asserted(bool value)
                 hostEffecterParser->getPldmPDR(), entity.entity_type,
                 entity.entity_instance_num, entity.entity_container_id,
                 PLDM_STATE_SET_IDENTIFY_STATE, false);
-
+            std::cerr << "Setting the led on : [ " << objectPath << "] ,[ "
+                      << entity.entity_type << " , "
+                      << entity.entity_instance_num << " , "
+                      << entity.entity_container_id << " ] , effecter ID : [ "
+                      << effecterId << " ] , current value : [ "
+                      << std::boolalpha << asserted() << " ] new value : [ "
+                      << value << " ] " << std::endl;
             hostEffecterParser->sendSetStateEffecterStates(
                 mctpEid, effecterId, 1, stateField,
                 std::bind(std::mem_fn(&pldm::dbus::LEDGroup::updateAsserted),

@@ -271,42 +271,45 @@ int HostEffecterParser::sendSetStateEffecterStates(
         return rc;
     }
 
-    auto setStateEffecterStatesRespHandler =
-        [=](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
-            if (response == nullptr || !respMsgLen)
+    auto setStateEffecterStatesRespHandler = [=](mctp_eid_t /*eid*/,
+                                                 const pldm_msg* response,
+                                                 size_t respMsgLen) {
+        if (response == nullptr || !respMsgLen)
+        {
+            std::cerr << "Failed to receive response for "
+                      << "setStateEffecterStates command \n";
+            return;
+        }
+        uint8_t completionCode{};
+        auto rc = decode_set_state_effecter_states_resp(response, respMsgLen,
+                                                        &completionCode);
+        if (rc)
+        {
+            std::cerr
+                << "Failed to decode setStateEffecterStates response, effecter Id : "
+                << effecterId << " , rc " << rc << "\n";
+            pldm::utils::reportError(
+                "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
+                pldm::PelSeverity::ERROR);
+        }
+        if (completionCode)
+        {
+            std::cerr << "Failed to set a Host effecter, effecter Id :  "
+                      << effecterId
+                      << " , cc=" << static_cast<unsigned>(completionCode)
+                      << "\n";
+            pldm::utils::reportError(
+                "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
+                pldm::PelSeverity::ERROR);
+        }
+        else
+        {
+            if (callBack)
             {
-                std::cerr << "Failed to receive response for "
-                          << "setStateEffecterStates command \n";
-                return;
+                callBack(value);
             }
-            uint8_t completionCode{};
-            auto rc = decode_set_state_effecter_states_resp(
-                response, respMsgLen, &completionCode);
-            if (rc)
-            {
-                std::cerr << "Failed to decode setStateEffecterStates response,"
-                          << " rc " << rc << "\n";
-                pldm::utils::reportError(
-                    "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
-                    pldm::PelSeverity::ERROR);
-            }
-            if (completionCode)
-            {
-                std::cerr << "Failed to set a Host effecter "
-                          << ", cc=" << static_cast<unsigned>(completionCode)
-                          << "\n";
-                pldm::utils::reportError(
-                    "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
-                    pldm::PelSeverity::ERROR);
-            }
-            else
-            {
-                if (callBack)
-                {
-                    callBack(value);
-                }
-            }
-        };
+        }
+    };
 
     rc = handler->registerRequest(
         mctpEid, instanceId, PLDM_PLATFORM, PLDM_SET_STATE_EFFECTER_STATES,

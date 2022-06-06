@@ -33,7 +33,8 @@ class LEDGroup : public AssertedIntf
              pldm::host_effecters::HostEffecterParser* hostEffecterParser,
              const pldm_entity entity, uint8_t mctpEid) :
         AssertedIntf(bus, objPath.c_str(), AssertedIntf::action::defer_emit),
-        hostEffecterParser(hostEffecterParser), entity(entity), mctpEid(mctpEid)
+        hostEffecterParser(hostEffecterParser), entity(entity),
+        mctpEid(mctpEid), objectPath(objPath)
     {
         // Emit deferred signal.
         emit_object_added();
@@ -63,6 +64,8 @@ class LEDGroup : public AssertedIntf
     const pldm_entity entity;
 
     uint8_t mctpEid;
+
+    std::filesystem::path objectPath;
 
     bool isTriggerStateEffecterStates = false;
 };

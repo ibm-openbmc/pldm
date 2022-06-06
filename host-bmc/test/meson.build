@@ -24,8 +24,13 @@ test_sources = [
   '../dbus/pcie_topology.cpp',
   '../dbus/cable.cpp',
   '../dbus/asset.cpp',
-  '../dbus/pcie_device.cpp'
+  '../dbus/pcie_device.cpp',
+  '../dbus/linkreset.cpp'
 ]
+
+if get_option('oem-ibm').enabled()
+    test_sources += '../../oem/ibm/libpldmresponder/utils.cpp'
+    endif
 
 tests = [
   'dbus_to_host_effecter_test',
