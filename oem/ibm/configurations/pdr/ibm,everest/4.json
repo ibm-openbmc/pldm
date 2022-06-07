@@ -2852,7 +2852,7 @@
         }]
     },
     {
-        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/pcieslot/pcie_card8/cxp_bot",
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/pcieslot8/pcie_card8/cxp_bot",
         "sensors" : [{
             "set" : {
                 "id" : 10,
@@ -2869,7 +2869,7 @@
         }]
     },
     {
-        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/pcieslot/pcie_card8/cxp_top",
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/pcieslot8/pcie_card8/cxp_top",
         "sensors" : [{
             "set" : {
                 "id" : 10,

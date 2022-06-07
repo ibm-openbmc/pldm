@@ -578,6 +578,9 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                 return rc;
             }
 
+            std::cout << "pldmPDRRepositoryChgEvent eventDataOperation : "
+                      << (unsigned)eventDataOperation << std::endl;
+
             if (eventDataOperation == PLDM_RECORDS_ADDED ||
                 eventDataOperation == PLDM_RECORDS_DELETED)
             {

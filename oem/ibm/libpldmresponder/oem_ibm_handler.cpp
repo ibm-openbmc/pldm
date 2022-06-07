@@ -1771,9 +1771,6 @@ void pldm::responder::oem_ibm_platform::Handler::startStopTimer(bool value)
 void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
                                                               bool value)
 {
-    std::cout << "setSurvTimer:hostOff=" << (bool)hostOff
-              << " hostTransitioningToOff=" << (bool)hostTransitioningToOff
-              << " tid=" << (uint16_t)tid << std::endl;
     if ((hostOff == true) || (hostTransitioningToOff == true) ||
         (tid != HYPERVISOR_TID))
     {
