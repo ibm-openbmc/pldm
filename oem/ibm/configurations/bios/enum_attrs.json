@@ -327,7 +327,10 @@
          "attribute_name":"hb_memory_region_size",
          "possible_values":[
             "128MB",
-            "256MB"
+            "256MB",
+            "1024MB",
+            "2046MB",
+            "4098MB"
          ],
          "default_values":[
             "256MB"
@@ -339,7 +342,10 @@
          "attribute_name":"hb_memory_region_size_current",
          "possible_values":[
             "128MB",
-            "256MB"
+            "256MB",
+            "1024MB",
+            "2046MB",
+            "4098MB"
          ],
          "default_values":[
             "256MB"
