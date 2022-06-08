@@ -153,6 +153,10 @@ HostPDRHandler::HostPDRHandler(
                 isHostRunning = false;
                 this->sensorIndex = stateSensorPDRs.begin();
                 this->modifiedCounter = 0;
+                    if (oemPlatformHandler != nullptr)
+                    {
+                        oemPlatformHandler->startStopTimer(false);
+                    }
 
                 // After a power off , the remote nodes will be deleted
                 // from the entity association tree, making the nodes point
