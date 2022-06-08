@@ -9,7 +9,7 @@
 #ifdef OEM_IBM
 #include "oem/ibm/libpldm/pdr_oem_ibm.h"
 #endif
-
+// Test
 static inline uint32_t get_next_record_handle(const pldm_pdr *repo,
 					      const pldm_pdr_record *record)
 {
@@ -55,6 +55,12 @@ static void add_hotplug_record(pldm_pdr *repo, pldm_pdr_record *record,
 		pldm_pdr_record *curr = repo->first;
 		while (curr != NULL) {
 			if (curr->record_handle == prev_record_handle) {
+				record->next = curr->next;
+				curr->next = record;
+				if (record->next == NULL) {
+					repo->last->next = record;
+					repo->last = record;
+				}
 				break;
 			}
 			curr = curr->next;
@@ -64,12 +70,6 @@ static void add_hotplug_record(pldm_pdr *repo, pldm_pdr_record *record,
 		// printf("repo-last=%x, curr=%x, curr-next=%x",(unsigned
 		// int)repo->last, (unsigned int)curr, (unsigned
 		// int)curr->next);
-		record->next = curr->next;
-		curr->next = record;
-		if (record->next == NULL) {
-			repo->last->next = record;
-			repo->last = record;
-		}
 	}
 	repo->size += record->size;
 	++repo->record_count;
@@ -89,14 +89,14 @@ static void add_record_after_record_handle(pldm_pdr *repo,
 		pldm_pdr_record *curr = repo->first;
 		while (curr != NULL) {
 			if (curr->record_handle == prev_record_handle) {
+				record->next = curr->next;
+				curr->next = record;
+				if (record->next == NULL) {
+					repo->last = record;
+				}
 				break;
 			}
 			curr = curr->next;
-		}
-		record->next = curr->next;
-		curr->next = record;
-		if (record->next == NULL) {
-			repo->last = record;
 		}
 	}
 	repo->size += record->size;
@@ -123,6 +123,9 @@ static pldm_pdr_record *make_new_record(const pldm_pdr *repo,
 
 	pldm_pdr_record *record = malloc(sizeof(pldm_pdr_record));
 	assert(record != NULL);
+	if (record == NULL) {
+		return record;
+	}
 	if (record_handle == 0) {
 		record->record_handle = get_new_record_handle(repo);
 	}
@@ -1126,18 +1129,18 @@ void pldm_entity_association_tree_delete_node(
 			entity.entity_instance_num &&
 		    current_entity.entity_container_id ==
 			entity.entity_container_id) {
+			if (start == parent->first_child) {
+				parent->first_child = start->next_sibling;
+			} else {
+				prev->next_sibling = start->next_sibling;
+			}
+			start->next_sibling = NULL;
+			entity_association_tree_destroy(node);
 			break;
 		}
 		prev = start;
 		start = start->next_sibling;
 	}
-	if (start == parent->first_child) {
-		parent->first_child = start->next_sibling;
-	} else {
-		prev->next_sibling = start->next_sibling;
-	}
-	start->next_sibling = NULL;
-	entity_association_tree_destroy(node);
 }
 
 inline bool pldm_entity_is_node_parent(pldm_entity_node *node)
@@ -1706,6 +1709,12 @@ uint32_t pldm_entity_association_pdr_add_contained_entity(
 			}
 			prev = curr;
 			curr = curr->next;
+		}
+		if (curr == NULL) {
+			printf("Couldn't find bmc record handle %d\n",
+			       bmc_record_handle);
+			free(new_record);
+			return 0;
 		}
 
 		uint16_t new_pdr_size = sizeof(struct pldm_pdr_hdr) +
