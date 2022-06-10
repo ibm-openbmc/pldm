@@ -1826,23 +1826,6 @@
         }]
     },
     {
-        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/pcieslot10/pcie_card10/cxp_top",
-        "effecters" : [{
-            "set" : {
-                "id" : 10,
-                "size" : 1,
-                "states" : [1,2]
-            },
-            "dbus" : {
-                "path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/pcieslot10/pcie_card10/cxp_top",
-                "interface": "xyz.openbmc_project.State.Decorator.OperationalStatus",
-                "property_name": "Functional",
-                "property_type": "bool",
-                "property_values" : [true, false]
-             }
-        }]
-    },
-    {
         "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/pcieslot10/pcie_card10/c10_connector0",
         "effecters" : [{
             "set" : {

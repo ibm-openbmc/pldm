@@ -47,14 +47,23 @@ static void add_hotplug_record(pldm_pdr *repo, pldm_pdr_record *record,
 	assert(repo != NULL);
 	assert(record != NULL);
 	record->next = NULL;
+	bool recordAdded = false;
 	if (repo->first == NULL) {
 		assert(repo->last == NULL);
 		repo->first = record;
 		repo->last = record;
+		recordAdded = true;
 	} else {
 		pldm_pdr_record *curr = repo->first;
 		while (curr != NULL) {
 			if (curr->record_handle == prev_record_handle) {
+				record->next = curr->next;
+				curr->next = record;
+				if (record->next == NULL) {
+					repo->last->next = record;
+					repo->last = record;
+				}
+				recordAdded = true;
 				break;
 			}
 			curr = curr->next;
@@ -64,12 +73,10 @@ static void add_hotplug_record(pldm_pdr *repo, pldm_pdr_record *record,
 		// printf("repo-last=%x, curr=%x, curr-next=%x",(unsigned
 		// int)repo->last, (unsigned int)curr, (unsigned
 		// int)curr->next);
-		record->next = curr->next;
-		curr->next = record;
-		if (record->next == NULL) {
-			repo->last->next = record;
-			repo->last = record;
-		}
+	}
+	if (recordAdded == false) {
+		free(record);
+		assert(recordAdded != false);
 	}
 	repo->size += record->size;
 	++repo->record_count;
@@ -81,23 +88,30 @@ static void add_record_after_record_handle(pldm_pdr *repo,
 {
 	assert(repo != NULL);
 	assert(record != NULL);
+	bool recordAdded = false;
 	if (repo->first == NULL) {
 		assert(repo->last == NULL);
 		repo->first = record;
 		repo->last = record;
+		recordAdded = true;
 	} else {
 		pldm_pdr_record *curr = repo->first;
 		while (curr != NULL) {
 			if (curr->record_handle == prev_record_handle) {
+				record->next = curr->next;
+				curr->next = record;
+				if (record->next == NULL) {
+					repo->last = record;
+				}
+				recordAdded = true;
 				break;
 			}
 			curr = curr->next;
 		}
-		record->next = curr->next;
-		curr->next = record;
-		if (record->next == NULL) {
-			repo->last = record;
-		}
+	}
+	if (recordAdded == false) {
+		free(record);
+		assert(recordAdded != false);
 	}
 	repo->size += record->size;
 	++repo->record_count;
@@ -129,9 +143,7 @@ static pldm_pdr_record *make_new_record(const pldm_pdr *repo,
 #ifdef OEM_IBM
 	else if (record_handle == 0xFFFFFFFF) {
 		pldm_pdr_record *rec = pldm_pdr_find_last_local_record(repo);
-		if (record != NULL) {
-			record->record_handle = rec->record_handle + 1;
-		}
+		record->record_handle = rec->record_handle + 1;
 	}
 #endif
 	else {
@@ -466,7 +478,9 @@ uint32_t pldm_pdr_remove_fru_record_set_by_rsi(pldm_pdr *repo, uint16_t fru_rsi,
 				}
 				if (repo->last == record) {
 					repo->last = prev;
-					prev->next = NULL; // sm00
+					if (prev != NULL) {
+						prev->next = NULL; // sm00
+					}
 				}
 				--repo->record_count;
 				repo->size -= record->size;
@@ -764,7 +778,9 @@ uint16_t pldm_delete_by_effecter_id(pldm_pdr *repo, uint16_t effecter_id,
 				}
 				if (repo->last == record) {
 					repo->last = prev;
-					prev->next = NULL;
+					if (prev != NULL) {
+						prev->next = NULL;
+					}
 				}
 				--repo->record_count;
 				repo->size -= record->size;
@@ -809,7 +825,9 @@ uint16_t pldm_delete_by_sensor_id(pldm_pdr *repo, uint16_t sensor_id,
 				}
 				if (repo->last == record) {
 					repo->last = prev;
-					prev->next = NULL;
+					if (prev != NULL) {
+						prev->next = NULL;
+					}
 				}
 				--repo->record_count;
 				repo->size -= record->size;
@@ -1103,6 +1121,7 @@ void pldm_entity_association_tree_delete_node(
 	//	printf("\nenter pldm_entity_association_tree_delete_node");
 	pldm_entity_node *node = NULL;
 	pldm_find_entity_ref_in_tree(tree, entity, &node);
+	assert(node != NULL);
 	// sm00
 	/* printf(
 		    "\nfound node to delete "
@@ -1112,6 +1131,7 @@ void pldm_entity_association_tree_delete_node(
 	pldm_entity_node *parent = NULL;
 	pldm_find_entity_ref_in_tree(tree, node->parent, &parent);
 	//	printf("\nfound parent");
+	assert(parent != NULL);
 	pldm_entity_node *start = parent->first_child;
 	pldm_entity_node *prev = parent->first_child;
 	while (start != NULL) {
@@ -1126,17 +1146,17 @@ void pldm_entity_association_tree_delete_node(
 			entity.entity_instance_num &&
 		    current_entity.entity_container_id ==
 			entity.entity_container_id) {
+			if (start == parent->first_child) {
+				parent->first_child = start->next_sibling;
+			} else {
+				prev->next_sibling = start->next_sibling;
+			}
+			start->next_sibling = NULL;
 			break;
 		}
 		prev = start;
 		start = start->next_sibling;
 	}
-	if (start == parent->first_child) {
-		parent->first_child = start->next_sibling;
-	} else {
-		prev->next_sibling = start->next_sibling;
-	}
-	start->next_sibling = NULL;
 	entity_association_tree_destroy(node);
 }
 
@@ -1695,63 +1715,70 @@ uint32_t pldm_entity_association_pdr_add_contained_entity(
 	{
 		// printf("\ncreating a new entity assoc pdr for slot \n");
 		uint8_t num_children = 1;
-		added = true;
+		added = false;
 		*event_data_op = PLDM_RECORDS_ADDED;
 		prev = repo->first;
 		pldm_pdr_record *curr = repo->first;
 		while (curr != NULL) {
 			if (curr->record_handle == bmc_record_handle) {
 				// printf("\nfound the place \n");
+				added = true;
 				break;
 			}
 			prev = curr;
 			curr = curr->next;
 		}
 
-		uint16_t new_pdr_size = sizeof(struct pldm_pdr_hdr) +
-					sizeof(uint16_t) + sizeof(uint8_t) +
-					sizeof(pldm_entity) + sizeof(uint8_t) +
-					num_children * sizeof(pldm_entity);
-		new_record->data = malloc(new_pdr_size);
-		new_record->record_handle = bmc_record_handle + 1;
-		new_record->size = new_pdr_size;
-		new_record->is_remote = false;
-		new_record->next = curr->next;
-		curr->next = new_record;
-		if (repo->last == prev) {
-			repo->last = new_record;
+		if (added) {
+			uint16_t new_pdr_size =
+			    sizeof(struct pldm_pdr_hdr) + sizeof(uint16_t) +
+			    sizeof(uint8_t) + sizeof(pldm_entity) +
+			    sizeof(uint8_t) +
+			    num_children * sizeof(pldm_entity);
+			new_record->data = malloc(new_pdr_size);
+			new_record->record_handle = bmc_record_handle + 1;
+			new_record->size = new_pdr_size;
+			new_record->is_remote = false;
+			new_record->next = curr->next;
+			curr->next = new_record;
+			if (repo->last == prev) {
+				repo->last = new_record;
+			}
+			repo->size += new_record->size;
+			++repo->record_count;
+
+			updated_hdl = new_record->record_handle;
+
+			struct pldm_pdr_hdr *new_hdr =
+			    (struct pldm_pdr_hdr *)new_record->data;
+			new_hdr->version = 1;
+			new_hdr->record_handle = new_record->record_handle;
+			new_hdr->type = PLDM_PDR_ENTITY_ASSOCIATION;
+			new_hdr->record_change_num = 0;
+			new_hdr->length =
+			    htole16(new_pdr_size - sizeof(struct pldm_pdr_hdr));
+
+			struct pldm_pdr_entity_association *new_pdr =
+			    (struct pldm_pdr_entity_association
+				 *)((uint8_t *)new_record->data +
+				    sizeof(struct pldm_pdr_hdr));
+			new_pdr->container.entity_type = parent.entity_type;
+			new_pdr->container.entity_instance_num =
+			    parent.entity_instance_num;
+			new_pdr->container.entity_container_id =
+			    parent.entity_container_id;
+			new_pdr->container_id = entity.entity_container_id;
+			new_pdr->association_type =
+			    PLDM_ENTITY_ASSOCIAION_PHYSICAL;
+			new_pdr->num_children = 1;
+			struct pldm_entity *new_child =
+			    (struct pldm_entity *)(&new_pdr->children[0]);
+			new_child->entity_type = entity.entity_type;
+			new_child->entity_instance_num =
+			    entity.entity_instance_num;
+			new_child->entity_container_id =
+			    entity.entity_container_id;
 		}
-		repo->size += new_record->size;
-		++repo->record_count;
-
-		updated_hdl = new_record->record_handle;
-
-		struct pldm_pdr_hdr *new_hdr =
-		    (struct pldm_pdr_hdr *)new_record->data;
-		new_hdr->version = 1;
-		new_hdr->record_handle = new_record->record_handle;
-		new_hdr->type = PLDM_PDR_ENTITY_ASSOCIATION;
-		new_hdr->record_change_num = 0;
-		new_hdr->length =
-		    htole16(new_pdr_size - sizeof(struct pldm_pdr_hdr));
-
-		struct pldm_pdr_entity_association *new_pdr =
-		    (struct pldm_pdr_entity_association
-			 *)((uint8_t *)new_record->data +
-			    sizeof(struct pldm_pdr_hdr));
-		new_pdr->container.entity_type = parent.entity_type;
-		new_pdr->container.entity_instance_num =
-		    parent.entity_instance_num;
-		new_pdr->container.entity_container_id =
-		    parent.entity_container_id;
-		new_pdr->container_id = entity.entity_container_id;
-		new_pdr->association_type = PLDM_ENTITY_ASSOCIAION_PHYSICAL;
-		new_pdr->num_children = 1;
-		struct pldm_entity *new_child =
-		    (struct pldm_entity *)(&new_pdr->children[0]);
-		new_child->entity_type = entity.entity_type;
-		new_child->entity_instance_num = entity.entity_instance_num;
-		new_child->entity_container_id = entity.entity_container_id;
 	}
 	if (!added) {
 		if (new_record->data) // sm00
