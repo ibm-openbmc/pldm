@@ -358,7 +358,7 @@
                 "states" : [1,2]
             },
             "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu0_c61_identify",
+                "path": "/xyz/openbmc_project/led/groups/cpu3_c61_identify",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
@@ -377,7 +377,7 @@
                 "states" : [1,2]
             },
             "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu1_c14_identify",
+                "path": "/xyz/openbmc_project/led/groups/cpu0_c14_identify",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
@@ -396,7 +396,7 @@
                 "states" : [1,2]
             },
             "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu2_c19_identify",
+                "path": "/xyz/openbmc_project/led/groups/cpu1_c19_identify",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
@@ -415,7 +415,7 @@
                 "states" : [1,2]
             },
             "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu3_c56_identify",
+                "path": "/xyz/openbmc_project/led/groups/cpu2_c56_identify",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
@@ -2964,7 +2964,7 @@
                 "states" : [1,2]
             },
             "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu0_c61_fault",
+                "path": "/xyz/openbmc_project/led/groups/cpu3_c61_fault",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
@@ -2983,7 +2983,7 @@
                 "states" : [1,2]
             },
             "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu1_c14_fault",
+                "path": "/xyz/openbmc_project/led/groups/cpu0_c14_fault",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
@@ -3002,7 +3002,7 @@
                 "states" : [1,2]
             },
             "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu2_c19_fault",
+                "path": "/xyz/openbmc_project/led/groups/cpu1_c19_fault",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
@@ -3021,7 +3021,7 @@
                 "states" : [1,2]
             },
             "dbus" : {
-                "path": "/xyz/openbmc_project/led/groups/cpu3_c56_fault",
+                "path": "/xyz/openbmc_project/led/groups/cpu2_c56_fault",
                 "interface": "xyz.openbmc_project.Led.Group",
                 "property_name": "Asserted",
                 "property_type": "bool",
