@@ -44,6 +44,21 @@ uint8_t getStateSensorEventState(
 
         for (const auto& stateValue : stateToDbusValue)
         {
+            // This special condition added to handle the "||" keyword
+            // present in the property value string
+            if (dbusMapping.propertyType == "string")
+            {
+                std::string statValSecStr =
+                    std::get<std::string>(stateValue.second);
+                std::string proValStr = std::get<std::string>(propertyValue);
+
+                if ((std::strstr(statValSecStr.c_str(), "||")) &&
+                    (std::strstr(statValSecStr.c_str(), proValStr.c_str())))
+                {
+                    return stateValue.first;
+                }
+            }
+
             if (stateValue.second == propertyValue)
             {
                 return stateValue.first;
