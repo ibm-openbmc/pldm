@@ -11,7 +11,6 @@ namespace dbus
 
 bool Link::linkReset(bool value)
 {
-    std::cerr << "CustomDBus: Got a link reset on: " << path << std::endl;
     std::vector<set_effecter_state_field> stateField;
 
     if (value ==
@@ -28,6 +27,7 @@ bool Link::linkReset(bool value)
 
     if (value && hostEffecterParser)
     {
+        std::cerr << "Got a link reset request on : " << path << std::endl;
         uint16_t effecterID = getEffecterID();
 
         if (effecterID == 0)
@@ -36,7 +36,7 @@ bool Link::linkReset(bool value)
         }
 
         std::cerr
-            << "CustomDBus: Sending a effecter call to host with effecter id: "
+            << "[link reset] : Sending a effecter call to host with effecter id: "
             << effecterID << std::endl;
         hostEffecterParser->sendSetStateEffecterStates(
             mctpEid, effecterID, 1, stateField, nullptr, value);
