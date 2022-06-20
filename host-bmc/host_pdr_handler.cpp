@@ -1098,6 +1098,7 @@ void HostPDRHandler::_setHostSensorState()
                         }
                         ++sensorIndex;
                         _setHostSensorState();
+                        return;
                     }
                     std::array<get_sensor_state_field, 8> stateField{};
                     uint8_t completionCode = 0;
@@ -1121,6 +1122,7 @@ void HostPDRHandler::_setHostSensorState()
                         }
                         ++sensorIndex;
                         _setHostSensorState();
+                        return;
                     }
 
                     uint8_t eventState;
