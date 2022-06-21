@@ -97,7 +97,16 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
         std::cerr
             << "transferHostDataToSocket : Failed to execute the DMA operation, RC="
             << rc << " ADDRESS=" << address << " LENGTH=" << length << "\n";
-        munmap(vgaMemDump, pageAlignedLength);
+        if (rc != -EINTR)
+        {
+            munmap(vgaMemDump, pageAlignedLength);
+        }
+        else
+        {
+            std::cerr
+                << "transferHostDataToSocket : Received interrupt during dump DMA transfer. Skipping Unmap"
+                << std::endl;
+        }
         return rc;
     }
 
