@@ -100,7 +100,7 @@
       {
          "attribute_name" : "hb_ioadapter_enlarged_capacity",
          "lower_bound" : 0,
-         "upper_bound" : 255,
+         "upper_bound" : 21,
          "scalar_increment" : 1,
          "default_value" : 0,
          "helpText" : "Specifies the enlarged IO capacity, requires a reboot for a change to be applied.",
@@ -109,7 +109,7 @@
       {
          "attribute_name" : "hb_ioadapter_enlarged_capacity_current",
          "lower_bound" : 0,
-         "upper_bound" : 255,
+         "upper_bound" : 21,
          "scalar_increment" : 1,
          "default_value" : 0,
          "readOnly" : true,
