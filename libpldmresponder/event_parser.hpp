@@ -53,34 +53,17 @@ struct StateSensorEntry
     {
         if (!skipContainerCheck)
         {
-            return ((containerId < e.containerId) ||
-                    ((containerId == e.containerId) &&
-                     (entityType < e.entityType)) ||
-                    ((containerId == e.containerId) &&
-                     (entityType == e.entityType) &&
-                     (entityInstance < e.entityInstance)) ||
-                    ((containerId == e.containerId) &&
-                     (entityType == e.entityType) &&
-                     (entityInstance == e.entityInstance) &&
-                     (sensorOffset < e.sensorOffset)) ||
-                    ((containerId == e.containerId) &&
-                     (entityType == e.entityType) &&
-                     (entityInstance == e.entityInstance) &&
-                     (sensorOffset == e.sensorOffset) &&
-                     (stateSetid < e.stateSetid)));
+            return std::tie(entityType, entityInstance, containerId,
+                            sensorOffset, stateSetid) <
+                   std::tie(e.entityType, e.entityInstance, e.containerId,
+                            e.sensorOffset, e.stateSetid);
         }
         else
         {
-            return ((entityType < e.entityType) ||
-                    ((entityType == e.entityType) &&
-                     (entityInstance < e.entityInstance)) ||
-                    ((entityType == e.entityType) &&
-                     (entityInstance == e.entityInstance) &&
-                     (sensorOffset < e.sensorOffset)) ||
-                    ((entityType == e.entityType) &&
-                     (entityInstance == e.entityInstance) &&
-                     (sensorOffset == e.sensorOffset) &&
-                     (stateSetid < e.stateSetid)));
+            return std::tie(entityType, entityInstance, sensorOffset,
+                            stateSetid) <
+                   std::tie(e.entityType, e.entityInstance, e.sensorOffset,
+                            e.stateSetid);
         }
     }
 };

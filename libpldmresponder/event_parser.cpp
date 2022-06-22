@@ -127,7 +127,9 @@ int StateSensorHandler::eventAction(StateSensorEntry entry,
     {
         if (kv.first.skipContainerCheck &&
             kv.first.entityType == entry.entityType &&
-            kv.first.entityInstance == entry.entityInstance)
+            kv.first.entityInstance == entry.entityInstance &&
+            kv.first.stateSetid == entry.stateSetid &&
+            kv.first.sensorOffset == entry.sensorOffset)
         {
             entry.skipContainerCheck = true;
             break;

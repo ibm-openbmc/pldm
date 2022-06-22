@@ -421,6 +421,13 @@ int HostPDRHandler::handleStateSensorEvent(
         if ((stateSetId[0] == PLDM_STATE_SET_HEALTH_STATE ||
              stateSetId[0] == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS))
         {
+            if (!(state == PLDM_OPERATIONAL_NORMAL) &&
+                stateSetId[0] == PLDM_STATE_SET_HEALTH_STATE &&
+                strstr(entity.first.c_str(), "core"))
+            {
+                std::cerr << "Guard event on CORE : [" << entity.first
+                          << "] \n";
+            }
             CustomDBus::getCustomDBus().setOperationalStatus(
                 entity.first, state == PLDM_OPERATIONAL_NORMAL,
                 getParentChassis(entity.first));

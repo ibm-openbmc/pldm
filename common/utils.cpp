@@ -351,6 +351,17 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
         {
             std::cout << " value : " << std::get<bool>(value);
         }
+        if (strstr(dBusMap.objectPath.c_str(), "dimm") &&
+            (dBusMap.interface ==
+             "xyz.openbmc_project.State.Decorator.OperationalStatus"))
+        {
+            if (!std::get<bool>(value))
+            {
+                std::cerr << "Guard event on DIMM : [ "
+                          << dBusMap.objectPath.c_str() << " ] \n";
+            }
+        }
+
         setDbusValue(v);
     }
     else if (dBusMap.propertyType == "int16_t")
