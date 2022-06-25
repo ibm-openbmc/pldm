@@ -95,21 +95,11 @@ class DMA
 template <class DMAInterface>
 Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
                      uint32_t offset, uint32_t length, uint64_t address,
-                     bool upstream, uint8_t instanceId,
-                     bool bootProgressComplete)
+                     bool upstream, uint8_t instanceId)
 {
     uint32_t origLength = length;
     Response response(sizeof(pldm_msg_hdr) + PLDM_RW_FILE_MEM_RESP_BYTES, 0);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
-
-    if (!bootProgressComplete)
-    {
-        std::cerr << "declining DMA operation for command " << (uint16_t)command
-                  << std::endl;
-        encode_rw_file_memory_resp(instanceId, command, PLDM_ERROR, 0,
-                                   responsePtr);
-        return response;
-    }
 
     int flags{};
     if (upstream)

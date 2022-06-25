@@ -323,14 +323,11 @@ Response Handler::readFileIntoMemory(const pldm_msg* request,
         return response;
     }
 
-    oem_ibm_platform::Handler* oemIbmPlatformHandler =
-        reinterpret_cast<oem_ibm_platform::Handler*>(oemPlatformHandler);
     using namespace dma;
     DMA intf;
     return transferAll<DMA>(&intf, PLDM_READ_FILE_INTO_MEMORY, value.fsPath,
                             offset, length, address, true,
-                            request->hdr.instance_id,
-                            oemIbmPlatformHandler->getBootProgressState());
+                            request->hdr.instance_id);
 }
 
 Response Handler::writeFileFromMemory(const pldm_msg* request,
@@ -403,14 +400,11 @@ Response Handler::writeFileFromMemory(const pldm_msg* request,
         return response;
     }
 
-    oem_ibm_platform::Handler* oemIbmPlatformHandler =
-        reinterpret_cast<oem_ibm_platform::Handler*>(oemPlatformHandler);
     using namespace dma;
     DMA intf;
     return transferAll<DMA>(&intf, PLDM_WRITE_FILE_FROM_MEMORY, value.fsPath,
                             offset, length, address, false,
-                            request->hdr.instance_id,
-                            oemIbmPlatformHandler->getBootProgressState());
+                            request->hdr.instance_id);
 }
 
 Response Handler::getFileTable(const pldm_msg* request, size_t payloadLength)
@@ -653,20 +647,6 @@ Response rwFileByTypeIntoMemory(uint8_t cmd, const pldm_msg* request,
                                            responsePtr);
         return response;
     }
-
-    oem_ibm_platform::Handler* oemIbmPlatformHandler =
-        reinterpret_cast<oem_ibm_platform::Handler*>(oemPlatformHandler);
-    if (!oemIbmPlatformHandler->getBootProgressState())
-    {
-        std::cerr
-            << "Host is in off state, declining DMA operation for [fileType, Read/Write] [ "
-            << fileType << " , " << static_cast<uint16_t>(cmd) << "]"
-            << std::endl;
-        encode_rw_file_by_type_memory_resp(request->hdr.instance_id, cmd,
-                                           PLDM_ERROR, 0, responsePtr);
-        return response;
-    }
-
     if ((length == 0) || (length % dma::minSize))
     {
         std::cerr << "Length is not a multiple of DMA minSize, LENGTH="

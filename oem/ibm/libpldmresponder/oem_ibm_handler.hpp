@@ -129,43 +129,6 @@ class Handler : public oem_platform::Handler
                     }
                 }
             });
-        constexpr auto hostPath = "/xyz/openbmc_project/state/host0";
-        constexpr auto hostBootProgressInterface =
-            "xyz.openbmc_project.State.Boot.Progress";
-        constexpr auto hostBootProgressProperty = "BootProgress";
-
-        try
-        {
-            auto propVal = pldm::utils::DBusHandler().getDbusPropertyVariant(
-                hostPath, hostBootProgressProperty, hostBootProgressInterface);
-            bootProgressState = std::get<std::string>(propVal);
-        }
-        catch (const sdbusplus::exception::exception& e)
-        {
-            /* Execption is expected to happen in the case when state manager is
-             * started after pldm, this is expected to happen in reboot case
-             * where host is considred to be up. As host is up pldm is expected
-             * to send attribute update event to host so this is not and error
-             * case */
-            bootProgressState =
-                "xyz.openbmc_project.State.Boot.Progress.ProgressStages.Unspecified";
-        }
-
-        bootProgressMatch = std::make_unique<sdbusplus::bus::match::match>(
-            pldm::utils::DBusHandler::getBus(),
-            propertiesChanged("/xyz/openbmc_project/state/host0",
-                              "xyz.openbmc_project.State.Boot.Progress"),
-            [this](sdbusplus::message::message& msg) {
-                pldm::utils::DbusChangedProps props{};
-                std::string intf;
-                msg.read(intf, props);
-                const auto itr = props.find("BootProgress");
-                if (itr != props.end())
-                {
-                    pldm::utils::PropertyValue value = itr->second;
-                    bootProgressState = std::get<std::string>(value);
-                }
-            });
         updateBIOSMatch = std::make_unique<sdbusplus::bus::match::match>(
             pldm::utils::DBusHandler::getBus(),
             propertiesChanged("/xyz/openbmc_project/bios_config/manager",
@@ -508,46 +471,6 @@ class Handler : public oem_platform::Handler
      */
     void triggerHostEffecter(bool value, std::string path);
 
-    /** @brief Allows/Deny DMA operation based on boot progress state and Host
-     * State. DMA is allowed if BootProgressStage is one of the following
-     * SystemInitComplete
-     * OSRunning
-     * SecondaryProcInit
-     * OSStart
-     * SystemSetup
-     * DMA is also allowed in Boot Progress State Unspecified only if
-     * host state is TransitioningToOff
-     *
-     *  @param[out] bool - true is returned if DMA operation is allowed
-     *                     false means DMA is declined
-     */
-    bool getBootProgressState()
-    {
-        if ((bootProgressState != "xyz.openbmc_project.State.Boot.Progress."
-                                  "ProgressStages.SystemInitComplete") &&
-            (bootProgressState != "xyz.openbmc_project.State.Boot.Progress."
-                                  "ProgressStages.OSRunning") &&
-            (bootProgressState != "xyz.openbmc_project.State.Boot.Progress."
-                                  "ProgressStages.SecondaryProcInit") &&
-            (bootProgressState != "xyz.openbmc_project.State.Boot.Progress."
-                                  "ProgressStages.OSStart") &&
-            (bootProgressState != "xyz.openbmc_project.State.Boot.Progress."
-                                  "ProgressStages.SystemSetup"))
-        {
-            if (bootProgressState ==
-                    "xyz.openbmc_project.State.Boot.Progress.ProgressStages.Unspecified" &&
-                hostTransitioningToOff == true)
-            {
-                return true;
-            }
-            std::cerr << "BootProgress State [" << bootProgressState
-                      << "]. HostTransitioningToOff [" << hostTransitioningToOff
-                      << "]. hostOff [" << hostOff << "]" << std::endl;
-            return false;
-        }
-        return true;
-    }
-
     ~Handler() = default;
 
     pldm::responder::CodeUpdate* codeUpdate; //!< pointer to CodeUpdate object
@@ -618,8 +541,6 @@ class Handler : public oem_platform::Handler
 
     /** @brief vector of DBus property changed signal match for linkReset*/
     std::vector<std::unique_ptr<sdbusplus::bus::match::match>> matches;
-
-    std::string bootProgressState;
 
     bool hostOff = true;
 
