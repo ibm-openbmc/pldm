@@ -12,4 +12,11 @@ configure_file(
   install_dir: systemd_system_unit_dir,
   output: 'pldm-create-phyp-nvram-cksum.service',
 )
+configure_file(
+  copy: true,
+  input: 'pldm-clear-dma.service',
+  install: true,
+  install_dir: systemd_system_unit_dir,
+  output: 'pldm-clear-dma.service',
+)
 
