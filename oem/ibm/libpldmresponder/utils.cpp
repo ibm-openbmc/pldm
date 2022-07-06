@@ -127,6 +127,7 @@ void writeToUnixSocket(const int sock, const char* buf,
     const std::lock_guard<std::mutex> lock(lockMutex);
     if (socketWriteStatus == Error)
     {
+        munmap((void*)buf, blockSize);
         return;
     }
     socketWriteStatus = InProgress;
@@ -152,6 +153,7 @@ void writeToUnixSocket(const int sock, const char* buf,
                       << std::endl;
             close(sock);
             socketWriteStatus = Error;
+            munmap((void*)buf, blockSize);
             return;
         }
         if (retval == 0)
@@ -177,6 +179,7 @@ void writeToUnixSocket(const int sock, const char* buf,
                           << std::endl;
                 close(sock);
                 socketWriteStatus = Error;
+                munmap((void*)buf, blockSize);
                 return;
             }
         }
