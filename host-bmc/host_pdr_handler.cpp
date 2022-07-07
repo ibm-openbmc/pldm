@@ -186,6 +186,8 @@ HostPDRHandler::HostPDRHandler(
                     this->mergedHostParents = false;
                     this->objMapIndex = objPathMap.begin();
                     this->sensorIndex = stateSensorPDRs.begin();
+                    this->isHostPdrModified = false;
+                    this->modifiedCounter = 0;
                     fruRecordSetPDRs.clear();
 
                     // After a power off , the remote notes will be deleted
