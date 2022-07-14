@@ -283,6 +283,16 @@ void CodeUpdate::setVersions()
         error(
             "Failed to make a d-bus call to Object Mapper Association, error - {ERROR}",
             "ERROR", e);
+        if (retrySetVersion < maxVersionRetry)
+        {
+            retrySetVersion++;
+            usleep(500 * 1000);
+            setVersions();
+        }
+        else
+        {
+            throw std::runtime_error("Failed to fetch Update Software Object");
+        }
         return;
     }
 
