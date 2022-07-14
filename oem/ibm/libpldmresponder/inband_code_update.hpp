@@ -13,6 +13,7 @@ namespace responder
 
 static constexpr uint8_t pSideNum = 1;
 static constexpr uint8_t tSideNum = 2;
+static constexpr uint8_t maxVersionRetry = 20;
 static constexpr auto Pside = "P";
 static constexpr auto Tside = "T";
 
@@ -233,6 +234,8 @@ class CodeUpdate
     std::string runningVersion;    //!< currently running image
     std::string nonRunningVersion; //!< alternate image
     std::string newImageId;        //!< new image id
+    uint8_t retrySetVersion = 0;
+
     bool codeUpdateInProgress =
         false; //!< indicates whether codeupdate is going on
     bool outOfBandCodeUpdateInProgress = false; //!< indicates whether
