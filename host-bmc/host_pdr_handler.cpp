@@ -457,13 +457,21 @@ int HostPDRHandler::handleStateSensorEvent(
     return PLDM_SUCCESS;
 }
 
-void HostPDRHandler::mergeEntityAssociations(const std::vector<uint8_t>& pdr)
+void HostPDRHandler::mergeEntityAssociations(
+    const std::vector<uint8_t>& pdr, [[maybe_unused]] uint32_t size,
+    [[maybe_unused]] uint32_t record_handle)
 {
     size_t numEntities{};
     pldm_entity* entities = nullptr;
     bool merged = false;
     auto entityPdr = reinterpret_cast<pldm_pdr_entity_association*>(
         const_cast<uint8_t*>(pdr.data()) + sizeof(pldm_pdr_hdr));
+
+    if (oemPlatformHandler && oemPlatformHandler->isHBRange(record_handle))
+    {
+        // Adding the HostBoot range PDRs to the repo before merging it
+        pldm_pdr_add(repo, pdr.data(), size, record_handle, true, 0xFFFF);
+    }
 
     pldm_entity_association_pdr_extract(pdr.data(), pdr.size(), &numEntities,
                                         &entities);
@@ -733,7 +741,7 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
 
             if (pdrHdr->type == PLDM_PDR_ENTITY_ASSOCIATION)
             {
-                this->mergeEntityAssociations(pdr);
+                this->mergeEntityAssociations(pdr, respCount, rh);
                 merged = true;
             }
             else
@@ -766,6 +774,17 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                     if (tlpdr->validity == 0)
                     {
                         tlValid = false;
+                    }
+                    for (const auto& map : tlPDRInfo)
+                    {
+                        if (terminusHandle == (map.first) &&
+                            get<1>(map.second) == tlEid &&
+                            get<2>(map.second) == tlpdr->validity)
+                        {
+                            // TL PDR already present with same valididty don't
+                            // add the PDR to the repo just return
+                            return;
+                        }
                     }
                     tlPDRInfo.insert_or_assign(
                         tlpdr->terminus_handle,
