@@ -489,14 +489,14 @@ void PCIeInfoHandler::parsePrimaryLink(
     else
     {
         // if we enter here, that means its a primary link that involves pcie
-        // slot connected to a pcie switch This link would need additional
-        // processing - as we need to check the parent link of this to figure
-        // out the slot and the adapter
+        // slot connected to a pcie switch or a flett. This link would need
+        // additional processing - as we need to check the parent link of this
+        // to figure out the slot and the adapter
         if (!localPortLocation.first.empty())
         {
-            // we have a io slot location code (probably mex), but its a primary
-            // link and if we have local ports , then figure out which slot it
-            // is connected to
+            // we have a io slot location code (probably mex or cec), but its a
+            // primary link and if we have local ports , then figure out which
+            // slot it is connected to
             if (localPortLocation.first.find("-T") != std::string::npos)
             {
                 auto slotAndAdapter = pldm::responder::utils::getSlotAndAdapter(
@@ -508,15 +508,29 @@ void PCIeInfoHandler::parsePrimaryLink(
             }
             else
             {
-                // if its a slot, then
+                // check if it is a cec slot first
                 std::string slotObjectPath =
                     pldm::responder::utils::getObjectPathByLocationCode(
-                        ioSlotLocationCode[0], itemPCIeSlot);
+                        localPortLocation.first, itemPCIeSlot);
 
                 // get the adapter with the same location code
                 std::string adapterObjPath =
                     pldm::responder::utils::getObjectPathByLocationCode(
-                        ioSlotLocationCode[0], itemPCIeDevice);
+                        localPortLocation.first, itemPCIeDevice);
+
+                if (slotObjectPath.empty())
+                {
+                    // check if it is a mex slot
+                    // if its a slot, then
+                    slotObjectPath =
+                        pldm::responder::utils::getObjectPathByLocationCode(
+                            ioSlotLocationCode[0], itemPCIeSlot);
+
+                    // get the adapter with the same location code
+                    adapterObjPath =
+                        pldm::responder::utils::getObjectPathByLocationCode(
+                            ioSlotLocationCode[0], itemPCIeDevice);
+                }
 
                 // set topology info on both the slot and adapter object
                 setTopologyOnSlotAndAdapter(
