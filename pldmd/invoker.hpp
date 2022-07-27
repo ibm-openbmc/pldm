@@ -37,9 +37,10 @@ class Invoker
      *  @return PLDM response message
      */
     Response handle(Type pldmType, Command pldmCommand, const pldm_msg* request,
-                    size_t reqMsgLen)
+                    size_t reqMsgLen, uint8_t eid = 0)
     {
-        return handlers.at(pldmType)->handle(pldmCommand, request, reqMsgLen);
+        return handlers.at(pldmType)->handle(pldmCommand, request, reqMsgLen,
+                                             eid);
     }
 
   private:

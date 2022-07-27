@@ -73,26 +73,31 @@ class Handler : public CmdHandler
         }
 
         handlers.emplace(PLDM_GET_PDR,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->getPDR(request, payloadLength);
                          });
         handlers.emplace(PLDM_SET_NUMERIC_EFFECTER_VALUE,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->setNumericEffecterValue(
                                  request, payloadLength);
                          });
         handlers.emplace(PLDM_SET_STATE_EFFECTER_STATES,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->setStateEffecterStates(request,
                                                                  payloadLength);
                          });
         handlers.emplace(PLDM_PLATFORM_EVENT_MESSAGE,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->platformEventMessage(request,
                                                                payloadLength);
                          });
         handlers.emplace(PLDM_GET_STATE_SENSOR_READINGS,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->getStateSensorReadings(request,
                                                                  payloadLength);
                          });

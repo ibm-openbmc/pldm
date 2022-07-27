@@ -384,23 +384,27 @@ class Handler : public CmdHandler
              dbusToPLDMEventHandler)
     {
         handlers.emplace(PLDM_GET_FRU_RECORD_TABLE_METADATA,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->getFRURecordTableMetadata(
                                  request, payloadLength);
                          });
 
         handlers.emplace(PLDM_GET_FRU_RECORD_TABLE,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->getFRURecordTable(request,
                                                             payloadLength);
                          });
         handlers.emplace(PLDM_GET_FRU_RECORD_BY_OPTION,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->getFRURecordByOption(request,
                                                                payloadLength);
                          });
         handlers.emplace(PLDM_SET_FRU_RECORD_TABLE,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->setFRURecordTable(request,
                                                             payloadLength);
                          });

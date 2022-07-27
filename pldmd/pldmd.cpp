@@ -20,6 +20,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+#include <sdbusplus/asio/connection.hpp>
 #include <sdeventplus/event.hpp>
 #include <sdeventplus/source/io.hpp>
 #include <sdeventplus/source/signal.hpp>
@@ -106,7 +107,7 @@ static std::optional<Response>
         try
         {
             response = invoker.handle(hdrFields.pldm_type, hdrFields.command,
-                                      request, requestLen);
+                                      request, requestLen, eid);
         }
         catch (const std::out_of_range& e)
         {
@@ -147,36 +148,9 @@ void optionUsage(void)
     std::cerr << "Defaulted settings:  --verbose=0 \n";
 }
 
-int main(int argc, char** argv)
+void initialization(bool verbose,
+                    std::shared_ptr<sdbusplus::asio::connection> conn)
 {
-
-    bool verbose = false;
-    static struct option long_options[] = {
-        {"verbose", required_argument, 0, 'v'}, {0, 0, 0, 0}};
-
-    auto argflag = getopt_long(argc, argv, "v:", long_options, nullptr);
-    switch (argflag)
-    {
-        case 'v':
-            switch (std::stoi(optarg))
-            {
-                case 0:
-                    verbose = false;
-                    break;
-                case 1:
-                    verbose = true;
-                    break;
-                default:
-                    optionUsage();
-                    exit(EXIT_FAILURE);
-            }
-            break;
-        case -1:
-            break;
-        default:
-            exit(EXIT_FAILURE);
-    }
-
     /* Create local socket. */
     int returnCode = 0;
     int sockfd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
@@ -291,6 +265,7 @@ int main(int argc, char** argv)
         dbusToPLDMEventHandler = std::make_unique<DbusToPLDMEvent>(
             sockfd, hostEID, dbusImplReq, &reqHandler);
     }
+    std::cerr << "Created FRU Handler in Main.............\n";
     auto fruHandler = std::make_unique<fru::Handler>(
         FRU_JSONS_DIR, FRU_MASTER_JSON, pdrRepo.get(), entityTree.get(),
         bmcEntityTree.get(), oemFruHandler.get(), dbusImplReq, &reqHandler,
@@ -302,11 +277,13 @@ int main(int argc, char** argv)
         &dbusHandler, PDR_JSONS_DIR, pdrRepo.get(), hostPDRHandler.get(),
         dbusToPLDMEventHandler.get(), fruHandler.get(), bmcEntityTree.get(),
         oemPlatformHandler.get(), event, true);
+
 #ifdef OEM_IBM
     pldm::responder::oem_ibm_platform::Handler* oemIbmPlatformHandler =
         dynamic_cast<pldm::responder::oem_ibm_platform::Handler*>(
             oemPlatformHandler.get());
     oemIbmPlatformHandler->setPlatformHandler(platformHandler.get());
+    oemIbmPlatformHandler->setConnectionHandler(conn);
 
     pldm::responder::oem_ibm_fru::Handler* oemIbmFruHandler =
         dynamic_cast<pldm::responder::oem_ibm_fru::Handler*>(
@@ -354,6 +331,7 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
 
+    oemIbmPlatformHandler->setReturnPath(verbose, currentSendbuffSize);
     auto callback = [verbose, &invoker, &reqHandler, currentSendbuffSize](
                         IO& io, int fd, uint32_t revents) mutable {
         if (!(revents & EPOLLIN))
@@ -426,6 +404,16 @@ int main(int argc, char** argv)
 
                         msg.msg_iov = iov;
                         msg.msg_iovlen = sizeof(iov) / sizeof(iov[0]);
+                        auto optlen = sizeof(currentSendbuffSize);
+
+                        int res = getsockopt(fd, SOL_SOCKET, SO_SNDBUF,
+                                             &currentSendbuffSize, &optlen);
+                        if (res == -1)
+                        {
+                            std::cerr
+                                << "Error calling getsockopt. RC = " << res
+                                << std::endl;
+                        }
                         if (currentSendbuffSize >= 0 &&
                             (size_t)currentSendbuffSize < (*response).size())
                         {
@@ -439,7 +427,6 @@ int main(int argc, char** argv)
                                     << res << ", errno = " << errno
                                     << std::endl;
                         }
-
                         int result = sendmsg(fd, &msg, 0);
                         if (-1 == result)
                         {
@@ -470,7 +457,6 @@ int main(int argc, char** argv)
         hostPDRHandler->setHostFirmwareCondition();
     }
 #endif
-
     stdplus::signal::block(SIGUSR1);
     sdeventplus::source::Signal sigUsr1(
         event, SIGUSR1, std::bind_front(&interruptFlightRecorderCallBack));
@@ -484,4 +470,40 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
     exit(EXIT_SUCCESS);
+}
+
+int main(int argc, char** argv)
+{
+
+    bool verbose = false;
+    static struct option long_options[] = {
+        {"verbose", required_argument, 0, 'v'}, {0, 0, 0, 0}};
+
+    auto argflag = getopt_long(argc, argv, "v:", long_options, nullptr);
+    switch (argflag)
+    {
+        case 'v':
+            switch (std::stoi(optarg))
+            {
+                case 0:
+                    verbose = false;
+                    break;
+                case 1:
+                    verbose = true;
+                    break;
+                default:
+                    optionUsage();
+                    exit(EXIT_FAILURE);
+            }
+            break;
+        case -1:
+            break;
+        default:
+            exit(EXIT_FAILURE);
+    }
+
+    boost::asio::io_context io_context;
+    auto conn = std::make_shared<sdbusplus::asio::connection>(io_context);
+    io_context.post([verbose, conn]() { initialization(verbose, conn); });
+    io_context.run();
 }

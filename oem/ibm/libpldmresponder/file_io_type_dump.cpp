@@ -721,15 +721,22 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
 
     return PLDM_ERROR;
 }
-
-int DumpHandler::newFileAvailableWithMetaData(uint64_t length,
-                                              uint32_t metaDataValue1,
+int DumpHandler::newFileAvailableWithMetaData(uint64_t /*length*/,
+                                              uint32_t /*metaDataValue1*/,
                                               uint32_t /*metaDataValue2*/,
                                               uint32_t /*metaDataValue3*/,
                                               uint32_t /*metaDataValue4*/)
 {
+    return 0;
+}
+int DumpHandler::newFileAvailableWithMetaData(
+    uint64_t length, uint32_t metaDataValue1, uint32_t /*metaDataValue2*/,
+    uint32_t /*metaDataValue3*/, uint32_t /*metaDataValue4*/,
+    uint8_t instanceId,
+    std::shared_ptr<sdbusplus::asio::connection> dbusConnection, uint8_t eid,
+    bool verbose, int currentSendBuffSize, int fd)
+{
     static constexpr auto dumpInterface = "xyz.openbmc_project.Dump.NewDump";
-    auto& bus = pldm::utils::DBusHandler::getBus();
 
     std::cout << "newFileAvailableWithMetaData for NewDump with token :"
               << metaDataValue1 << std::endl;
@@ -745,13 +752,38 @@ int DumpHandler::newFileAvailableWithMetaData(uint64_t length,
         auto service =
             pldm::utils::DBusHandler().getService(notifyObjPath, dumpInterface);
         using namespace sdbusplus::xyz::openbmc_project::Dump::server;
-        auto method = bus.new_method_call(
-            service.c_str(), notifyObjPath, dumpInterface,
-            "Notify"); // need to change the method to "NotifyWithToken"
-                       // once dump manager changes are merged
-        method.append(fileHandle, length); // need to append metaDataValue1 once
-                                           // dump manager changes are merged
-        bus.call(method);
+
+        dbusConnection->async_method_call(
+            [this, instanceId, dbusConnection, eid, verbose,
+             currentSendBuffSize, fd](boost::system::error_code ec) mutable {
+                std::cerr << "Async Method callback with error code " << ec
+                          << std::endl;
+
+                Response response(
+                    sizeof(pldm_msg_hdr) +
+                    PLDM_NEW_FILE_AVAILABLE_WITH_META_DATA_RESP_BYTES);
+                auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+                if (ec == boost::system::errc::success)
+                {
+                    encode_new_file_with_metadata_resp(instanceId, PLDM_SUCCESS,
+                                                       responsePtr);
+                }
+                else
+                {
+                    std::cerr
+                        << "failed to make a d-bus call to notify"
+                           " a new dump request using newFileAvailableWithMetaData, ERROR="
+                        << "\n";
+                    pldm::utils::reportError(
+                        "xyz.openbmc_project.PLDM.Error.newFileAvailableWithMetaData.NewDumpNotifyFail",
+                        pldm::PelSeverity::ERROR);
+                    encode_new_file_with_metadata_resp(instanceId, PLDM_ERROR,
+                                                       responsePtr);
+                }
+                this->sendResponse(verbose, eid, fd, response);
+            },
+            service.c_str(), notifyObjPath, dumpInterface, "Notify", fileHandle,
+            length);
     }
     catch (const std::exception& e)
     {
