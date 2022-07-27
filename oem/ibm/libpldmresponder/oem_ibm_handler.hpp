@@ -14,6 +14,10 @@
 #include "requester/handler.hpp"
 #include "utils.hpp"
 
+#include <sdbusplus/asio/connection.hpp>
+
+#include <memory>
+
 typedef ibm_oem_pldm_state_set_firmware_update_state_values CodeUpdateState;
 
 namespace pldm
@@ -256,6 +260,15 @@ class Handler : public oem_platform::Handler
      *  @param[in] handler - pointer to PLDM platform handler
      */
     void setPlatformHandler(pldm::responder::platform::Handler* handler);
+    void setConnectionHandler(std::shared_ptr<sdbusplus::asio::connection> conn)
+    {
+        busConnection = conn;
+    }
+    void setReturnPath(bool verboseMode, int currentSendbuffSize)
+    {
+        verbose = verboseMode;
+        currentSendbuffSize = currentSendbuffSize;
+    }
 
     /** @brief Method to fetch the effecter ID of the code update PDRs
      *
@@ -477,6 +490,7 @@ class Handler : public oem_platform::Handler
 
     pldm::responder::SlotHandler* slotHandler;
 
+    std::shared_ptr<sdbusplus::asio::connection> busConnection;
     pldm::responder::platform::Handler*
         platformHandler; //!< pointer to PLDM platform handler
 
@@ -485,6 +499,10 @@ class Handler : public oem_platform::Handler
 
     /** @brief MCTP EID of host firmware */
     uint8_t mctp_eid;
+
+    bool verbose;
+
+    int currentSendbuffSize;
 
     /** @brief reference to Requester object, primarily used to access API to
      *  obtain PLDM instance id.

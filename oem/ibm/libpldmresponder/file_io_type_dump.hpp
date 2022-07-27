@@ -50,6 +50,12 @@ class DumpHandler : public FileHandler
                                              uint32_t /*metaDataValue2*/,
                                              uint32_t /*metaDataValue3*/,
                                              uint32_t /*metaDataValue4*/);
+    int newFileAvailableWithMetaData(
+        uint64_t length, uint32_t metaDataValue1, uint32_t /*metaDataValue2*/,
+        uint32_t /*metaDataValue3*/, uint32_t /*metaDataValue4*/,
+        uint8_t instanceId,
+        std::shared_ptr<sdbusplus::asio::connection> dbusConnection,
+        uint8_t eid, bool verbose, int currentSendBuffSize, int mctp_fd);
 
     std::string findDumpObjPath(uint32_t fileHandle);
     std::string getOffloadUri(uint32_t fileHandle);
