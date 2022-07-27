@@ -111,6 +111,15 @@ class FileHandler
                                              uint32_t metaDataValue2,
                                              uint32_t metaDataValue3,
                                              uint32_t metaDataValue4) = 0;
+    virtual int newFileAvailableWithMetaData(
+        uint64_t /*length*/, uint32_t /*metaDataValue1*/,
+        uint32_t /*metaDataValue2*/, uint32_t /*metaDataValue3*/,
+        uint32_t /*metaDataValue4*/, uint8_t /*instanceId*/,
+        std::shared_ptr<sdbusplus::asio::connection> /*dbusConnection*/,
+        uint8_t /*eid*/, bool /*verbose*/, int /*mctp_fd*/)
+    {
+        return 0;
+    }
 
     /** @brief Method to read an oem file type's content into the PLDM response.
      *  @param[in] filePath - file to read from
@@ -154,6 +163,12 @@ class FileHandler
      */
     virtual ~FileHandler()
     {}
+
+    /** Send the response
+     *  Currently used only if DBus method call is made
+     * asynchronously(async_method_call)
+     */
+    void sendResponse(bool verbose, uint8_t eid, int fd, Response response);
 
   protected:
     uint32_t fileHandle; //!< file handle indicating name of file or invalid

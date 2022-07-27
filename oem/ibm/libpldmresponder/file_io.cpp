@@ -955,7 +955,8 @@ Response Handler::fileAckWithMetaData(const pldm_msg* request,
 }
 
 Response Handler::newFileAvailableWithMetaData(const pldm_msg* request,
-                                               size_t payloadLength)
+                                               size_t payloadLength,
+                                               uint8_t eid)
 {
     Response response(sizeof(pldm_msg_hdr) +
                       PLDM_NEW_FILE_AVAILABLE_WITH_META_DATA_RESP_BYTES);
@@ -992,12 +993,31 @@ Response Handler::newFileAvailableWithMetaData(const pldm_msg* request,
         return CmdHandler::ccOnlyResponse(request, PLDM_INVALID_FILE_TYPE);
     }
 
-    rc = handler->newFileAvailableWithMetaData(
-        length, fileMetaData1, fileMetaData2, fileMetaData3, fileMetaData4);
-    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
-    encode_new_file_with_metadata_resp(request->hdr.instance_id, rc,
-                                       responsePtr);
+    oem_ibm_platform::Handler* oemIbmPlatformHandler =
+        reinterpret_cast<oem_ibm_platform::Handler*>(oemPlatformHandler);
 
+    if (fileType == PLDM_FILE_TYPE_DUMP ||
+        fileType == PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS ||
+        fileType == PLDM_FILE_TYPE_RESOURCE_DUMP ||
+        fileType == PLDM_FILE_TYPE_BMC_DUMP ||
+        fileType == PLDM_FILE_TYPE_SBE_DUMP ||
+        fileType == PLDM_FILE_TYPE_HOSTBOOT_DUMP ||
+        fileType == PLDM_FILE_TYPE_HARDWARE_DUMP)
+    {
+        rc = handler->newFileAvailableWithMetaData(
+            length, fileMetaData1, fileMetaData2, fileMetaData3, fileMetaData4,
+            request->hdr.instance_id, oemIbmPlatformHandler->busConnection, eid,
+            oemIbmPlatformHandler->verbose, oemIbmPlatformHandler->mctp_fd);
+        response = {};
+    }
+    else
+    {
+        rc = handler->newFileAvailableWithMetaData(
+            length, fileMetaData1, fileMetaData2, fileMetaData3, fileMetaData4);
+        auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+        encode_new_file_with_metadata_resp(request->hdr.instance_id, rc,
+                                           responsePtr);
+    }
     return response;
 }
 
