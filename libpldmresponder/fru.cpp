@@ -770,9 +770,9 @@ int FruImpl::getFRURecordByOption(std::vector<uint8_t>& fruData,
     size_t recordTableSize = table.size() - padBytes + 7;
     fruData.resize(recordTableSize, 0);
 
-    get_fru_record_by_option(table.data(), table.size() - padBytes,
-                             fruData.data(), &recordTableSize,
-                             recordSetIdentifer, recordType, fieldType);
+    get_fru_record_by_option(table.data(), table.size(), fruData.data(),
+                             &recordTableSize, recordSetIdentifer, recordType,
+                             fieldType);
 
     if (recordTableSize == 0)
     {
