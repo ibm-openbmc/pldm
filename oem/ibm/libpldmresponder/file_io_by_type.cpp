@@ -229,5 +229,58 @@ int FileHandler::readFile(const std::string& filePath, uint32_t offset,
     return PLDM_ERROR;
 }
 
+void FileHandler::sendResponse(bool verbose, uint8_t eid, int fd,
+                               Response response)
+{
+    std::cerr << "Sending Response call\n";
+
+    socklen_t optlen;
+    int currentSendBuffSize;
+
+    // Get Current send buffer size
+    optlen = sizeof(currentSendBuffSize);
+
+    int res =
+        getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &currentSendBuffSize, &optlen);
+    if (res == -1)
+    {
+        std::cerr << "Error calling setsockopt. RC = " << res
+                  << ", errno = " << errno << std::endl;
+    }
+    struct msghdr msg
+    {};
+    // Outgoing message.
+    struct iovec iov[2]{};
+
+    if (verbose)
+    {
+        printBuffer(Tx, response);
+    }
+    std::vector<uint8_t> requestMsg{eid, 1};
+    iov[0].iov_base = &requestMsg[0];
+    iov[0].iov_len = sizeof(requestMsg[0]) + sizeof(requestMsg[1]);
+    iov[1].iov_base = (response).data();
+    iov[1].iov_len = (response).size();
+
+    msg.msg_iov = iov;
+    msg.msg_iovlen = sizeof(iov) / sizeof(iov[0]);
+    if (currentSendBuffSize >= 0 &&
+        (size_t)currentSendBuffSize < response.size())
+    {
+        currentSendBuffSize = (response).size();
+        int res = setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &currentSendBuffSize,
+                             sizeof(currentSendBuffSize));
+        if (res == -1)
+            std::cerr << "Tx: Error calling setsockopt. RC = " << res
+                      << ", errno = " << errno << std::endl;
+    }
+    std::cerr << "Sending Async Response\n";
+    int result = sendmsg(fd, &msg, 0);
+    if (-1 == result)
+    {
+        std::cerr << "sendto system call failed\n ";
+    }
+}
+
 } // namespace responder
 } // namespace pldm

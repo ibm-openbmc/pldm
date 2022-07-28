@@ -17,8 +17,8 @@ namespace responder
 
 using Response = std::vector<uint8_t>;
 class CmdHandler;
-using HandlerFunc =
-    std::function<Response(const pldm_msg* request, size_t reqMsgLen)>;
+using HandlerFunc = std::function<Response(const pldm_msg* request,
+                                           size_t reqMsgLen, uint8_t eid)>;
 
 class CmdHandler
 {
@@ -31,9 +31,9 @@ class CmdHandler
      *  @return PLDM response message
      */
     Response handle(Command pldmCommand, const pldm_msg* request,
-                    size_t reqMsgLen)
+                    size_t reqMsgLen, uint8_t eid = 0)
     {
-        return handlers.at(pldmCommand)(request, reqMsgLen);
+        return handlers.at(pldmCommand)(request, reqMsgLen, eid);
     }
 
     /** @brief Create a response message containing only cc

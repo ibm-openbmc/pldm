@@ -177,71 +177,85 @@ class Handler : public CmdHandler
         dbusImplReqester(dbusImplReqester), handler(handler)
     {
         handlers.emplace(PLDM_READ_FILE_INTO_MEMORY,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->readFileIntoMemory(request,
                                                              payloadLength);
                          });
         handlers.emplace(PLDM_WRITE_FILE_FROM_MEMORY,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->writeFileFromMemory(request,
                                                               payloadLength);
                          });
         handlers.emplace(PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->writeFileByTypeFromMemory(
                                  request, payloadLength);
                          });
         handlers.emplace(PLDM_READ_FILE_BY_TYPE_INTO_MEMORY,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->readFileByTypeIntoMemory(
                                  request, payloadLength);
                          });
         handlers.emplace(PLDM_READ_FILE_BY_TYPE, [this](const pldm_msg* request,
-                                                        size_t payloadLength) {
+                                                        size_t payloadLength,
+                                                        uint8_t /*eid*/) {
             return this->readFileByType(request, payloadLength);
         });
         handlers.emplace(PLDM_WRITE_FILE_BY_TYPE,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->writeFileByType(request,
                                                           payloadLength);
                          });
         handlers.emplace(PLDM_GET_FILE_TABLE,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->getFileTable(request, payloadLength);
                          });
         handlers.emplace(PLDM_READ_FILE,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->readFile(request, payloadLength);
                          });
         handlers.emplace(PLDM_WRITE_FILE,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->writeFile(request, payloadLength);
                          });
         handlers.emplace(PLDM_FILE_ACK,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->fileAck(request, payloadLength);
                          });
         handlers.emplace(PLDM_HOST_GET_ALERT_STATUS,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->getAlertStatus(request,
                                                          payloadLength);
                          });
         handlers.emplace(PLDM_NEW_FILE_AVAILABLE,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->newFileAvailable(request,
                                                            payloadLength);
                          });
         handlers.emplace(PLDM_FILE_ACK_WITH_META_DATA,
-                         [this](const pldm_msg* request, size_t payloadLength) {
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t /*eid*/) {
                              return this->fileAckWithMetaData(request,
                                                               payloadLength);
                          });
 
-        handlers.emplace(PLDM_NEW_FILE_AVAILABLE_WITH_META_DATA,
-                         [this](const pldm_msg* request, size_t payloadLength) {
-                             return this->newFileAvailableWithMetaData(
-                                 request, payloadLength);
-                         });
+        handlers.emplace(
+            PLDM_NEW_FILE_AVAILABLE_WITH_META_DATA,
+            [this](const pldm_msg* request, size_t payloadLength, uint8_t eid) {
+                return this->newFileAvailableWithMetaData(request,
+                                                          payloadLength, eid);
+            });
 
         resDumpMatcher = std::make_unique<sdbusplus::bus::match::match>(
             pldm::utils::DBusHandler::getBus(),
@@ -477,7 +491,8 @@ class Handler : public CmdHandler
      *  @return PLDM response messsage
      */
     Response newFileAvailableWithMetaData(const pldm_msg* request,
-                                          size_t payloadLength);
+                                          size_t payloadLength,
+                                          uint8_t eid = 0);
 
   private:
     oem_platform::Handler* oemPlatformHandler;

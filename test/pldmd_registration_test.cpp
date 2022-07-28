@@ -17,12 +17,14 @@ class TestHandler : public CmdHandler
     TestHandler()
     {
         handlers.emplace(testCmd,
-                         [this](const pldm_msg* request, size_t payloadLength) {
-                             return this->handle(request, payloadLength);
+                         [this](const pldm_msg* request, size_t payloadLength,
+                                uint8_t eid = 0) {
+                             return this->handle(request, payloadLength, eid);
                          });
     }
 
-    Response handle(const pldm_msg* /*request*/, size_t /*payloadLength*/)
+    Response handle(const pldm_msg* /*request*/, size_t /*payloadLength*/,
+                    uint8_t /*eid*/)
     {
         return {100, 200};
     }
