@@ -635,6 +635,7 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                 {
                     pldm_pdr_remove_pdrs_by_terminus_handle(terminusHandle,
                                                             pdrRepo.getPdr());
+                    hostPDRHandler->tlPDRInfo.erase(terminusHandle);
                 }
             }
         }
