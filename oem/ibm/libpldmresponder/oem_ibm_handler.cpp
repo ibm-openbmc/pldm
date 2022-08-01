@@ -1923,6 +1923,15 @@ void pldm::responder::oem_ibm_platform::Handler::triggerHostEffecter(
     }
 }
 
+bool pldm::responder::oem_ibm_platform::Handler::isHBRange(
+    uint32_t record_handle)
+{
+    if (record_handle >= 0x01000000 && record_handle < 0x01FFFFFF)
+    {
+        return true;
+    }
+    return false;
+}
 } // namespace oem_ibm_platform
 } // namespace responder
 } // namespace pldm
