@@ -42,6 +42,7 @@ std::map<std::string,
 
 std::vector<std::string> PCIeInfoHandler::cables;
 std::vector<std::pair<linkId_t, linkId_t>> PCIeInfoHandler::needPostProcessing;
+std::unordered_map<linkId_t, linkType_t> PCIeInfoHandler::linkTypeInfo;
 
 PCIeInfoHandler::PCIeInfoHandler(uint32_t fileHandle, uint16_t fileType) :
     FileHandler(fileHandle), infoType(fileType)
@@ -658,8 +659,25 @@ void PCIeInfoHandler::setTopologyAttrsOnDbus()
                     std::get<0>(info), std::get<2>(info), std::get<3>(info));
                 break;
             case Unknown:
-                // its just no-op
-                break;
+                std::cerr << "link type is unkown : " << (unsigned)link
+                          << std::endl;
+                switch (linkTypeInfo[link])
+                {
+                    case Primary:
+                        parsePrimaryLink(linkTypeInfo[link], std::get<7>(info),
+                                         std::get<5>(info),
+                                         static_cast<uint32_t>(link),
+                                         std::get<0>(info), std::get<2>(info),
+                                         std::get<3>(info), std::get<8>(info));
+                        break;
+                    case Secondary:
+                        parseSecondaryLink(
+                            linkTypeInfo[link], std::get<7>(info),
+                            std::get<5>(info), std::get<6>(info),
+                            static_cast<uint32_t>(link), std::get<0>(info),
+                            std::get<2>(info), std::get<3>(info));
+                        break;
+                }
         }
     }
 
@@ -816,6 +834,10 @@ void PCIeInfoHandler::parseTopologyData()
 
         // get link type
         auto linkType = single_entry_data->link_type;
+        if (linkType != Unknown)
+        {
+            linkTypeInfo[linkid] = linkType;
+        }
 
         // get link speed
         auto linkSpeed = single_entry_data->link_speed;
