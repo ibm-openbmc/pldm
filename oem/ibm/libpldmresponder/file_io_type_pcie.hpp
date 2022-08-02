@@ -284,6 +284,7 @@ class PCIeInfoHandler : public FileHandler
         mexObjectMap;
     static std::vector<std::string> cables;
     static std::vector<std::pair<linkId_t, linkId_t>> needPostProcessing;
+    static std::unordered_map<linkId_t, linkType_t> linkTypeInfo;
 };
 
 } // namespace responder
