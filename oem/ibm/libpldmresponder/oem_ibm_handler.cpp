@@ -929,7 +929,7 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
     bool status)
 {
     pldm::pdr::EntityType entityType = PLDM_ENTITY_PROC;
-    pldm::pdr::StateSetId stateSetId = PLDM_OEM_IBM_SBE_SEMANTIC_ID;
+    pldm::pdr::StateSetId stateSetId = PLDM_OEM_IBM_SBE_MAINTENANCE_STATE;
 
     uint8_t tid = TERMINUS_ID;
 
