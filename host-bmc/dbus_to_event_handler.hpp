@@ -10,7 +10,6 @@
 
 namespace pldm
 {
-
 using SensorId = uint16_t;
 /*using DbusObjMaps =
     std::map<SensorId, std::tuple<pldm::responder::pdr_utils::DbusMappings,
@@ -18,6 +17,8 @@ using SensorId = uint16_t;
 using sensorEvent = std::function<void(
     SensorId sensorId,
     const pldm::responder::pdr_utils::DbusObjMaps& dbusMaps)>;
+using stateSensorCacheMaps =
+    std::map<pldm::pdr::SensorID, pldm::responder::pdr_utils::EventStates>;
 
 namespace state_sensor
 {
@@ -54,6 +55,9 @@ class DbusToPLDMEvent
         const pldm::responder::pdr_utils::Repo& repo,
         const pldm::responder::pdr_utils::DbusObjMaps& dbusMaps);
 
+    /** @brief get the sensor state cache */
+    const stateSensorCacheMaps& getSensorCache();
+
     /** @brief Send state sensor event msg when a D-Bus property changes
      *  @param[in] sensorId - sensor id
      */
@@ -86,6 +90,9 @@ class DbusToPLDMEvent
 
     /** @brief PLDM request handler */
     pldm::requester::Handler<pldm::requester::Request>* handler;
+
+    /** @brief sensor cache */
+    stateSensorCacheMaps sensorCacheMap;
 };
 
 } // namespace state_sensor

@@ -19,7 +19,6 @@ namespace responder
 {
 namespace platform_state_sensor
 {
-
 /** @brief Function to get the sensor state
  *
  *  @tparam[in] DBusInterface - DBus interface type
@@ -95,7 +94,8 @@ template <class DBusInterface, class Handler>
 int getStateSensorReadingsHandler(
     const DBusInterface& dBusIntf, Handler& handler, uint16_t sensorId,
     uint8_t sensorRearmCnt, uint8_t& compSensorCnt,
-    std::vector<get_sensor_state_field>& stateField)
+    std::vector<get_sensor_state_field>& stateField,
+    const stateSensorCacheMaps& sensorCache)
 {
     using namespace pldm::responder::pdr;
     using namespace pldm::utils;
@@ -154,6 +154,17 @@ int getStateSensorReadingsHandler(
         const auto& [dbusMappings, dbusValMaps] = handler.getDbusObjMaps(
             sensorId, pldm::responder::pdr_utils::TypeId::PLDM_SENSOR_ID);
 
+        pldm::responder::pdr_utils::EventStates sensorCacheforSensor{};
+        if (sensorCache.contains(sensorId))
+        {
+            sensorCacheforSensor = sensorCache.at(sensorId);
+        }
+        else
+        {
+            std::cerr << "Sensor Cache not available for sensor ID : "
+                      << sensorId << std::endl;
+        }
+
         stateField.clear();
         for (size_t i = 0; i < sensorRearmCnt; i++)
         {
@@ -162,6 +173,12 @@ int getStateSensorReadingsHandler(
             uint8_t sensorEvent = getStateSensorEventState<DBusInterface>(
                 dBusIntf, dbusValMaps[i], dbusMapping);
 
+            uint8_t previousState = PLDM_SENSOR_UNKNOWN;
+            if (!sensorCacheforSensor.empty() &&
+                i <= sensorCacheforSensor.size())
+            {
+                previousState = sensorCacheforSensor[i];
+            }
             uint8_t opState = PLDM_SENSOR_ENABLED;
             if (sensorEvent == PLDM_SENSOR_UNKNOWN)
             {
@@ -169,7 +186,7 @@ int getStateSensorReadingsHandler(
             }
 
             stateField.push_back(
-                {opState, sensorEvent, PLDM_SENSOR_UNKNOWN, sensorEvent});
+                {opState, sensorEvent, previousState, sensorEvent});
         }
     }
     catch (const std::out_of_range& e)
