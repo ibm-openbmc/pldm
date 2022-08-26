@@ -23,13 +23,10 @@ namespace fs = std::filesystem;
 
 namespace pldm
 {
-
 namespace responder
 {
-
 namespace pdr_utils
 {
-
 /** @struct Type ID associated with pdr
  *
  */
@@ -82,6 +79,7 @@ using StatestoDbusVal = std::map<State, pldm::utils::PropertyValue>;
 using DbusMappings = std::vector<pldm::utils::DBusMapping>;
 using DbusValMaps = std::vector<StatestoDbusVal>;
 using DbusObjMaps = std::map<EffecterId, std::tuple<DbusMappings, DbusValMaps>>;
+using EventStates = std::vector<uint8_t>;
 
 /** @brief Parse PDR JSON file and output Json object
  *
