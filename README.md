@@ -153,3 +153,4 @@ PDR repository. Platform specific PDR modifications would likely just result in
 JSON updates. New PDR type support would require JSON updates as well as PDR
 generation code. The PDR generator is a map of PDR Type -> C++ lambda to create
 PDR entries for that type based on the JSON, and to update the central PDR repo.
+
