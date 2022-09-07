@@ -154,11 +154,20 @@ void DbusToPLDMEvent::sendStateSensorEvent(SensorId sensorId,
                             reinterpret_cast<struct pldm_sensor_event_data*>(
                                 sensorEventDataVec.data());
                         eventData->event_class[1] = itr.first;
+                        if (sensorCacheMap.contains(sensorId) &&
+                            sensorCacheMap[sensorId][offset] !=
+                                PLDM_SENSOR_UNKNOWN)
+                        {
+                            previousState = sensorCacheMap[sensorId][offset];
+                        }
+                        else
+                        {
+                            previousState = itr.first;
+                        }
                         eventData->event_class[2] = previousState;
                         this->sendEventMsg(PLDM_SENSOR_EVENT,
                                            sensorEventDataVec);
-                        sensorCacheMap[sensorId][offset] = previousState;
-                        previousState = itr.first;
+                        updateSensorCacheMaps(sensorId, offset, previousState);
                         break;
                     }
                 }

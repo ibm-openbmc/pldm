@@ -58,6 +58,13 @@ class DbusToPLDMEvent
     /** @brief get the sensor state cache */
     const stateSensorCacheMaps& getSensorCache();
 
+    void updateSensorCacheMaps(pldm::pdr::SensorID sensorId, size_t sensorRearm,
+                               uint8_t previousState)
+    {
+        // update the sensor cache
+        sensorCacheMap[sensorId][sensorRearm] = previousState;
+    }
+
     /** @brief Send state sensor event msg when a D-Bus property changes
      *  @param[in] sensorId - sensor id
      */

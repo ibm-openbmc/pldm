@@ -159,14 +159,9 @@ int getStateSensorReadingsHandler(
         {
             sensorCacheforSensor = sensorCache.at(sensorId);
         }
-        else
-        {
-            std::cerr << "Sensor Cache not available for sensor ID : "
-                      << sensorId << std::endl;
-        }
 
         stateField.clear();
-        for (size_t i = 0; i < sensorRearmCnt; i++)
+        for (std::size_t i{0}; i < sensorRearmCnt; i++)
         {
             auto& dbusMapping = dbusMappings[i];
 
@@ -174,11 +169,23 @@ int getStateSensorReadingsHandler(
                 dBusIntf, dbusValMaps[i], dbusMapping);
 
             uint8_t previousState = PLDM_SENSOR_UNKNOWN;
-            if (!sensorCacheforSensor.empty() &&
-                i <= sensorCacheforSensor.size())
+
+            // if sensor cache is empty, then its the first
+            // get_state_sensor_reading on this sensor, set the previous state
+            // as the current state
+
+            if (sensorCacheforSensor.at(i) == PLDM_SENSOR_UNKNOWN)
             {
+                previousState = sensorEvent;
+                handler.updateSensorCache(sensorId, i, previousState);
+            }
+            else
+            {
+                // sensor cache is not empty, so get the previous state from
+                // the sensor cache
                 previousState = sensorCacheforSensor[i];
             }
+
             uint8_t opState = PLDM_SENSOR_ENABLED;
             if (sensorEvent == PLDM_SENSOR_UNKNOWN)
             {
