@@ -106,9 +106,10 @@ class HostPDRHandler
     /** @brief fetch PDRs from host firmware. See @class.
      *  @param[in] recordHandles - list of record handles pointing to host's
      *             PDRs that need to be fetched.
+     *  @param[in] tid - terminus ID.
      */
 
-    void fetchPDR(PDRRecordHandles&& recordHandles);
+    void fetchPDR(PDRRecordHandles&& recordHandles, uint8_t tid);
 
     void deletePDRFromRepo(PDRRecordHandles&& recordHandles);
 
@@ -214,6 +215,7 @@ class HostPDRHandler
 
     /** @brief deferred function to fetch PDR from Host, scheduled to work on
      *  the event loop. The PDR exchg with the host is async.
+     *
      *  @param[in] source - sdeventplus event source
      */
     void _fetchPDR(sdeventplus::source::EventBase& source);
@@ -222,8 +224,12 @@ class HostPDRHandler
      *  @details A merge operation involves adding a pldm_entity under the
      *  appropriate parent, and updating container ids.
      *  @param[in] pdr - entity association pdr
+     *  @param[in] size - size of input PDR record in bytes
+     *  @param[in] record_handle - record handle of the PDR
      */
-    void mergeEntityAssociations(const std::vector<uint8_t>& pdr);
+    void mergeEntityAssociations(const std::vector<uint8_t>& pdr,
+                                 const uint32_t& size,
+                                 const uint32_t& record_handle);
 
     /** @brief process the Host's PDR and add to BMC's PDR repo
      *  @param[in] eid - MCTP id of Host
@@ -432,6 +438,9 @@ class HostPDRHandler
 
     /** cache the fru record set PDR's */
     PDRList fruRecordSetPDRs{};
+
+    /** @brief variable to hold the terminus ID */
+    uint16_t terminusID = 0;
 };
 
 } // namespace pldm

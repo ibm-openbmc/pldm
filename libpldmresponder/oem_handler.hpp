@@ -156,6 +156,14 @@ class Handler : public CmdHandler
      */
     virtual void setSurvTimer(uint8_t tid, bool value) = 0;
 
+    /** @brief To check if record handle is in HostBoot range
+     *
+     *  @param[in] record_handle - record handle of the PDR
+     *
+     *  @return true or false
+     */
+    virtual bool isHBRange(const uint32_t& record_handle) = 0;
+
     virtual ~Handler() = default;
 
   protected:

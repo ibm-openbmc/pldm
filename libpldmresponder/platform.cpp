@@ -643,7 +643,7 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
         }
         else
         {
-            hostPDRHandler->fetchPDR(std::move(pdrRecordHandles));
+            hostPDRHandler->fetchPDR(std::move(pdrRecordHandles), tid);
         }
     }
 
