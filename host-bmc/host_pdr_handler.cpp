@@ -296,7 +296,7 @@ std::string HostPDRHandler::getParentChassis(const std::string& frupath)
     return "";
 }
 
-void HostPDRHandler::fetchPDR(PDRRecordHandles&& recordHandles)
+void HostPDRHandler::fetchPDR(PDRRecordHandles&& recordHandles, uint8_t tid)
 {
     pdrRecordHandles.clear();
     modifiedPDRRecordHandles.clear();
@@ -309,12 +309,13 @@ void HostPDRHandler::fetchPDR(PDRRecordHandles&& recordHandles)
         pdrRecordHandles = std::move(recordHandles);
     }
 
+    terminusID = tid;
+
     // Defer the actual fetch of PDRs from the host (by queuing the call on the
     // main event loop). That way, we can respond to the platform event msg from
     // the host firmware.
     pdrFetchEvent = std::make_unique<sdeventplus::source::Defer>(
-        event, std::bind(std::mem_fn(&HostPDRHandler::_fetchPDR), this,
-                         std::placeholders::_1));
+        event, std::bind_front(std::mem_fn(&HostPDRHandler::_fetchPDR), this));
 }
 
 void HostPDRHandler::_fetchPDR(sdeventplus::source::EventBase& /*source*/)
@@ -457,7 +458,9 @@ int HostPDRHandler::handleStateSensorEvent(
     return PLDM_SUCCESS;
 }
 
-void HostPDRHandler::mergeEntityAssociations(const std::vector<uint8_t>& pdr)
+void HostPDRHandler::mergeEntityAssociations(
+    const std::vector<uint8_t>& pdr, [[maybe_unused]] const uint32_t& size,
+    [[maybe_unused]] const uint32_t& record_handle)
 {
     size_t numEntities{};
     pldm_entity* entities = nullptr;
@@ -465,6 +468,11 @@ void HostPDRHandler::mergeEntityAssociations(const std::vector<uint8_t>& pdr)
     auto entityPdr = reinterpret_cast<pldm_pdr_entity_association*>(
         const_cast<uint8_t*>(pdr.data()) + sizeof(pldm_pdr_hdr));
 
+    if (oemPlatformHandler && oemPlatformHandler->isHBRange(record_handle))
+    {
+        // Adding the HostBoot range PDRs to the repo before merging it
+        pldm_pdr_add(repo, pdr.data(), size, record_handle, true, 0xFFFF);
+    }
     pldm_entity_association_pdr_extract(pdr.data(), pdr.size(), &numEntities,
                                         &entities);
     if (numEntities > 0)
@@ -519,11 +527,22 @@ void HostPDRHandler::mergeEntityAssociations(const std::vector<uint8_t>& pdr)
         }
         else
         {
+            uint16_t terminus_handle = 0;
+            for (const auto& [terminusHandle, terminusInfo] : tlPDRInfo)
+            {
+                if (std::get<0>(terminusInfo) == terminusID &&
+                    std::get<1>(terminusInfo) == mctp_eid &&
+                    std::get<2>(terminusInfo))
+                {
+                    terminus_handle = terminusHandle;
+                }
+            }
+
             // Record Handle is 0xFFFFFFFF(max value uint32_t), for merging
             // entity association pdr to bmc range
             pldm_entity_association_pdr_add_from_node(
-                node, repo, &entities, numEntities, true, TERMINUS_HANDLE,
-                0xFFFFFFFF);
+                node, repo, &entities, numEntities, true,
+                isHostUp() ? TERMINUS_HANDLE : terminus_handle, 0xFFFFFFFF);
         }
     }
     free(entities);
@@ -552,8 +571,27 @@ void HostPDRHandler::sendPDRRepositoryChgEvent(std::vector<uint8_t>&& pdrTypes,
                                                   nullptr, nullptr);
             if (record && pldm_pdr_record_is_remote(record))
             {
-                changeEntries[0].push_back(
-                    pldm_pdr_get_record_handle(repo, record));
+                if (!isHostUp())
+                {
+                    for (const auto& [terminusHandle, terminusInfo] : tlPDRInfo)
+                    {
+                        if (std::get<0>(terminusInfo) == terminusID &&
+                            std::get<1>(terminusInfo) == mctp_eid &&
+                            std::get<2>(terminusInfo) &&
+                            record->terminus_handle == terminusHandle)
+                        {
+                            // send record handles of that terminus only.
+                            changeEntries[0].push_back(
+                                pldm_pdr_get_record_handle(repo, record));
+                        }
+                    }
+                }
+                else
+                {
+                    // When host is up, Reset Reload case
+                    changeEntries[0].push_back(
+                        pldm_pdr_get_record_handle(repo, record));
+                }
             }
         } while (record);
     }
@@ -733,7 +771,7 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
 
             if (pdrHdr->type == PLDM_PDR_ENTITY_ASSOCIATION)
             {
-                this->mergeEntityAssociations(pdr);
+                this->mergeEntityAssociations(pdr, respCount, rh);
                 merged = true;
             }
             else
@@ -805,6 +843,14 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                 {
                     pldm_pdr_update_TL_pdr(repo, terminusHandle, tid, tlEid,
                                            tlValid);
+
+                    if (!isHostUp())
+                    {
+                        // since HB is sending down the TL PDR in the beginning
+                        // of the PDR exchange, do not continue PDR exchange
+                        // when the TL PDR is invalid.
+                        nextRecordHandle = 0;
+                    }
                 }
                 else
                 {
