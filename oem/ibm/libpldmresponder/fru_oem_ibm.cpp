@@ -177,6 +177,8 @@ void Handler::setFruPresence(const std::string& adapterObjPath)
 
 void Handler::setFirmwareUAK(std::vector<uint8_t> data)
 {
+    std::cout << "Got a SetFRURecordTable cmd from host to set the firmware UAK"
+              << std::endl;
     static constexpr auto uakObjPath = "/com/ibm/VPD/Manager";
     static constexpr auto uakInterface = "com.ibm.VPD.Manager";
 

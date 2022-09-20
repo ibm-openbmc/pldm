@@ -414,9 +414,11 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
 
     deleteFruRecord(rsi);
 
-    sendPDRRepositoryChgEventbyPDRHandles(
-        std::move(std::vector<ChangeEntry>(1, deleteRecordHdl)),
-        std::move(std::vector<uint8_t>(1, PLDM_RECORDS_DELETED)));
+    std::vector<ChangeEntry> handlesTobeDeleted;
+    if (deleteRecordHdl != 0)
+    {
+        handlesTobeDeleted.push_back(deleteRecordHdl);
+    }
 
     std::vector<uint16_t> effecterIDs = findEffecterIds(
         pdrRepo, 0 /*tid*/, removeEntity.entity_type,
@@ -428,12 +430,9 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
         effecterDbusObjMaps.erase(ids);
         if (delEffecterHdl != 0)
         {
-            sendPDRRepositoryChgEventbyPDRHandles(
-                std::move(std::vector<ChangeEntry>(1, delEffecterHdl)),
-                std::move(std::vector<uint8_t>(1, PLDM_RECORDS_DELETED)));
+            handlesTobeDeleted.push_back(delEffecterHdl);
         }
     }
-
     std::vector<uint16_t> sensorIDs = findSensorIds(
         pdrRepo, 0 /*tid*/, removeEntity.entity_type,
         removeEntity.entity_instance_num, removeEntity.entity_container_id);
@@ -444,26 +443,37 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
         sensorDbusObjMaps.erase(ids);
         if (delSensorHdl != 0)
         {
-            sendPDRRepositoryChgEventbyPDRHandles(
-                std::move(std::vector<ChangeEntry>(1, delSensorHdl)),
-                std::move(std::vector<uint8_t>(1, PLDM_RECORDS_DELETED)));
+            handlesTobeDeleted.push_back(delSensorHdl);
         }
     }
 
     // need to
     // send both remote and local records. Phyp keeps track of bmc only records
+    std::vector<ChangeEntry> handlesTobeModified;
     if (bmcEventDataOps != PLDM_INVALID_OP && updateRecordHdlBmc != 0)
     {
-        sendPDRRepositoryChgEventbyPDRHandles(
-            std::move(std::vector<ChangeEntry>(1, updateRecordHdlBmc)),
-            std::move(std::vector<uint8_t>(1, bmcEventDataOps)));
+        (bmcEventDataOps == PLDM_RECORDS_DELETED)
+            ? handlesTobeDeleted.push_back(updateRecordHdlBmc)
+            : handlesTobeModified.push_back(updateRecordHdlBmc);
     }
     if (hostEventDataOps != PLDM_INVALID_OP && updateRecordHdlHost != 0)
     {
-        sendPDRRepositoryChgEventbyPDRHandles(
-            std::move(std::vector<ChangeEntry>(1, updateRecordHdlHost)),
-            std::move(std::vector<uint8_t>(1, hostEventDataOps)));
+        (hostEventDataOps == PLDM_RECORDS_DELETED)
+            ? handlesTobeDeleted.push_back(updateRecordHdlHost)
+            : handlesTobeModified.push_back(updateRecordHdlHost);
     } // sm00 this can be RECORDS_DELETED also for adapter pdrs
+    if (!handlesTobeDeleted.empty())
+    {
+        sendPDRRepositoryChgEventbyPDRHandles(
+            std::move(handlesTobeDeleted),
+            std::move(std::vector<uint8_t>(1, PLDM_RECORDS_DELETED)));
+    }
+    if (!handlesTobeModified.empty())
+    {
+        sendPDRRepositoryChgEventbyPDRHandles(
+            std::move(handlesTobeModified),
+            std::move(std::vector<uint8_t>(1, PLDM_RECORDS_MODIFIED)));
+    }
 }
 
 void FruImpl::deleteFruRecord(uint16_t rsi)
@@ -621,26 +631,38 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
     std::vector<uint32_t> recordHdlList;
     reGenerateStatePDR(fruObjectPath, recordHdlList);
 
-    sendPDRRepositoryChgEventbyPDRHandles(
-        std::move(std::vector<ChangeEntry>(1, newRecordHdl)),
-        std::move(std::vector<uint8_t>(1, PLDM_RECORDS_ADDED)));
+    std::vector<ChangeEntry> handlesTobeAdded;
+    std::vector<ChangeEntry> handlesTobeModified;
+
+    handlesTobeAdded.push_back(newRecordHdl);
+
     for (auto& ids : recordHdlList)
     {
-        sendPDRRepositoryChgEventbyPDRHandles(
-            std::move(std::vector<ChangeEntry>(1, ids)),
-            std::move(std::vector<uint8_t>(1, PLDM_RECORDS_ADDED)));
+        handlesTobeAdded.push_back(ids);
     }
     if (updatedRecordHdlBmc != 0)
     {
-        sendPDRRepositoryChgEventbyPDRHandles(
-            std::move(std::vector<ChangeEntry>(1, updatedRecordHdlBmc)),
-            std::move(std::vector<uint8_t>(1, bmcEventDataOps)));
+        (bmcEventDataOps == PLDM_RECORDS_MODIFIED)
+            ? handlesTobeModified.push_back(updatedRecordHdlBmc)
+            : handlesTobeAdded.push_back(updatedRecordHdlBmc);
     }
     if (updatedRecordHdlHost != 0)
     {
+        (hostEventDataOps == PLDM_RECORDS_MODIFIED)
+            ? handlesTobeModified.push_back(updatedRecordHdlHost)
+            : handlesTobeAdded.push_back(updatedRecordHdlHost);
+    }
+    if (!handlesTobeAdded.empty())
+    {
         sendPDRRepositoryChgEventbyPDRHandles(
-            std::move(std::vector<ChangeEntry>(1, updatedRecordHdlHost)),
-            std::move(std::vector<uint8_t>(1, hostEventDataOps)));
+            std::move(handlesTobeAdded),
+            std::move(std::vector<uint8_t>(1, PLDM_RECORDS_ADDED)));
+    }
+    if (!handlesTobeModified.empty())
+    {
+        sendPDRRepositoryChgEventbyPDRHandles(
+            std::move(handlesTobeModified),
+            std::move(std::vector<uint8_t>(1, PLDM_RECORDS_MODIFIED)));
     }
 }
 

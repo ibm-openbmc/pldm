@@ -263,7 +263,8 @@ TEST(PDRAccess, testGet)
     EXPECT_NE(hdl, nullptr);
     EXPECT_EQ(size, sizeof(in));
     EXPECT_EQ(nextRecHdl, 0u);
-    // EXPECT_EQ(memcmp(outData, in.data(), sizeof(in)), -1);
+    EXPECT_EQ(memcmp(outData + 4, in.data() + 1, sizeof(in) - 4), 0);
+    EXPECT_EQ(reinterpret_cast<uint32_t*>(outData)[0], hdl->record_handle);
     outData = nullptr;
 
     auto hdl2 = pldm_pdr_find_record(repo, 1, &outData, &size, &nextRecHdl);
@@ -271,7 +272,8 @@ TEST(PDRAccess, testGet)
     EXPECT_NE(hdl, nullptr);
     EXPECT_EQ(size, sizeof(in));
     EXPECT_EQ(nextRecHdl, 0u);
-    // EXPECT_EQ(memcmp(outData, in.data(), sizeof(in)), -1);
+    EXPECT_EQ(memcmp(outData + 4, in.data() + 1, sizeof(in) - 4), 0);
+    EXPECT_EQ(reinterpret_cast<uint32_t*>(outData)[0], hdl2->record_handle);
     outData = nullptr;
 
     hdl = pldm_pdr_find_record(repo, htole32(0xdeaddead), &outData, &size,
@@ -293,37 +295,47 @@ TEST(PDRAccess, testGet)
     EXPECT_EQ(pldm_pdr_get_record_count(repo), 4u);
     EXPECT_EQ(pldm_pdr_get_repo_size(repo), sizeof(in2) * 4);
     hdl = pldm_pdr_find_record(repo, 0, &outData, &size, &nextRecHdl);
+
     EXPECT_NE(hdl, nullptr);
     EXPECT_EQ(size, sizeof(in));
     EXPECT_EQ(nextRecHdl, 2u);
-    // EXPECT_EQ(memcmp(outData, in.data(), sizeof(in)), -1);
+    EXPECT_EQ(memcmp(outData + 4, in.data() + 1, sizeof(in) - 4), 0);
+    EXPECT_EQ(reinterpret_cast<uint32_t*>(outData)[0], hdl->record_handle);
     outData = nullptr;
+
     hdl2 = pldm_pdr_find_record(repo, 1, &outData, &size, &nextRecHdl);
     EXPECT_EQ(hdl, hdl2);
     EXPECT_NE(hdl, nullptr);
     EXPECT_EQ(size, sizeof(in));
     EXPECT_EQ(nextRecHdl, 2u);
-    // EXPECT_EQ(memcmp(outData, in.data(), sizeof(in)), -1);
+    EXPECT_EQ(memcmp(outData + 4, in.data() + 1, sizeof(in) - 4), 0);
+    EXPECT_EQ(reinterpret_cast<uint32_t*>(outData)[0], hdl2->record_handle);
     outData = nullptr;
+
     hdl = pldm_pdr_find_record(repo, 2, &outData, &size, &nextRecHdl);
     EXPECT_NE(hdl, nullptr);
     EXPECT_EQ(size, sizeof(in2));
     EXPECT_EQ(nextRecHdl, 3u);
-    // EXPECT_EQ(memcmp(outData, in2.data(), sizeof(in2)), -1);
+    EXPECT_EQ(memcmp(outData + 4, in2.data() + 1, sizeof(in2) - 4), 0);
+    EXPECT_EQ(reinterpret_cast<uint32_t*>(outData)[0], hdl->record_handle);
     outData = nullptr;
+
     hdl = pldm_pdr_find_record(repo, 3, &outData, &size, &nextRecHdl);
     EXPECT_NE(hdl, nullptr);
     EXPECT_EQ(pldm_pdr_record_is_remote(hdl), false);
     EXPECT_EQ(size, sizeof(in2));
     EXPECT_EQ(nextRecHdl, 4u);
-    // EXPECT_EQ(memcmp(outData, in2.data(), sizeof(in2)), -1);
+    EXPECT_EQ(memcmp(outData + 4, in2.data() + 1, sizeof(in2) - 4), 0);
+    EXPECT_EQ(reinterpret_cast<uint32_t*>(outData)[0], hdl->record_handle);
     outData = nullptr;
+
     hdl = pldm_pdr_find_record(repo, 4, &outData, &size, &nextRecHdl);
     EXPECT_NE(hdl, nullptr);
     EXPECT_EQ(pldm_pdr_record_is_remote(hdl), true);
     EXPECT_EQ(size, sizeof(in2));
     EXPECT_EQ(nextRecHdl, 0u);
-    // EXPECT_EQ(memcmp(outData, in2.data(), sizeof(in2)), -1);
+    EXPECT_EQ(memcmp(outData + 4, in2.data() + 1, sizeof(in2) - 4), 0);
+    EXPECT_EQ(reinterpret_cast<uint32_t*>(outData)[0], hdl->record_handle);
     outData = nullptr;
 
     pldm_pdr_destroy(repo);
@@ -345,7 +357,8 @@ TEST(PDRAccess, testGetNext)
     EXPECT_NE(hdl, nullptr);
     EXPECT_EQ(size, sizeof(in));
     EXPECT_EQ(nextRecHdl, 0u);
-    // EXPECT_EQ(memcmp(outData, in.data(), sizeof(in)), -1);
+    EXPECT_EQ(memcmp(outData + 4, in.data() + 1, sizeof(in) - 4), 0);
+    EXPECT_EQ(reinterpret_cast<uint32_t*>(outData)[0], hdl->record_handle);
     outData = nullptr;
 
     std::array<uint32_t, 10> in2{1000, 3450, 30,  60,     890,
@@ -362,19 +375,24 @@ TEST(PDRAccess, testGetNext)
     EXPECT_NE(hdl, nullptr);
     EXPECT_EQ(size, sizeof(in2));
     EXPECT_EQ(nextRecHdl, 3u);
-    // EXPECT_EQ(memcmp(outData, in2.data(), sizeof(in2)), -1);
+    EXPECT_EQ(memcmp(outData + 4, in2.data() + 1, sizeof(in2) - 4), 0);
+    EXPECT_EQ(reinterpret_cast<uint32_t*>(outData)[0], hdl->record_handle);
     outData = nullptr;
+
     hdl = pldm_pdr_get_next_record(repo, hdl, &outData, &size, &nextRecHdl);
     EXPECT_NE(hdl, nullptr);
     EXPECT_EQ(size, sizeof(in2));
     EXPECT_EQ(nextRecHdl, 4u);
-    // EXPECT_EQ(memcmp(outData, in2.data(), sizeof(in2)), -1);
+    EXPECT_EQ(memcmp(outData + 4, in2.data() + 1, sizeof(in2) - 4), 0);
+    EXPECT_EQ(reinterpret_cast<uint32_t*>(outData)[0], hdl->record_handle);
     outData = nullptr;
+
     hdl = pldm_pdr_get_next_record(repo, hdl, &outData, &size, &nextRecHdl);
     EXPECT_NE(hdl, nullptr);
     EXPECT_EQ(size, sizeof(in2));
     EXPECT_EQ(nextRecHdl, 0u);
-    // EXPECT_EQ(memcmp(outData, in2.data(), sizeof(in2)), -1);
+    EXPECT_EQ(memcmp(outData + 4, in2.data() + 1, sizeof(in2) - 4), 0);
+    EXPECT_EQ(reinterpret_cast<uint32_t*>(outData)[0], hdl->record_handle);
     outData = nullptr;
 
     pldm_pdr_destroy(repo);
