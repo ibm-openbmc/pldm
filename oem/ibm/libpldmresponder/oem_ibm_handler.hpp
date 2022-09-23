@@ -471,13 +471,6 @@ class Handler : public oem_platform::Handler
      */
     void triggerHostEffecter(bool value, std::string path);
 
-    /** @brief method to check if the record handle is within the HostBoot range
-     *  or not
-     *
-     *  @param[in] record_handle - record handle of the pdr
-     */
-    bool isHBRange(const uint32_t& record_handle);
-
     ~Handler() = default;
 
     pldm::responder::CodeUpdate* codeUpdate; //!< pointer to CodeUpdate object
