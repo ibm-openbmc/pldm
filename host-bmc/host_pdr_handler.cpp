@@ -458,9 +458,7 @@ int HostPDRHandler::handleStateSensorEvent(
     return PLDM_SUCCESS;
 }
 
-void HostPDRHandler::mergeEntityAssociations(
-    const std::vector<uint8_t>& pdr, [[maybe_unused]] const uint32_t& size,
-    [[maybe_unused]] const uint32_t& record_handle)
+void HostPDRHandler::mergeEntityAssociations(const std::vector<uint8_t>& pdr)
 {
     size_t numEntities{};
     pldm_entity* entities = nullptr;
@@ -468,11 +466,6 @@ void HostPDRHandler::mergeEntityAssociations(
     auto entityPdr = reinterpret_cast<pldm_pdr_entity_association*>(
         const_cast<uint8_t*>(pdr.data()) + sizeof(pldm_pdr_hdr));
 
-    if (oemPlatformHandler && oemPlatformHandler->isHBRange(record_handle))
-    {
-        // Adding the HostBoot range PDRs to the repo before merging it
-        pldm_pdr_add(repo, pdr.data(), size, record_handle, true, 0xFFFF);
-    }
     pldm_entity_association_pdr_extract(pdr.data(), pdr.size(), &numEntities,
                                         &entities);
     if (numEntities > 0)
@@ -771,7 +764,7 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
 
             if (pdrHdr->type == PLDM_PDR_ENTITY_ASSOCIATION)
             {
-                this->mergeEntityAssociations(pdr, respCount, rh);
+                this->mergeEntityAssociations(pdr);
                 merged = true;
             }
             else
