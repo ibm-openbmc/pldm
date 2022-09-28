@@ -161,6 +161,33 @@ Response Handler::setDateTime(const pldm_msg* request, size_t payloadLength)
     uint16_t year = 0;
     std::time_t timeSec;
 
+    constexpr auto timeSyncPath = "/xyz/openbmc_project/time/sync_method";
+    constexpr auto timeSyncInterface =
+        "xyz.openbmc_project.Time.Synchronization";
+    constexpr auto timeSyncProperty = "TimeSyncMethod";
+
+    // The time is correct on BMC when in NTP mode, so we do not want to
+    // try and set the time again and cause potential time drifts.
+
+    try
+    {
+        auto propVal = pldm::utils::DBusHandler().getDbusPropertyVariant(
+            timeSyncPath, timeSyncProperty, timeSyncInterface);
+        const auto& mode = std::get<std::string>(propVal);
+        if (mode == "xyz.openbmc_project.Time.Synchronization.Method.NTP")
+        {
+            std::cout << "Mode in which the system is: " << mode << std::endl;
+            return ccOnlyResponse(request, PLDM_SUCCESS);
+        }
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Error getting the time sync property, PATH="
+                  << timeSyncPath << "INTERFACE=" << timeSyncInterface
+                  << "PROPERTY=" << timeSyncProperty << "ERROR=" << e.what()
+                  << "\n";
+    }
+
     constexpr auto setTimeInterface = "xyz.openbmc_project.Time.EpochTime";
     constexpr auto setTimePath = "/xyz/openbmc_project/time/bmc";
     constexpr auto timeSetPro = "Elapsed";
