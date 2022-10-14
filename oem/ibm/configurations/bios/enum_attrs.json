@@ -125,7 +125,8 @@
             "Disabled"
          ],
          "helpText" : "Specifies the current hypervisor boot policy. Do not set this attribute directly; set pvm_stop_at_standby instead.",
-         "displayName" : "pvm_stop_at_standby_current (current)"
+         "displayName" : "pvm_stop_at_standby_current (current)",
+         "readOnly":true
       },
       {
          "attribute_name":"hb_debug_console",
@@ -215,7 +216,8 @@
             "Default"
          ],
          "helpText" : "Specifies the current CEC Primary OS type. Do not set this attribute directly; set pvm_default_os_type instead.",
-         "displayName" : "CEC Primary OS (current)"
+         "displayName" : "CEC Primary OS (current)",
+         "readOnly":true
       },
       {
          "attribute_name":"pvm_system_operating_mode",
@@ -257,7 +259,8 @@
             "Normal"
          ],
          "helpText" : "Specifies the current boot type for an AIX/Linux partition. Do not set this attribute directly; set pvm_rpa_boot_mode instead.",
-         "displayName" : "AIX/Linux Partition Boot Mode (current)"
+         "displayName" : "AIX/Linux Partition Boot Mode (current)",
+         "readOnly":true
       },
       {
          "attribute_name":"pvm_os_boot_type",
@@ -285,7 +288,8 @@
             "D_Mode"
          ],
          "helpText" : "Specifies the current IBMi partition boot mode for next system boot. Do not set this attribute directly; set pvm_os_boot_type instead.",
-         "displayName" : "IBMi Partition Boot Mode (current)"
+         "displayName" : "IBMi Partition Boot Mode (current)",
+         "readOnly":true
       },
       {
          "attribute_name":"pvm_vtpm",
@@ -309,7 +313,8 @@
             "Enabled"
          ],
          "helpText" : "Specifies the current vTPM policy. Do not set this attribute directly; set pvm_vtpm instead.",
-         "displayName" : "Virtual Trusted Platform Module (current)"
+         "displayName" : "Virtual Trusted Platform Module (current)",
+         "readOnly":true
       },
       {
          "attribute_name":"pvm_sys_dump_active",
@@ -345,7 +350,8 @@
             "256MB"
          ],
          "helpText" : "Specifies the size of the logical memory block the system uses to read memory for the current IPL. Do not set this attribute directly; set hb_memory_region_size instead.",
-         "displayName" : "Memory Region Size (current)"
+         "displayName" : "Memory Region Size (current)",
+         "readOnly":true
       },
       {
          "attribute_name":"hb_power_limit_enable",
@@ -379,7 +385,8 @@
             "Disabled"
          ],
          "helpText" : "Specifies if the power limit is enabled for the current IPL. Do not set this attribute directly; set hb_power_limit_enable instead.",
-         "displayName" : "Power Limit Enable (current)"
+         "displayName" : "Power Limit Enable (current)",
+         "readOnly":true
       },
       {
          "attribute_name":"hb_secure_ver_lockin_enabled",
@@ -415,7 +422,8 @@
             "Disabled"
          ],
          "helpText" : "Specifies if the memory mirroring is enabled for the current IPL. Do not set this attribute directly; set hb_memory_mirror_mode instead.",
-         "displayName" : "Memory Mirror Mode (current)"
+         "displayName" : "Memory Mirror Mode (current)",
+         "readOnly":true
       },
       {
          "attribute_name":"hb_tpm_required",
@@ -447,7 +455,8 @@
             "Required"
          ],
          "helpText" : "When the 'TPM Required Policy' is 'Required', a functional TPM is required to boot the system. Do not set this attribute directly; set hb_tpm_required instead.",
-         "displayName" : "TPM Required Policy (current)"
+         "displayName" : "TPM Required Policy (current)",
+         "readOnly":true
       },
       {
          "attribute_name":"hb_key_clear_request",
@@ -479,7 +488,8 @@
             "NONE"
          ],
          "helpText" : "Specifies the requested level of security keys to be cleared from the system for the current IPL. Do not set this attribute directly; set hb_key_clear_request instead.",
-         "displayName" : "Key Clear Request (current)"
+         "displayName" : "Key Clear Request (current)",
+         "readOnly":true
       },
       {
          "attribute_name":"hb_host_usb_enablement",
@@ -503,7 +513,8 @@
             "Enabled"
          ],
          "helpText" : "Specifies if Host USB is disabled or enabled for security reasons. Do not set this attribute directly; set hb_host_usb_enablement instead.",
-         "displayName" : "Host USB Enablement (current)"
+         "displayName" : "Host USB Enablement (current)",
+         "readOnly":true
       },
       {
         "attribute_name":"pvm_auto_poweron_restart",
@@ -547,7 +558,8 @@
             "Disabled"
          ],
          "helpText" : "Only change this value if instructed by service provider as it might degrade system performance. Specifies if Proc Favor Aggressive Prefetch is disabled or enabled. Do not set this attribute directly; set hb_proc_favor_aggressive_prefetch instead.",
-         "displayName" : "Proc Favor Aggressive Prefetch (current)"
+         "displayName" : "Proc Favor Aggressive Prefetch (current)",
+         "readOnly":true
       },
       {
          "attribute_name":"pvm_boot_initiator",
@@ -649,7 +661,8 @@
             "Enabled"
         ],
         "helpText" : "Only change this value if instructed by service provider as it might degrade system performance. Specifies if Lateral Cast Out mode is disabled or enabled. Do not set this attribute directly; set hb_lateral_cast_out_mode instead.",
-        "displayName" : "Lateral Cast Out mode (current)"
+        "displayName" : "Lateral Cast Out mode (current)",
+         "readOnly":true
      },
      {
         "attribute_name":"pvm_create_default_lpar",
@@ -673,7 +686,8 @@
            "Disabled"
         ],
         "helpText" : "When enabled creates a new default partition after NVRAM is cleared. This is primarily for machines that are managed by hardware management console.Do not set this attribute directly; set pvm_create_default_lpar instead.",
-        "displayName" : "pvm_create_default_lpar (current)"
+        "displayName" : "pvm_create_default_lpar (current)",
+         "readOnly":true
      }
 
   ]
