@@ -46,6 +46,7 @@ std::vector<std::pair<linkId_t, linkId_t>> PCIeInfoHandler::needPostProcessing;
 PCIeInfoHandler::PCIeInfoHandler(uint32_t fileHandle, uint16_t fileType) :
     FileHandler(fileHandle), infoType(fileType)
 {
+    deleteTolologyFiles();
     receivedFiles.emplace(infoType, false);
 }
 int PCIeInfoHandler::writeFromMemory(
@@ -1081,6 +1082,25 @@ int PCIeInfoHandler::newFileAvailableWithMetaData(uint64_t /*length*/,
                                                   uint32_t /*metaDataValue4*/)
 {
     return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+}
+
+void PCIeInfoHandler::deleteTolologyFiles()
+{
+    if (receivedFiles.empty())
+    {
+        try
+        {
+            for (auto& path : fs::directory_iterator(pciePath))
+            {
+                fs::remove_all(path);
+            }
+        }
+        catch (const fs::filesystem_error& err)
+        {
+            std::cerr << "Topology file deletion failed " << pciePath << " : "
+                      << err.what() << "\n";
+        }
+    }
 }
 
 } // namespace responder
