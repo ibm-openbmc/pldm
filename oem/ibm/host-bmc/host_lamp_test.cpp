@@ -70,8 +70,7 @@ bool HostLampTest::asserted(bool value)
                 "Get Effecter ID failed, effecter = 0");
         }
     }
-
-    return value;
+    return sdbusplus::xyz::openbmc_project::Led::server::Group::asserted(value);
 }
 
 uint16_t HostLampTest::getEffecterID()
