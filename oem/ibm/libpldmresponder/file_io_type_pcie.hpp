@@ -285,6 +285,12 @@ class PCIeInfoHandler : public FileHandler
     static std::vector<std::string> cables;
     static std::vector<std::pair<linkId_t, linkId_t>> needPostProcessing;
     static std::unordered_map<linkId_t, linkType_t> linkTypeInfo;
+
+    /** @brief Deletes the topology and cable data
+     *
+     *  @param[return] void
+     */
+    void deleteTopologyFiles();
 };
 
 } // namespace responder
