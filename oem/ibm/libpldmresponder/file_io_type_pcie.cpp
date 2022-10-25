@@ -47,6 +47,7 @@ std::unordered_map<linkId_t, linkType_t> PCIeInfoHandler::linkTypeInfo;
 PCIeInfoHandler::PCIeInfoHandler(uint32_t fileHandle, uint16_t fileType) :
     FileHandler(fileHandle), infoType(fileType)
 {
+    deleteTopologyFiles();
     receivedFiles.emplace(infoType, false);
 }
 int PCIeInfoHandler::writeFromMemory(
@@ -1103,6 +1104,25 @@ int PCIeInfoHandler::newFileAvailableWithMetaData(uint64_t /*length*/,
                                                   uint32_t /*metaDataValue4*/)
 {
     return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+}
+
+void PCIeInfoHandler::deleteTopologyFiles()
+{
+    if (receivedFiles.empty())
+    {
+        try
+        {
+            for (auto& path : fs::directory_iterator(pciePath))
+            {
+                fs::remove_all(path);
+            }
+        }
+        catch (const fs::filesystem_error& err)
+        {
+            std::cerr << "Topology file deletion failed " << pciePath << " : "
+                      << err.what() << "\n";
+        }
+    }
 }
 
 } // namespace responder
