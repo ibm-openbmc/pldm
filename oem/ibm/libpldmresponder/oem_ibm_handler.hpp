@@ -422,15 +422,6 @@ class Handler : public oem_platform::Handler
      */
     uint8_t fetchRealSAIStatus();
 
-    /** @brief updating the container ID of PROC LEd PDRs*/
-    void updateContainerIDofProcLed();
-
-    /** @brief update conatiner id of identify effecter and sensor LED PDRs*/
-    void updateIdentifyEffecterAndSensorPDRs();
-
-    /** @brief update conatiner id of fault effecter and sensor LED PDRs*/
-    void updateFaultEffecterAndSensorPDRs();
-
     /** @brief To process the graceful shutdown, cycle chassis power, and boot
      *  the host back up*/
     void processPowerCycleOffSoftGraceful();
@@ -470,13 +461,6 @@ class Handler : public oem_platform::Handler
      *  @param[in] path - path for which the effecter is set
      */
     void triggerHostEffecter(bool value, std::string path);
-
-    /** @brief method to check if the record handle is within the HostBoot range
-     *  or not
-     *
-     *  @param[in] record_handle - record handle of the pdr
-     */
-    bool isHBRange(const uint32_t& record_handle);
 
     ~Handler() = default;
 
