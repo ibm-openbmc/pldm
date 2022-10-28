@@ -197,15 +197,6 @@ void pldm_pdr_update_TL_pdr(const pldm_pdr *repo, uint16_t terminusHandle,
 void pldm_delete_by_record_handle(pldm_pdr *repo, uint32_t record_handle,
 				  bool is_remote);
 
-/** @brief find the container ID of the contained entity
- *
- *  @param[in] repo - opaque pointer acting as a PDR repo handle
- *  @param[in] entityType - entity type
- *  @param[in] entityInstance - instance of the entity
- */
-uint16_t pldm_find_container_id(const pldm_pdr *repo, uint16_t entityType,
-				uint16_t entityInstance);
-
 /** @brief update the container id of an effecter
  *
  *  @param[in] repo -  opaque pointer acting as a PDR repo handle

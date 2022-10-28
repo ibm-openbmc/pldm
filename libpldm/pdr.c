@@ -623,37 +623,6 @@ pldm_entity pldm_get_entity_from_record_handle(const pldm_pdr *repo,
 	return element;
 }
 
-uint16_t pldm_find_container_id(const pldm_pdr *repo, uint16_t entityType,
-				uint16_t entityInstance)
-{
-	assert(repo != NULL);
-
-	pldm_pdr_record *record = repo->first;
-
-	while (record != NULL) {
-		struct pldm_pdr_hdr *hdr = (struct pldm_pdr_hdr *)record->data;
-		if (hdr->type == PLDM_PDR_ENTITY_ASSOCIATION) {
-			struct pldm_pdr_entity_association *pdr =
-			    (struct pldm_pdr_entity_association
-				 *)((uint8_t *)record->data +
-				    sizeof(struct pldm_pdr_hdr));
-			struct pldm_entity *child =
-			    (struct pldm_entity *)(&pdr->children[0]);
-			for (int i = 0; i < pdr->num_children; ++i) {
-				if (pdr->container.entity_type == entityType &&
-				    pdr->container.entity_instance_num ==
-					entityInstance) {
-					uint16_t id =
-					    child->entity_container_id;
-					return id;
-				}
-			}
-		}
-		record = record->next;
-	}
-	return 0;
-}
-
 void pldm_change_container_id_of_effecter(const pldm_pdr *repo,
 					  uint16_t effecterId,
 					  uint16_t containerId)

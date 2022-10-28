@@ -5,7 +5,10 @@
 #include "libpldm/fru.h"
 #include "libpldm/requester/pldm.h"
 #include "libpldm/state_set.h"
+#ifdef OEM_IBM
 #include "oem/ibm/libpldm/fru.h"
+#include "oem/ibm/libpldm/pdr_oem_ibm.h"
+#endif
 
 #include "dbus/custom_dbus.hpp"
 #include "dbus/serialize.hpp"
@@ -468,11 +471,13 @@ void HostPDRHandler::mergeEntityAssociations(
     auto entityPdr = reinterpret_cast<pldm_pdr_entity_association*>(
         const_cast<uint8_t*>(pdr.data()) + sizeof(pldm_pdr_hdr));
 
-    if (oemPlatformHandler && oemPlatformHandler->isHBRange(record_handle))
+#ifdef OEM_IBM
+    if (oemPlatformHandler && isHBRange(record_handle))
     {
         // Adding the HostBoot range PDRs to the repo before merging it
         pldm_pdr_add(repo, pdr.data(), size, record_handle, true, 0xFFFF);
     }
+#endif
 
     pldm_entity_association_pdr_extract(pdr.data(), pdr.size(), &numEntities,
                                         &entities);
@@ -996,7 +1001,6 @@ void HostPDRHandler::_processPDRRepoChgEvent(
     if (oemPlatformHandler != nullptr)
     {
         oemPlatformHandler->updateContainerID();
-        oemPlatformHandler->updateContainerIDofProcLed();
     }
     deferredPDRRepoChgEvent.reset();
     this->sendPDRRepositoryChgEvent(
@@ -1604,6 +1608,7 @@ void HostPDRHandler::setLocationCode(
                 continue;
             }
 
+#ifdef OEM_IBM
             if (data.fruRecType == PLDM_FRU_RECORD_TYPE_OEM)
             {
                 for (auto& tlv : data.fruTLV)
@@ -1619,6 +1624,7 @@ void HostPDRHandler::setLocationCode(
                     }
                 }
             }
+#endif
             else
             {
                 for (auto& tlv : data.fruTLV)

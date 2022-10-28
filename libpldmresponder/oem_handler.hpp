@@ -140,9 +140,6 @@ class Handler : public CmdHandler
     /** @brief To handle the boot types bios attributes at shutdown*/
     virtual void handleBootTypesAtChassisOff() = 0;
 
-    /** @brief To update container ID of Proc LED PDRs */
-    virtual void updateContainerIDofProcLed() = 0;
-
     /** @brief Interface to reset or stop the surveillance timer
      *  @param[in] value - true or false, to indicate if the timer
      *                     should be reset or turned off*/
@@ -155,14 +152,6 @@ class Handler : public CmdHandler
      *                    running or not
      */
     virtual void setSurvTimer(uint8_t tid, bool value) = 0;
-
-    /** @brief To check if record handle is in HostBoot range
-     *
-     *  @param[in] record_handle - record handle of the PDR
-     *
-     *  @return true or false
-     */
-    virtual bool isHBRange(const uint32_t& record_handle) = 0;
 
     virtual ~Handler() = default;
 
