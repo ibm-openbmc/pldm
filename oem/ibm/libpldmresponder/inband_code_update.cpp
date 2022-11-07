@@ -435,7 +435,10 @@ void CodeUpdate::setVersions()
                     }
                     catch (const sdbusplus::exception::exception& e)
                     {
-                        std::cerr << "Error in getting Activation status \n";
+                        std::cerr << "Error in getting Activation status,"
+                                  << "ERROR=" << e.what()
+                                  << ", INTERFACE=" << imageInterface
+                                  << ", OBJECT PATH=" << imageObjPath << "\n";
                     }
                 }
             }
