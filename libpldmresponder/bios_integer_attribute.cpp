@@ -135,6 +135,15 @@ void BIOSIntegerAttribute::constructEntry(
         currentValue = getAttrValue();
     }
 
+    if (currentValue < (int64_t)integerInfo.lowerBound ||
+        currentValue > (int64_t)integerInfo.upperBound)
+    {
+        std::cerr << "Setting to default value " << integerInfo.defaultValue
+                  << " For Attribute " << name
+                  << " Received value: " << currentValue << std::endl;
+        currentValue = integerInfo.defaultValue;
+    }
+
     table::attribute_value::constructIntegerEntry(attrValueTable, attrHandle,
                                                   attrType, currentValue);
 }
