@@ -6,6 +6,7 @@
 #include "libpldm/requester/pldm.h"
 #include "libpldm/state_set.h"
 #ifdef OEM_IBM
+#include "oem/ibm/libpldm/entity.h"
 #include "oem/ibm/libpldm/fru.h"
 #include "oem/ibm/libpldm/pdr_oem_ibm.h"
 #endif
@@ -1792,12 +1793,21 @@ void HostPDRHandler::createDbusObjects()
 
         switch (node.entity_type)
         {
-            case 32903:
+#ifdef OEM_IBM
+            case PLDM_OEM_ENTITY_CPU_CORE:
                 CustomDBus::getCustomDBus().implementCpuCoreInterface(
                     entity.first);
                 CustomDBus::getCustomDBus().implementObjectEnableIface(
                     entity.first, false);
                 break;
+            case PLDM_OEM_ENTITY_SLOT:
+                CustomDBus::getCustomDBus().implementPCIeSlotInterface(
+                    entity.first);
+                CustomDBus::getCustomDBus().setSlotType(
+                    entity.first,
+                    "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.OEM");
+                break;
+#endif
             case PLDM_ENTITY_SYSTEM_CHASSIS:
                 CustomDBus::getCustomDBus().implementChassisInterface(
                     entity.first);
@@ -1840,13 +1850,6 @@ void HostPDRHandler::createDbusObjects()
                     entity.first);
                 CustomDBus::getCustomDBus().implementPCIeDeviceInterface(
                     entity.first);
-                break;
-            case 32954:
-                CustomDBus::getCustomDBus().implementPCIeSlotInterface(
-                    entity.first);
-                CustomDBus::getCustomDBus().setSlotType(
-                    entity.first,
-                    "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.OEM");
                 break;
             default:
                 break;

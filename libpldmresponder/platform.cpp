@@ -17,6 +17,10 @@
 #include "platform_state_effecter.hpp"
 #include "platform_state_sensor.hpp"
 
+#ifdef OEM_IBM
+#include "oem/ibm/libpldm/entity.h"
+#endif
+
 #include <config.h>
 
 using namespace pldm::utils;
@@ -231,11 +235,28 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
         return CmdHandler::ccOnlyResponse(request, PLDM_ERROR_INVALID_LENGTH);
     }
 
-    if (isFirstGetPDR && hostPDRHandler && !hostPDRHandler->isHostUp())
+    if (isFirstGetPDR && hostPDRHandler)
     {
         isFirstGetPDR = false;
-        // Since the Host is off, remove all cores in the persist file
-        std::vector<uint16_t> types = {32903};
+        // Deleting Fru Dbus Objects and persisted details
+        std::vector<uint16_t> types = {PLDM_ENTITY_SYSTEM_CHASSIS,
+                                       PLDM_ENTITY_POWER_SUPPLY,
+                                       PLDM_ENTITY_FAN,
+                                       PLDM_ENTITY_SYS_BOARD,
+                                       PLDM_ENTITY_POWER_CONVERTER,
+                                       PLDM_ENTITY_SLOT,
+                                       PLDM_ENTITY_CONNECTOR,
+                                       PLDM_ENTITY_MODULE,
+                                       PLDM_ENTITY_CARD,
+                                       PLDM_ENTITY_IO_MODULE};
+#ifdef OEM_IBM
+        types.push_back(PLDM_OEM_ENTITY_SLOT);
+        if (!hostPDRHandler->isHostUp())
+        {
+            // Since the Host is off, remove all cores in the persist file
+            types.push_back(PLDM_OEM_ENTITY_CPU_CORE);
+        }
+#endif
         pldm::dbus::CustomDBus::getCustomDBus().removeDBus(types);
         pldm::serialize::Serialize::getSerialize().reSerialize(types);
     }
