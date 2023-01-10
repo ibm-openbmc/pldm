@@ -82,6 +82,14 @@ void convertJsonToBinaryFile(const Json& jsonData, const fs::path& path);
  */
 void clearLicenseStatus();
 
+/** @brief Clear Dump Socket Write Status
+ *  This function clears all the dump socket write status to "Free" during
+ *  reset reload operation or when host is coming down to off state.
+ *
+ *  @return   None
+ */
+void clearDumpSocketWriteStatus();
+
 /** @brief Create or update the d-bus license data
  *  This function creates or updates the d-bus license details. If the input
  *  input flag is 1, then new license data will be created and if the the input

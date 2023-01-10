@@ -194,6 +194,12 @@ void writeToUnixSocket(const int sock, const char* buf,
     return;
 }
 
+void clearDumpSocketWriteStatus()
+{
+    socketWriteStatus = Free;
+    return;
+}
+
 Json convertBinFileToJson(const fs::path& path)
 {
     std::ifstream file(path, std::ios::in | std::ios::binary);
