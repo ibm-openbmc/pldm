@@ -330,8 +330,6 @@ void CodeUpdate::setVersions()
 
                     try
                     {
-                        auto propVal = dBusIntf->getDbusPropertyVariant(
-                            imageObjPath, "Activation", imageInterface);
                         nonRunningVersion = path.str;
 
                         if (isCodeUpdateInProgress())
