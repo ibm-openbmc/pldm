@@ -6,6 +6,8 @@
 #include "common/types.hpp"
 #include "common/utils.hpp"
 #include "event_parser.hpp"
+#include "host-bmc/dbus/custom_dbus.hpp"
+#include "host-bmc/dbus/serialize.hpp"
 #include "pdr.hpp"
 #include "pdr_numeric_effecter.hpp"
 #include "pdr_state_effecter.hpp"
@@ -61,11 +63,16 @@ const std::tuple<pdr_utils::DbusMappings, pdr_utils::DbusValMaps>&
 }
 
 void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
-                       const std::string& dir, Repo& repo)
+                       const std::vector<fs::path>& dir, Repo& repo,
+                       pldm_entity_association_tree* bmcEntityTree)
 {
-    if (!fs::exists(dir))
+    for (const auto& directory : dir)
     {
-        return;
+        std::cerr << "checking if : " << directory << "exists" << std::endl;
+        if (!fs::exists(directory))
+        {
+            return;
+        }
     }
 
     // A map of PDR type to a lambda that handles creation of that PDR type.
@@ -76,82 +83,104 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
     const std::map<Type, generatePDR> generateHandlers = {
         {PLDM_STATE_EFFECTER_PDR,
          [this](const DBusHandler& dBusIntf, const auto& json,
-                RepoInterface& repo) {
+                RepoInterface& repo,
+                pldm_entity_association_tree* bmcEntityTree) {
              pdr_state_effecter::generateStateEffecterPDR<
-                 pldm::utils::DBusHandler, Handler>(dBusIntf, json, *this,
-                                                    repo);
+                 pldm::utils::DBusHandler, Handler>(dBusIntf, json, *this, repo,
+                                                    bmcEntityTree);
          }},
         {PLDM_NUMERIC_EFFECTER_PDR,
          [this](const DBusHandler& dBusIntf, const auto& json,
-                RepoInterface& repo) {
+                RepoInterface& repo,
+                pldm_entity_association_tree* bmcEntityTree) {
              pdr_numeric_effecter::generateNumericEffecterPDR<
-                 pldm::utils::DBusHandler, Handler>(dBusIntf, json, *this,
-                                                    repo);
+                 pldm::utils::DBusHandler, Handler>(dBusIntf, json, *this, repo,
+                                                    bmcEntityTree);
          }},
-        {PLDM_STATE_SENSOR_PDR, [this](const DBusHandler& dBusIntf,
-                                       const auto& json, RepoInterface& repo) {
+        {PLDM_STATE_SENSOR_PDR,
+         [this](const DBusHandler& dBusIntf, const auto& json,
+                RepoInterface& repo,
+                pldm_entity_association_tree* bmcEntityTree) {
              pdr_state_sensor::generateStateSensorPDR<pldm::utils::DBusHandler,
-                                                      Handler>(dBusIntf, json,
-                                                               *this, repo);
+                                                      Handler>(
+                 dBusIntf, json, *this, repo, bmcEntityTree);
          }}};
 
     Type pdrType{};
-    for (const auto& dirEntry : fs::directory_iterator(dir))
+    for (const auto& directory : dir)
     {
-        try
+        for (const auto& dirEntry : fs::directory_iterator(directory))
         {
-            auto json = readJson(dirEntry.path().string());
-            if (!json.empty())
+            try
             {
-                auto effecterPDRs = json.value("effecterPDRs", empty);
-                for (const auto& effecter : effecterPDRs)
+                if (fs::is_regular_file(dirEntry.path().string()))
                 {
-                    pdrType = effecter.value("pdrType", 0);
-                    generateHandlers.at(pdrType)(dBusIntf, effecter, repo);
-                }
+                    auto json = readJson(dirEntry.path().string());
+                    if (!json.empty())
+                    {
+                        auto effecterPDRs = json.value("effecterPDRs", empty);
+                        for (const auto& effecter : effecterPDRs)
+                        {
+                            pdrType = effecter.value("pdrType", 0);
+                            generateHandlers.at(pdrType)(dBusIntf, effecter,
+                                                         repo, bmcEntityTree);
+                        }
 
-                auto sensorPDRs = json.value("sensorPDRs", empty);
-                for (const auto& sensor : sensorPDRs)
-                {
-                    pdrType = sensor.value("pdrType", 0);
-                    generateHandlers.at(pdrType)(dBusIntf, sensor, repo);
+                        auto sensorPDRs = json.value("sensorPDRs", empty);
+                        for (const auto& sensor : sensorPDRs)
+                        {
+                            pdrType = sensor.value("pdrType", 0);
+                            generateHandlers.at(pdrType)(dBusIntf, sensor, repo,
+                                                         bmcEntityTree);
+                        }
+                    }
                 }
             }
+            catch (const InternalFailure& e)
+            {
+                std::cerr
+                    << "PDR config directory does not exist or empty, TYPE= "
+                    << pdrType << "PATH= " << dirEntry << " ERROR=" << e.what()
+                    << "\n";
+            }
+            catch (const Json::exception& e)
+            {
+                std::cerr << "Failed parsing PDR JSON file, TYPE= " << pdrType
+                          << " ERROR=" << e.what() << "\n";
+                pldm::utils::reportError(
+                    "xyz.openbmc_project.PLDM.Error.Generate.PDRJsonFileParseFail",
+                    pldm::PelSeverity::ERROR);
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "Failed parsing PDR JSON file, TYPE= " << pdrType
+                          << " ERROR=" << e.what() << "\n";
+                pldm::utils::reportError(
+                    "xyz.openbmc_project.PLDM.Error.Generate.PDRJsonFileParseFail",
+                    pldm::PelSeverity::ERROR);
+            }
         }
-        catch (const InternalFailure& e)
-        {
-            std::cerr << "PDR config directory does not exist or empty, TYPE= "
-                      << pdrType << "PATH= " << dirEntry
-                      << " ERROR=" << e.what() << "\n";
-        }
-        catch (const Json::exception& e)
-        {
-            std::cerr << "Failed parsing PDR JSON file, TYPE= " << pdrType
-                      << " ERROR=" << e.what() << "\n";
-            pldm::utils::reportError(
-                "xyz.openbmc_project.bmc.pldm.InternalFailure");
-        }
-        catch (const std::exception& e)
-        {
-            std::cerr << "Failed parsing PDR JSON file, TYPE= " << pdrType
-                      << " ERROR=" << e.what() << "\n";
-            pldm::utils::reportError(
-                "xyz.openbmc_project.bmc.pldm.InternalFailure");
-        }
+    }
+
+    if (fruHandler)
+    {
+        fruHandler->setStatePDRParams(pdrJsonsDir, getNextSensorId(),
+                                      getNextEffecterId(), sensorDbusObjMaps,
+                                      effecterDbusObjMaps, false);
     }
 }
 
 Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
 {
-    if (hostPDRHandler)
+    if (oemPlatformHandler != nullptr)
     {
-        if (hostPDRHandler->isHostUp() && oemPlatformHandler != nullptr)
+        //  we assume that the entity manager
+        // already sends the system type information before we
+        // reach BMC ready state.
+        auto rc = oemPlatformHandler->checkBMCState();
+        if (rc != PLDM_SUCCESS)
         {
-            auto rc = oemPlatformHandler->checkBMCState();
-            if (rc != PLDM_SUCCESS)
-            {
-                return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
-            }
+            return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
         }
     }
 
@@ -165,11 +194,23 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
     if (!pdrCreated)
     {
         generateTerminusLocatorPDR(pdrRepo);
-        generate(*dBusIntf, pdrJsonsDir, pdrRepo);
+
         if (oemPlatformHandler != nullptr)
         {
+            auto systemType = oemPlatformHandler->getConfigDir();
+            if (!systemType.empty())
+            {
+                // In case of normal poweron , the system type would have been
+                // already filled by entity manager when ever BMC reaches Ready
+                // state. If this is not filled by time we get a getpdr request
+                // we can assume that the entity manager service is not present
+                // on this system & continue to build the common PDR's.
+                pdrJsonsDir.push_back(pdrJsonDir /
+                                      oemPlatformHandler->getConfigDir());
+            }
             oemPlatformHandler->buildOEMPDR(pdrRepo);
         }
+        generate(*dBusIntf, pdrJsonsDir, pdrRepo, bmcEntityTree);
 
         pdrCreated = true;
 
@@ -188,6 +229,15 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
     if (payloadLength != PLDM_GET_PDR_REQ_BYTES)
     {
         return CmdHandler::ccOnlyResponse(request, PLDM_ERROR_INVALID_LENGTH);
+    }
+
+    if (isFirstGetPDR && hostPDRHandler && !hostPDRHandler->isHostUp())
+    {
+        isFirstGetPDR = false;
+        // Since the Host is off, remove all cores in the persist file
+        std::vector<uint16_t> types = {32903};
+        pldm::dbus::CustomDBus::getCustomDBus().removeDBus(types);
+        pldm::serialize::Serialize::getSerialize().reSerialize(types);
     }
 
     uint32_t recordHandle{};
@@ -330,7 +380,14 @@ Response Handler::platformEventMessage(const pldm_msg* request,
         rc = PLDM_SUCCESS;
         if (oemPlatformHandler)
         {
-            oemPlatformHandler->resetWatchDogTimer();
+            if (oemPlatformHandler->watchDogRunning())
+            {
+                oemPlatformHandler->resetWatchDogTimer();
+            }
+            else
+            {
+                oemPlatformHandler->setSurvTimer(tid, true);
+            }
         }
     }
     else
@@ -419,10 +476,11 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
 
         pldm::pdr::EntityInfo entityInfo{};
         pldm::pdr::CompositeSensorStates compositeSensorStates{};
+        std::vector<pldm::pdr::StateSetId> stateSetIds{};
 
         try
         {
-            std::tie(entityInfo, compositeSensorStates) =
+            std::tie(entityInfo, compositeSensorStates, stateSetIds) =
                 hostPDRHandler->lookupSensorInfo(sensorEntry);
         }
         catch (const std::out_of_range& e)
@@ -433,7 +491,7 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
             try
             {
                 sensorEntry.terminusID = PLDM_TID_RESERVED;
-                std::tie(entityInfo, compositeSensorStates) =
+                std::tie(entityInfo, compositeSensorStates, stateSetIds) =
                     hostPDRHandler->lookupSensorInfo(sensorEntry);
             }
             // If there is no mapping for events return PLDM_SUCCESS
@@ -455,10 +513,11 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
         }
 
         const auto& [containerId, entityType, entityInstance] = entityInfo;
-        events::StateSensorEntry stateSensorEntry{containerId, entityType,
-                                                  entityInstance, sensorOffset};
-        return hostPDRHandler->handleStateSensorEvent(stateSensorEntry,
-                                                      eventState);
+        events::StateSensorEntry stateSensorEntry{
+            containerId,  entityType, entityInstance,
+            sensorOffset, false,      stateSetIds[sensorOffset]};
+        return hostPDRHandler->handleStateSensorEvent(
+            stateSetIds, stateSensorEntry, eventState);
     }
     else
     {
@@ -473,7 +532,10 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                                        uint8_t /*formatVersion*/, uint8_t tid,
                                        size_t eventDataOffset)
 {
+    std::cerr << "Got a repo change event from TID: " << (unsigned)tid
+              << std::endl;
     uint8_t eventDataFormat{};
+    uint8_t eventDataOperation{};
     uint8_t numberOfChangeRecords{};
     size_t dataOffset{};
 
@@ -498,7 +560,6 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
 
     if (eventDataFormat == FORMAT_IS_PDR_HANDLES)
     {
-        uint8_t eventDataOperation{};
         uint8_t numberOfChangeEntries{};
 
         auto changeRecordData = eventData + dataOffset;
@@ -515,14 +576,12 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                 return rc;
             }
 
-            if (eventDataOperation == PLDM_RECORDS_ADDED ||
-                eventDataOperation == PLDM_RECORDS_MODIFIED)
-            {
-                if (eventDataOperation == PLDM_RECORDS_MODIFIED)
-                {
-                    hostPDRHandler->isHostPdrModified = true;
-                }
+            std::cout << "pldmPDRRepositoryChgEvent eventDataOperation : "
+                      << (unsigned)eventDataOperation << std::endl;
 
+            if (eventDataOperation == PLDM_RECORDS_ADDED ||
+                eventDataOperation == PLDM_RECORDS_DELETED)
+            {
                 rc = getPDRRecordHandles(
                     reinterpret_cast<const ChangeEntry*>(changeRecordData +
                                                          dataOffset),
@@ -535,7 +594,22 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                     return rc;
                 }
             }
+            else if (eventDataOperation == PLDM_RECORDS_MODIFIED)
+            {
+                hostPDRHandler->isHostPdrModified = true;
+                rc = getPDRRecordHandles(
+                    reinterpret_cast<const ChangeEntry*>(changeRecordData +
+                                                         dataOffset),
+                    changeRecordDataSize - dataOffset,
+                    static_cast<size_t>(numberOfChangeEntries),
+                    pdrRecordHandles);
 
+                if (rc != PLDM_SUCCESS)
+                {
+                    return rc;
+                }
+                hostPDRHandler->modifiedCounter += pdrRecordHandles.size();
+            }
             changeRecordData +=
                 dataOffset + (numberOfChangeEntries * sizeof(ChangeEntry));
             changeRecordDataSize -=
@@ -552,22 +626,24 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
             // We cannot get the Repo change event from the Terminus
             // that is not already added to the BMC repository
 
-            for (auto it = hostPDRHandler->tlPDRInfo.cbegin();
-                 it != hostPDRHandler->tlPDRInfo.cend();)
+            for (const auto& [terminusHandle, terminusInfo] :
+                 hostPDRHandler->tlPDRInfo)
             {
-                if (std::get<0>(it->second) == tid)
+                if (std::get<0>(terminusInfo) == tid)
                 {
                     pldm_pdr_remove_pdrs_by_terminus_handle(pdrRepo.getPdr(),
-                                                            it->first);
-                    hostPDRHandler->tlPDRInfo.erase(it++);
-                }
-                else
-                {
-                    ++it;
+                                                            terminusHandle);
                 }
             }
         }
-        hostPDRHandler->fetchPDR(std::move(pdrRecordHandles));
+        if (eventDataOperation == PLDM_RECORDS_DELETED)
+        {
+            hostPDRHandler->deletePDRFromRepo(std::move(pdrRecordHandles));
+        }
+        else
+        {
+            hostPDRHandler->fetchPDR(std::move(pdrRecordHandles), tid);
+        }
     }
 
     return PLDM_SUCCESS;
@@ -585,6 +661,10 @@ int Handler::getPDRRecordHandles(const ChangeEntry* changeEntryData,
     for (size_t i = 0; i < numberOfChangeEntries; i++)
     {
         pdrRecordHandles.push_back(changeEntryData[i]);
+    }
+    for (const auto& i : pdrRecordHandles)
+    {
+        std::cerr << "Record handles sent down to BMC: " << i << std::endl;
     }
     return PLDM_SUCCESS;
 }
@@ -609,9 +689,25 @@ Response Handler::setNumericEffecterValue(const pldm_msg* request,
         request, payloadLength, &effecterId, &effecterDataSize,
         reinterpret_cast<uint8_t*>(&effecterValue));
 
-    if (rc == PLDM_SUCCESS)
+    const pldm::utils::DBusHandler dBusIntf;
+    uint16_t entityType{};
+    uint16_t entityInstance{};
+    uint16_t effecterSemanticId{};
+    real32_t effecterOffset{};
+    real32_t effecterResolution{};
+
+    if (isOemNumericEffecter(*this, effecterId, entityType, entityInstance,
+                             effecterDataSize, effecterSemanticId,
+                             effecterOffset, effecterResolution) &&
+        oemPlatformHandler != nullptr &&
+        !effecterDbusObjMaps.contains(effecterId))
     {
-        const pldm::utils::DBusHandler dBusIntf;
+        rc = oemPlatformHandler->oemSetNumericEffecterValueHandler(
+            entityType, entityInstance, effecterSemanticId, effecterDataSize,
+            effecterValue, effecterOffset, effecterResolution, effecterId);
+    }
+    else
+    {
         rc = platform_numeric_effecter::setNumericEffecterValueHandler<
             pldm::utils::DBusHandler, Handler>(dBusIntf, *this, effecterId,
                                                effecterDataSize, effecterValue,
@@ -684,20 +780,22 @@ Response Handler::getStateSensorReadings(const pldm_msg* request,
     uint16_t entityType{};
     uint16_t entityInstance{};
     uint16_t stateSetId{};
+    uint16_t containerId{};
 
     if (isOemStateSensor(*this, sensorId, sensorRearmCount, comSensorCnt,
-                         entityType, entityInstance, stateSetId) &&
+                         entityType, entityInstance, stateSetId, containerId) &&
         oemPlatformHandler != nullptr && !sensorDbusObjMaps.contains(sensorId))
     {
         rc = oemPlatformHandler->getOemStateSensorReadingsHandler(
-            entityType, entityInstance, stateSetId, comSensorCnt, stateField);
+            entityType, entityInstance, containerId, stateSetId, comSensorCnt,
+            sensorId, stateField);
     }
     else
     {
         rc = platform_state_sensor::getStateSensorReadingsHandler<
-            pldm::utils::DBusHandler, Handler>(dBusIntf, *this, sensorId,
-                                               sensorRearmCount, comSensorCnt,
-                                               stateField);
+            pldm::utils::DBusHandler, Handler>(
+            dBusIntf, *this, sensorId, sensorRearmCount, comSensorCnt,
+            stateField, dbusToPLDMEventHandler->getSensorCache());
     }
 
     if (rc != PLDM_SUCCESS)
@@ -727,10 +825,73 @@ void Handler::_processPostGetPDRActions(sdeventplus::source::EventBase&
     dbusToPLDMEventHandler->listenSensorEvent(pdrRepo, sensorDbusObjMaps);
 }
 
+bool isOemNumericEffecter(Handler& handler, uint16_t effecterId,
+                          uint16_t& entityType, uint16_t& entityInstance,
+                          uint8_t& effecterDataSize,
+                          uint16_t& effecterSemanticId,
+                          real32_t& effecterOffset,
+                          real32_t& effecterResolution)
+{
+    pldm_numeric_effecter_value_pdr* pdr = nullptr;
+
+    std::unique_ptr<pldm_pdr, decltype(&pldm_pdr_destroy)>
+        numericEffecterPdrRepo(pldm_pdr_init(), pldm_pdr_destroy);
+    pldm::responder::pdr_utils::Repo numericEffecterPDRs(
+        numericEffecterPdrRepo.get());
+    pldm::responder::pdr::getRepoByType(handler.getRepo(), numericEffecterPDRs,
+                                        PLDM_NUMERIC_EFFECTER_PDR);
+
+    if (numericEffecterPDRs.empty())
+    {
+        std::cerr << "Failed to get record by PDR type\n";
+        return false;
+    }
+
+    PdrEntry pdrEntry{};
+    auto pdrRecord = numericEffecterPDRs.getFirstRecord(pdrEntry);
+    while (pdrRecord)
+    {
+        pdr = reinterpret_cast<pldm_numeric_effecter_value_pdr*>(pdrEntry.data);
+        assert(pdr != NULL);
+        if (pdr->effecter_id != effecterId)
+        {
+            pdr = nullptr;
+            pdrRecord = numericEffecterPDRs.getNextRecord(pdrRecord, pdrEntry);
+            continue;
+        }
+
+        auto tmpEntityType = pdr->entity_type;
+        auto tmpEntityInstance = pdr->entity_instance;
+        auto tmpEffecterDataSize = pdr->effecter_data_size;
+        auto tmpEffecterSemanticId = pdr->effecter_semantic_id;
+        auto tmpEffecterOffset = pdr->offset;
+        auto tmpEffecterResolution = pdr->resolution;
+
+        if ((tmpEntityType >= PLDM_OEM_ENTITY_TYPE_START &&
+             tmpEntityType <= PLDM_OEM_ENTITY_TYPE_END) ||
+            (tmpEffecterSemanticId >= PLDM_OEM_STATE_SET_ID_START &&
+             tmpEffecterSemanticId < PLDM_OEM_STATE_SET_ID_END))
+        {
+            entityType = tmpEntityType;
+            entityInstance = tmpEntityInstance;
+            effecterDataSize = tmpEffecterDataSize;
+            effecterSemanticId = tmpEffecterSemanticId;
+            effecterOffset = tmpEffecterOffset;
+            effecterResolution = tmpEffecterResolution;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    return false;
+}
+
 bool isOemStateSensor(Handler& handler, uint16_t sensorId,
                       uint8_t sensorRearmCount, uint8_t& compSensorCnt,
                       uint16_t& entityType, uint16_t& entityInstance,
-                      uint16_t& stateSetId)
+                      uint16_t& stateSetId, uint16_t& containerId)
 {
     pldm_state_sensor_pdr* pdr = nullptr;
 
@@ -758,6 +919,7 @@ bool isOemStateSensor(Handler& handler, uint16_t sensorId,
         }
         auto tmpEntityType = pdr->entity_type;
         auto tmpEntityInstance = pdr->entity_instance;
+        auto tmpEntityContainerId = pdr->container_id;
         auto tmpCompSensorCnt = pdr->composite_sensor_count;
         auto tmpPossibleStates =
             reinterpret_cast<state_sensor_possible_states*>(
@@ -782,6 +944,7 @@ bool isOemStateSensor(Handler& handler, uint16_t sensorId,
             entityInstance = tmpEntityInstance;
             stateSetId = tmpStateSetId;
             compSensorCnt = tmpCompSensorCnt;
+            containerId = tmpEntityContainerId;
             return true;
         }
         else

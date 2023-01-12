@@ -22,7 +22,6 @@ namespace responder
 {
 namespace platform_numeric_effecter
 {
-
 /** @brief Function to get the effecter value by PDR factor coefficient, etc.
  *  @param[in] pdr - The structure of pldm_numeric_effecter_value_pdr.
  *  @param[in] effecterValue - effecter value.

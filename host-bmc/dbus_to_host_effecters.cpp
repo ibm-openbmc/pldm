@@ -16,7 +16,6 @@ namespace pldm
 {
 namespace host_effecters
 {
-
 using InternalFailure =
     sdbusplus::xyz::openbmc_project::Common::Error::InternalFailure;
 
@@ -175,7 +174,7 @@ void HostEffecterParser::processHostEffecterChangeNotification(
             return;
         }
     }
-    catch (const sdbusplus::exception_t& e)
+    catch (const sdbusplus::exception::exception& e)
     {
         std::cerr << "Error in getting current host state. Will still "
                      "continue to set the host effecter \n";
@@ -247,12 +246,11 @@ uint8_t
     return newState;
 }
 
-int HostEffecterParser::setHostStateEffecter(
-    size_t effecterInfoIndex, std::vector<set_effecter_state_field>& stateField,
-    uint16_t effecterId)
+int HostEffecterParser::sendSetStateEffecterStates(
+    uint8_t mctpEid, uint16_t effecterId, uint8_t compEffCnt,
+    std::vector<set_effecter_state_field>& stateField,
+    std::function<bool(bool)> callBack, bool value)
 {
-    uint8_t& mctpEid = hostEffecterInfo[effecterInfoIndex].mctpEid;
-    uint8_t& compEffCnt = hostEffecterInfo[effecterInfoIndex].compEffecterCnt;
     auto instanceId = requester->getInstanceId(mctpEid);
 
     std::vector<uint8_t> requestMsg(
@@ -265,39 +263,52 @@ int HostEffecterParser::setHostStateEffecter(
 
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "Message encode failure. PLDM error code = " << std::hex
-                  << std::showbase << rc << "\n";
+        std::cerr
+            << "Message encode SetStateEffecterStates failure. PLDM error code = "
+            << std::hex << std::showbase << rc << "\n";
         requester->markFree(mctpEid, instanceId);
         return rc;
     }
 
-    auto setStateEffecterStatesRespHandler =
-        [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
-            if (response == nullptr || !respMsgLen)
+    auto setStateEffecterStatesRespHandler = [=](mctp_eid_t /*eid*/,
+                                                 const pldm_msg* response,
+                                                 size_t respMsgLen) {
+        if (response == nullptr || !respMsgLen)
+        {
+            std::cerr << "Failed to receive response for "
+                      << "setStateEffecterStates command \n";
+            return;
+        }
+        uint8_t completionCode{};
+        auto rc = decode_set_state_effecter_states_resp(response, respMsgLen,
+                                                        &completionCode);
+        if (rc)
+        {
+            std::cerr
+                << "Failed to decode setStateEffecterStates response, effecter Id : "
+                << effecterId << " , rc " << rc << "\n";
+            pldm::utils::reportError(
+                "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
+                pldm::PelSeverity::ERROR);
+        }
+        if (completionCode)
+        {
+            std::cerr << "Failed to set a Host effecter, effecter Id :  "
+                      << effecterId
+                      << " , cc=" << static_cast<unsigned>(completionCode)
+                      << "\n";
+            pldm::utils::reportError(
+                "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
+                pldm::PelSeverity::ERROR);
+        }
+        else
+        {
+            if (callBack)
             {
-                std::cerr << "Failed to receive response for "
-                          << "setStateEffecterStates command \n";
-                return;
+                callBack(value);
             }
-            uint8_t completionCode{};
-            auto rc = decode_set_state_effecter_states_resp(
-                response, respMsgLen, &completionCode);
-            if (rc)
-            {
-                std::cerr << "Failed to decode setStateEffecterStates response,"
-                          << " rc " << rc << "\n";
-                pldm::utils::reportError(
-                    "xyz.openbmc_project.bmc.pldm.SetHostEffecterFailed");
-            }
-            if (completionCode)
-            {
-                std::cerr << "Failed to set a Host effecter "
-                          << ", cc=" << static_cast<unsigned>(completionCode)
-                          << "\n";
-                pldm::utils::reportError(
-                    "xyz.openbmc_project.bmc.pldm.SetHostEffecterFailed");
-            }
-        };
+        }
+    };
 
     rc = handler->registerRequest(
         mctpEid, instanceId, PLDM_PLATFORM, PLDM_SET_STATE_EFFECTER_STATES,
@@ -309,6 +320,17 @@ int HostEffecterParser::setHostStateEffecter(
     return rc;
 }
 
+int HostEffecterParser::setHostStateEffecter(
+    size_t effecterInfoIndex, std::vector<set_effecter_state_field>& stateField,
+    uint16_t effecterId)
+{
+    uint8_t& mctpEid = hostEffecterInfo[effecterInfoIndex].mctpEid;
+    uint8_t& compEffCnt = hostEffecterInfo[effecterInfoIndex].compEffecterCnt;
+
+    return sendSetStateEffecterStates(mctpEid, effecterId, compEffCnt,
+                                      stateField);
+}
+
 void HostEffecterParser::createHostEffecterMatch(const std::string& objectPath,
                                                  const std::string& interface,
                                                  size_t effecterInfoIndex,
@@ -316,17 +338,23 @@ void HostEffecterParser::createHostEffecterMatch(const std::string& objectPath,
                                                  uint16_t effecterId)
 {
     using namespace sdbusplus::bus::match::rules;
-    effecterInfoMatch.emplace_back(std::make_unique<sdbusplus::bus::match_t>(
-        pldm::utils::DBusHandler::getBus(),
-        propertiesChanged(objectPath, interface),
-        [this, effecterInfoIndex, dbusInfoIndex,
-         effecterId](sdbusplus::message_t& msg) {
-            DbusChgHostEffecterProps props;
-            std::string iface;
-            msg.read(iface, props);
-            processHostEffecterChangeNotification(props, effecterInfoIndex,
-                                                  dbusInfoIndex, effecterId);
-        }));
+    effecterInfoMatch.emplace_back(
+        std::make_unique<sdbusplus::bus::match::match>(
+            pldm::utils::DBusHandler::getBus(),
+            propertiesChanged(objectPath, interface),
+            [this, effecterInfoIndex, dbusInfoIndex,
+             effecterId](sdbusplus::message::message& msg) {
+                DbusChgHostEffecterProps props;
+                std::string iface;
+                msg.read(iface, props);
+                processHostEffecterChangeNotification(
+                    props, effecterInfoIndex, dbusInfoIndex, effecterId);
+            }));
+}
+
+const pldm_pdr* HostEffecterParser::getPldmPDR()
+{
+    return pdrRepo;
 }
 
 } // namespace host_effecters

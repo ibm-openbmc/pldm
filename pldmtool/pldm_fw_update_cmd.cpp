@@ -7,13 +7,10 @@
 
 namespace pldmtool
 {
-
 namespace fw_update
 {
-
 namespace
 {
-
 using namespace pldmtool::helper;
 
 std::vector<std::unique_ptr<CommandInterface>> commands;

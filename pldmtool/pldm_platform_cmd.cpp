@@ -15,13 +15,10 @@ using namespace pldm::utils;
 
 namespace pldmtool
 {
-
 namespace platform
 {
-
 namespace
 {
-
 using namespace pldmtool::helper;
 
 static const std::map<uint8_t, std::string> sensorPresState{
@@ -298,6 +295,7 @@ class GetPDR : public CommandInterface
         {PLDM_ENTITY_INTERCONNECT, "Interconnect"},
         {PLDM_ENTITY_PLUG, "Plug"},
         {PLDM_ENTITY_SOCKET, "Socket"},
+        {11521, "System (Logical)"},
     };
 
     const std::map<uint16_t, std::string> stateSet = {
@@ -470,8 +468,11 @@ class GetPDR : public CommandInterface
         {PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS_STRESSED, "Stressed"}};
 
     static inline const std::map<uint8_t, std::string> setSysPowerState{
-        {PLDM_STATE_SET_SYS_POWER_STATE_OFF_SOFT_GRACEFUL,
-         "Off-Soft Graceful"}};
+        {PLDM_STATE_SET_SYS_POWER_STATE_OFF_SOFT_GRACEFUL, "Off-Soft Graceful"},
+        {PLDM_STATE_SET_SYS_POWER_CYCLE_OFF_SOFT_GRACEFUL,
+         "Power Cycle Off-Soft Graceful"},
+        {PLDM_STATE_SET_SYS_POWER_STATE_OFF_HARD_GRACEFUL,
+         "Off-Hard Graceful"}};
 
     static inline const std::map<uint8_t, std::string> setSWTerminationStatus{
         {PLDM_SW_TERM_GRACEFUL_RESTART_REQUESTED,
@@ -491,6 +492,11 @@ class GetPDR : public CommandInterface
         {PLDM_STATE_SET_HEALTH_STATE_LOWER_CRITICAL, "Lower Critical"},
         {PLDM_STATE_SET_HEALTH_STATE_UPPER_FATAL, "Upper Fatal"},
         {PLDM_STATE_SET_HEALTH_STATE_LOWER_FATAL, "Lower Fatal"}};
+
+    static inline const std::map<uint8_t, std::string> setPowerDeviceState{
+        {PLDM_STATE_SET_DEVICE_POWER_STATE_UNKNOWN, "Unknown"},
+        {PLDM_STATE_SET_DEVICE_POWER_STATE_FULLY_ON, "Fully-On"},
+        {PLDM_STATE_SET_DEVICE_POWER_STATE_OFF, "Off"}};
 
     static inline const std::map<uint8_t, std::string>
         setOperationalRunningState{
@@ -514,6 +520,7 @@ class GetPDR : public CommandInterface
             {PLDM_STATE_SET_HEALTH_STATE, setHealthState},
             {PLDM_STATE_SET_OPERATIONAL_RUNNING_STATUS,
              setOperationalRunningState},
+            {PLDM_STATE_SET_DEVICE_POWER_STATE, setPowerDeviceState},
         };
 
     const std::map<std::string, uint8_t> strToPdrType = {
@@ -730,7 +737,7 @@ class GetPDR : public CommandInterface
         output["PLDMTerminusHandle"] = unsigned(pdr->terminus_handle);
         output["FRURecordSetIdentifier"] = unsigned(pdr->fru_rsi);
         output["entityType"] = getEntityName(pdr->entity_type);
-        output["entityInstanceNumber"] = unsigned(pdr->entity_instance_num);
+        output["entityInstanceNumber"] = unsigned(pdr->entity_instance);
         output["containerID"] = unsigned(pdr->container_id);
     }
 

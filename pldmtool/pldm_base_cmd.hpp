@@ -4,10 +4,8 @@
 
 namespace pldmtool
 {
-
 namespace base
 {
-
 void registerCommand(CLI::App& app);
 }
 

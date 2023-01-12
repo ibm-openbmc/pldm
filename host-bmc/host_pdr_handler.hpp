@@ -2,18 +2,24 @@
 
 #include "libpldm/base.h"
 #include "libpldm/platform.h"
+#include "libpldm/state_set.h"
 
 #include "common/types.hpp"
 #include "common/utils.hpp"
+#include "dbus_to_host_effecters.hpp"
+#include "host_associations_parser.hpp"
 #include "libpldmresponder/event_parser.hpp"
+#include "libpldmresponder/oem_handler.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
 #include "pldmd/dbus_impl_requester.hpp"
 #include "requester/handler.hpp"
+#include "utils.hpp"
 
 #include <sdeventplus/event.hpp>
 #include <sdeventplus/source/event.hpp>
 
 #include <deque>
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <vector>
@@ -91,15 +97,21 @@ class HostPDRHandler
         pldm_pdr* repo, const std::string& eventsJsonsDir,
         pldm_entity_association_tree* entityTree,
         pldm_entity_association_tree* bmcEntityTree,
+        pldm::host_effecters::HostEffecterParser* hostEffecterParser,
         pldm::dbus_api::Requester& requester,
-        pldm::requester::Handler<pldm::requester::Request>* handler);
+        pldm::requester::Handler<pldm::requester::Request>* handler,
+        pldm::host_associations::HostAssociationsParser* asscoationsParser,
+        pldm::responder::oem_platform::Handler* oemPlatformHandler);
 
     /** @brief fetch PDRs from host firmware. See @class.
      *  @param[in] recordHandles - list of record handles pointing to host's
      *             PDRs that need to be fetched.
+     *  @param[in] tid - terminus ID.
      */
 
-    void fetchPDR(PDRRecordHandles&& recordHandles);
+    void fetchPDR(PDRRecordHandles&& recordHandles, uint8_t tid);
+
+    void deletePDRFromRepo(PDRRecordHandles&& recordHandles);
 
     /** @brief Send a PLDM event to host firmware containing a list of record
      *  handles of PDRs that the host firmware has to fetch.
@@ -124,12 +136,14 @@ class HostPDRHandler
 
     /** @brief Handles state sensor event
      *
+     *  @param[in] stateSetId - state set Id
      *  @param[in] entry - state sensor entry
      *  @param[in] state - event state
      *
      *  @return PLDM completion code
      */
     int handleStateSensorEvent(
+        const std::vector<pldm::pdr::StateSetId>& stateSetId,
         const pldm::responder::events::StateSensorEntry& entry,
         pdr::EventState state);
 
@@ -137,9 +151,10 @@ class HostPDRHandler
      *         structure
      *
      *  @param[in] stateSensorPDRs - host state sensor PDRs
+
      *
      */
-    void parseStateSensorPDRs(const PDRList& stateSensorPDRs);
+    void parseStateSensorPDRs();
 
     /** @brief this function sends a GetPDR request to Host firmware.
      *  And processes the PDRs based on type
@@ -155,24 +170,52 @@ class HostPDRHandler
     /** @brief set HostSensorStates when pldmd starts or restarts
      *  and updates the D-Bus property
      *  @param[in] stateSensorPDRs - host state sensor PDRs
+
      */
-    void setHostSensorState(const PDRList& stateSensorPDRs);
+    void setHostSensorState();
+    void _setHostSensorState();
+
+    /** @brief check whether Host is running when pldmd starts
+     */
+    bool isHostUp();
+
+    /** @brief Update objectPathMaps, if path does not exist, you need to add,
+     *         if it exists, replace
+     *
+     * @param[in] path - object path
+     * @param[in] node - pldm entity node pointer
+     */
+    void updateObjectPathMaps(const std::string& path, pldm_entity_node* node);
 
     /** @brief whether we received PLDM_RECORDS_MODIFIED event data operation
      *  from host
      */
     bool isHostPdrModified = false;
 
-    /** @brief check whether Host is running when pldmd starts
+    /** @brief counter to count the number of modified records sent from host
      */
-    bool isHostUp();
+    uint8_t modifiedCounter = 0;
 
     /** @brief map that captures various terminus information **/
     TLPDRMap tlPDRInfo;
 
   private:
+    /** @brief set the FRU presence based on the host off signal
+     */
+    void setPresenceFrus();
+
+    /* @brief get the Parent chassis object path for a fru
+     */
+    std::string getParentChassis(const std::string& fruPath);
+
+    /** @brief set the presence of the fru from record handle
+     *  @param[in] recorHandle - record handle of the PDR
+     */
+    void setRecordPresent(uint32_t recorHandle);
+
     /** @brief deferred function to fetch PDR from Host, scheduled to work on
      *  the event loop. The PDR exchg with the host is async.
+     *
      *  @param[in] source - sdeventplus event source
      */
     void _fetchPDR(sdeventplus::source::EventBase& source);
@@ -181,16 +224,13 @@ class HostPDRHandler
      *  @details A merge operation involves adding a pldm_entity under the
      *  appropriate parent, and updating container ids.
      *  @param[in] pdr - entity association pdr
+     *  @param[in] size - size of input PDR record in bytes
+     *  @param[in] record_handle - record handle of the PDR
      */
-    void mergeEntityAssociations(const std::vector<uint8_t>& pdr);
-
-    /** @brief Find parent of input entity type, from the entity association
-     *  tree
-     *  @param[in] type - PLDM entity type
-     *  @param[out] parent - PLDM entity information of parent
-     *  @return bool - true if parent found, false otherwise
-     */
-    bool getParent(EntityType type, pldm_entity& parent);
+    void
+        mergeEntityAssociations(const std::vector<uint8_t>& pdr,
+                                [[maybe_unused]] const uint32_t& size,
+                                [[maybe_unused]] const uint32_t& record_handle);
 
     /** @brief process the Host's PDR and add to BMC's PDR repo
      *  @param[in] eid - MCTP id of Host
@@ -212,6 +252,90 @@ class HostPDRHandler
     void _processFetchPDREvent(uint32_t nextRecordHandle,
                                sdeventplus::source::EventBase& source);
 
+    /** @brief Get FRU record table metadata by host
+     */
+    void getFRURecordTableMetadataByHost();
+
+    /** @brief Set Location Code in the dbus objects
+     *
+     *  @param[in] fruRecordData - the Fru Record Data
+     */
+
+    void setLocationCode(
+        const std::vector<responder::pdr_utils::FruRecordDataFormat>&
+            fruRecordData);
+    void setFRUDynamicAssociations();
+
+    /** @brief Get FRU record table by host
+     *
+     *  @param[in] uint16_t    - total table records
+     *
+     *  @return
+     */
+    void getFRURecordTableByHost(uint16_t& total);
+
+    /** @brief Create DBUS objects
+     *
+     * @ return
+     */
+    void createDbusObjects();
+
+    /** @brief Get FRU Record Set Identifier from FRU Record data Format
+     *  @param[in] entity           - PLDM entity information
+     *  @return
+     */
+    uint16_t getRSI(const pldm_entity& entity);
+
+    /** @brief Get present state from state sensor readings
+     *  @param[in] tid          - terminus id
+     *  @param[in] sensorId     - state sensor Id
+     *  @param[in] type         - entity type
+     *  @param[in] instance     - entity instance num
+     *  @param[in] containerId  - entity container id
+     *
+     *  @param[in] path       - object path
+     *  @param[in] stateSetId - state set Id
+     */
+    void getPresentStateBySensorReadigs(const pldm::pdr::TerminusID& tid,
+                                        uint16_t sensorId, uint16_t type,
+                                        uint16_t instance, uint16_t containerId,
+                                        const std::string& path,
+                                        pldm::pdr::StateSetId stateSetId);
+
+    /** @brief Obtain the mctp_eid for a particular sensor
+     *  @param[in] tid        -  terminus id of the sensor
+     *  @param[out] uint8_t   -  mctp_eid
+     */
+    pdr::EID getMctpEID(const pldm::pdr::TerminusID& tid);
+
+    /** @brief Set the OperationalStatus interface
+     *  @return
+     */
+    void setOperationStatus();
+    /** @brief Get the Validity of a Terminus ID
+     *
+     *  @param[out] bool - true if valid, false otherwise
+     */
+    bool getValidity(const pldm::pdr::TerminusID& tid);
+
+    /** @brief Set the Present dbus Property
+     *  @param[in] path     - object path
+     *  @return
+     */
+    void setPresentPropertyStatus(const std::string& path);
+
+    /** @brief Set the availabilty dbus Property
+     *  @param[in] path     - object path
+     *  @return
+     */
+    void setAvailabilityState(const std::string& path);
+
+    /** @brief Update the Led Group path
+     *  @param[in] path     - object path
+     *  @return
+     */
+    std::string updateLedGroupPath(const std::string& path);
+
     /** @brief fd of MCTP communications socket */
     int mctp_fd;
     /** @brief MCTP EID of host firmware */
@@ -220,6 +344,12 @@ class HostPDRHandler
      *  work.
      */
     sdeventplus::Event& event;
+
+    /** @brief iterator to track the entries in the objPathMap */
+    ObjectPathMaps::iterator objMapIndex;
+
+    HostStateSensorMap::iterator sensorMapIndex;
+
     /** @brief pointer to BMC's primary PDR repo, host PDRs are added here */
     pldm_pdr* repo;
 
@@ -230,13 +360,17 @@ class HostPDRHandler
     /** @brief Pointer to BMC's entity association tree */
     pldm_entity_association_tree* bmcEntityTree;
 
-    /** @brief reference to Requester object, primarily used to access API to
-     *  obtain PLDM instance id.
+    /** @brief Pointer to host effecter parser */
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser;
+
+    /** @brief reference to Requester object, primarily used to access API
+     * to obtain PLDM instance id.
      */
     pldm::dbus_api::Requester& requester;
 
     /** @brief PLDM request handler */
     pldm::requester::Handler<pldm::requester::Request>* handler;
+    pldm::host_associations::HostAssociationsParser* associationsParser;
 
     /** @brief sdeventplus event source */
     std::unique_ptr<sdeventplus::source::Defer> pdrFetchEvent;
@@ -245,16 +379,19 @@ class HostPDRHandler
 
     /** @brief list of PDR record handles pointing to host's PDRs */
     PDRRecordHandles pdrRecordHandles;
+
+    /** @brief list of PDR record handles modified pointing to host's PDRs */
+    PDRRecordHandles modifiedPDRRecordHandles;
+
     /** @brief maps an entity type to parent pldm_entity from the BMC's entity
      *  association tree
      */
-
-    /** @brief list of PDR record handles modified pointing to host PDRs */
-    PDRRecordHandles modifiedPDRRecordHandles;
-
     std::map<EntityType, pldm_entity> parents;
     /** @brief D-Bus property changed signal match */
-    std::unique_ptr<sdbusplus::bus::match_t> hostOffMatch;
+    std::unique_ptr<sdbusplus::bus::match::match> hostOffMatch;
+
+    /** @brief D-Bus property changed signal match */
+    std::unique_ptr<sdbusplus::bus::match::match> chassisOffMatch;
 
     /** @brief sensorMap is a lookup data structure that is build from the
      *         hostPDR that speeds up the lookup of <TerminusID, SensorID> in
@@ -262,8 +399,49 @@ class HostPDRHandler
      */
     HostStateSensorMap sensorMap;
 
+    PDRList::const_iterator sensorIndex;
+    PDRList stateSensorPDRs;
     /** @brief whether response received from Host */
     bool responseReceived;
+
+    /** @brief veriable that captures if the first entity association PDR
+     *         from host is merged into the BMC tree
+     */
+    bool mergedHostParents;
+
+    /** @brief whether timed out waiting for a response from Host */
+    bool timeOut;
+    /** @brief request message instance id */
+    uint8_t insId;
+
+    /** @brief maps an object path to pldm_entity from the BMC's entity
+     *         association tree
+     */
+    ObjectPathMaps objPathMap;
+
+    /** @brief maps an entity name to map, maps to entity name to pldm_entity
+     */
+    EntityAssociations entityAssociations;
+
+    /** @brief the vector of FRU Record Data Format
+     */
+    std::vector<responder::pdr_utils::FruRecordDataFormat> fruRecordData;
+
+    /** @OEM platform handler */
+    pldm::responder::oem_platform::Handler* oemPlatformHandler;
+
+    /** @brief Object path and entity association and is only loaded once
+     */
+    bool objPathEntityAssociation;
+
+    /** @brief variable to capture the host state */
+    bool isHostOff;
+
+    /** cache the fru record set PDR's */
+    PDRList fruRecordSetPDRs{};
+
+    /** @brief variable to hold the terminus ID */
+    uint16_t terminusID = 0;
 };
 
 } // namespace pldm

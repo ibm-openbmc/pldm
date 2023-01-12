@@ -249,6 +249,7 @@ int CertHandler::newFileAvailableWithMetaData(uint64_t length,
                                               uint32_t /*metaDataValue3*/,
                                               uint32_t /*metaDataValue4*/)
 {
+    uint8_t certSigningStatus = (uint8_t)metaDataValue1;
     fs::create_directories(certFilePath);
     fs::permissions(certFilePath,
                     fs::perms::others_read | fs::perms::owner_write);
@@ -262,7 +263,7 @@ int CertHandler::newFileAvailableWithMetaData(uint64_t length,
     }
     if (certType == PLDM_FILE_TYPE_SIGNED_CERT)
     {
-        if (metaDataValue1 == PLDM_SUCCESS)
+        if (certSigningStatus == PLDM_SUCCESS)
         {
             std::cerr
                 << "CertHandler::newFileAvailableWithMetaData:new file available client cert file, file handle: "
@@ -271,7 +272,7 @@ int CertHandler::newFileAvailableWithMetaData(uint64_t length,
                 (filePath + "ClientCert_" + std::to_string(fileHandle)).c_str(),
                 flags, S_IRUSR | S_IWUSR);
         }
-        else if (metaDataValue1 == PLDM_INVALID_CERT_DATA)
+        else if (certSigningStatus == PLDM_INVALID_CERT_DATA)
         {
             std::cerr
                 << "newFileAvailableWithMetaData:client cert file Invalid data, file handle: "
@@ -323,11 +324,14 @@ int CertHandler::fileAckWithMetaData(uint8_t fileStatus,
         PropertyValue value = "xyz.openbmc_project.Certs.Entry.State.Pending";
         if (fileStatus == PLDM_ERROR_INVALID_DATA)
         {
-            value = "xyz.openbmc_project.Certs.Entry.State.BadCSR";
+            std::string status = "xyz.openbmc_project.Certs.Entry.State.BadCSR";
+            value = status;
         }
         else if (fileStatus == PLDM_ERROR_NOT_READY)
         {
-            value = "xyz.openbmc_project.Certs.Entry.State.Pending";
+            std::string status =
+                "xyz.openbmc_project.Certs.Entry.State.Pending";
+            value = status;
         }
         try
         {

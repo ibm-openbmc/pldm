@@ -20,18 +20,25 @@
 
 namespace pldm
 {
-
 using namespace sdeventplus;
 using namespace sdeventplus::source;
 constexpr auto clockId = sdeventplus::ClockId::RealTime;
 using Clock = Clock<clockId>;
 using Timer = Time<clockId>;
 
-constexpr pldm::pdr::TerminusID TID = 0; // TID will be implemented later.
+using sdbusplus::exception::SdBusError;
+
+// Shutdown effecter terminus ID, set when we look up the effecter
+pldm::pdr::TerminusID TID;
+
+const pldm::pdr::TerminusID hypervisor_TID = 208;
+
 namespace sdbusRule = sdbusplus::bus::match::rules;
 
-SoftPowerOff::SoftPowerOff(sdbusplus::bus_t& bus, sd_event* event) :
-    bus(bus), timer(event)
+SoftPowerOff::SoftPowerOff(sdbusplus::bus_t& bus, sd_event* event,
+                           bool noTimeOut) :
+    bus(bus),
+    timer(event), noTimeOut(noTimeOut)
 {
     getHostState();
     if (hasError || completed)
@@ -55,7 +62,8 @@ SoftPowerOff::SoftPowerOff(sdbusplus::bus_t& bus, sd_event* event) :
     rc = getSensorInfo();
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "Message get Sensor PDRs error. PLDM error code = "
+        std::cerr << "Message get Sensor PDRs error. PLDM "
+                     "error code = "
                   << std::hex << std::showbase << rc << "\n";
         hasError = true;
         return;
@@ -113,14 +121,19 @@ void SoftPowerOff::hostSoftOffComplete(sdbusplus::message_t& msg)
              msgPreviousEventState);
 
     if (msgSensorID == sensorID && msgSensorOffset == sensorOffset &&
-        msgEventState == PLDM_SW_TERM_GRACEFUL_SHUTDOWN)
+        msgEventState == PLDM_SW_TERM_GRACEFUL_SHUTDOWN && msgTID == TID)
     {
-        // Receive Graceful shutdown completion event message. Disable the timer
-        auto rc = timer.stop();
-        if (rc < 0)
+        std::cout << "Recieved the graceful shutdown signal from host\n";
+        if (!noTimeOut)
         {
-            std::cerr << "PLDM soft off: Failure to STOP the timer. ERRNO="
-                      << rc << "\n";
+            // Receive Graceful shutdown completion event message. Disable the
+            // timer
+            auto rc = timer.stop();
+            if (rc < 0)
+            {
+                std::cerr << "PLDM soft off: Failure to STOP the timer. ERRNO="
+                          << rc << "\n";
+            }
         }
 
         // This marks the completion of pldm soft power off.
@@ -154,6 +167,7 @@ int SoftPowerOff::getEffecterID()
                 auto VMMPdr =
                     reinterpret_cast<pldm_state_effecter_pdr*>(rep.data());
                 effecterID = VMMPdr->effecter_id;
+                TID = hypervisor_TID;
             }
         }
         else
@@ -174,9 +188,10 @@ int SoftPowerOff::getEffecterID()
     }
 
     // If the Virtual Machine Manager PDRs doesn't exist, go find the System
-    // Firmware PDRs.
-    // System Firmware is a logical entity, so the bit 15 in entity type is set
-    entityType = PLDM_ENTITY_SYS_FIRMWARE | 0x8000;
+    // Chassis PDRs.
+    // The host firmware may attach the graceful shutdown effecter to this
+    // entity.
+    entityType = PLDM_ENTITY_SYSTEM_CHASSIS;
     try
     {
         std::vector<std::vector<uint8_t>> sysFwResponse{};
@@ -203,6 +218,7 @@ int SoftPowerOff::getEffecterID()
             auto sysFwPdr =
                 reinterpret_cast<pldm_state_effecter_pdr*>(rep.data());
             effecterID = sysFwPdr->effecter_id;
+            TID = sysFwPdr->terminus_handle;
         }
     }
     catch (const sdbusplus::exception_t& e)
@@ -220,12 +236,8 @@ int SoftPowerOff::getSensorInfo()
 {
     pldm::pdr::EntityType entityType;
 
-    entityType = VMMPdrExist ? PLDM_ENTITY_VIRTUAL_MACHINE_MANAGER
-                             : PLDM_ENTITY_SYS_FIRMWARE;
-
-    // The Virtual machine manager/System firmware is logical entity, so bit 15
-    // need to be set.
-    entityType = entityType | 0x8000;
+    entityType = VMMPdrExist ? PLDM_ENTITY_VIRTUAL_MACHINE_MANAGER | 0x8000
+                             : PLDM_ENTITY_SYSTEM_CHASSIS;
 
     try
     {
@@ -300,6 +312,21 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
 
     mctpEID = pldm::utils::readHostEID();
 
+    uint8_t effecterState;
+    auto requestHostTransition =
+        pldm::utils::DBusHandler().getDbusProperty<std::string>(
+            "/xyz/openbmc_project/state/host0", "RequestedHostTransition",
+            "xyz.openbmc_project.State.Host");
+    if (requestHostTransition !=
+        "xyz.openbmc_project.State.Host.Transition.Off")
+    {
+        effecterState = PLDM_SW_TERM_GRACEFUL_RESTART_REQUESTED;
+    }
+    else
+    {
+        effecterState = PLDM_SW_TERM_GRACEFUL_SHUTDOWN_REQUESTED;
+    }
+
     // Get instanceID
     try
     {
@@ -325,8 +352,7 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
                             sizeof(set_effecter_state_field)>
         requestMsg{};
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
-    set_effecter_state_field stateField{
-        PLDM_REQUEST_SET, PLDM_SW_TERM_GRACEFUL_SHUTDOWN_REQUESTED};
+    set_effecter_state_field stateField{PLDM_REQUEST_SET, effecterState};
     auto rc = encode_set_state_effecter_states_req(
         instanceID, effecterID, effecterCount, &stateField, request);
     if (rc != PLDM_SUCCESS)
@@ -350,9 +376,9 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
                                    Timer::TimePoint /*time*/) {
         if (!responseReceived)
         {
-            std::cerr
-                << "PLDM soft off: ERROR! Can't get the response for the PLDM request msg. Time out!\n"
-                << "Exit the pldm-softpoweroff\n";
+            std::cerr << "PLDM soft off: ERROR! Can't get the response for the "
+                         "PLDM request msg. Time out!\n"
+                      << "Exit the pldm-softpoweroff\n";
             exit(-1);
         }
         return;
@@ -388,30 +414,44 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
         auto response = reinterpret_cast<pldm_msg*>(responseMsgPtr.get());
         if (response->payload[0] != PLDM_SUCCESS)
         {
-            std::cerr << "Getting the wrong response. PLDM RC = "
-                      << (unsigned)response->payload[0] << "\n";
+            std::cerr
+                << "Got a bad respose for soft off seteffecter states command . PLDM RC = "
+                << (unsigned)response->payload[0] << "\n";
             exit(-1);
         }
+
+        std::cerr
+            << "Got the response for set effecter states command, PLDM RC = "
+            << std::hex << std::showbase
+            << static_cast<uint16_t>(response->payload[0]) << "\n";
+        std::vector<uint8_t> responseMessage;
+        responseMessage.resize(responseMsgSize);
+        memcpy(responseMessage.data(), responseMsg, responseMessage.size());
+        pldm::utils::printBuffer(pldm::utils::Rx, responseMessage);
 
         responseReceived = true;
 
-        // Start Timer
-        using namespace std::chrono;
-        auto timeMicroseconds =
-            duration_cast<microseconds>(seconds(SOFTOFF_TIMEOUT_SECONDS));
+        if (!noTimeOut)
+        {
+            // Start Timer
+            using namespace std::chrono;
+            auto timeMicroseconds =
+                duration_cast<microseconds>(seconds(SOFTOFF_TIMEOUT_SECONDS));
 
-        auto ret = startTimer(timeMicroseconds);
-        if (ret < 0)
-        {
-            std::cerr << "Failure to start Host soft off wait timer, ERRNO = "
-                      << ret << "Exit the pldm-softpoweroff\n";
-            exit(-1);
-        }
-        else
-        {
-            std::cerr
-                << "Timer started waiting for host soft off, TIMEOUT_IN_SEC = "
-                << SOFTOFF_TIMEOUT_SECONDS << "\n";
+            auto ret = startTimer(timeMicroseconds);
+            if (ret < 0)
+            {
+                std::cerr
+                    << "Failure to start Host soft off wait timer, ERRNO = "
+                    << ret << "Exit the pldm-softpoweroff\n";
+                exit(-1);
+            }
+            else
+            {
+                std::cerr
+                    << "Timer started waiting for host soft off, TIMEOUT_IN_SEC = "
+                    << SOFTOFF_TIMEOUT_SECONDS << "\n";
+            }
         }
         return;
     };
@@ -425,6 +465,8 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
                   << ", errno = " << errno << "\n";
         return PLDM_ERROR;
     }
+    std::vector<uint8_t> requestbuffer(requestMsg.begin(), requestMsg.end());
+    pldm::utils::printBuffer(pldm::utils::Tx, requestbuffer);
 
     // Time out or soft off complete
     while (!isCompleted() && !isTimerExpired())

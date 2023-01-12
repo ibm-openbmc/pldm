@@ -14,15 +14,25 @@
 
 namespace pldm
 {
-
 using eid = uint8_t;
 using Request = std::vector<uint8_t>;
 using Response = std::vector<uint8_t>;
+
+enum PelSeverity
+{
+    NOTICE,
+    INFORMATIONAL,
+    DEBUG,
+    WARNING,
+    CRITICAL,
+    EMERGENCY,
+    ALERT,
+    ERROR
+};
 using Command = uint8_t;
 
 namespace dbus
 {
-
 using ObjectPath = std::string;
 using Service = std::string;
 using Interface = std::string;
@@ -41,7 +51,6 @@ using ObjectValueTree = std::map<sdbusplus::message::object_path, InterfaceMap>;
 
 namespace fw_update
 {
-
 // Descriptor definition
 using DescriptorType = uint16_t;
 using DescriptorData = std::vector<uint8_t>;
@@ -111,7 +120,6 @@ enum class ComponentImageInfoPos : size_t
 
 namespace pdr
 {
-
 using EID = uint8_t;
 using TerminusHandle = uint16_t;
 using TerminusID = uint8_t;
@@ -124,6 +132,8 @@ using CompositeCount = uint8_t;
 using SensorOffset = uint8_t;
 using EventState = uint8_t;
 using TerminusValidity = uint8_t;
+using EffecterID = uint16_t;
+using Pdr_t = uint8_t;
 
 //!< Subset of the State Set that is supported by a effecter/sensor
 using PossibleStates = std::set<uint8_t>;
@@ -131,7 +141,8 @@ using PossibleStates = std::set<uint8_t>;
 //!< composite efffecter/sensor
 using CompositeSensorStates = std::vector<PossibleStates>;
 using EntityInfo = std::tuple<ContainerID, EntityType, EntityInstance>;
-using SensorInfo = std::tuple<EntityInfo, CompositeSensorStates>;
+using SensorInfo =
+    std::tuple<EntityInfo, CompositeSensorStates, std::vector<StateSetId>>;
 
 } // namespace pdr
 

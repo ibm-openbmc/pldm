@@ -7,7 +7,6 @@ namespace pldm
 {
 namespace utils
 {
-
 /** @brief helper function for parameter matching
  *  @param[in] lhs - left-hand side value
  *  @param[in] rhs - right-hand side value

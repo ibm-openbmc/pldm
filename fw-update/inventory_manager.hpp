@@ -8,10 +8,8 @@
 
 namespace pldm
 {
-
 namespace fw_update
 {
-
 /** @class InventoryManager
  *
  *  InventoryManager class manages the software inventory of firmware devices

@@ -15,10 +15,8 @@
 
 namespace pldm
 {
-
 namespace fw_update
 {
-
 using namespace pldm::dbus_api;
 
 /** @class Manager

@@ -14,7 +14,6 @@ namespace responder
 {
 namespace bios
 {
-
 BIOSEnumAttribute::BIOSEnumAttribute(const Json& entry,
                                      DBusHandler* const dbusHandler) :
     BIOSAttribute(entry, dbusHandler)
@@ -216,7 +215,18 @@ void BIOSEnumAttribute::constructEntry(
         if (attributeValue.index() == 1)
         {
             auto currValue = std::get<std::string>(attributeValue);
-            currValueIndices[0] = getValueIndex(currValue, possibleValues);
+            try
+            {
+                currValueIndices[0] = getValueIndex(currValue, possibleValues);
+            }
+            catch (std::invalid_argument const& ex)
+            {
+                std::cerr << "Enum Value " << currValue
+                          << " is not one of the possible values. Error: "
+                          << ex.what() << " for Attribute " << name << '\n';
+                currValueIndices[0] =
+                    getValueIndex(defaultValue, possibleValues);
+            }
         }
         else
         {

@@ -4,10 +4,8 @@
 
 namespace pldmtool
 {
-
 namespace fw_update
 {
-
 void registerCommand(CLI::App& app);
 
 } // namespace fw_update

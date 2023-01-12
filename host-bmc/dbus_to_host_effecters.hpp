@@ -11,10 +11,8 @@
 
 namespace pldm
 {
-
 namespace host_effecters
 {
-
 using DbusChgHostEffecterProps =
     std::map<dbus::Property, pldm::utils::PropertyValue>;
 
@@ -167,13 +165,20 @@ class HostEffecterParser
                                          size_t dbusInfoIndex,
                                          uint16_t effecterId);
 
+    const pldm_pdr* getPldmPDR();
+
+    int sendSetStateEffecterStates(
+        uint8_t mctpEid, uint16_t effecterId, uint8_t compEffCnt,
+        std::vector<set_effecter_state_field>& stateField,
+        std::function<bool(bool)> callBack = nullptr, bool value = false);
+
   protected:
     pldm::dbus_api::Requester*
         requester;           //!< Reference to Requester to obtain instance id
     int sockFd;              //!< Socket fd to send message to host
     const pldm_pdr* pdrRepo; //!< Reference to PDR repo
     std::vector<EffecterInfo> hostEffecterInfo; //!< Parsed effecter information
-    std::vector<std::unique_ptr<sdbusplus::bus::match_t>>
+    std::vector<std::unique_ptr<sdbusplus::bus::match::match>>
         effecterInfoMatch; //!< vector to catch the D-Bus property change
                            //!< signals for the effecters
     const pldm::utils::DBusHandler* dbusHandler; //!< D-bus Handler

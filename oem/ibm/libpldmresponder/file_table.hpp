@@ -11,10 +11,8 @@
 
 namespace pldm
 {
-
 namespace filetable
 {
-
 namespace fs = std::filesystem;
 using Handle = uint32_t;
 using Json = nlohmann::json;

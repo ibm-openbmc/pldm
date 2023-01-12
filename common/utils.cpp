@@ -5,6 +5,8 @@
 #include "libpldm/pdr.h"
 #include "libpldm/pldm_types.h"
 
+#include <sys/time.h>
+
 #include <xyz/openbmc_project/Common/error.hpp>
 
 #include <algorithm>
@@ -223,7 +225,15 @@ std::string DBusHandler::getService(const char* path,
 
     auto mapper = bus.new_method_call(mapperBusName, mapperPath,
                                       mapperInterface, "GetObject");
-    mapper.append(path, DbusInterfaceList({interface}));
+
+    if (interface)
+    {
+        mapper.append(path, DbusInterfaceList({interface}));
+    }
+    else
+    {
+        mapper.append(path, DbusInterfaceList({}));
+    }
 
     auto mapperResponseMsg = bus.call(mapper);
     mapperResponseMsg.read(mapperResponse);
@@ -244,10 +254,11 @@ GetSubTreeResponse
     return response;
 }
 
-void reportError(const char* errorMsg)
+void reportError(const char* errorMsg, const Severity& sev)
 {
     static constexpr auto logObjPath = "/xyz/openbmc_project/logging";
     static constexpr auto logInterface = "xyz.openbmc_project.Logging.Create";
+    std::string severity = "xyz.openbmc_project.Logging.Entry.Level.Error";
 
     auto& bus = pldm::utils::DBusHandler::getBus();
 
@@ -255,12 +266,14 @@ void reportError(const char* errorMsg)
     {
         auto service = DBusHandler().getService(logObjPath, logInterface);
         using namespace sdbusplus::xyz::openbmc_project::Logging::server;
-        auto severity =
-            sdbusplus::xyz::openbmc_project::Logging::server::convertForMessage(
-                sdbusplus::xyz::openbmc_project::Logging::server::Entry::Level::
-                    Error);
         auto method = bus.new_method_call(service.c_str(), logObjPath,
                                           logInterface, "Create");
+
+        auto itr = sevMap.find(sev);
+        if (itr != sevMap.end())
+        {
+            severity = itr->second;
+        }
         std::map<std::string, std::string> addlData{};
         method.append(errorMsg, severity, addlData);
         bus.call_noreply(method);
@@ -279,11 +292,45 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
         auto& bus = getBus();
         auto service =
             getService(dBusMap.objectPath.c_str(), dBusMap.interface.c_str());
-        auto method = bus.new_method_call(
-            service.c_str(), dBusMap.objectPath.c_str(), dbusProperties, "Set");
-        method.append(dBusMap.interface.c_str(), dBusMap.propertyName.c_str(),
-                      variant);
-        bus.call_noreply(method);
+        if (service == "xyz.openbmc_project.Inventory.Manager")
+        {
+            ObjectValueTree objectValueTree;
+            InterfaceMap interfaceMap;
+            PropertyMap propertyMap;
+            propertyMap.emplace(dBusMap.propertyName.c_str(),
+                                std::get<0>(variant));
+            std::string objPath = dBusMap.objectPath.c_str();
+            std::string toReplace("/xyz/openbmc_project/inventory/system");
+            size_t pos = objPath.find(toReplace);
+            objPath.replace(pos, toReplace.length(), "/system");
+            interfaceMap.emplace(dBusMap.interface.c_str(), propertyMap);
+            objectValueTree.emplace(std::move(objPath),
+                                    std::move(interfaceMap));
+            auto method = bus.new_method_call(
+                service.c_str(), "/xyz/openbmc_project/inventory",
+                "xyz.openbmc_project.Inventory.Manager", "Notify");
+            method.append(std::move(objectValueTree));
+            bus.call_noreply(method);
+        }
+        else
+        {
+            auto method =
+                bus.new_method_call(service.c_str(), dBusMap.objectPath.c_str(),
+                                    dbusProperties, "Set");
+            if (dBusMap.objectPath ==
+                    "/xyz/openbmc_project/network/hypervisor/eth0/ipv4/addr0" ||
+                dBusMap.objectPath ==
+                    "/xyz/openbmc_project/network/hypervisor/eth1/ipv4/addr0")
+            {
+                std::cout << " ,service :" << service.c_str()
+                          << " , interface : " << dBusMap.interface.c_str()
+                          << " , path : " << dBusMap.objectPath.c_str()
+                          << std::endl;
+            }
+            method.append(dBusMap.interface.c_str(),
+                          dBusMap.propertyName.c_str(), variant);
+            bus.call_noreply(method);
+        }
     };
 
     if (dBusMap.propertyType == "uint8_t")
@@ -294,6 +341,24 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
     else if (dBusMap.propertyType == "bool")
     {
         std::variant<bool> v = std::get<bool>(value);
+        if (dBusMap.objectPath ==
+                "/xyz/openbmc_project/network/hypervisor/eth0/ipv4/addr0" ||
+            dBusMap.objectPath ==
+                "/xyz/openbmc_project/network/hypervisor/eth1/ipv4/addr0")
+        {
+            std::cout << " value : " << std::get<bool>(value);
+        }
+        if (strstr(dBusMap.objectPath.c_str(), "dimm") &&
+            (dBusMap.interface ==
+             "xyz.openbmc_project.State.Decorator.OperationalStatus"))
+        {
+            if (!std::get<bool>(value))
+            {
+                std::cerr << "Guard event on DIMM : [ "
+                          << dBusMap.objectPath.c_str() << " ] \n";
+            }
+        }
+
         setDbusValue(v);
     }
     else if (dBusMap.propertyType == "int16_t")
@@ -338,6 +403,7 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
     }
     else
     {
+        std::cerr << "Property Type is:" << dBusMap.propertyType << std::endl;
         throw std::invalid_argument("UnSpported Dbus Type");
     }
 }
@@ -354,6 +420,19 @@ PropertyValue DBusHandler::getDbusPropertyVariant(
     auto reply = bus.call(method);
     reply.read(value);
     return value;
+}
+
+ObjectValueTree DBusHandler::getManagedObj(const char* service,
+                                           const char* rootPath)
+{
+    ObjectValueTree objects;
+    auto& bus = DBusHandler::getBus();
+    auto method = bus.new_method_call(service, rootPath,
+                                      "org.freedesktop.DBus.ObjectManager",
+                                      "GetManagedObjects");
+    auto reply = bus.call(method);
+    reply.read(objects);
+    return objects;
 }
 
 PropertyValue jsonEntryToDbusVal(std::string_view type,
@@ -566,6 +645,77 @@ std::vector<std::string> split(std::string_view srcStr, std::string_view delim,
     return out;
 }
 
+std::string getBiosAttrValue(const std::string& dbusAttrName)
+{
+    constexpr auto biosConfigPath = "/xyz/openbmc_project/bios_config/manager";
+    constexpr auto biosConfigIntf = "xyz.openbmc_project.BIOSConfig.Manager";
+
+    std::string var1;
+    std::variant<std::string> var2;
+    std::variant<std::string> var3;
+
+    auto& bus = DBusHandler::getBus();
+    try
+    {
+        auto service = pldm::utils::DBusHandler().getService(biosConfigPath,
+                                                             biosConfigIntf);
+        auto method = bus.new_method_call(
+            service.c_str(), biosConfigPath,
+            "xyz.openbmc_project.BIOSConfig.Manager", "GetAttribute");
+        method.append(dbusAttrName);
+        auto reply = bus.call(method);
+        reply.read(var1, var2, var3);
+    }
+    catch (const sdbusplus::exception::SdBusError& e)
+    {
+        std::cout << "Error getting the bios attribute"
+                  << "ERROR=" << e.what() << "ATTRIBUTE=" << dbusAttrName
+                  << std::endl;
+        return {};
+    }
+
+    return std::get<std::string>(var2);
+}
+
+void setBiosAttr(const BiosAttributeList& biosAttrList)
+{
+    static constexpr auto SYSTEMD_PROPERTY_INTERFACE =
+        "org.freedesktop.DBus.Properties";
+    constexpr auto biosConfigPath = "/xyz/openbmc_project/bios_config/manager";
+    constexpr auto biosConfigIntf = "xyz.openbmc_project.BIOSConfig.Manager";
+
+    constexpr auto dbusAttrType =
+        "xyz.openbmc_project.BIOSConfig.Manager.AttributeType.Enumeration";
+    for (const auto& [dbusAttrName, biosAttrStr] : biosAttrList)
+    {
+        using PendingAttributesType = std::vector<std::pair<
+            std::string, std::tuple<std::string, std::variant<std::string>>>>;
+        PendingAttributesType pendingAttributes;
+        pendingAttributes.emplace_back(std::make_pair(
+            dbusAttrName, std::make_tuple(dbusAttrType, biosAttrStr)));
+
+        auto& bus = DBusHandler::getBus();
+        try
+        {
+            auto service = pldm::utils::DBusHandler().getService(
+                biosConfigPath, biosConfigIntf);
+            auto method =
+                bus.new_method_call(service.c_str(), biosConfigPath,
+                                    SYSTEMD_PROPERTY_INTERFACE, "Set");
+            method.append(
+                biosConfigIntf, "PendingAttributes",
+                std::variant<PendingAttributesType>(pendingAttributes));
+            bus.call_noreply(method);
+        }
+        catch (const sdbusplus::exception::SdBusError& e)
+        {
+            std::cout << "Error setting the bios attribute"
+                      << "ERROR=" << e.what() << "ATTRIBUTE=" << dbusAttrName
+                      << "ATTRIBUTE VALUE=" << biosAttrStr << std::endl;
+            return;
+        }
+    }
+}
 std::string getCurrentSystemTime()
 {
     using namespace std::chrono;
@@ -578,6 +728,182 @@ std::string getCurrentSystemTime()
     ss << std::put_time(std::localtime(&tt), "%F %Z %T.")
        << std::to_string(ms.count());
     return ss.str();
+}
+
+std::vector<std::vector<pldm::pdr::Pdr_t>>
+    getStateEffecterPDRsByType(uint8_t /*tid*/, uint16_t entityType,
+                               const pldm_pdr* repo)
+{
+    uint8_t* outData = nullptr;
+    uint32_t size{};
+    const pldm_pdr_record* record{};
+    std::vector<std::vector<uint8_t>> pdrs;
+
+    do
+    {
+        record = pldm_pdr_find_record_by_type(repo, PLDM_STATE_EFFECTER_PDR,
+                                              record, &outData, &size);
+
+        if (record)
+        {
+            auto pdr = reinterpret_cast<pldm_state_effecter_pdr*>(outData);
+            if (pdr)
+            {
+                auto compositeEffecterCount = pdr->composite_effecter_count;
+                auto possible_states_start = pdr->possible_states;
+
+                for (auto effecters = 0x00; effecters < compositeEffecterCount;
+                     effecters++)
+                {
+                    auto possibleStates =
+                        reinterpret_cast<state_effecter_possible_states*>(
+                            possible_states_start);
+                    auto setId = possibleStates->state_set_id;
+                    auto possibleStateSize =
+                        possibleStates->possible_states_size;
+
+                    if (pdr->entity_type == entityType)
+                    {
+                        std::vector<uint8_t> effecter_pdr(&outData[0],
+                                                          &outData[size]);
+                        pdrs.emplace_back(std::move(effecter_pdr));
+                        break;
+                    }
+                    possible_states_start += possibleStateSize + sizeof(setId) +
+                                             sizeof(possibleStateSize);
+                }
+            }
+        }
+    } while (record);
+
+    return pdrs;
+}
+
+std::vector<std::vector<pldm::pdr::Pdr_t>>
+    getStateSensorPDRsByType(uint8_t /*tid*/, uint16_t entityType,
+                             const pldm_pdr* repo)
+{
+    uint8_t* outData = nullptr;
+    uint32_t size{};
+    const pldm_pdr_record* record{};
+    std::vector<std::vector<uint8_t>> pdrs;
+    do
+    {
+        record = pldm_pdr_find_record_by_type(repo, PLDM_STATE_SENSOR_PDR,
+                                              record, &outData, &size);
+
+        if (record)
+        {
+            auto pdr = reinterpret_cast<pldm_state_sensor_pdr*>(outData);
+            if (pdr)
+            {
+                auto compositeSensorCount = pdr->composite_sensor_count;
+                auto possible_states_start = pdr->possible_states;
+
+                for (auto sensors = 0x00; sensors < compositeSensorCount;
+                     sensors++)
+                {
+                    auto possibleStates =
+                        reinterpret_cast<state_sensor_possible_states*>(
+                            possible_states_start);
+                    auto setId = possibleStates->state_set_id;
+                    auto possibleStateSize =
+                        possibleStates->possible_states_size;
+
+                    if (pdr->entity_type == entityType)
+                    {
+                        std::vector<uint8_t> sensor_pdr(&outData[0],
+                                                        &outData[size]);
+                        pdrs.emplace_back(std::move(sensor_pdr));
+                        break;
+                    }
+                    possible_states_start += possibleStateSize + sizeof(setId) +
+                                             sizeof(possibleStateSize);
+                }
+            }
+        }
+
+    } while (record);
+
+    return pdrs;
+}
+
+std::vector<pldm::pdr::EffecterID>
+    findEffecterIds(const pldm_pdr* pdrRepo, uint8_t tid, uint16_t entityType,
+                    uint16_t entityInstance, uint16_t containerId)
+{
+    std::vector<uint16_t> effecterIDs;
+
+    auto pdrs = getStateEffecterPDRsByType(tid, entityType, pdrRepo);
+    for (const auto& pdr : pdrs)
+    {
+        auto effecterPdr =
+            reinterpret_cast<const pldm_state_effecter_pdr*>(pdr.data());
+        if (effecterPdr)
+        {
+            auto compositeEffecterCount = effecterPdr->composite_effecter_count;
+            auto possible_states_start = effecterPdr->possible_states;
+
+            for (auto effecters = 0x00; effecters < compositeEffecterCount;
+                 effecters++)
+            {
+                auto possibleStates =
+                    reinterpret_cast<const state_effecter_possible_states*>(
+                        possible_states_start);
+                auto possibleStateSize = possibleStates->possible_states_size;
+                if (entityType == effecterPdr->entity_type &&
+                    entityInstance == effecterPdr->entity_instance &&
+                    containerId == effecterPdr->container_id)
+                {
+                    uint16_t id = effecterPdr->effecter_id;
+                    effecterIDs.emplace_back(std::move(id));
+                }
+                possible_states_start += possibleStateSize +
+                                         sizeof(possibleStates->state_set_id) +
+                                         sizeof(possibleStateSize);
+            }
+        }
+    }
+    return effecterIDs;
+}
+
+std::vector<pldm::pdr::SensorID> findSensorIds(const pldm_pdr* pdrRepo,
+                                               uint8_t tid, uint16_t entityType,
+                                               uint16_t entityInstance,
+                                               uint16_t containerId)
+{
+    std::vector<uint16_t> sensorIDs;
+
+    auto pdrs = getStateSensorPDRsByType(tid, entityType, pdrRepo);
+    for (const auto& pdr : pdrs)
+    {
+        auto sensorPdr =
+            reinterpret_cast<const pldm_state_sensor_pdr*>(pdr.data());
+        if (sensorPdr)
+        {
+            auto compositeSensorCount = sensorPdr->composite_sensor_count;
+            auto possible_states_start = sensorPdr->possible_states;
+
+            for (auto sensors = 0x00; sensors < compositeSensorCount; sensors++)
+            {
+                auto possibleStates =
+                    reinterpret_cast<const state_sensor_possible_states*>(
+                        possible_states_start);
+                auto possibleStateSize = possibleStates->possible_states_size;
+                if (entityType == sensorPdr->entity_type &&
+                    entityInstance == sensorPdr->entity_instance &&
+                    containerId == sensorPdr->container_id)
+                {
+                    uint16_t id = sensorPdr->sensor_id;
+                    sensorIDs.emplace_back(std::move(id));
+                }
+                possible_states_start += possibleStateSize +
+                                         sizeof(possibleStates->state_set_id) +
+                                         sizeof(possibleStateSize);
+            }
+        }
+    }
+    return sensorIDs;
 }
 
 bool checkForFruPresence(const std::string& objPath)

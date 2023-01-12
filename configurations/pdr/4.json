@@ -3,9 +3,58 @@
     {
     "pdrType" : 4,
     "entries" : [{
-        "type" : 91,
-        "instance" : 0,
+        "type" : 121,
+        "instance" : 1,
         "container" : 1,
+        "parent_entity_path" : "/xyz/openbmc_project/inventory/system",
+        "sensors" : [{
+            "set" : {
+                "id" : 259,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/org/freedesktop/UPower/devices/ups_hiddev0",
+                "interface": "org.freedesktop.UPower.Device",
+                "property_name": "IsPresent",
+                "property_type": "bool",
+                "property_values" : [false, true]
+            }
+        },
+        {
+            "set" : {
+                "id" : 261,
+                "size" : 1,
+                "states" : [1,4,5]
+            },
+            "dbus" : {
+                "path": "/org/freedesktop/UPower/devices/ups_hiddev0",
+                "interface": "org.freedesktop.UPower.Device",
+                "property_name": "State",
+                "property_type": "uint32_t",
+                "property_values" : [4, 1, 2]
+            }
+        },
+        {
+            "set" : {
+                "id" : 262,
+                "size" : 1,
+                "states" : [1,3]
+            },
+            "dbus" : {
+                "path": "/org/freedesktop/UPower/devices/ups_hiddev0",
+                "interface": "org.freedesktop.UPower.Device",
+                "property_name": "BatteryLevel",
+                "property_type": "uint32_t",
+                "property_values" : [8, 3]
+            }
+        }]
+    },
+    {
+        "type" : 91,
+        "instance" : 1,
+        "container" : 2,
+        "parent_entity_path" : "/xyz/openbmc_project/inventory/system/chassis",
         "sensors" : [{
             "set" : {
                 "id" : 21,
@@ -23,8 +72,9 @@
     },
     {
         "type" : 5,
-        "instance" : 0,
-        "container" : 1,
+        "instance" : 1,
+        "container" : 2,
+        "parent_entity_path" : "/xyz/openbmc_project/inventory/system/chassis",
         "sensors" : [{
             "set" : {
                 "id" : 1,
@@ -42,8 +92,9 @@
     },
     {
         "type" : 5,
-        "instance" : 0,
-        "container" : 1,
+        "instance" : 2,
+        "container" : 2,
+        "parent_entity_path" : "/xyz/openbmc_project/inventory/system/chassis",
         "sensors" : [{
             "set" : {
                 "id" : 1,
@@ -54,6 +105,46 @@
                 "path": "/xyz/openbmc_project/sensors/temperature/Ambient_Virtual_Temp",
                 "interface": "xyz.openbmc_project.Sensor.Threshold.SoftShutdown",
                 "property_name": "SoftShutdownAlarmHigh",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 19,
+        "instance" : 1,
+        "container" : 1,
+        "parent_entity_path" : "/xyz/openbmc_project/inventory/system",
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/partition_system_attention_indicator",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+     {
+        "type" : 19,
+        "instance" : 2,
+        "container" : 1,
+        "parent_entity_path" : "/xyz/openbmc_project/inventory/system",
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/platform_system_attention_indicator",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
                 "property_type": "bool",
                 "property_values" : [false, true]
              }

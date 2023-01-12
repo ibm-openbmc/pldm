@@ -10,7 +10,6 @@ namespace responder
 {
 namespace bios
 {
-
 BIOSIntegerAttribute::BIOSIntegerAttribute(const Json& entry,
                                            DBusHandler* const dbusHandler) :
     BIOSAttribute(entry, dbusHandler)
@@ -132,6 +131,15 @@ void BIOSIntegerAttribute::constructEntry(
     else
     {
         currentValue = getAttrValue();
+    }
+
+    if (currentValue < (int64_t)integerInfo.lowerBound ||
+        currentValue > (int64_t)integerInfo.upperBound)
+    {
+        std::cerr << "Setting to default value " << integerInfo.defaultValue
+                  << " For Attribute " << name
+                  << " Received value: " << currentValue << std::endl;
+        currentValue = integerInfo.defaultValue;
     }
 
     table::attribute_value::constructIntegerEntry(attrValueTable, attrHandle,

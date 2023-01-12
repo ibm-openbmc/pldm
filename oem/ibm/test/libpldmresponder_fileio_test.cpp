@@ -88,13 +88,10 @@ class TestFileTable : public testing::Test
 
 namespace pldm
 {
-
 namespace responder
 {
-
 namespace dma
 {
-
 class MockDMA
 {
   public:

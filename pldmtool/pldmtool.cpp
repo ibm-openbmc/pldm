@@ -10,10 +10,8 @@
 
 namespace pldmtool
 {
-
 namespace raw
 {
-
 using namespace pldmtool::helper;
 
 namespace

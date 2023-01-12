@@ -9,12 +9,10 @@
 
 namespace pldm
 {
-
 using Command = uint8_t;
 
 namespace responder
 {
-
 using Response = std::vector<uint8_t>;
 class CmdHandler;
 using HandlerFunc =

@@ -14,7 +14,6 @@ namespace pldm
 {
 namespace dbus_api
 {
-
 using PdrIntf = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::PLDM::server::PDR>;
 

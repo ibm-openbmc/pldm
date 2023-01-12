@@ -13,7 +13,6 @@ namespace bios
 {
 namespace utils
 {
-
 using Table = std::vector<uint8_t>;
 
 /** @class BIOSTableIter

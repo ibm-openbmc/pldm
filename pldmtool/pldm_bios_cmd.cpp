@@ -12,13 +12,10 @@
 
 namespace pldmtool
 {
-
 namespace bios
 {
-
 namespace
 {
-
 using namespace pldmtool::helper;
 using namespace pldm::bios::utils;
 using namespace pldm::utils;

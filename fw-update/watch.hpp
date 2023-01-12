@@ -7,10 +7,8 @@
 
 namespace pldm
 {
-
 namespace fw_update
 {
-
 /** @class Watch
  *
  *  @brief Adds inotify watch on software image upload directory

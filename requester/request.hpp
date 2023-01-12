@@ -18,10 +18,8 @@
 
 namespace pldm
 {
-
 namespace requester
 {
-
 /** @class RequestRetryTimer
  *
  *  The abstract base class for implementing the PLDM request retry logic. This
@@ -144,17 +142,17 @@ class Request final : public RequestRetryTimer
      *
      *  @param[in] fd - fd of the MCTP communication socket
      *  @param[in] eid - endpoint ID of the remote MCTP endpoint
-     *  @param[in] currrentSendbuffSize - the current send buffer size
      *  @param[in] event - reference to PLDM daemon's main event loop
      *  @param[in] requestMsg - PLDM request message
      *  @param[in] numRetries - number of request retries
      *  @param[in] timeout - time to wait between each retry in milliseconds
+     *  @param[in] currrentSendbuffSize - the current send buffer size
      *  @param[in] verbose - verbose tracing flag
      */
     explicit Request(int fd, mctp_eid_t eid, sdeventplus::Event& event,
                      pldm::Request&& requestMsg, uint8_t numRetries,
-                     std::chrono::milliseconds timeout, int currentSendbuffSize,
-                     bool verbose) :
+                     std::chrono::milliseconds timeout,
+                     size_t currentSendbuffSize, bool verbose) :
         RequestRetryTimer(event, numRetries, timeout),
         fd(fd), eid(eid), requestMsg(std::move(requestMsg)),
         currentSendbuffSize(currentSendbuffSize), verbose(verbose)
@@ -177,10 +175,11 @@ class Request final : public RequestRetryTimer
         {
             pldm::utils::printBuffer(pldm::utils::Tx, requestMsg);
         }
+
         if (currentSendbuffSize >= 0 &&
             (size_t)currentSendbuffSize < requestMsg.size())
         {
-            int oldSendbuffSize = currentSendbuffSize;
+            size_t oldSendbuffSize = currentSendbuffSize;
             currentSendbuffSize = requestMsg.size();
             int res =
                 setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &currentSendbuffSize,

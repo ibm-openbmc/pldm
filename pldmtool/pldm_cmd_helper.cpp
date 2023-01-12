@@ -15,7 +15,6 @@ using namespace pldm::utils;
 
 namespace pldmtool
 {
-
 namespace helper
 {
 /*

@@ -11,7 +11,6 @@ namespace responder
 {
 namespace platform
 {
-
 /** @brief To send BIOS attribute update event
  *
  *  When the attribute value changes for any BIOS attribute, then

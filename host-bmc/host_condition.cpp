@@ -4,7 +4,6 @@ namespace pldm
 {
 namespace dbus_api
 {
-
 Host::FirmwareCondition Host::currentFirmwareCondition() const
 {
     bool hostRunning = false;

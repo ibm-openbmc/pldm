@@ -4,10 +4,8 @@
 
 namespace pldm
 {
-
 namespace responder
 {
-
 int ProgressCodeHandler::setRawBootProperty(
     const std::tuple<uint64_t, std::vector<uint8_t>>& progressCodeBuffer)
 {

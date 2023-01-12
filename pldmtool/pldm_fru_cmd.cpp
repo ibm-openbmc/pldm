@@ -13,13 +13,10 @@
 
 namespace pldmtool
 {
-
 namespace fru
 {
-
 namespace
 {
-
 using namespace pldmtool::helper;
 
 std::vector<std::unique_ptr<CommandInterface>> commands;

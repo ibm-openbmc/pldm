@@ -4,10 +4,8 @@
 
 namespace pldmtool
 {
-
 namespace oem_ibm
 {
-
 void registerCommand(CLI::App& app);
 
 } // namespace oem_ibm

@@ -26,15 +26,15 @@ namespace responder
 {
 namespace platform
 {
+using generatePDR = std::function<void(
+    const pldm::utils::DBusHandler& dBusIntf, const pldm::utils::Json& json,
+    pdr_utils::RepoInterface& repo,
+    pldm_entity_association_tree* bmcEntityTree)>;
 
-using generatePDR = std::function<void(const pldm::utils::DBusHandler& dBusIntf,
-                                       const pldm::utils::Json& json,
-                                       pdr_utils::RepoInterface& repo)>;
-
-using EffecterId = uint16_t;
+/*using EffecterId = uint16_t;
 using DbusObjMaps =
     std::map<EffecterId,
-             std::tuple<pdr_utils::DbusMappings, pdr_utils::DbusValMaps>>;
+             std::tuple<pdr_utils::DbusMappings, pdr_utils::DbusValMaps>>;*/
 using DbusPath = std::string;
 using EffecterObjs = std::vector<DbusPath>;
 using EventType = uint8_t;
@@ -49,23 +49,25 @@ class Handler : public CmdHandler
 {
   public:
     Handler(const pldm::utils::DBusHandler* dBusIntf,
-            const std::string& pdrJsonsDir, pldm_pdr* repo,
+            const fs::path& pdrJsonDir, pldm_pdr* repo,
             HostPDRHandler* hostPDRHandler,
             pldm::state_sensor::DbusToPLDMEvent* dbusToPLDMEventHandler,
             fru::Handler* fruHandler,
+            pldm_entity_association_tree* bmcEntityTree,
             pldm::responder::oem_platform::Handler* oemPlatformHandler,
             sdeventplus::Event& event, bool buildPDRLazily = false,
             const std::optional<EventMap>& addOnHandlersMap = std::nullopt) :
         pdrRepo(repo),
         hostPDRHandler(hostPDRHandler),
         dbusToPLDMEventHandler(dbusToPLDMEventHandler), fruHandler(fruHandler),
-        dBusIntf(dBusIntf), oemPlatformHandler(oemPlatformHandler),
-        event(event), pdrJsonsDir(pdrJsonsDir), pdrCreated(false)
+        bmcEntityTree(bmcEntityTree), dBusIntf(dBusIntf),
+        oemPlatformHandler(oemPlatformHandler), event(event),
+        pdrJsonDir(pdrJsonDir), pdrCreated(false), pdrJsonsDir({pdrJsonDir})
     {
         if (!buildPDRLazily)
         {
             generateTerminusLocatorPDR(pdrRepo);
-            generate(*dBusIntf, pdrJsonsDir, pdrRepo);
+            generate(*dBusIntf, pdrJsonsDir, pdrRepo, bmcEntityTree);
             pdrCreated = true;
         }
 
@@ -184,8 +186,9 @@ class Handler : public CmdHandler
      *  @param[in] repo - instance of concrete implementation of Repo
      */
     void generate(const pldm::utils::DBusHandler& dBusIntf,
-                  const std::string& dir,
-                  pldm::responder::pdr_utils::Repo& repo);
+                  const std::vector<fs::path>& dir,
+                  pldm::responder::pdr_utils::Repo& repo,
+                  pldm_entity_association_tree* bmcEntityTree);
 
     /** @brief Parse PDR JSONs and build state effecter PDR repository
      *
@@ -193,7 +196,8 @@ class Handler : public CmdHandler
      *  @param[in] repo - instance of state effecter implementation of Repo
      */
     void generateStateEffecterRepo(const pldm::utils::Json& json,
-                                   pldm::responder::pdr_utils::Repo& repo);
+                                   pldm::responder::pdr_utils::Repo& repo,
+                                   pldm_entity_association_tree* bmcEntityTree);
 
     /** @brief map of PLDM event type to EventHandlers
      *
@@ -440,6 +444,13 @@ class Handler : public CmdHandler
         return fruHandler->getAssociateEntityMap();
     }
 
+    inline void updateSensorCache(pldm::pdr::SensorID sensorId,
+                                  size_t sensorRearm, uint8_t value)
+    {
+        dbusToPLDMEventHandler->updateSensorCacheMaps(sensorId, sensorRearm,
+                                                      value);
+    }
+
     /** @brief process the actions that needs to be performed after a GetPDR
      *         call is received
      *  @param[in] source - sdeventplus event source
@@ -450,18 +461,44 @@ class Handler : public CmdHandler
     pdr_utils::Repo pdrRepo;
     uint16_t nextEffecterId{};
     uint16_t nextSensorId{};
-    DbusObjMaps effecterDbusObjMaps{};
-    DbusObjMaps sensorDbusObjMaps{};
+    pdr_utils::DbusObjMaps effecterDbusObjMaps{};
+    pdr_utils::DbusObjMaps sensorDbusObjMaps{};
     HostPDRHandler* hostPDRHandler;
     pldm::state_sensor::DbusToPLDMEvent* dbusToPLDMEventHandler;
     fru::Handler* fruHandler;
+    pldm_entity_association_tree* bmcEntityTree;
     const pldm::utils::DBusHandler* dBusIntf;
     pldm::responder::oem_platform::Handler* oemPlatformHandler;
     sdeventplus::Event& event;
-    std::string pdrJsonsDir;
+    fs::path pdrJsonDir;
     bool pdrCreated;
+    std::vector<fs::path> pdrJsonsDir;
     std::unique_ptr<sdeventplus::source::Defer> deferredGetPDREvent;
+    bool isFirstGetPDR = true;
 };
+
+/** @brief Function to check if the effecter falls in OEM range
+ *         An effecter is considered to be oem if either of entity
+ *         type or effecter semantic id or both falls in oem range
+ *
+ *  @param[in] handler - the interface object
+ *  @param[in] effecterId - effecter id
+ *  @param[out] entityType - entity type
+ *  @param[out] entityInstance - entity instance number
+ *  @param[out] effecterDataSize - effecter value size
+ *  @param[out] effecterSemanticId - effecter semantic id
+ *  @param[out] effecterOffset - offset of the effecter
+ *  @param[out] effecterResolution - resolution of the effecter
+ *
+ *  @return true if the effecter is OEM. All out parameters are invalid
+ *                  for a non OEM effecter
+ */
+bool isOemNumericEffecter(Handler& handler, uint16_t effecterId,
+                          uint16_t& entityType, uint16_t& entityInstance,
+                          uint8_t& effecterDataSize,
+                          uint16_t& effecterSemanticId,
+                          real32_t& effecterOffset,
+                          real32_t& effecterResolution);
 
 /** @brief Function to check if a sensor falls in OEM range
  *         A sensor is considered to be oem if either of entity
@@ -481,7 +518,7 @@ class Handler : public CmdHandler
 bool isOemStateSensor(Handler& handler, uint16_t sensorId,
                       uint8_t sensorRearmCount, uint8_t& compSensorCnt,
                       uint16_t& entityType, uint16_t& entityInstance,
-                      uint16_t& stateSetId);
+                      uint16_t& stateSetId, uint16_t& containerId);
 
 /** @brief Function to check if an effecter falls in OEM range
  *         An effecter is considered to be oem if either of entity

@@ -9,10 +9,8 @@
 
 namespace pldm
 {
-
 namespace fw_update
 {
-
 void InventoryManager::discoverFDs(const std::vector<mctp_eid_t>& eids)
 {
     for (const auto& eid : eids)

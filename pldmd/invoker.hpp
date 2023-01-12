@@ -9,12 +9,10 @@
 
 namespace pldm
 {
-
 using Type = uint8_t;
 
 namespace responder
 {
-
 class Invoker
 {
   public:

@@ -24,10 +24,8 @@
 
 namespace pldm
 {
-
 namespace requester
 {
-
 /** @struct RequestKey
  *
  *  RequestKey uniquely identifies the PLDM request message to match it with the

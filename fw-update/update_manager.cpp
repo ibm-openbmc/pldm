@@ -12,10 +12,8 @@
 
 namespace pldm
 {
-
 namespace fw_update
 {
-
 namespace fs = std::filesystem;
 namespace software = sdbusplus::xyz::openbmc_project::Software::server;
 

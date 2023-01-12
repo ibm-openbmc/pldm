@@ -11,10 +11,8 @@
 
 namespace pldm
 {
-
 namespace fw_update
 {
-
 class UpdateManager;
 
 /** @class DeviceUpdater

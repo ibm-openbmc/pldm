@@ -14,7 +14,6 @@ namespace pldm
 {
 namespace dbus_api
 {
-
 std::vector<std::vector<uint8_t>> Pdr::findStateEffecterPDR(uint8_t tid,
                                                             uint16_t entityID,
                                                             uint16_t stateSetId)

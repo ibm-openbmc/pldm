@@ -13,7 +13,6 @@
 
 namespace pldm
 {
-
 MctpDiscovery::MctpDiscovery(sdbusplus::bus_t& bus,
                              fw_update::Manager* fwManager) :
     bus(bus),

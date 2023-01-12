@@ -13,13 +13,10 @@
 
 namespace pldmtool
 {
-
 namespace base
 {
-
 namespace
 {
-
 using namespace pldmtool::helper;
 
 std::vector<std::unique_ptr<CommandInterface>> commands;

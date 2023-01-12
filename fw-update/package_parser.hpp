@@ -12,10 +12,8 @@
 
 namespace pldm
 {
-
 namespace fw_update
 {
-
 /** @class PackageParser
  *
  *  PackageParser is the abstract base class for parsing the PLDM firmware

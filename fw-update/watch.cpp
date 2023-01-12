@@ -11,10 +11,8 @@
 
 namespace pldm
 {
-
 namespace fw_update
 {
-
 // using namespace phosphor::logging;
 using namespace std::string_literals;
 namespace fs = std::filesystem;

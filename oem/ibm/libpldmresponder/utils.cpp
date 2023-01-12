@@ -2,19 +2,53 @@
 
 #include "libpldm/base.h"
 
+#include "common/utils.hpp"
+#include "host-bmc/dbus/custom_dbus.hpp"
+
+#include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
 
+#include <xyz/openbmc_project/Common/error.hpp>
+
+#include <exception>
+#include <fstream>
 #include <iostream>
+#include <mutex>
 
 namespace pldm
 {
+using namespace pldm::dbus;
 namespace responder
 {
+std::atomic<SocketWriteStatus> socketWriteStatus = Free;
+std::mutex lockMutex;
+
 namespace utils
 {
+static constexpr auto curLicFilePath =
+    "/var/lib/pldm/license/current_license.bin";
+static constexpr auto newLicFilePath = "/var/lib/pldm/license/new_license.bin";
+static constexpr auto newLicJsonFilePath =
+    "/var/lib/pldm/license/new_license.json";
+static constexpr auto licEntryPath = "/xyz/openbmc_project/license/entry";
+static constexpr uint8_t createLic = 1;
+static constexpr uint8_t clearLicStatus = 2;
+
+using InternalFailure =
+    sdbusplus::xyz::openbmc_project::Common::Error::InternalFailure;
+
+using LicJsonObjMap = std::map<fs::path, nlohmann::json>;
+LicJsonObjMap licJsonMap;
+using PropertyValue =
+    std::variant<bool, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t,
+                 uint64_t, double, std::string, std::vector<uint8_t>>;
+using PropertyMap = std::map<std::string, PropertyValue>;
+using InterfaceMap = std::map<std::string, PropertyMap>;
+using ObjectValueTree = std::map<sdbusplus::message::object_path, InterfaceMap>;
+
 int setupUnixSocket(const std::string& socketInterface)
 {
     int sock;
@@ -38,7 +72,7 @@ int setupUnixSocket(const std::string& socketInterface)
 
     if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) == -1)
     {
-        std::cerr << "setupUnixSocket: bind() call failed with errno " << errno
+        std::cerr << "setupUnixSocket: bind() call failed  with errno " << errno
                   << std::endl;
         close(sock);
         return -1;
@@ -85,8 +119,16 @@ int setupUnixSocket(const std::string& socketInterface)
     return fd;
 }
 
-int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
+void writeToUnixSocket(const int sock, const char* buf,
+                       const uint64_t blockSize)
 {
+    const std::lock_guard<std::mutex> lock(lockMutex);
+    if (socketWriteStatus == Error)
+    {
+        munmap((void*)buf, blockSize);
+        return;
+    }
+    socketWriteStatus = InProgress;
     uint64_t i;
     int nwrite = 0;
 
@@ -107,7 +149,9 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
             std::cerr << "writeToUnixSocket: select call failed " << errno
                       << std::endl;
             close(sock);
-            return -1;
+            socketWriteStatus = Error;
+            munmap((void*)buf, blockSize);
+            return;
         }
         if (retval == 0)
         {
@@ -117,6 +161,7 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
         if ((retval > 0) && (FD_ISSET(sock, &wfd)))
         {
             nwrite = write(sock, buf + i, blockSize - i);
+
             if (nwrite < 0)
             {
                 if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
@@ -127,9 +172,12 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
                     nwrite = 0;
                     continue;
                 }
-                std::cerr << "writeToUnixSocket: Failed to write" << std::endl;
+                std::cerr << "writeToUnixSocket: Failed to write " << errno
+                          << std::endl;
                 close(sock);
-                return -1;
+                socketWriteStatus = Error;
+                munmap((void*)buf, blockSize);
+                return;
             }
         }
         else
@@ -137,7 +185,404 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
             nwrite = 0;
         }
     }
-    return 0;
+
+    munmap((void*)buf, blockSize);
+    socketWriteStatus = Completed;
+    return;
+}
+
+Json convertBinFileToJson(const fs::path& path)
+{
+    std::ifstream file(path, std::ios::in | std::ios::binary);
+    std::streampos fileSize;
+
+    // Get the file size
+    file.seekg(0, std::ios::end);
+    fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    // Read the data into vector from file and convert to json object
+    std::vector<uint8_t> vJson(fileSize);
+    file.read((char*)&vJson[0], fileSize);
+    return Json::from_bson(vJson);
+}
+
+void convertJsonToBinaryFile(const Json& jsonData, const fs::path& path)
+{
+    // Covert the json data to binary format and copy to vector
+    std::vector<uint8_t> vJson = {};
+    vJson = Json::to_bson(jsonData);
+
+    // Copy the vector to file
+    std::ofstream licout(path, std::ios::out | std::ios::binary);
+    size_t size = vJson.size();
+    licout.write(reinterpret_cast<char*>(&vJson[0]), size * sizeof(vJson[0]));
+}
+
+void clearLicenseStatus()
+{
+    if (!fs::exists(curLicFilePath))
+    {
+        return;
+    }
+
+    auto data = convertBinFileToJson(curLicFilePath);
+
+    const Json empty{};
+    const std::vector<Json> emptyList{};
+
+    auto entries = data.value("Licenses", emptyList);
+    fs::path path{licEntryPath};
+
+    for (const auto& entry : entries)
+    {
+        auto licId = entry.value("Id", empty);
+        fs::path l_path = path / licId;
+        licJsonMap.emplace(l_path, entry);
+    }
+
+    createOrUpdateLicenseDbusPaths(clearLicStatus);
+}
+
+int createOrUpdateLicenseDbusPaths(const uint8_t& flag)
+{
+    const Json empty{};
+    std::string authTypeAsNoOfDev = "NumberOfDevice";
+    struct tm tm;
+    time_t licTimeSinceEpoch = 0;
+
+    sdbusplus::com::ibm::License::Entry::server::LicenseEntry::Type licType =
+        sdbusplus::com::ibm::License::Entry::server::LicenseEntry::Type::
+            Prototype;
+    sdbusplus::com::ibm::License::Entry::server::LicenseEntry::AuthorizationType
+        licAuthType = sdbusplus::com::ibm::License::Entry::server::
+            LicenseEntry::AuthorizationType::Device;
+    for (auto const& [key, licJson] : licJsonMap)
+    {
+        auto licName = licJson.value("Name", empty);
+
+        auto type = licJson.value("Type", empty);
+        if (type == "Trial")
+        {
+            licType = sdbusplus::com::ibm::License::Entry::server::
+                LicenseEntry::Type::Trial;
+        }
+        else if (type == "Commercial")
+        {
+            licType = sdbusplus::com::ibm::License::Entry::server::
+                LicenseEntry::Type::Purchased;
+        }
+        else
+        {
+            licType = sdbusplus::com::ibm::License::Entry::server::
+                LicenseEntry::Type::Prototype;
+        }
+
+        auto authType = licJson.value("AuthType", empty);
+        if (authType == "NumberOfDevice")
+        {
+            licAuthType = sdbusplus::com::ibm::License::Entry::server::
+                LicenseEntry::AuthorizationType::Capacity;
+        }
+        else if (authType == "Unlimited")
+        {
+            licAuthType = sdbusplus::com::ibm::License::Entry::server::
+                LicenseEntry::AuthorizationType::Unlimited;
+        }
+        else
+        {
+            licAuthType = sdbusplus::com::ibm::License::Entry::server::
+                LicenseEntry::AuthorizationType::Device;
+        }
+
+        uint32_t licAuthDevNo = 0;
+        if (authType == authTypeAsNoOfDev)
+        {
+            licAuthDevNo = licJson.value("AuthDeviceNumber", 0);
+        }
+
+        auto licSerialNo = licJson.value("SerialNum", "");
+
+        auto expTime = licJson.value("ExpirationTime", "");
+        if (!expTime.empty())
+        {
+            memset(&tm, 0, sizeof(tm));
+            strptime(expTime.c_str(), "%Y-%m-%dT%H:%M:%SZ", &tm);
+            licTimeSinceEpoch = mktime(&tm);
+        }
+
+        CustomDBus::getCustomDBus().implementLicInterfaces(
+            key, licAuthDevNo, licName, licSerialNo, licTimeSinceEpoch, licType,
+            licAuthType);
+
+        auto status = licJson.value("Status", empty);
+
+        // License status is a single entry which needs to be mapped to
+        // OperationalStatus and Availability dbus interfaces
+        auto licOpStatus = false;
+        auto licAvailState = false;
+        if ((flag == clearLicStatus) || (status == "Unknown"))
+        {
+            licOpStatus = false;
+            licAvailState = false;
+        }
+        else if (status == "Enabled")
+        {
+            licOpStatus = true;
+            licAvailState = true;
+        }
+        else if (status == "Disabled")
+        {
+            licOpStatus = false;
+            licAvailState = true;
+        }
+
+        CustomDBus::getCustomDBus().setOperationalStatus(key, licOpStatus, "");
+        CustomDBus::getCustomDBus().setAvailabilityState(key, licAvailState);
+    }
+
+    return PLDM_SUCCESS;
+}
+
+int createOrUpdateLicenseObjs()
+{
+    bool l_curFilePresent = true;
+    const Json empty{};
+    const std::vector<Json> emptyList{};
+    std::ifstream jsonFileCurrent;
+    Json dataCurrent;
+    Json entries;
+
+    if (!fs::exists(curLicFilePath))
+    {
+        l_curFilePresent = false;
+    }
+
+    if (l_curFilePresent == true)
+    {
+        dataCurrent = convertBinFileToJson(curLicFilePath);
+    }
+
+    auto dataNew = convertBinFileToJson(newLicFilePath);
+
+    if (l_curFilePresent == true)
+    {
+        dataCurrent.merge_patch(dataNew);
+        convertJsonToBinaryFile(dataCurrent, curLicFilePath);
+        entries = dataCurrent.value("Licenses", emptyList);
+    }
+    else
+    {
+        convertJsonToBinaryFile(dataNew, curLicFilePath);
+        entries = dataNew.value("Licenses", emptyList);
+    }
+
+    fs::path path{licEntryPath};
+
+    for (const auto& entry : entries)
+    {
+        auto licId = entry.value("Id", empty);
+        fs::path l_path = path / licId;
+        licJsonMap.insert_or_assign(l_path, entry);
+    }
+
+    int rc = createOrUpdateLicenseDbusPaths(createLic);
+    if (rc == PLDM_SUCCESS)
+    {
+        fs::copy_file(newLicFilePath, curLicFilePath,
+                      fs::copy_options::overwrite_existing);
+
+        if (fs::exists(newLicFilePath))
+        {
+            fs::remove_all(newLicFilePath);
+        }
+
+        if (fs::exists(newLicJsonFilePath))
+        {
+            fs::remove_all(newLicJsonFilePath);
+        }
+    }
+
+    return rc;
+}
+
+bool checkIfIBMCableCard(const std::string& objPath)
+{
+    constexpr auto pcieAdapterModelInterface =
+        "xyz.openbmc_project.Inventory.Decorator.Asset";
+    constexpr auto modelProperty = "Model";
+
+    try
+    {
+        auto propVal = pldm::utils::DBusHandler().getDbusPropertyVariant(
+            objPath.c_str(), modelProperty, pcieAdapterModelInterface);
+        const auto& model = std::get<std::string>(propVal);
+        if (!model.empty())
+        {
+            return true;
+        }
+    }
+    catch (const sdbusplus::exception::SdBusError& e)
+    {
+        return false;
+    }
+    return false;
+}
+
+void findPortObjects(const std::string& cardObjPath,
+                     std::vector<std::string>& portObjects)
+{
+    static constexpr auto MAPPER_BUSNAME = "xyz.openbmc_project.ObjectMapper";
+    static constexpr auto MAPPER_PATH = "/xyz/openbmc_project/object_mapper";
+    static constexpr auto MAPPER_INTERFACE = "xyz.openbmc_project.ObjectMapper";
+    static constexpr auto portInterface =
+        "xyz.openbmc_project.Inventory.Item.Connector";
+
+    auto& bus = pldm::utils::DBusHandler::getBus();
+    try
+    {
+        auto method = bus.new_method_call(MAPPER_BUSNAME, MAPPER_PATH,
+                                          MAPPER_INTERFACE, "GetSubTreePaths");
+        method.append(cardObjPath);
+        method.append(0);
+        method.append(std::vector<std::string>({portInterface}));
+        auto reply = bus.call(method);
+        reply.read(portObjects);
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "no ports under card " << cardObjPath << "\n";
+    }
+}
+
+bool checkFruPresence(const char* objPath)
+{
+    // if we enter here with port, then we need to find the
+    // parent and see if the pcie card or the drive bp is present. if so then
+    // the port is considered as present. this is so because
+    // the ports do not have "Present" property
+    std::string pcieAdapter("pcie_card");
+    std::string portStr("cxp_");
+    std::string newObjPath = objPath;
+    bool isPresent = true;
+
+    if ((newObjPath.find(pcieAdapter) != std::string::npos) &&
+        !checkIfIBMCableCard(newObjPath))
+    {
+        return true; // industry std cards
+    }
+    else if (newObjPath.find(portStr) != std::string::npos)
+    {
+        newObjPath = pldm::utils::findParent(objPath);
+    }
+
+    // Phyp expects the FRU records for industry std cards to be always
+    // built, irrespective of presence
+
+    static constexpr auto presentInterface =
+        "xyz.openbmc_project.Inventory.Item";
+    static constexpr auto presentProperty = "Present";
+    try
+    {
+        auto propVal = pldm::utils::DBusHandler().getDbusPropertyVariant(
+            newObjPath.c_str(), presentProperty, presentInterface);
+        isPresent = std::get<bool>(propVal);
+    }
+    catch (const sdbusplus::exception::SdBusError& e)
+    {}
+    return isPresent;
+}
+
+std::pair<std::string, std::string>
+    getSlotAndAdapter(const std::string& portLocationCode)
+{
+    std::filesystem::path portPath =
+        pldm::responder::utils::getObjectPathByLocationCode(
+            portLocationCode, "xyz.openbmc_project.Inventory.Item.Connector");
+    return std::make_pair(portPath.parent_path().parent_path(),
+                          portPath.parent_path());
+}
+
+void hostPCIETopologyIntf(
+    uint8_t mctp_eid,
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser)
+{
+    CustomDBus::getCustomDBus().implementPcieTopologyInterface(
+        "/xyz/openbmc_project/pldm", mctp_eid, hostEffecterParser);
+}
+
+std::string getObjectPathByLocationCode(const std::string& locationCode,
+                                        const std::string& inventoryItemType)
+{
+    std::string locationIface(
+        "xyz.openbmc_project.Inventory.Decorator.LocationCode");
+
+    std::string path;
+    ObjectValueTree objects;
+    try
+    {
+        objects = pldm::utils::DBusHandler::getInventoryObjects();
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "Look up of inventory objects failed for location "
+                  << locationCode << std::endl;
+        return path;
+    }
+
+    for (const auto& objPath : objects)
+    {
+        InterfaceMap interfaces = objPath.second;
+        if (interfaces.contains(inventoryItemType) &&
+            interfaces.contains(locationIface))
+        {
+            PropertyMap properties = interfaces[locationIface];
+            if (properties.contains("LocationCode"))
+            {
+                if (get<std::string>(properties["LocationCode"]) ==
+                    locationCode)
+                {
+                    path = objPath.first.str;
+                    return path;
+                }
+            }
+        }
+    }
+    std::cerr << "Location not found " << locationCode << " for Item type "
+              << inventoryItemType << std::endl;
+    return path;
+}
+
+uint32_t getLinkResetInstanceNumber(std::string& path)
+{
+    uint32_t id = pldm::dbus::CustomDBus::getCustomDBus().getBusId(path);
+    return id;
+}
+
+void findSlotObjects(const std::string& boardObjPath,
+                     std::vector<std::string>& slotObjects)
+{
+    static constexpr auto MAPPER_BUSNAME = "xyz.openbmc_project.ObjectMapper";
+    static constexpr auto MAPPER_PATH = "/xyz/openbmc_project/object_mapper";
+    static constexpr auto MAPPER_INTERFACE = "xyz.openbmc_project.ObjectMapper";
+    static constexpr auto slotInterface =
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot";
+
+    auto& bus = pldm::utils::DBusHandler::getBus();
+    try
+    {
+        auto method = bus.new_method_call(MAPPER_BUSNAME, MAPPER_PATH,
+                                          MAPPER_INTERFACE, "GetSubTreePaths");
+        method.append(boardObjPath);
+        method.append(0);
+        method.append(std::vector<std::string>({slotInterface}));
+        auto reply = bus.call(method);
+        reply.read(slotObjects);
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << "no cec slots under motherboard" << boardObjPath << "\n";
+    }
 }
 
 } // namespace utils

@@ -7,10 +7,8 @@
 
 namespace pldm
 {
-
 namespace filetable
 {
-
 FileTable::FileTable(const std::string& fileTableConfigPath)
 {
     std::ifstream jsonFile(fileTableConfigPath);

@@ -9,10 +9,8 @@
 
 namespace pldm
 {
-
 namespace fw_update
 {
-
 void DeviceUpdater::startFwUpdateFlow()
 {
     auto instanceId = updateManager->requester.getInstanceId(eid);

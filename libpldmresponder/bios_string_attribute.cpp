@@ -14,7 +14,6 @@ namespace responder
 {
 namespace bios
 {
-
 BIOSStringAttribute::BIOSStringAttribute(const Json& entry,
                                          DBusHandler* const dbusHandler) :
     BIOSAttribute(entry, dbusHandler)
@@ -124,6 +123,14 @@ void BIOSStringAttribute::constructEntry(
     else
     {
         currStr = getAttrValue();
+    }
+
+    if (currStr.size() < stringInfo.minLength ||
+        currStr.size() > stringInfo.maxLength)
+    {
+        std::cerr << "Setting to default. Received string size "
+                  << currStr.size() << " For Attribute " << name << std::endl;
+        currStr = stringInfo.defString;
     }
 
     table::attribute_value::constructStringEntry(attrValueTable, attrHandle,

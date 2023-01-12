@@ -12,12 +12,10 @@
 #include <string>
 namespace pldmtool
 {
-
 namespace oem_ibm
 {
 namespace
 {
-
 using namespace pldmtool::helper;
 
 std::vector<std::unique_ptr<CommandInterface>> commands;

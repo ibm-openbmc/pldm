@@ -12,7 +12,6 @@ namespace pldm
 {
 namespace flightrecorder
 {
-
 using ReqOrResponse = bool;
 using FlightRecorderData = std::vector<uint8_t>;
 using FlightRecorderTimeStamp = std::string;

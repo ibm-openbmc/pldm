@@ -6,13 +6,10 @@
 
 namespace pldm
 {
-
 namespace responder
 {
-
 namespace pdr_numeric_effecter
 {
-
 using Json = nlohmann::json;
 
 static const Json empty{};
@@ -27,7 +24,8 @@ static const Json empty{};
 template <class DBusInterface, class Handler>
 void generateNumericEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
                                 Handler& handler,
-                                pdr_utils::RepoInterface& repo)
+                                pdr_utils::RepoInterface& repo,
+                                pldm_entity_association_tree* /*bmcEntityTree*/)
 {
     static const std::vector<Json> emptyList{};
     auto entries = json.value("entries", emptyList);
@@ -72,6 +70,13 @@ void generateNumericEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
                 pdr->entity_type = e.value("type", 0);
                 pdr->entity_instance = e.value("instance", 0);
                 pdr->container_id = e.value("container", 0);
+
+                // do not create the PDR when the FRU or the entity path is not
+                // present
+                if (!pdr->entity_type)
+                {
+                    continue;
+                }
             }
         }
         catch (const std::exception& ex)
@@ -106,28 +111,28 @@ void generateNumericEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
         switch (pdr->effecter_data_size)
         {
             case PLDM_EFFECTER_DATA_SIZE_UINT8:
-                pdr->max_settable.value_u8 = e.value("max_settable", 0);
-                pdr->min_settable.value_u8 = e.value("min_settable", 0);
+                pdr->max_settable.value_u8 = e.value("max_set_table", 0);
+                pdr->min_settable.value_u8 = e.value("min_set_table", 0);
                 break;
             case PLDM_EFFECTER_DATA_SIZE_SINT8:
-                pdr->max_settable.value_s8 = e.value("max_settable", 0);
-                pdr->min_settable.value_s8 = e.value("min_settable", 0);
+                pdr->max_settable.value_s8 = e.value("max_set_table", 0);
+                pdr->min_settable.value_s8 = e.value("min_set_table", 0);
                 break;
             case PLDM_EFFECTER_DATA_SIZE_UINT16:
-                pdr->max_settable.value_u16 = e.value("max_settable", 0);
-                pdr->min_settable.value_u16 = e.value("min_settable", 0);
+                pdr->max_settable.value_u16 = e.value("max_set_table", 0);
+                pdr->min_settable.value_u16 = e.value("min_set_table", 0);
                 break;
             case PLDM_EFFECTER_DATA_SIZE_SINT16:
-                pdr->max_settable.value_s16 = e.value("max_settable", 0);
-                pdr->min_settable.value_s16 = e.value("min_settable", 0);
+                pdr->max_settable.value_s16 = e.value("max_set_table", 0);
+                pdr->min_settable.value_s16 = e.value("min_set_table", 0);
                 break;
             case PLDM_EFFECTER_DATA_SIZE_UINT32:
-                pdr->max_settable.value_u32 = e.value("max_settable", 0);
-                pdr->min_settable.value_u32 = e.value("min_settable", 0);
+                pdr->max_settable.value_u32 = e.value("max_set_table", 0);
+                pdr->min_settable.value_u32 = e.value("min_set_table", 0);
                 break;
             case PLDM_EFFECTER_DATA_SIZE_SINT32:
-                pdr->max_settable.value_s32 = e.value("max_settable", 0);
-                pdr->min_settable.value_s32 = e.value("min_settable", 0);
+                pdr->max_settable.value_s32 = e.value("max_set_table", 0);
+                pdr->min_settable.value_s32 = e.value("min_set_table", 0);
                 break;
             default:
                 break;
@@ -210,8 +215,9 @@ void generateNumericEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "D-Bus object path does not exist, effecter ID: "
-                      << pdr->effecter_id << "\n";
+            std::cerr << "D-Bus object path " << objectPath
+                      << " does not exist, numeric effecter ID: "
+                      << pdr->effecter_id << " error : " << e.what() << "\n";
         }
         dbusMappings.emplace_back(std::move(dbusMapping));
 

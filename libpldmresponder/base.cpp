@@ -25,12 +25,10 @@
 
 namespace pldm
 {
-
 using Type = uint8_t;
 
 namespace responder
 {
-
 using Cmd = std::vector<uint8_t>;
 
 static const std::map<Type, Cmd> capabilities{
@@ -71,7 +69,6 @@ static const std::map<Type, ver32_t> versions{
 
 namespace base
 {
-
 Response Handler::getPLDMTypes(const pldm_msg* request,
                                size_t /*payloadLength*/)
 {
@@ -220,7 +217,8 @@ void Handler::processSetEventReceiver(
                       << " rc=" << rc << "cc=" << (unsigned)completionCode
                       << "\n";
             pldm::utils::reportError(
-                "xyz.openbmc_project.bmc.pldm.InternalFailure");
+                "xyz.openbmc_project.bmc.pldm.InternalFailure",
+                pldm::PelSeverity::ERROR);
         }
     };
     rc = handler->registerRequest(

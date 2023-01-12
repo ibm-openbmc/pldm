@@ -25,12 +25,10 @@ namespace pldm
 {
 namespace responder
 {
-
 using namespace sdbusplus::xyz::openbmc_project::Logging::server;
 
 namespace detail
 {
-
 /**
  * @brief Finds the Entry::Level value for the severity of the PEL
  *        passed in.

@@ -18,10 +18,8 @@
 
 namespace pldm
 {
-
 namespace fw_update
 {
-
 using namespace sdeventplus;
 using namespace sdeventplus::source;
 using namespace pldm::dbus_api;

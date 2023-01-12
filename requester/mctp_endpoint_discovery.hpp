@@ -6,7 +6,6 @@
 
 namespace pldm
 {
-
 class MctpDiscovery
 {
   public:

@@ -10,7 +10,6 @@ namespace pldm
 {
 namespace dbus_api
 {
-
 uint8_t Requester::getInstanceId(uint8_t eid)
 {
     if (ids.find(eid) == ids.end())

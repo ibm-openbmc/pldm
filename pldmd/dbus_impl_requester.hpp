@@ -12,7 +12,6 @@ namespace pldm
 {
 namespace dbus_api
 {
-
 using RequesterIntf = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::PLDM::server::Requester>;
 
