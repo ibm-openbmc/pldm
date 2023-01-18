@@ -2,17 +2,17 @@
 
 #include "file_io_by_type.hpp"
 
-#include "libpldm/base.h"
-#include "libpldm/file_io.h"
-
 #include "common/utils.hpp"
 #include "file_io_type_cert.hpp"
 #include "file_io_type_dump.hpp"
 #include "file_io_type_lid.hpp"
 #include "file_io_type_pel.hpp"
 #include "file_io_type_progress_src.hpp"
+#include "file_io_type_vpd.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
 
+#include <libpldm/base.h>
+#include <libpldm/file_io.h>
 #include <stdint.h>
 #include <unistd.h>
 
@@ -164,6 +164,10 @@ std::unique_ptr<FileHandler> getHandlerByType(uint16_t fileType,
         {
             return std::make_unique<LidHandler>(fileHandle, false,
                                                 PLDM_FILE_TYPE_LID_RUNNING);
+        }
+        case PLDM_FILE_TYPE_VPD_KEYWORD:
+        {
+            return std::make_unique<keywordHandler>(fileHandle, fileType);
         }
         default:
         {
