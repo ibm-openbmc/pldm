@@ -1,0 +1,436 @@
+{
+ "sensorPDRs": [
+   {
+    "pdrType" : 4,
+    "entries" : [{
+        "type" : 45,
+        "instance" : 1,
+        "container" : 1,
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/enclosure_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/bmc_booted",
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/bmc_booted",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/power_on",
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/power_on",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/partition_system_attention_indicator",
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/partition_system_attention_indicator",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/fan0",
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/fan0_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/fan1",
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/fan1_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/nvme0",
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/nvme0_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/nvme1",
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/nvme1_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/nvme2",
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/nvme1_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {   
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/nvme3",
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/nvme3_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/rdx0",
+        "sensors" : [{
+            "set" : { 
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },  
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/rdx0_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/media0",
+        "sensors" : [{
+            "set" : { 
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },  
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/media0_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply0",
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/powersupply0_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply1",
+        "sensors" : [{
+            "set" : {
+                "id" : 17,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/powersupply1_identify",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "type" : 45,
+        "instance" : 1,
+        "container" : 1,
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/enclosure_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/fan0",
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/fan0_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/fan1",
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/fan1_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/nvme0",
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/nvme0_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/nvme1",
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/nvme1_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/nvme2",
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/nvme1_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/nvme3",
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/nvme3_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/rdx0",
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/rdx0_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/media0",
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/media0_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply0",
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/powersupply0_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    },
+    {
+        "entity_path" : "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply1",
+        "sensors" : [{
+            "set" : {
+                "id" : 10,
+                "size" : 1,
+                "states" : [1,2]
+            },
+            "dbus" : {
+                "path": "/xyz/openbmc_project/led/groups/powersupply1_fault",
+                "interface": "xyz.openbmc_project.Led.Group",
+                "property_name": "Asserted",
+                "property_type": "bool",
+                "property_values" : [false, true]
+             }
+        }]
+    }]
+  }]
+}
+
