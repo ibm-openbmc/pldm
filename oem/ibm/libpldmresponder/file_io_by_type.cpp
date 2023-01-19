@@ -2,6 +2,9 @@
 
 #include "file_io_by_type.hpp"
 
+#include <libpldm/base.h>
+#include <libpldm/file_io.h>
+
 #include "common/utils.hpp"
 #include "file_io_type_cert.hpp"
 #include "file_io_type_dump.hpp"
@@ -11,8 +14,6 @@
 #include "file_io_type_vpd.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
 
-#include <libpldm/base.h>
-#include <libpldm/file_io.h>
 #include <stdint.h>
 #include <unistd.h>
 
