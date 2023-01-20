@@ -6,7 +6,6 @@ namespace pldm
 {
 namespace responder
 {
-using DumpEntryInterface = std::string;
 
 /** @class DumpHandler
  *
@@ -40,9 +39,21 @@ class DumpHandler : public FileHandler
 
     virtual int fileAck(uint8_t fileStatus);
 
+    virtual int fileAckWithMetaData(uint8_t /*fileStatus*/,
+                                    uint32_t metaDataValue1,
+                                    uint32_t metaDataValue2,
+                                    uint32_t /*metaDataValue3*/,
+                                    uint32_t /*metaDataValue4*/);
+
+    virtual int newFileAvailableWithMetaData(uint64_t length,
+                                             uint32_t metaDataValue1,
+                                             uint32_t /*metaDataValue2*/,
+                                             uint32_t /*metaDataValue3*/,
+                                             uint32_t /*metaDataValue4*/);
+
     std::string findDumpObjPath(uint32_t fileHandle);
     std::string getOffloadUri(uint32_t fileHandle);
-
+    void resetOffloadUri();
     /** @brief DumpHandler destructor
      */
     ~DumpHandler()
@@ -51,6 +62,18 @@ class DumpHandler : public FileHandler
   private:
     static int fd;     //!< fd to manage the dump offload to bmc
     uint16_t dumpType; //!< type of the dump
+    std::string
+        resDumpRequestDirPath; //!< directory where the resource
+                               //!< dump request parameter file is stored
+
+    enum DumpRequestStatus
+    {
+        Success = 0x0,
+        AcfFileInvalid = 0x1,
+        PasswordInvalid = 0x2,
+        PermissionDenied = 0x3,
+        ResourceSelectorInvalid = 0x4,
+    };
 };
 
 } // namespace responder

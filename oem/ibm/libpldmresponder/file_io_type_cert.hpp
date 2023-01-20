@@ -8,6 +8,7 @@ namespace pldm
 {
 namespace responder
 {
+
 using Fd = int;
 using RemainingSize = uint64_t;
 using CertDetails = std::tuple<Fd, RemainingSize>;
@@ -68,6 +69,7 @@ class CertHandler : public FileHandler
     uint16_t certType;      //!< type of the certificate
     static CertMap certMap; //!< holds the fd and remaining read/write size for
                             //!< each certificate
+
     enum SignedCertStatus
     {
         PLDM_INVALID_CERT_DATA = 0X03

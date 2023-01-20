@@ -1,9 +1,11 @@
+#include "libpldm/fru.h"
 #include "libpldm/platform.h"
 
 #include "pdr.hpp"
 
 #include <config.h>
 
+#include <bitset>
 #include <climits>
 
 using namespace pldm::pdr;
@@ -151,6 +153,7 @@ std::tuple<TerminusHandle, SensorID, SensorInfo>
     CompositeSensorStates sensors{};
     auto statesPtr = pdr->possible_states;
     auto compositeSensorCount = pdr->composite_sensor_count;
+    std::vector<StateSetId> stateSetIds{};
 
     while (compositeSensorCount--)
     {
@@ -174,6 +177,8 @@ std::tuple<TerminusHandle, SensorID, SensorInfo>
                       updateStates);
 
         sensors.emplace_back(std::move(possibleStates));
+        stateSetIds.emplace_back(state->state_set_id);
+
         if (compositeSensorCount)
         {
             statesPtr += sizeof(state_sensor_possible_states) +
@@ -185,12 +190,104 @@ std::tuple<TerminusHandle, SensorID, SensorInfo>
         std::make_tuple(static_cast<ContainerID>(pdr->container_id),
                         static_cast<EntityType>(pdr->entity_type),
                         static_cast<EntityInstance>(pdr->entity_instance));
-    auto sensorInfo =
-        std::make_tuple(std::move(entityInfo), std::move(sensors));
+    auto sensorInfo = std::make_tuple(std::move(entityInfo), std::move(sensors),
+                                      std::move(stateSetIds));
     return std::make_tuple(pdr->terminus_handle, pdr->sensor_id,
                            std::move(sensorInfo));
 }
 
+std::vector<FruRecordDataFormat> parseFruRecordTable(const uint8_t* fruData,
+                                                     size_t fruLen)
+{
+    // 7: uint16_t(FRU Record Set Identifier), uint8_t(FRU Record Type),
+    // uint8_t(Number of FRU fields), uint8_t(Encoding Type for FRU fields),
+    // uint8_t(FRU Field Type), uint8_t(FRU Field Length)
+    if (fruLen < 7)
+    {
+        return {};
+    }
+
+    std::vector<FruRecordDataFormat> frus;
+
+    size_t index = 0;
+    do
+    {
+        FruRecordDataFormat fru;
+
+        auto record = reinterpret_cast<const pldm_fru_record_data_format*>(
+            fruData + index);
+        fru.fruRSI = (int)le16toh(record->record_set_id);
+        fru.fruRecType = record->record_type;
+        fru.fruNum = record->num_fru_fields;
+        fru.fruEncodeType = record->encoding_type;
+
+        index += 5;
+
+        for (int i = 0; i < record->num_fru_fields; i++)
+        {
+            auto tlv =
+                reinterpret_cast<const pldm_fru_record_tlv*>(fruData + index);
+            FruTLV frutlv;
+            frutlv.fruFieldType = tlv->type;
+            frutlv.fruFieldLen = tlv->length;
+            frutlv.fruFieldValue.resize(tlv->length);
+            for (int i = 0; i < tlv->length; i++)
+            {
+                memcpy(frutlv.fruFieldValue.data() + i, tlv->value + i, 1);
+            }
+
+            fru.fruTLV.push_back(frutlv);
+
+            index += 2 + (unsigned)tlv->length;
+        }
+
+        frus.push_back(fru);
+
+    } while (index < fruLen);
+
+    return frus;
+}
+std::vector<uint8_t> fetchBitMap(const std::vector<std::vector<uint8_t>>& pdrs)
+{
+    std::vector<uint8_t> bitMap;
+    for (const auto& pdr : pdrs)
+    {
+        bitMap.clear();
+        auto effecterPdr =
+            reinterpret_cast<const pldm_state_effecter_pdr*>(pdr.data());
+        auto statesPtr = effecterPdr->possible_states;
+        auto compEffCount = effecterPdr->composite_effecter_count;
+        while (compEffCount--)
+        {
+            auto state =
+                reinterpret_cast<const state_effecter_possible_states*>(
+                    statesPtr);
+            uint8_t possibleStatesPos{};
+            auto printStates = [&possibleStatesPos,
+                                &bitMap](const bitfield8_t& val) {
+                bitMap.emplace_back(static_cast<uint8_t>(val.byte));
+                possibleStatesPos++;
+            };
+            std::for_each(state->states,
+                          state->states + state->possible_states_size,
+                          printStates);
+            std::ostringstream tempStream;
+            for (int byte : bitMap)
+            {
+                tempStream << std::setfill('0') << std::setw(2) << std::hex
+                           << byte << " ";
+            }
+            std::cout << "Panel:BitMap received: " << tempStream.str()
+                      << std::endl;
+            if (compEffCount)
+            {
+                statesPtr += sizeof(state_effecter_possible_states) +
+                             state->possible_states_size - 1;
+            }
+        }
+    }
+    return bitMap;
+}
 } // namespace pdr_utils
 } // namespace responder
 } // namespace pldm

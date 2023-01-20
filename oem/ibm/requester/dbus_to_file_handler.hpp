@@ -57,6 +57,11 @@ class DbusToFileHandler
     void newCsrFileAvailable(const std::string& csr,
                              const std::string fileHandle);
 
+    /** @brief Process the new license file available
+     *  @param[in] licenseStr - License string
+     */
+    void newLicFileAvailable(const std::string& licenseStr);
+
   private:
     /** @brief Send the new file available command request to hypervisor
      *  @param[in] fileSize - size of the file
@@ -72,12 +77,13 @@ class DbusToFileHandler
                                     const uint32_t fileHandle,
                                     const uint16_t type);
 
-    /** @brief report failure that a resource dump has failed
-     */
-    void reportResourceDumpFailure();
-
     /** @brief method to get the acf file contents */
     std::string getAcfFileContent();
+
+    /** @brief report failure that a resource dump has failed
+     *  @param[in] str - string of function that calls resource dump failure
+     */
+    void reportResourceDumpFailure(std::string str);
 
     /** @brief fd of MCTP communications socket */
     int mctp_fd;

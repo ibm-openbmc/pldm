@@ -8,7 +8,9 @@
 #include "common/utils.hpp"
 #include "file_io_type_cert.hpp"
 #include "file_io_type_dump.hpp"
+#include "file_io_type_lic.hpp"
 #include "file_io_type_lid.hpp"
+#include "file_io_type_pcie.hpp"
 #include "file_io_type_pel.hpp"
 #include "file_io_type_progress_src.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
@@ -28,6 +30,7 @@ namespace pldm
 {
 namespace responder
 {
+
 using namespace sdbusplus::xyz::openbmc_project::Common::Error;
 
 int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
@@ -117,7 +120,7 @@ int FileHandler::transferFileData(const fs::path& path, bool upstream,
         ;
         return PLDM_ERROR;
     }
-    utils::CustomFD fd(file);
+    pldm::utils::CustomFD fd(file);
 
     return transferFileData(fd(), upstream, offset, length, address);
 }
@@ -144,9 +147,18 @@ std::unique_ptr<FileHandler> getHandlerByType(uint16_t fileType,
             return std::make_unique<LidHandler>(fileHandle, false,
                                                 PLDM_FILE_TYPE_LID_MARKER);
         }
+        case PLDM_FILE_TYPE_LID_RUNNING:
+        {
+            return std::make_unique<LidHandler>(fileHandle, false,
+                                                PLDM_FILE_TYPE_LID_RUNNING);
+        }
         case PLDM_FILE_TYPE_DUMP:
         case PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS:
         case PLDM_FILE_TYPE_RESOURCE_DUMP:
+        case PLDM_FILE_TYPE_BMC_DUMP:
+        case PLDM_FILE_TYPE_SBE_DUMP:
+        case PLDM_FILE_TYPE_HOSTBOOT_DUMP:
+        case PLDM_FILE_TYPE_HARDWARE_DUMP:
         {
             return std::make_unique<DumpHandler>(fileHandle, fileType);
         }
@@ -156,14 +168,19 @@ std::unique_ptr<FileHandler> getHandlerByType(uint16_t fileType,
         {
             return std::make_unique<CertHandler>(fileHandle, fileType);
         }
+        case PLDM_FILE_TYPE_COD_LICENSE_KEY:
+        case PLDM_FILE_TYPE_COD_LICENSED_RESOURCES:
+        {
+            return std::make_unique<LicenseHandler>(fileHandle, fileType);
+        }
         case PLDM_FILE_TYPE_PROGRESS_SRC:
         {
             return std::make_unique<ProgressCodeHandler>(fileHandle);
         }
-        case PLDM_FILE_TYPE_LID_RUNNING:
+        case PLDM_FILE_TYPE_PCIE_TOPOLOGY:
+        case PLDM_FILE_TYPE_CABLE_INFO:
         {
-            return std::make_unique<LidHandler>(fileHandle, false,
-                                                PLDM_FILE_TYPE_LID_RUNNING);
+            return std::make_unique<PCIeInfoHandler>(fileHandle, fileType);
         }
         default:
         {

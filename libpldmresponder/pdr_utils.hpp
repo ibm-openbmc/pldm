@@ -23,13 +23,10 @@ namespace fs = std::filesystem;
 
 namespace pldm
 {
-
 namespace responder
 {
-
 namespace pdr_utils
 {
-
 /** @struct Type ID associated with pdr
  *
  */
@@ -37,6 +34,22 @@ enum class TypeId
 {
     PLDM_EFFECTER_ID,
     PLDM_SENSOR_ID
+};
+
+struct FruTLV
+{
+    uint8_t fruFieldType;
+    uint8_t fruFieldLen;
+    std::vector<uint8_t> fruFieldValue;
+};
+
+struct FruRecordDataFormat
+{
+    uint16_t fruRSI;
+    uint8_t fruRecType;
+    uint8_t fruNum;
+    uint8_t fruEncodeType;
+    std::vector<FruTLV> fruTLV;
 };
 
 /** @struct PdrEntry
@@ -61,9 +74,12 @@ using PossibleValues = std::vector<uint8_t>;
 
 /** @brief Map of DBus property State to attribute value
  */
+using EffecterId = uint16_t;
 using StatestoDbusVal = std::map<State, pldm::utils::PropertyValue>;
 using DbusMappings = std::vector<pldm::utils::DBusMapping>;
 using DbusValMaps = std::vector<StatestoDbusVal>;
+using DbusObjMaps = std::map<EffecterId, std::tuple<DbusMappings, DbusValMaps>>;
+using EventStates = std::array<uint8_t, 8>;
 
 /** @brief Parse PDR JSON file and output Json object
  *
@@ -215,6 +231,26 @@ class Repo : public RepoInterface
 std::tuple<pldm::pdr::TerminusHandle, pldm::pdr::SensorID,
            pldm::pdr::SensorInfo>
     parseStateSensorPDR(const std::vector<uint8_t>& stateSensorPdr);
+
+/** @brief Parse FRU record table and return the vector of the FRU record data
+ *         format structure
+ *
+ *  @param[in] fruData - fru data
+ *  @param[in] fruLen  - fru len
+ *
+ *  @return std::vector<FruRecordDataFormat> - the vector of the FRU record data
+ *          format structure
+ */
+std::vector<FruRecordDataFormat> parseFruRecordTable(const uint8_t* fruData,
+                                                     size_t fruLen);
+
+/** @brief Method to fetch the bitmap of possible states from a PDR
+ *
+ *  @param[in] pdrs - The PDR to fetch the bitmap from
+ *
+ *  @return the bitmap of possible states
+ *  */
+std::vector<uint8_t> fetchBitMap(const std::vector<std::vector<uint8_t>>& pdrs);
 
 } // namespace pdr_utils
 } // namespace responder

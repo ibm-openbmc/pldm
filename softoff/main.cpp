@@ -1,10 +1,29 @@
 #include "common/utils.hpp"
 #include "softoff.hpp"
 
+#include <getopt.h>
+
 #include <iostream>
 
-int main()
+int main(int argc, char* argv[])
 {
+    bool noTimeOut = false;
+    static struct option long_options[] = {{"notimeout", no_argument, 0, 't'},
+                                           {0, 0, 0, 0}};
+
+    auto argflag = getopt_long(argc, argv, "t", long_options, nullptr);
+    switch (argflag)
+    {
+        case 't':
+            noTimeOut = true;
+            std::cout << "Not applying any time outs\n";
+            break;
+        case -1:
+            break;
+        default:
+            exit(EXIT_FAILURE);
+    }
+
     // Get a default event loop
     auto event = sdeventplus::Event::get_default();
 
@@ -14,7 +33,7 @@ int main()
     // Attach the bus to sd_event to service user requests
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
 
-    pldm::SoftPowerOff softPower(bus, event.get());
+    pldm::SoftPowerOff softPower(bus, event.get(), noTimeOut);
 
     if (softPower.isError())
     {
@@ -43,7 +62,25 @@ int main()
     if (softPower.isTimerExpired() && softPower.isReceiveResponse())
     {
         pldm::utils::reportError(
-            "pldm soft off: Waiting for the host soft off timeout");
+            "xyz.openbmc_project.PLDM.Error.SoftPowerOff.HostSoftOffTimeOut",
+            pldm::PelSeverity::ERROR);
+
+        auto method = bus.new_method_call(
+            "xyz.openbmc_project.Dump.Manager", "/xyz/openbmc_project/dump/bmc",
+            "xyz.openbmc_project.Dump.Create", "CreateDump");
+        method.append(
+            std::vector<
+                std::pair<std::string, std::variant<std::string, uint64_t>>>());
+        try
+        {
+            bus.call_noreply(method);
+        }
+        catch (const sdbusplus::exception::exception& e)
+        {
+            std::cerr << "SoftPowerOff:Failed to create BMC dump, ERROR="
+                      << e.what() << std::endl;
+        }
+
         std::cerr
             << "PLDM host soft off: ERROR! Wait for the host soft off timeout."
             << "Exit the pldm-softpoweroff "

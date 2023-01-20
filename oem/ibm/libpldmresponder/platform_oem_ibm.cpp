@@ -16,6 +16,7 @@ namespace responder
 {
 namespace platform
 {
+
 int sendBiosAttributeUpdateEvent(
     uint8_t eid, dbus_api::Requester* requester,
     const std::vector<uint16_t>& handles,
@@ -43,20 +44,12 @@ int sendBiosAttributeUpdateEvent(
             return PLDM_SUCCESS;
         }
     }
-    catch (
-        const sdbusplus::xyz::openbmc_project::Common::Error::ResourceNotFound&
-            e)
+    catch (const sdbusplus::exception::exception& e)
     {
-        /* Exception is expected to happen in the case when state manager is
-         * started after pldm, this is expected to happen in reboot case
-         * where host is considered to be up. As host is up pldm is expected
-         * to send attribute update event to host so this is not an error
-         * case */
-    }
-    catch (const sdbusplus::exception_t& e)
-    {
-        std::cerr << "Error in getting current host state, " << e.name()
-                  << " Continue sending the bios attribute update event ... \n";
+        /* Execption is expected to happen in the case when state manager is
+         * started after pldm, this is expected to happen in reboot case where
+         * host is considred to be up. As host is up pldm is expected to send
+         * attribute update event to host so this is not and error case */
     }
 
     auto instanceId = requester->getInstanceId(eid);
@@ -69,16 +62,27 @@ int sendBiosAttributeUpdateEvent(
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
 
     auto rc = encode_bios_attribute_update_event_req(
-        instanceId, PLDM_PLATFORM_EVENT_MESSAGE_FORMAT_VERSION, TERMINUS_ID,
-        handles.size(), reinterpret_cast<const uint8_t*>(handles.data()),
+        instanceId, PLDM_PLATFORM_EVENT_MESSAGE_FORMAT_VERSION,
+        pldm::responder::pdr::BmcMctpEid, handles.size(),
+        reinterpret_cast<const uint8_t*>(handles.data()),
         requestMsg.size() - sizeof(pldm_msg_hdr), request);
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr
-            << "BIOS Attribute update event message encode failure. PLDM error code = "
-            << std::hex << std::showbase << rc << "\n";
+        std::cerr << "Message encode failure 1. PLDM error code = " << std::hex
+                  << std::showbase << rc << "\n";
         requester->markFree(eid, instanceId);
         return rc;
+    }
+
+    if (requestMsg.size())
+    {
+        std::ostringstream tempStream;
+        for (int byte : requestMsg)
+        {
+            tempStream << std::setfill('0') << std::setw(2) << std::hex << byte
+                       << " ";
+        }
+        std::cout << tempStream.str() << std::endl;
     }
 
     auto platformEventMessageResponseHandler = [](mctp_eid_t /*eid*/,
@@ -87,7 +91,7 @@ int sendBiosAttributeUpdateEvent(
         if (response == nullptr || !respMsgLen)
         {
             std::cerr
-                << "Failed to receive response for BIOS Attribute update platform event message \n";
+                << "Failed to receive response for platform event message \n";
             return;
         }
         uint8_t completionCode{};
@@ -96,11 +100,10 @@ int sendBiosAttributeUpdateEvent(
                                                      &completionCode, &status);
         if (rc || completionCode)
         {
-            std::cerr
-                << "Failed to decode BIOS Attribute update platform_event_message_resp: "
-                << "rc=" << rc
-                << ", cc=" << static_cast<unsigned>(completionCode)
-                << std::endl;
+            std::cerr << "Failed to decode_platform_event_message_resp: "
+                      << "rc=" << rc
+                      << ", cc=" << static_cast<unsigned>(completionCode)
+                      << std::endl;
         }
     };
     rc = handler->registerRequest(
@@ -108,8 +111,7 @@ int sendBiosAttributeUpdateEvent(
         std::move(requestMsg), std::move(platformEventMessageResponseHandler));
     if (rc)
     {
-        std::cerr
-            << "Failed to send BIOS Attribute update the platform event message \n";
+        std::cerr << "Failed to send the platform event message \n";
     }
 
     return rc;

@@ -1,7 +1,7 @@
 #pragma once
-
 #include "common/types.hpp"
 #include "common/utils.hpp"
+#include "libpldmresponder/pdr_utils.hpp"
 #include "pldmd/handler.hpp"
 
 namespace pldm
@@ -12,12 +12,40 @@ namespace responder
 
 namespace oem_platform
 {
+using namespace pldm::responder::pdr_utils;
+
+using ObjectPath = std::filesystem::path;
+using ObjectPathMaps = std::map<ObjectPath, pldm_entity_node*>;
 
 class Handler : public CmdHandler
 {
   public:
     Handler(const pldm::utils::DBusHandler* dBusIntf) : dBusIntf(dBusIntf)
     {}
+
+    /** @brief Interface to set the numeric effecter requested by pldm
+     *  requester for OEM types. Each individual oem type should implement
+     *  it's own handler.
+     *
+     *  @param[in] entityType - entity type corresponding to the effecter id
+     *  @param[in] entityInstance - entity instance
+     *  @param[in] effecterSemanticId - effecter semantic id
+     *  @param[in] effecterDataSize - effecter value size.
+     *  @param[in] effecterValue - effecter value.
+     *  @param[in] effecterOffset - offset of the effecter.
+     *  @param[in] effecterResolution - resolution of the effecter.
+     *  @param[in] effecterId - Effecter ID sent by the requester to act on.
+     *
+     *  @return - Success or failure in setting the states.Returns failure in
+     *            terms of PLDM completion codes if atleast one state fails to
+     *            be set
+     *
+     */
+    virtual int oemSetNumericEffecterValueHandler(
+        uint16_t entityType, uint16_t entityInstance,
+        uint16_t effecterSemanticId, uint8_t effecterDataSize,
+        uint8_t* effecterValue, real32_t effecterOffset,
+        real32_t effecterResolution, uint16_t effecterId) = 0;
 
     /** @brief Interface to get the state sensor readings requested by pldm
      *  requester for OEM types. Each specific type should implement a handler
@@ -35,9 +63,11 @@ class Handler : public CmdHandler
      *            fails
      */
     virtual int getOemStateSensorReadingsHandler(
-        EntityType entityType, pldm::pdr::EntityInstance entityInstance,
+        pldm::pdr::EntityType entityType,
+        pldm::pdr::EntityInstance entityInstance,
+        pldm::pdr::ContainerID entityContainerId,
         pldm::pdr::StateSetId stateSetId,
-        pldm::pdr::CompositeCount compSensorCnt,
+        pldm::pdr::CompositeCount compSensorCnt, uint16_t sensorId,
         std::vector<get_sensor_state_field>& stateField) = 0;
 
     /** @brief Interface to set the effecter requested by pldm requester
@@ -68,6 +98,8 @@ class Handler : public CmdHandler
      */
     virtual void buildOEMPDR(pdr_utils::Repo& repo) = 0;
 
+    virtual std::filesystem::path getConfigDir() = 0;
+
     /** @brief Interface to check if setEventReceiver is sent to host already.
      *         If sent then then disableWatchDogTimer() would be called to
      *         disable the watchdog timer */
@@ -85,12 +117,41 @@ class Handler : public CmdHandler
     /** @brief Interface to disable the watchdog timer */
     virtual void disableWatchDogTimer() = 0;
 
+    /* @brief Interface to set the host effecter state */
+    virtual void setHostEffecterState(bool status) = 0;
+
     /** @brief Interface to keep track of how many times setEventReceiver
      *         is sent to host */
     virtual void countSetEventReceiver() = 0;
 
     /** @brief Interface to check the BMC state */
     virtual int checkBMCState() = 0;
+
+    /** @brief update the dbus object paths */
+    virtual void upadteOemDbusPaths(std::string& dbusPath) = 0;
+    /** @brief Interface to update container ID */
+    virtual void updateContainerID() = 0;
+    virtual void modifyPDROemActions(uint16_t entityType,
+                                     uint16_t stateSetId) = 0;
+
+    /** @brief To handle the boot types bios attributes at power on*/
+    virtual void handleBootTypesAtPowerOn() = 0;
+
+    /** @brief To handle the boot types bios attributes at shutdown*/
+    virtual void handleBootTypesAtChassisOff() = 0;
+
+    /** @brief Interface to reset or stop the surveillance timer
+     *  @param[in] value - true or false, to indicate if the timer
+     *                     should be reset or turned off*/
+    virtual void startStopTimer(bool value) = 0;
+
+    /** @brief Interface to monitor the surveillance pings from host
+     *
+     * @param[in] tid - TID of the host
+     * @param[in] value - true or false, to indicate if the timer is
+     *                    running or not
+     */
+    virtual void setSurvTimer(uint8_t tid, bool value) = 0;
 
     virtual ~Handler() = default;
 
@@ -99,6 +160,29 @@ class Handler : public CmdHandler
 };
 
 } // namespace oem_platform
+
+namespace oem_fru
+{
+
+class Handler : public CmdHandler
+{
+  public:
+    Handler(const pldm::utils::DBusHandler* dBusIntf) : dBusIntf(dBusIntf)
+    {}
+
+    /** @brief Process OEM FRU record
+     *
+     * @param[in] fruData - the data of the fru
+     */
+    virtual int processOEMfruRecord(const std::vector<uint8_t>& fruData) = 0;
+
+    virtual ~Handler() = default;
+
+  protected:
+    const pldm::utils::DBusHandler* dBusIntf;
+};
+
+} // namespace oem_fru
 
 } // namespace responder
 

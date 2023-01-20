@@ -24,8 +24,24 @@
 
 namespace pldm
 {
+
+using Severity = pldm::PelSeverity;
+
+// mapping of severity enum to severity interface
+static std::unordered_map<Severity, std::string> sevMap = {
+    {Severity::INFORMATIONAL,
+     "xyz.openbmc_project.Logging.Entry.Level.Informational"},
+    {Severity::DEBUG, "xyz.openbmc_project.Logging.Entry.Level.Debug"},
+    {Severity::NOTICE, "xyz.openbmc_project.Logging.Entry.Level.Notice"},
+    {Severity::WARNING, "xyz.openbmc_project.Logging.Entry.Level.Warning"},
+    {Severity::CRITICAL, "xyz.openbmc_project.Logging.Entry.Level.Critical"},
+    {Severity::EMERGENCY, "xyz.openbmc_project.Logging.Entry.Level.Emergency"},
+    {Severity::ERROR, "xyz.openbmc_project.Logging.Entry.Level.Error"},
+    {Severity::ALERT, "xyz.openbmc_project.Logging.Entry.Level.Alert"}};
+
 namespace utils
 {
+
 namespace fs = std::filesystem;
 using Json = nlohmann::json;
 constexpr bool Tx = true;
@@ -99,7 +115,7 @@ std::optional<std::vector<set_effecter_state_field>>
  *  @brief creates an error log
  *  @param[in] errorMsg - the error message
  */
-void reportError(const char* errorMsg);
+void reportError(const char* errorMsg, const PelSeverity& sev);
 
 /** @brief Convert any Decimal number to BCD
  *
@@ -126,6 +142,8 @@ T decimalToBcd(T decimal)
 
 constexpr auto dbusProperties = "org.freedesktop.DBus.Properties";
 constexpr auto mapperService = "xyz.openbmc_project.ObjectMapper";
+constexpr auto inventoryService = "xyz.openbmc_project.Inventory.Manager";
+constexpr auto inventoryPath = "/xyz/openbmc_project/inventory";
 
 struct DBusMapping
 {
@@ -137,7 +155,7 @@ struct DBusMapping
 
 using PropertyValue =
     std::variant<bool, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t,
-                 uint64_t, double, std::string>;
+                 uint64_t, double, std::string, std::vector<uint8_t>>;
 using DbusProp = std::string;
 using DbusChangedProps = std::map<DbusProp, PropertyValue>;
 using DBusInterfaceAdded = std::vector<
@@ -149,8 +167,10 @@ using ServiceName = std::string;
 using Interfaces = std::vector<std::string>;
 using MapperServiceMap = std::vector<std::pair<ServiceName, Interfaces>>;
 using GetSubTreeResponse = std::vector<std::pair<ObjectPath, MapperServiceMap>>;
+using BiosAttributeList = std::vector<std::pair<std::string, std::string>>;
 using PropertyMap = std::map<std::string, PropertyValue>;
 using InterfaceMap = std::map<std::string, PropertyMap>;
+using ObjectValueTree = std::map<sdbusplus::message::object_path, InterfaceMap>;
 
 /**
  * @brief The interface for DBusHandler
@@ -270,6 +290,29 @@ class DBusHandler : public DBusHandlerInterface
      */
     void setDbusProperty(const DBusMapping& dBusMap,
                          const PropertyValue& value) const override;
+
+    /** @brief This function will returns all the objectspaths under the service
+     * root path, with their interfaces and the properties under those
+     * interfaces     *
+     *  @param[in] service - Service name
+     *  @param[in] value - The root path of the service
+     *
+     *  @return map <objectPath, map<interfaces,map<properyName, value>>>
+     *  @throw sdbusplus::exception::exception when it fails
+     */
+    static ObjectValueTree getManagedObj(const char* service, const char* path);
+
+    /** @brief This function will returns all the objectspaths under inventory
+     * service
+     *
+     *  @return map <objectPath, map<interfaces,map<properyName, value>>>
+     */
+    static auto& getInventoryObjects()
+    {
+        static ObjectValueTree object =
+            getManagedObj(inventoryService, inventoryPath);
+        return object;
+    }
 };
 
 /** @brief Fetch parent D-Bus object based on pathname
@@ -408,6 +451,77 @@ std::vector<std::string> split(std::string_view srcStr, std::string_view delim,
  *  @return - std::string equivalent of the system time
  */
 std::string getCurrentSystemTime();
+
+/** @brief Method to get the value from a bios attribute
+ *
+ *  @param[in] dbusAttrName - the bios attribute name from
+ *             which the value must be retrieved
+ *
+ *  @return the attribute value
+ */
+std::string getBiosAttrValue(const std::string& dbusAttrName);
+
+/** @brief Method to set the specified bios attribute with
+ *         specified value
+ *
+ *  @param[in] BiosAttributeList - the list of bios attribute and values
+ *             to be set
+ */
+void setBiosAttr(const BiosAttributeList& biosAttrList);
+
+/** @brief Method to find all state effecter PDRs
+ *
+ *  @param[in] tid - Terminus ID
+ *  @param[in] entityType - the entity type
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *
+ *  @return vector of vector of all state effecter PDRs
+ */
+std::vector<std::vector<pldm::pdr::Pdr_t>>
+    getStateEffecterPDRsByType(uint8_t /*tid*/, uint16_t entityType,
+                               const pldm_pdr* repo);
+
+/** @brief Method to find all state sensor PDRs
+ *
+ *  @param[in] tid - terminus ID
+ *  @param[in] entityType - the entity type
+ *  @param[in] repo - opaque pointer acting as a PDR repo handle
+ *
+ *  @return vector of vector of all state sensor PDRs
+ */
+std::vector<std::vector<pldm::pdr::Pdr_t>>
+    getStateSensorPDRsByType(uint8_t /*tid*/, uint16_t entityType,
+                             const pldm_pdr* repo);
+
+/** @brief method to find effecter IDs based on the pldm_entity
+ *
+ *  @param[in] pdrRepo - opaque pointer acting as a PDR repo handle
+ *  @param[in] tid - terminus ID
+ *  @param[in] entityType - the entity type
+ *  @param[in] entityInstance - the entity instance number
+ *  @param[in] containerId - the container ID
+ *
+ *  @return vector of all effecter IDs
+ */
+std::vector<pldm::pdr::EffecterID> findEffecterIds(const pldm_pdr* pdrRepo,
+                                                   uint8_t /*tid*/,
+                                                   uint16_t entityType,
+                                                   uint16_t entityInstance,
+                                                   uint16_t containerId);
+
+/** @brief method to find sensor IDs based on the pldm_entity
+ *
+ *  @param[in] pdrRepo - opaque pointer acting as a PDR repo handle
+ *  @param[in] tid - terminus ID
+ *  @param[in] entityType - the entity type
+ *  @param[in] entityInstance - the entity instance number
+ *  @param[in] containerId - the container ID
+ *
+ *  @return vector of all sensor IDs
+ */
+std::vector<pldm::pdr::SensorID>
+    findSensorIds(const pldm_pdr* pdrRepo, uint8_t /*tid*/, uint16_t entityType,
+                  uint16_t entityInstance, uint16_t containerId);
 
 /** @brief checks if the FRU is actually present.
  *  @param[in] objPath - FRU object path.

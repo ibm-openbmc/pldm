@@ -7,7 +7,7 @@ After=obmc-flash-bios-init.service
 ConditionPathExists=!/var/lib/phosphor-software-manager/hostfw/nvram/PHYP-NVRAM-CKSUM
 
 [Service]
-ExecStart=/usr/bin/create-NVRAM-cksum-file
+ExecStart=/bin/sh -c "if [ -f /var/lib/pldm/PHYP-NVRAM-CKSUM ]; then mv /var/lib/pldm/PHYP-NVRAM-CKSUM /var/lib/phosphor-software-manager/hostfw/nvram/PHYP-NVRAM-CKSUM; else dd if=/dev/zero of=/var/lib/phosphor-software-manager/hostfw/nvram/PHYP-NVRAM-CKSUM bs=16 count=1; fi"
 Type=oneshot
 RemainAfterExit=no
 
