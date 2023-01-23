@@ -27,25 +27,44 @@ struct StateSensorEntry
     pdr::EntityType entityType;
     pdr::EntityInstance entityInstance;
     pdr::SensorOffset sensorOffset;
+    bool skipContainerCheck;
+    pdr::StateSetId stateSetid;
 
     bool operator==(const StateSensorEntry& e) const
     {
-        return ((containerId == e.containerId) &&
-                (entityType == e.entityType) &&
-                (entityInstance == e.entityInstance) &&
-                (sensorOffset == e.sensorOffset));
+        if (!skipContainerCheck)
+        {
+            return ((containerId == e.containerId) &&
+                    (entityType == e.entityType) &&
+                    (entityInstance == e.entityInstance) &&
+                    (sensorOffset == e.sensorOffset) &&
+                    (stateSetid == e.stateSetid));
+        }
+        else
+        {
+            return ((entityType == e.entityType) &&
+                    (entityInstance == e.entityInstance) &&
+                    (sensorOffset == e.sensorOffset) &&
+                    (stateSetid == e.stateSetid));
+        }
     }
 
     bool operator<(const StateSensorEntry& e) const
     {
-        return (
-            (containerId < e.containerId) ||
-            ((containerId == e.containerId) && (entityType < e.entityType)) ||
-            ((containerId == e.containerId) && (entityType == e.entityType) &&
-             (entityInstance < e.entityInstance)) ||
-            ((containerId == e.containerId) && (entityType == e.entityType) &&
-             (entityInstance == e.entityInstance) &&
-             (sensorOffset < e.sensorOffset)));
+        if (!skipContainerCheck)
+        {
+            return std::tie(entityType, entityInstance, containerId,
+                            sensorOffset, stateSetid) <
+                   std::tie(e.entityType, e.entityInstance, e.containerId,
+                            e.sensorOffset, e.stateSetid);
+        }
+        else
+        {
+            return std::tie(entityType, entityInstance, sensorOffset,
+                            stateSetid) <
+                   std::tie(e.entityType, e.entityInstance, e.sensorOffset,
+                            e.stateSetid);
+        }
     }
 };
 
@@ -87,7 +106,7 @@ class StateSensorHandler
      *
      *  @return PLDM completion code
      */
-    int eventAction(const StateSensorEntry& entry, pdr::EventState state);
+    int eventAction(StateSensorEntry entry, pdr::EventState state);
 
     /** @brief Helper API to get D-Bus information for a StateSensorEntry
      *

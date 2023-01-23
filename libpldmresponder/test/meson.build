@@ -13,11 +13,11 @@ tests = [
   'libpldmresponder_pdr_sensor_test',
 ]
 
-
 if get_option('oem-ibm').enabled()
   tests += [
     '../../oem/ibm/test/libpldmresponder_fileio_test',
-    '../../oem/ibm/test/libpldmresponder_oem_platform_test'
+    '../../oem/ibm/test/libpldmresponder_oem_platform_test',
+    '../../oem/ibm/test/host_bmc_lamp_test',
   ]
 endif
 
@@ -45,3 +45,4 @@ foreach t : tests
                          sdbusplus]),
        workdir: meson.current_source_dir())
 endforeach
+

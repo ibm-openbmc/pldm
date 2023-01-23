@@ -29,7 +29,8 @@ static const Json empty{};
  */
 template <class DBusInterface, class Handler>
 void generateStateEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
-                              Handler& handler, pdr_utils::RepoInterface& repo)
+                              Handler& handler, pdr_utils::RepoInterface& repo,
+                              pldm_entity_association_tree* /*bmcEntityTree*/)
 {
     static const std::vector<Json> emptyList{};
     auto entries = json.value("entries", emptyList);
@@ -92,6 +93,13 @@ void generateStateEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
                 pdr->entity_type = e.value("type", 0);
                 pdr->entity_instance = e.value("instance", 0);
                 pdr->container_id = e.value("container", 0);
+
+                // do not create the PDR when the FRU or the entity path is not
+                // present
+                if (!pdr->entity_type)
+                {
+                    continue;
+                }
             }
         }
         catch (const std::exception& ex)
@@ -153,8 +161,10 @@ void generateStateEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
             }
             catch (const std::exception& e)
             {
-                std::cerr << "D-Bus object path does not exist, effecter ID: "
-                          << pdr->effecter_id << "\n";
+                std::cerr << "D-Bus object " << objectPath
+                          << " does not exist, state effecter ID: "
+                          << pdr->effecter_id << " error : " << e.what()
+                          << "\n";
             }
 
             dbusMappings.emplace_back(std::move(dbusMapping));

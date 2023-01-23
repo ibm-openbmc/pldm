@@ -1,7 +1,18 @@
 #include "libpldm/state_set_oem_ibm.h"
 
+#include "oem/ibm/libpldmresponder/oem_ibm_handler.hpp"
+
 #include <libpldm/entity.h>
 #include <libpldm/entity_oem_ibm.h>
+
+/** @brief PLDM OEM State Set range as per DSP0249_1.1.0 specification
+ */
+enum pldm_oem_state_set_id_codes
+{
+    PLDM_OEM_STATE_SET_START = 32768,
+    PLDM_OEM_STATE_SET_END = 65535,
+
+};
 
 /** @brief PLDM OEM IBM Code Update possible state set values
  */
@@ -43,6 +54,14 @@ enum pldm_oem_ibm_boot_state_set_values
 /** @brief Map for PLDM OEM IBM Entity Types
  */
 extern const std::map<uint8_t, std::string> OemIBMEntityType{
+    {pldm::responder::oem_ibm_platform::PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
+     "OEM IBM Firmware Update"},
+    {PLDM_OEM_ENTITY_TYPE_START, "OEM IBM Entity Type Start"},
+    {PLDM_OEM_ENTITY_TYPE_END, "OEM IBM Entity Type End"},
+    {pldm::responder::oem_ibm_platform::PLDM_OEM_IBM_ENTITY_REAL_SAI,
+     "OEM IBM Real SAI"},
+    {pldm::responder::oem_ibm_platform::PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER,
+     "OEM IBM Chassis Power Controller"},
     {PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE, "OEM IBM Firmware Update"},
     {PLDM_OEM_IBM_ENTITY_TPM, "OEM IBM Trusted Platform Module"}};
 

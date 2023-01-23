@@ -19,7 +19,6 @@ namespace responder
 {
 namespace platform_state_sensor
 {
-
 /** @brief Function to get the sensor state
  *
  *  @tparam[in] DBusInterface - DBus interface type
@@ -44,6 +43,21 @@ uint8_t getStateSensorEventState(
 
         for (const auto& stateValue : stateToDbusValue)
         {
+            // This special condition added to handle the "||" keyword
+            // present in the property value string
+            if (dbusMapping.propertyType == "string")
+            {
+                std::string statValSecStr =
+                    std::get<std::string>(stateValue.second);
+                std::string proValStr = std::get<std::string>(propertyValue);
+
+                if ((std::strstr(statValSecStr.c_str(), "||")) &&
+                    (std::strstr(statValSecStr.c_str(), proValStr.c_str())))
+                {
+                    return stateValue.first;
+                }
+            }
+
             if (stateValue.second == propertyValue)
             {
                 return stateValue.first;
@@ -80,7 +94,8 @@ template <class DBusInterface, class Handler>
 int getStateSensorReadingsHandler(
     const DBusInterface& dBusIntf, Handler& handler, uint16_t sensorId,
     uint8_t sensorRearmCnt, uint8_t& compSensorCnt,
-    std::vector<get_sensor_state_field>& stateField)
+    std::vector<get_sensor_state_field>& stateField,
+    const stateSensorCacheMaps& sensorCache)
 {
     using namespace pldm::responder::pdr;
     using namespace pldm::utils;
@@ -139,13 +154,37 @@ int getStateSensorReadingsHandler(
         const auto& [dbusMappings, dbusValMaps] = handler.getDbusObjMaps(
             sensorId, pldm::responder::pdr_utils::TypeId::PLDM_SENSOR_ID);
 
+        pldm::responder::pdr_utils::EventStates sensorCacheforSensor{};
+        if (sensorCache.contains(sensorId))
+        {
+            sensorCacheforSensor = sensorCache.at(sensorId);
+        }
+
         stateField.clear();
-        for (size_t i = 0; i < sensorRearmCnt; i++)
+        for (std::size_t i{0}; i < sensorRearmCnt; i++)
         {
             auto& dbusMapping = dbusMappings[i];
 
             uint8_t sensorEvent = getStateSensorEventState<DBusInterface>(
                 dBusIntf, dbusValMaps[i], dbusMapping);
+
+            uint8_t previousState = PLDM_SENSOR_UNKNOWN;
+
+            // if sensor cache is empty, then its the first
+            // get_state_sensor_reading on this sensor, set the previous state
+            // as the current state
+
+            if (sensorCacheforSensor.at(i) == PLDM_SENSOR_UNKNOWN)
+            {
+                previousState = sensorEvent;
+                handler.updateSensorCache(sensorId, i, previousState);
+            }
+            else
+            {
+                // sensor cache is not empty, so get the previous state from
+                // the sensor cache
+                previousState = sensorCacheforSensor[i];
+            }
 
             uint8_t opState = PLDM_SENSOR_ENABLED;
             if (sensorEvent == PLDM_SENSOR_UNKNOWN)
@@ -153,8 +192,8 @@ int getStateSensorReadingsHandler(
                 opState = PLDM_SENSOR_UNAVAILABLE;
             }
 
-            stateField.push_back({opState, PLDM_SENSOR_NORMAL,
-                                  PLDM_SENSOR_UNKNOWN, sensorEvent});
+            stateField.push_back(
+                {opState, sensorEvent, previousState, sensorEvent});
         }
     }
     catch (const std::out_of_range& e)

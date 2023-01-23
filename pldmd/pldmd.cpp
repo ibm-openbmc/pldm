@@ -7,6 +7,7 @@
 #include "common/utils.hpp"
 #include "dbus_impl_requester.hpp"
 #include "fw-update/manager.hpp"
+#include "host-bmc/dbus/deserialize.hpp"
 #include "invoker.hpp"
 #include "requester/handler.hpp"
 #include "requester/mctp_endpoint_discovery.hpp"
@@ -43,6 +44,7 @@
 #include "dbus_impl_pdr.hpp"
 #include "host-bmc/dbus_to_event_handler.hpp"
 #include "host-bmc/dbus_to_host_effecters.hpp"
+#include "host-bmc/host_associations_parser.hpp"
 #include "host-bmc/host_condition.hpp"
 #include "host-bmc/host_pdr_handler.hpp"
 #include "libpldmresponder/base.hpp"
@@ -55,8 +57,12 @@
 
 #ifdef OEM_IBM
 #include "libpldmresponder/file_io.hpp"
+#include "libpldmresponder/fru_oem_ibm.hpp"
 #include "libpldmresponder/oem_ibm_handler.hpp"
+#include "oem/ibm/host-bmc/host_lamp_test.hpp"
 #endif
+
+#include "host-bmc/dbus/custom_dbus.hpp"
 
 constexpr uint8_t MCTP_MSG_TYPE_PLDM = 1;
 
@@ -84,6 +90,7 @@ static std::optional<Response>
 {
     using type = uint8_t;
     uint8_t eid = requestMsg[0];
+
     pldm_header_info hdrFields{};
     auto hdr = reinterpret_cast<const pldm_msg_hdr*>(
         requestMsg.data() + sizeof(eid) + sizeof(type));
@@ -168,7 +175,6 @@ int main(int argc, char** argv)
             optionUsage();
             exit(EXIT_FAILURE);
     }
-
     /* Create local socket. */
     int returnCode = 0;
     int sockfd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
@@ -188,13 +194,19 @@ int main(int argc, char** argv)
                          &optlen);
     if (res == -1)
     {
-        std::cerr << "Error in obtaining the default send buffer size, Error : "
-                  << strerror(errno) << std::endl;
+        std::cerr << "Error calling setsockopt. RC = " << res
+                  << ", errno = " << errno << std::endl;
     }
     auto event = Event::get_default();
     auto& bus = pldm::utils::DBusHandler::getBus();
-    sdbusplus::server::manager_t objManager(bus,
-                                            "/xyz/openbmc_project/software");
+    sdbusplus::server::manager::manager objManager(
+        bus, "/xyz/openbmc_project/software");
+    sdbusplus::server::manager::manager inventoryManager(
+        bus, "/xyz/openbmc_project/inventory");
+    sdbusplus::server::manager::manager licObjManager(
+        bus, "/xyz/openbmc_project/license");
+    sdbusplus::server::manager::manager ledManager(
+        bus, "/xyz/openbmc_project/led/groups");
     dbus_api::Requester dbusImplReq(bus, "/xyz/openbmc_project/pldm");
 
     Invoker invoker{};
@@ -217,57 +229,87 @@ int main(int argc, char** argv)
     std::shared_ptr<HostPDRHandler> hostPDRHandler;
     std::unique_ptr<pldm::host_effecters::HostEffecterParser>
         hostEffecterParser;
+    std::unique_ptr<pldm::host_associations::HostAssociationsParser>
+        associationsParser;
     std::unique_ptr<DbusToPLDMEvent> dbusToPLDMEventHandler;
     DBusHandler dbusHandler;
     auto hostEID = pldm::utils::readHostEID();
+    invoker.registerHandler(
+        PLDM_BIOS, std::make_unique<bios::Handler>(sockfd, hostEID,
+                                                   &dbusImplReq, &reqHandler));
+    std::unique_ptr<oem_platform::Handler> oemPlatformHandler{};
+    std::unique_ptr<oem_fru::Handler> oemFruHandler{};
+
     if (hostEID)
     {
-        hostPDRHandler = std::make_shared<HostPDRHandler>(
-            sockfd, hostEID, event, pdrRepo.get(), EVENTS_JSONS_DIR,
-            entityTree.get(), bmcEntityTree.get(), dbusImplReq, &reqHandler);
-        // HostFirmware interface needs access to hostPDR to know if host
-        // is running
-        dbusImplHost.setHostPdrObj(hostPDRHandler);
-
         hostEffecterParser =
             std::make_unique<pldm::host_effecters::HostEffecterParser>(
                 &dbusImplReq, sockfd, pdrRepo.get(), &dbusHandler,
                 HOST_JSONS_DIR, &reqHandler);
-        dbusToPLDMEventHandler = std::make_unique<DbusToPLDMEvent>(
-            sockfd, hostEID, dbusImplReq, &reqHandler);
     }
-    std::unique_ptr<oem_platform::Handler> oemPlatformHandler{};
 
 #ifdef OEM_IBM
     std::unique_ptr<pldm::responder::CodeUpdate> codeUpdate =
         std::make_unique<pldm::responder::CodeUpdate>(&dbusHandler);
+    std::unique_ptr<pldm::responder::SlotHandler> slotHandler =
+        std::make_unique<pldm::responder::SlotHandler>(event, pdrRepo.get());
     codeUpdate->clearDirPath(LID_STAGING_DIR);
     oemPlatformHandler = std::make_unique<oem_ibm_platform::Handler>(
-        &dbusHandler, codeUpdate.get(), sockfd, hostEID, dbusImplReq, event,
-        &reqHandler);
+        &dbusHandler, codeUpdate.get(), slotHandler.get(), sockfd, hostEID,
+        dbusImplReq, event, pdrRepo.get(), &reqHandler, bmcEntityTree.get(),
+        hostEffecterParser.get());
+    oemFruHandler =
+        std::make_unique<oem_ibm_fru::Handler>(&dbusHandler, pdrRepo.get());
     codeUpdate->setOemPlatformHandler(oemPlatformHandler.get());
+    slotHandler->setOemPlatformHandler(oemPlatformHandler.get());
     invoker.registerHandler(PLDM_OEM, std::make_unique<oem_ibm::Handler>(
                                           oemPlatformHandler.get(), sockfd,
                                           hostEID, &dbusImplReq, &reqHandler));
+
+    // host lamp test
+    std::unique_ptr<pldm::led::HostLampTest> hostLampTest =
+        std::make_unique<pldm::led::HostLampTest>(
+            bus, "/xyz/openbmc_project/led/groups/host_lamp_test", sockfd,
+            hostEID, dbusImplReq, pdrRepo.get(), reqHandler);
 #endif
-    invoker.registerHandler(
-        PLDM_BIOS, std::make_unique<bios::Handler>(sockfd, hostEID,
-                                                   &dbusImplReq, &reqHandler));
+    if (hostEID)
+    {
+        associationsParser =
+            std::make_unique<pldm::host_associations::HostAssociationsParser>(
+                HOST_JSONS_DIR);
+        hostPDRHandler = std::make_shared<HostPDRHandler>(
+            sockfd, hostEID, event, pdrRepo.get(), EVENTS_JSONS_DIR,
+            entityTree.get(), bmcEntityTree.get(), hostEffecterParser.get(),
+            dbusImplReq, &reqHandler, associationsParser.get(),
+            oemPlatformHandler.get());
+        // HostFirmware interface needs access to hostPDR to know if host
+        // is running
+        dbusImplHost.setHostPdrObj(hostPDRHandler);
+
+        dbusToPLDMEventHandler = std::make_unique<DbusToPLDMEvent>(
+            sockfd, hostEID, dbusImplReq, &reqHandler);
+    }
     auto fruHandler = std::make_unique<fru::Handler>(
         FRU_JSONS_DIR, FRU_MASTER_JSON, pdrRepo.get(), entityTree.get(),
-        bmcEntityTree.get());
+        bmcEntityTree.get(), oemFruHandler.get(), dbusImplReq, &reqHandler,
+        hostEID, event, dbusToPLDMEventHandler.get());
     // FRU table is built lazily when a FRU command or Get PDR command is
     // handled. To enable building FRU table, the FRU handler is passed to the
     // Platform handler.
     auto platformHandler = std::make_unique<platform::Handler>(
         &dbusHandler, PDR_JSONS_DIR, pdrRepo.get(), hostPDRHandler.get(),
-        dbusToPLDMEventHandler.get(), fruHandler.get(),
+        dbusToPLDMEventHandler.get(), fruHandler.get(), bmcEntityTree.get(),
         oemPlatformHandler.get(), event, true);
 #ifdef OEM_IBM
     pldm::responder::oem_ibm_platform::Handler* oemIbmPlatformHandler =
         dynamic_cast<pldm::responder::oem_ibm_platform::Handler*>(
             oemPlatformHandler.get());
     oemIbmPlatformHandler->setPlatformHandler(platformHandler.get());
+
+    pldm::responder::oem_ibm_fru::Handler* oemIbmFruHandler =
+        dynamic_cast<pldm::responder::oem_ibm_fru::Handler*>(
+            oemFruHandler.get());
+    oemIbmFruHandler->setFruHandler(fruHandler.get());
 #endif
 
     invoker.registerHandler(PLDM_PLATFORM, std::move(platformHandler));
@@ -279,6 +321,8 @@ int main(int argc, char** argv)
     dbus_api::Pdr dbusImplPdr(bus, "/xyz/openbmc_project/pldm", pdrRepo.get());
     sdbusplus::xyz::openbmc_project::PLDM::server::Event dbusImplEvent(
         bus, "/xyz/openbmc_project/pldm");
+
+    pldm::deserialize::restoreDbusObj(hostPDRHandler.get());
 
 #endif
 
@@ -360,6 +404,8 @@ int main(int argc, char** argv)
                 if (MCTP_MSG_TYPE_PLDM != requestMsg[1])
                 {
                     // Skip this message and continue.
+                    std::cerr << "Encountered Non-PLDM type message"
+                              << "\n";
                 }
                 else
                 {
