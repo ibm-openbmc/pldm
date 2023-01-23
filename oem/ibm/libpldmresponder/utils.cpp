@@ -8,11 +8,17 @@
 #include <unistd.h>
 
 #include <iostream>
+#include <sys/mman.h>
+#include <mutex>
 
 namespace pldm
 {
 namespace responder
 {
+
+std::atomic<SocketWriteStatus> socketWriteStatus = Free;
+std::mutex lockMutex;
+
 namespace utils
 {
 int setupUnixSocket(const std::string& socketInterface)
@@ -85,13 +91,21 @@ int setupUnixSocket(const std::string& socketInterface)
     return fd;
 }
 
-int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
+void writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
 {
+    const std::lock_guard<std::mutex> lock(lockMutex);
+    if (socketWriteStatus == Error)
+    {
+        munmap((void*)buf, blockSize);
+        return;
+    }
+    socketWriteStatus = InProgress;
     uint64_t i;
     int nwrite = 0;
 
     for (i = 0; i < blockSize; i = i + nwrite)
     {
+
         fd_set wfd;
         struct timeval tv;
         tv.tv_sec = 1;
@@ -107,7 +121,9 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
             std::cerr << "writeToUnixSocket: select call failed " << errno
                       << std::endl;
             close(sock);
-            return -1;
+            socketWriteStatus = Error;
+            munmap((void*)buf, blockSize);
+            return;
         }
         if (retval == 0)
         {
@@ -117,6 +133,7 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
         if ((retval > 0) && (FD_ISSET(sock, &wfd)))
         {
             nwrite = write(sock, buf + i, blockSize - i);
+
             if (nwrite < 0)
             {
                 if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
@@ -127,9 +144,12 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
                     nwrite = 0;
                     continue;
                 }
-                std::cerr << "writeToUnixSocket: Failed to write" << std::endl;
+                std::cerr << "writeToUnixSocket: Failed to write " << errno
+                          << std::endl;
                 close(sock);
-                return -1;
+                socketWriteStatus = Error;
+                munmap((void*)buf, blockSize);
+                return;
             }
         }
         else
@@ -137,8 +157,18 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
             nwrite = 0;
         }
     }
-    return 0;
+
+    munmap((void*)buf, blockSize);
+    socketWriteStatus = Completed;
+    return;
 }
+
+void clearDumpSocketWriteStatus()
+{
+    socketWriteStatus = Free;
+    return;
+}
+
 
 } // namespace utils
 } // namespace responder

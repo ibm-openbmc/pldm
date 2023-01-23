@@ -39,6 +39,7 @@ static constexpr auto resDumpDirPath = "/var/lib/pldm/resourcedump/1";
 
 int DumpHandler::fd = -1;
 namespace fs = std::filesystem;
+extern SocketWriteStatus socketWriteStatus;
 
 std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
 {
@@ -183,23 +184,77 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
                                  oem_platform::Handler* /*oemPlatformHandler*/)
 {
     if (DumpHandler::fd == -1)
-    {
+    {   
         auto socketInterface = getOffloadUri(fileHandle);
         int sock = setupUnixSocket(socketInterface);
         if (sock < 0)
-        {
+        {   
             sock = -errno;
             close(DumpHandler::fd);
             std::cerr
                 << "DumpHandler::writeFromMemory: setupUnixSocket() failed"
                 << std::endl;
             std::remove(socketInterface.c_str());
+            resetOffloadUri();
             return PLDM_ERROR;
         }
-
+        
         DumpHandler::fd = sock;
+        auto rc = transferFileDataToSocket(DumpHandler::fd, length, address);
+        if (rc < 0)
+        {   
+            std::cerr
+                << "DumpHandler::writeFromMemory: transferFileDataToSocket failed"
+                << std::endl;
+            if (DumpHandler::fd >= 0)
+            {   
+                close(DumpHandler::fd);
+                DumpHandler::fd = -1;
+            }
+            std::remove(socketInterface.c_str());
+            resetOffloadUri();
+            return PLDM_ERROR;
+        }
+        return rc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
     }
-    return transferFileDataToSocket(DumpHandler::fd, length, address);
+
+    if (socketWriteStatus == Error)
+    {
+        std::cerr
+            << "DumpHandler::writeFromMemory: Error while writing to Unix socket"
+            << std::endl;
+        if (DumpHandler::fd >= 0)
+        {
+            close(DumpHandler::fd);
+            DumpHandler::fd = -1;
+        }
+        auto socketInterface = getOffloadUri(fileHandle);
+        std::remove(socketInterface.c_str());
+        resetOffloadUri();
+        return PLDM_ERROR;
+    }
+    else if (socketWriteStatus == InProgress || socketWriteStatus == NotReady)
+    {
+        return PLDM_ERROR_NOT_READY;
+    }
+
+    auto rc = transferFileDataToSocket(DumpHandler::fd, length, address);
+    if (rc < 0)
+    {
+        std::cerr
+            << "DumpHandler::writeFromMemory: transferFileDataToSocket failed"
+            << std::endl;
+        if (DumpHandler::fd >= 0)
+        {
+            close(DumpHandler::fd);
+            DumpHandler::fd = -1;
+        }
+        auto socketInterface = getOffloadUri(fileHandle);
+        std::remove(socketInterface.c_str());
+        resetOffloadUri();
+        return PLDM_ERROR;
+    }
+    return rc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
 }
 
 int DumpHandler::write(const char* buffer, uint32_t, uint32_t& length,
