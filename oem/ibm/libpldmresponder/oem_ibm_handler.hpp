@@ -60,6 +60,7 @@ class Handler : public oem_platform::Handler
                         hostOff = true;
                         setEventReceiverCnt = 0;
                         disableWatchDogTimer();
+                        pldm::responder::utils::clearDumpSocketWriteStatus();
                     }
                     else if (propVal ==
                              "xyz.openbmc_project.State.Host.HostState.Running")
