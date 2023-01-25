@@ -20,14 +20,11 @@ namespace pldm
 {
 namespace serialize
 {
-
 namespace fs = std::filesystem;
 
 void Serialize::serialize(const std::string& path, const std::string& intf,
                           const std::string& name, dbus::PropertyValue value)
 {
-    std::cout << "Inside Serialize::serialize; path=" << path
-              << " Interface=" << intf << " name=" << name << std::endl;
     if (path.empty() || intf.empty())
     {
         return;
@@ -44,32 +41,22 @@ void Serialize::serialize(const std::string& path, const std::string& intf,
 
     if (!savedObjs.contains(type) || !savedObjs[type].contains(path))
     {
-        std::cout
-            << "Inside Serialize::serialize; inside if (!savedObjs.contains(type) || !savedObjs[type].contains(path))\n";
         std::map<std::string, std::map<std::string, pldm::dbus::PropertyValue>>
             maps{{{intf, {{name, value}}}}};
         savedObjs[type][path] = std::make_tuple(num, cid, maps);
     }
     else
     {
-        std::cout
-            << "Inside Serialize::serialize; inside else if not (!savedObjs.contains(type) || !savedObjs[type].contains(path))\n";
         auto& [num, cid, objs] = savedObjs[type][path];
 
         if (objs.empty())
         {
-            std::cout
-                << "Inside Serialize::serialize; inside if(objs.empty())\n";
             objs[intf][name] = value;
         }
         else
         {
-            std::cout
-                << "Inside Serialize::serialize; inside if(objs.empty()) else\n";
             if (value != objs[intf][name])
             {
-                std::cout
-                    << "Inside Serialize::serialize; inside if(value != objs[intf][name])\n";
                 // The value is changed and is not equal to
                 // the value in the in-memory cache, so update it
                 // and update the persistent cache file
@@ -77,8 +64,6 @@ void Serialize::serialize(const std::string& path, const std::string& intf,
             }
             else
             {
-                std::cout
-                    << "Inside Serialize::serialize; inside if(value != objs[intf][name]) else\n";
                 // The value in memory cache is same as the new value
                 // so no need to serialise it again
                 return;
@@ -94,15 +79,11 @@ void Serialize::serialize(const std::string& path, const std::string& intf,
     auto dir = filePath.parent_path();
     if (!fs::exists(dir))
     {
-        std::cout
-            << "Inside Serialize::serialize; inside if(!fs::exists(dir))\n";
         fs::create_directories(dir);
     }
 
     std::ofstream os(filePath.c_str(), std::ios::binary);
-    std::cout << "Inside Serialize::serialize : before oarchive(os) \n";
     cereal::BinaryOutputArchive oarchive(os);
-    std::cout << "Inside Serialize::serialize : after oarchive(os) \n";
     oarchive(savedObjs);
 }
 
