@@ -9,7 +9,6 @@ namespace pldm
 {
 namespace dbus
 {
-
 void CustomDBus::setLocationCode(const std::string& path, std::string value)
 {
     if (location.find(path) == location.end())
@@ -284,19 +283,13 @@ void CustomDBus::implementVRMInterface(const std::string& path)
 
 void CustomDBus::implementCpuCoreInterface(const std::string& path)
 {
-    std::cout << "Inside implementCpuCoreInterface\n";
     if (cpuCore.find(path) == cpuCore.end())
     {
-        std::cout
-            << "Inside implementCpuCoreInterface: inside ifcpuCore.find(path) == cpuCore.end()\n";
-        std::cout << "Inside implementCpuCoreInterface: inside if: path="
-                  << path.c_str() << std::endl;
+        << path.c_str() << std::endl;
         cpuCore.emplace(
             path, std::make_unique<CPUCore>(pldm::utils::DBusHandler::getBus(),
                                             path.c_str()));
     }
-    std::cout
-        << "Inside implementCpuCoreInterface: outside ifcpuCore.find(path) == cpuCore.end()\n";
 }
 
 void CustomDBus::implementFabricAdapter(const std::string& path)
@@ -321,20 +314,14 @@ void CustomDBus::implementBoard(const std::string& path)
 
 void CustomDBus::implementObjectEnableIface(const std::string& path, bool value)
 {
-    std::cout << "Inside implementObjectEnableIface\n";
     if (_enabledStatus.find(path) == _enabledStatus.end())
     {
-        std::cout
-            << "Inside implementObjectEnableIface: inside if _enabledStatus.find(path) == _enabledStatus.end()\n";
-        std::cout << "Inside implementObjectEnableIface: inside if: path="
-                  << path.c_str() << std::endl;
+        << path.c_str() << std::endl;
         _enabledStatus.emplace(
             path, std::make_unique<Enable>(pldm::utils::DBusHandler::getBus(),
                                            path.c_str()));
         _enabledStatus.at(path)->enabled(value);
     }
-    std::cout
-        << "Inside implementObjectEnableIface: outside if _enabledStatus.find(path) == _enabledStatus.end()\n";
 }
 
 void CustomDBus::implementGlobalInterface(const std::string& path)

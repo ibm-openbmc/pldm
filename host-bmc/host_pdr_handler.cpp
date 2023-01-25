@@ -27,7 +27,6 @@
 
 namespace pldm
 {
-
 using namespace pldm::dbus_api;
 using namespace pldm::responder::events;
 using namespace pldm::utils;
@@ -465,8 +464,6 @@ void HostPDRHandler::mergeEntityAssociations(
     const std::vector<uint8_t>& pdr, [[maybe_unused]] const uint32_t& size,
     [[maybe_unused]] const uint32_t& record_handle)
 {
-    std::cout << "Inside mergeEntityAssociations: record_handle="
-              << record_handle << std::endl;
     size_t numEntities{};
     pldm_entity* entities = nullptr;
     bool merged = false;
@@ -525,7 +522,6 @@ void HostPDRHandler::mergeEntityAssociations(
 
     if (merged)
     {
-        std::cout << "inside if (merged)\n";
         // Update our PDR repo with the merged entity association PDRs
         pldm_entity_node* node = nullptr;
         pldm_find_entity_ref_in_tree(entityTree, entities[0], &node);
@@ -552,8 +548,6 @@ void HostPDRHandler::mergeEntityAssociations(
             // a refreshEntireRepo change event.
             if (isHostUp() || (terminus_handle & 0x8000))
             {
-                std::cout
-                    << "inside if (merged): Inside  if (isHostUp() || (terminus_handle & 0x8000))\n";
                 // Record Handle is 0xFFFFFFFF(max value uint32_t), for merging
                 // entity association pdr to bmc range
                 pldm_entity_association_pdr_add_from_node(
@@ -562,7 +556,6 @@ void HostPDRHandler::mergeEntityAssociations(
             }
             else
             {
-                std::cout << "inside if (merged): Inside else \n";
                 // Record Handle is 0xFFFFFFFF(max value uint32_t), for merging
                 // entity association pdr to bmc range
                 pldm_entity_association_pdr_add_from_node(
@@ -789,8 +782,6 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                 rh = nextRecordHandle - 1;
             }
 
-            std::cout << "Inside processHostPDRs: nextrecordhandle="
-                      << nextRecordHandle << std::endl;
             auto pdrHdr = reinterpret_cast<pldm_pdr_hdr*>(pdr.data());
             if (!rh)
             {
@@ -1790,7 +1781,6 @@ void HostPDRHandler::createDbusObjects()
 
     for (const auto& entity : objPathMap)
     {
-        std::cout << "Inside createDbusObjects: for loop\n";
         pldm_entity node = pldm_entity_extract(entity.second);
         // update the Present Property
         setPresentPropertyStatus(entity.first);
@@ -1801,79 +1791,55 @@ void HostPDRHandler::createDbusObjects()
         switch (node.entity_type)
         {
             case 32903:
-                std::cout
-                    << "Inside createDbusObjects: switch case; case 32903\n";
                 CustomDBus::getCustomDBus().implementCpuCoreInterface(
                     entity.first);
                 CustomDBus::getCustomDBus().implementObjectEnableIface(
                     entity.first, false);
                 break;
             case PLDM_ENTITY_SYSTEM_CHASSIS:
-                std::cout
-                    << "Inside createDbusObjects: switch case; case PLDM_ENTITY_SYSTEM_CHASSIS\n";
                 CustomDBus::getCustomDBus().implementChassisInterface(
                     entity.first);
                 CustomDBus::getCustomDBus().implementGlobalInterface(
                     entity.first);
                 break;
             case PLDM_ENTITY_POWER_SUPPLY:
-                std::cout
-                    << "Inside createDbusObjects: switch case; case PLDM_ENTITY_POWER_SUPPLY\n";
                 CustomDBus::getCustomDBus().implementPowerSupplyInterface(
                     entity.first);
                 break;
             case PLDM_ENTITY_FAN:
-                std::cout
-                    << "Inside createDbusObjects: switch case; case PLDM_ENTITY_FAN\n";
                 CustomDBus::getCustomDBus().implementFanInterface(entity.first);
                 break;
             case PLDM_ENTITY_SYS_BOARD:
-                std::cout
-                    << "Inside createDbusObjects: switch case; case PLDM_ENTITY_SYS_BOARD\n";
                 CustomDBus::getCustomDBus().implementMotherboardInterface(
                     entity.first);
                 break;
             case PLDM_ENTITY_POWER_CONVERTER:
-                std::cout
-                    << "Inside createDbusObjects: switch case; case PLDM_ENTITY_POWER_CONVERTER\n";
                 CustomDBus::getCustomDBus().implementVRMInterface(entity.first);
                 break;
             case PLDM_ENTITY_SLOT:
-                std::cout
-                    << "Inside createDbusObjects: switch case; case PLDM_ENTITY_SLOT\n";
                 CustomDBus::getCustomDBus().implementPCIeSlotInterface(
                     entity.first);
                 CustomDBus::getCustomDBus().setlinkreset(
                     entity.first, false, hostEffecterParser, mctp_eid);
                 break;
             case PLDM_ENTITY_CONNECTOR:
-                std::cout
-                    << "Inside createDbusObjects: switch case; case PLDM_ENTITY_CONNECTOR\n";
                 CustomDBus::getCustomDBus().implementConnecterInterface(
                     entity.first);
                 break;
             case PLDM_ENTITY_MODULE:
-                std::cout
-                    << "Inside createDbusObjects: switch case; case PLDM_ENTITY_MODULE\n";
                 CustomDBus::getCustomDBus().implementBoard(entity.first);
                 break;
             case PLDM_ENTITY_CARD:
-                std::cout
-                    << "Inside createDbusObjects: switch case; case PLDM_ENTITY_CARD\n";
                 CustomDBus::getCustomDBus().implementPCIeDeviceInterface(
                     entity.first);
                 break;
             case PLDM_ENTITY_IO_MODULE:
-                std::cout
-                    << "Inside createDbusObjects: switch case; case PLDM_ENTITY_IO_MODULE\n";
                 CustomDBus::getCustomDBus().implementFabricAdapter(
                     entity.first);
                 CustomDBus::getCustomDBus().implementPCIeDeviceInterface(
                     entity.first);
                 break;
             case 32954:
-                std::cout
-                    << "Inside createDbusObjects: switch case; case 32954\n";
                 CustomDBus::getCustomDBus().implementPCIeSlotInterface(
                     entity.first);
                 CustomDBus::getCustomDBus().setSlotType(
@@ -1883,13 +1849,10 @@ void HostPDRHandler::createDbusObjects()
             default:
                 break;
         }
-        std::cout << "Inside createDbusObjects: outside switch case\n";
     }
-    std::cout << "Inside createDbusObjects: outside for loop\n";
     this->setFRUDynamicAssociations();
     getFRURecordTableMetadataByHost();
 
-    std::cout << "Inside createDbusObjects: before setOperationStatus\n";
     // update xyz.openbmc_project.State.Decorator.OperationalStatus
     setOperationStatus();
     std::cerr << "Refreshing dbus hosted by pldm Completed \n";
