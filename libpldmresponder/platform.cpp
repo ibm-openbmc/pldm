@@ -241,6 +241,28 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
         pldm::serialize::Serialize::getSerialize().reSerialize(types);
     }
 
+    if (clearMexObj && hostPDRHandler)
+    {
+        clearMexObj = false;
+
+        // Deleting Fru Dbus Objects and persisted details
+        std::vector<uint16_t> types = {
+            PLDM_ENTITY_POWER_SUPPLY,
+            PLDM_ENTITY_FAN,
+            PLDM_ENTITY_POWER_CONVERTER,
+            PLDM_ENTITY_CONNECTOR,
+            PLDM_ENTITY_MODULE,
+            PLDM_ENTITY_CARD,
+            PLDM_ENTITY_SLOT,
+            PLDM_ENTITY_IO_MODULE,
+            PLDM_ENTITY_SLOT | 0x8000,
+            PLDM_ENTITY_SYS_BOARD,
+            PLDM_ENTITY_SYSTEM_CHASSIS,
+        };
+        hostPDRHandler->deleteDbusObjects(types);
+        pldm::serialize::Serialize::getSerialize().reSerialize(types);
+    }
+
     uint32_t recordHandle{};
     uint32_t dataTransferHandle{};
     uint8_t transferOpFlag{};
