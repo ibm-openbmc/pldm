@@ -585,6 +585,16 @@ void CustomDBus::deleteObject(const std::string& path)
     {
         asset.erase(asset.find(path));
     }
+
+    if (pcieDevice.contains(path))
+    {
+        pcieDevice.erase(pcieDevice.find(path));
+    }
+
+    if (link.contains(path))
+    {
+        link.erase(link.find(path));
+    }
 }
 
 void CustomDBus::removeDBus(const std::vector<uint16_t> types)

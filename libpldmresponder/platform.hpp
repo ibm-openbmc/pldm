@@ -45,6 +45,7 @@ using EventHandler = std::function<int(
 using EventHandlers = std::vector<EventHandler>;
 using EventMap = std::map<EventType, EventHandlers>;
 using AssociatedEntityMap = std::map<DbusPath, pldm_entity>;
+using namespace sdbusplus::bus::match::rules;
 
 class Handler : public CmdHandler
 {
@@ -133,6 +134,26 @@ class Handler : public CmdHandler
                 }
             }
         }
+        hostOffMatch = std::make_unique<sdbusplus::bus::match::match>(
+            dBusIntf->getBus(),
+            propertiesChanged("/xyz/openbmc_project/state/host0",
+                              "xyz.openbmc_project.State.Host"),
+            [this](sdbusplus::message::message& msg) {
+                DbusChangedProps props{};
+                std::string intf;
+                msg.read(intf, props);
+                const auto itr = props.find("CurrentHostState");
+                if (itr != props.end())
+                {
+                    utils::PropertyValue value = itr->second;
+                    auto propVal = std::get<std::string>(value);
+                    if (propVal ==
+                        "xyz.openbmc_project.State.Host.HostState.Off")
+                    {
+                        clearMexObj = true;
+                    }
+                }
+            });
     }
 
     pdr_utils::Repo& getRepo()
@@ -476,6 +497,11 @@ class Handler : public CmdHandler
     std::vector<fs::path> pdrJsonsDir;
     std::unique_ptr<sdeventplus::source::Defer> deferredGetPDREvent;
     bool isFirstGetPDR = true;
+    /** @brief D-Bus property changed signal match */
+    std::unique_ptr<sdbusplus::bus::match::match> hostOffMatch;
+    /** @brief Flag used to delete the cached Mex details and Mex Dbus Objects
+     */
+    bool clearMexObj = true;
 };
 
 /** @brief Function to check if the effecter falls in OEM range
