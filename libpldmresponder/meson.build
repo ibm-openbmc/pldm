@@ -74,6 +74,7 @@ if get_option('oem-ibm').enabled()
     '../oem/ibm/libpldmresponder/file_io_type_progress_src.cpp',
     '../oem/ibm/libpldmresponder/file_io_type_lic.cpp',
     '../oem/ibm/libpldmresponder/file_io_type_pcie.cpp',
+    '../oem/ibm/libpldmresponder/file_io_type_vpd.cpp',
     '../oem/ibm/host-bmc/host_lamp_test.cpp',
   ]
 endif
