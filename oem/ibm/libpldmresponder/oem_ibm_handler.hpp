@@ -114,6 +114,7 @@ class Handler : public oem_platform::Handler
                         setEventReceiverCnt = 0;
                         disableWatchDogTimer();
                         pldm::responder::utils::clearLicenseStatus();
+                        pldm::responder::utils::clearDumpSocketWriteStatus();
                     }
                     else if (propVal ==
                              "xyz.openbmc_project.State.Host.HostState.Running")
