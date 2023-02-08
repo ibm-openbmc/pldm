@@ -88,7 +88,6 @@ int pldm::responder::oem_ibm_platform::Handler::
     for (size_t i = 0; i < compSensorCnt; i++)
     {
         uint8_t sensorOpState{};
-        uint8_t realSAIState{};
         if (entityType == PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE &&
             stateSetId == PLDM_OEM_IBM_BOOT_STATE)
         {
@@ -109,13 +108,6 @@ int pldm::responder::oem_ibm_platform::Handler::
                     break;
                 }
             }
-        }
-        else if (entityType == PLDM_OEM_IBM_ENTITY_REAL_SAI &&
-                 stateSetId == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS)
-        {
-            realSAIState = fetchRealSAIStatus();
-            stateField.push_back({PLDM_SENSOR_ENABLED, PLDM_SENSOR_NORMAL,
-                                  PLDM_SENSOR_UNKNOWN, realSAIState});
         }
         else
         {
@@ -766,52 +758,6 @@ void buildAllRealSAIEffecterPDR(oem_ibm_platform::Handler* platformHandler,
     repo.addRecord(pdrEntry);
 }
 
-void buildAllRealSAISensorPDR(oem_ibm_platform::Handler* platformHandler,
-                              uint16_t entityType, uint16_t entityInstance,
-                              pdr_utils::Repo& repo)
-
-{
-    size_t pdrSize = 0;
-    pdrSize =
-        sizeof(pldm_state_sensor_pdr) + sizeof(state_sensor_possible_states);
-    std::vector<uint8_t> entry{};
-    entry.resize(pdrSize);
-    pldm_state_sensor_pdr* pdr =
-        reinterpret_cast<pldm_state_sensor_pdr*>(entry.data());
-    if (!pdr)
-    {
-        std::cerr << "Failed to get record by PDR type, ERROR:"
-                  << PLDM_PLATFORM_INVALID_SENSOR_ID << std::endl;
-        return;
-    }
-    pdr->hdr.record_handle = 0;
-    pdr->hdr.version = 1;
-    pdr->hdr.type = PLDM_STATE_SENSOR_PDR;
-    pdr->hdr.record_change_num = 0;
-    pdr->hdr.length = sizeof(pldm_state_sensor_pdr) - sizeof(pldm_pdr_hdr);
-    pdr->terminus_handle = TERMINUS_HANDLE;
-    pdr->sensor_id = platformHandler->getNextSensorId();
-    pdr->entity_type = entityType;
-    pdr->entity_instance = entityInstance;
-    pdr->container_id = 1;
-    pdr->sensor_init = PLDM_NO_INIT;
-    pdr->sensor_auxiliary_names_pdr = false;
-    pdr->composite_sensor_count = 1;
-
-    auto* possibleStatesPtr = pdr->possible_states;
-    auto possibleStates =
-        reinterpret_cast<state_sensor_possible_states*>(possibleStatesPtr);
-    possibleStates->state_set_id = 10;
-    possibleStates->possible_states_size = 2;
-    auto state =
-        reinterpret_cast<state_sensor_possible_states*>(possibleStates);
-    state->states[0].byte = 6;
-    pldm::responder::pdr_utils::PdrEntry pdrEntry{};
-    pdrEntry.data = entry.data();
-    pdrEntry.size = pdrSize;
-    repo.addRecord(pdrEntry);
-}
-
 void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     pdr_utils::Repo& repo)
 {
@@ -827,8 +773,6 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
 
     buildAllRealSAIEffecterPDR(this, PLDM_OEM_IBM_ENTITY_REAL_SAI,
                                ENTITY_INSTANCE_1, repo);
-    buildAllRealSAISensorPDR(this, PLDM_OEM_IBM_ENTITY_REAL_SAI,
-                             ENTITY_INSTANCE_1, repo);
 
     buildAllCodeUpdateEffecterPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
                                   ENTITY_INSTANCE_0,
@@ -853,10 +797,6 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     attachOemEntityToEntityAssociationPDR(
         this, bmcEntityTree, "/xyz/openbmc_project/inventory/system", repo,
         fwUpEntity);
-    pldm_entity saiEntity = {PLDM_OEM_IBM_ENTITY_REAL_SAI, 1, 1};
-    attachOemEntityToEntityAssociationPDR(
-        this, bmcEntityTree, "/xyz/openbmc_project/inventory/system", repo,
-        saiEntity);
     pldm_entity powerStateEntity = {PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER, 0,
                                     1};
     attachOemEntityToEntityAssociationPDR(
