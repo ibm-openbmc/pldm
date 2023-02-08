@@ -24,7 +24,6 @@
 
 namespace pldm
 {
-
 using Severity = pldm::PelSeverity;
 
 // mapping of severity enum to severity interface
@@ -41,7 +40,6 @@ static std::unordered_map<Severity, std::string> sevMap = {
 
 namespace utils
 {
-
 namespace fs = std::filesystem;
 using Json = nlohmann::json;
 constexpr bool Tx = true;
@@ -114,6 +112,7 @@ std::optional<std::vector<set_effecter_state_field>>
 /**
  *  @brief creates an error log
  *  @param[in] errorMsg - the error message
+ *  @param[in] sev - severity of the log
  */
 void reportError(const char* errorMsg, const PelSeverity& sev);
 

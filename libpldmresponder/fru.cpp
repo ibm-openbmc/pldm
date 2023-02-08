@@ -21,10 +21,8 @@
 
 namespace pldm
 {
-
 namespace responder
 {
-
 pldm_entity FruImpl::getEntityByObjectPath(const dbus::ObjectValueTree& objects,
                                            const std::string& path)
 {
@@ -226,14 +224,6 @@ void FruImpl::buildFRUTable()
     // save a copy of bmc's entity association tree
     pldm_entity_association_tree_copy_root(entityTree, bmcEntityTree);
 
-    if (table.size())
-    {
-        padBytes = pldm::utils::getNumPadBytes(table.size());
-        table.resize(table.size() + padBytes, 0);
-
-        // Calculate the checksum
-        checksum = crc32(table.data(), table.size());
-    }
     isBuilt = true;
 }
 std::string FruImpl::populatefwVersion()
@@ -1421,7 +1411,6 @@ uint32_t
 
 namespace fru
 {
-
 Response Handler::getFRURecordTableMetadata(const pldm_msg* request,
                                             size_t /*payloadLength*/)
 {
