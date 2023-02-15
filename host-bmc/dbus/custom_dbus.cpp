@@ -2,6 +2,8 @@
 
 #include "libpldm/state_set.h"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include "serialize.hpp"
 #include "type.hpp"
 
@@ -612,8 +614,8 @@ void CustomDBus::removeDBus(const std::vector<uint16_t> types)
             continue;
         }
 
-        std::cerr << "Deleting the dbus objects of type : " << (unsigned)type
-                  << std::endl;
+        lg2::error("Deleting the dbus objects of type : {KEY0}", "KEY0", (unsigned)type);
+
         for (const auto& [path, entites] : savedObjs.at(type))
         {
             deleteObject(path);

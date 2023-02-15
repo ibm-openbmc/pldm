@@ -13,6 +13,8 @@
 #include "requester/mctp_endpoint_discovery.hpp"
 #include "requester/request.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <err.h>
 #include <getopt.h>
 #include <poll.h>
@@ -77,7 +79,7 @@ using namespace pldm::flightrecorder;
 void interruptFlightRecorderCallBack(Signal& /*signal*/,
                                      const struct signalfd_siginfo*)
 {
-    std::cerr << "\nReceived SIGUR1(10) Signal interrupt\n";
+    lg2::info("Received SIGUR1(10) Signal interrupt");
 
     // obtain the flight recorder instance and dump the recorder
     FlightRecorder::GetInstance().playRecorder();
@@ -96,7 +98,7 @@ static std::optional<Response>
         requestMsg.data() + sizeof(eid) + sizeof(type));
     if (PLDM_SUCCESS != unpack_pldm_header(hdr, &hdrFields))
     {
-        std::cerr << "Empty PLDM request header \n";
+        lg2::info("Empty PLDM request header");
         return std::nullopt;
     }
 
@@ -132,7 +134,7 @@ static std::optional<Response>
             header.command = hdrFields.command;
             if (PLDM_SUCCESS != pack_pldm_header(&header, responseHdr))
             {
-                std::cerr << "Failed adding response header \n";
+                lg2::error("Failed adding response header");
                 return std::nullopt;
             }
             response.insert(response.end(), completion_code);
@@ -152,9 +154,9 @@ static std::optional<Response>
 
 void optionUsage(void)
 {
-    std::cerr << "Usage: pldmd [options]\n";
-    std::cerr << "Options:\n";
-    std::cerr << "  [--verbose] - would enable verbosity\n";
+    lg2::error("Usage: pldmd [options]");
+    lg2::error("Options:");
+    lg2::error(" [--verbose] - would enable verbosity");
 }
 
 int main(int argc, char** argv)
@@ -181,7 +183,7 @@ int main(int argc, char** argv)
     if (-1 == sockfd)
     {
         returnCode = -errno;
-        std::cerr << "Failed to create the socket, RC= " << returnCode << "\n";
+        lg2::error("Failed to create the socket, RC={KEY0}", "KEY0", returnCode);
         exit(EXIT_FAILURE);
     }
     socklen_t optlen;
@@ -194,8 +196,7 @@ int main(int argc, char** argv)
                          &optlen);
     if (res == -1)
     {
-        std::cerr << "Error calling setsockopt. RC = " << res
-                  << ", errno = " << errno << std::endl;
+        lg2::error("Error calling setsockopt. RC = {KEY0}, errno = {KEY1}", "KEY0", res, "KEY1",errno);
     }
     auto event = Event::get_default();
     auto& bus = pldm::utils::DBusHandler::getBus();
@@ -338,8 +339,7 @@ int main(int argc, char** argv)
     if (-1 == result)
     {
         returnCode = -errno;
-        std::cerr << "Failed to connect to the socket, RC= " << returnCode
-                  << "\n";
+        lg2::error("Failed to connect to the socket, RC= {KEY0}", "KEY0", returnCode);
         exit(EXIT_FAILURE);
     }
 
@@ -347,8 +347,8 @@ int main(int argc, char** argv)
     if (-1 == result)
     {
         returnCode = -errno;
-        std::cerr << "Failed to send message type as pldm to mctp, RC= "
-                  << returnCode << "\n";
+        lg2::error("Failed to send message type as pldm to mctp, RC= {KEY0}", "KEY0", returnCode);
+        
         exit(EXIT_FAILURE);
     }
 
@@ -386,7 +386,7 @@ int main(int argc, char** argv)
         else if (peekedLength <= -1)
         {
             returnCode = -errno;
-            std::cerr << "recv system call failed, RC= " << returnCode << "\n";
+            lg2::error("recv system call failed, RC= {KEY0}", "KEY0", returnCode);
         }
         else
         {
@@ -404,8 +404,7 @@ int main(int argc, char** argv)
                 if (MCTP_MSG_TYPE_PLDM != requestMsg[1])
                 {
                     // Skip this message and continue.
-                    std::cerr << "Encountered Non-PLDM type message"
-                              << "\n";
+                    lg2::error("Encountered Non-PLDM type message");
                 }
                 else
                 {
@@ -439,13 +438,8 @@ int main(int argc, char** argv)
                                                  sizeof(currentSendbuffSize));
                             if (res == -1)
                             {
-                                std::cerr
-                                    << "Responder : Failed to set the new send buffer size [bytes] : "
-                                    << currentSendbuffSize
-                                    << " from current size [bytes] : "
-                                    << oldBuffSize
-                                    << ", Error : " << strerror(errno)
-                                    << std::endl;
+                                lg2::error("Responder : Failed to set the new send buffer size [bytes] : {KEY0}",  "KEY0", currentSendbuffSize);
+                                lg2::error("from current size [bytes] : {KEY1}, Error : {KEY2}", "KEY0", currentSendbuffSize, "KEY1", oldBuffSize, "KEY2", strerror(errno));
                                 return;
                             }
                         }
@@ -454,18 +448,15 @@ int main(int argc, char** argv)
                         if (-1 == result)
                         {
                             returnCode = -errno;
-                            std::cerr << "sendto system call failed, RC= "
-                                      << returnCode << "\n";
+                            lg2::error("sendto system call failed, RC= {KEY0}", "KEY0", returnCode);
                         }
                     }
                 }
             }
             else
             {
-                std::cerr
-                    << "Failure to read peeked length packet. peekedLength= "
-                    << peekedLength << " recvDataLength=" << recvDataLength
-                    << "\n";
+                lg2::error("Failure to read peeked length packet. peekedLength = {KEY0}, recvDataLength= {KEY1}", 
+                "KEY0", peekedLength, "KEY1", recvDataLength);
             }
         }
     };
@@ -486,7 +477,7 @@ int main(int argc, char** argv)
 
     if (shutdown(sockfd, SHUT_RDWR))
     {
-        std::perror("Failed to shutdown the socket");
+        lg2::error("Failed to shutdown the socket");
     }
     if (returnCode)
     {

@@ -3,6 +3,8 @@
 #include <nlohmann/json.hpp>
 #include <xyz/openbmc_project/Common/error.hpp>
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -50,8 +52,7 @@ void FruParser::setupDefaultDBusLookup(const fs::path& masterJsonPath)
     auto data = Json::parse(jsonFile, nullptr, false);
     if (data.is_discarded())
     {
-        std::cerr << "Parsing FRU Dbus Lookup Map config file failed, FILE="
-                  << masterJsonPath;
+        lg2::error("Parsing FRU Dbus Lookup Map config file failed, FILE={KEY0}", "KEY0", masterJsonPath.c_str());
         std::abort();
     }
     std::map<Interface, EntityType> defIntfToEntityType;
@@ -66,7 +67,7 @@ void FruParser::setupDefaultDBusLookup(const fs::path& masterJsonPath)
         }
         catch (const std::exception& e)
         {
-            std::cerr << "FRU DBus lookup map format error\n";
+            lg2::error("FRU DBus lookup map format error");
             throw InternalFailure();
         }
     }
@@ -118,7 +119,7 @@ void FruParser::setupFruRecordMap(const std::string& dirPath)
         auto data = Json::parse(jsonFile, nullptr, false);
         if (data.is_discarded())
         {
-            std::cerr << "Parsing FRU config file failed, FILE=" << file.path();
+            lg2::error("Parsing FRU config file failed, FILE={KEY0}", "KEY0", file.path().c_str());
             throw InternalFailure();
         }
 

@@ -1,6 +1,7 @@
 #include "pldm_fru_cmd.hpp"
 
 #include "pldm_cmd_helper.hpp"
+#include <phosphor-logging/lg2.hpp>
 
 #ifdef OEM_IBM
 #include "libpldm/fru_oem_ibm.h"
@@ -63,8 +64,8 @@ class GetFruRecordTableMetadata : public CommandInterface
             &total_record_set_identifiers, &total_table_records, &checksum);
         if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
         {
-            std::cerr << "Response Message Error: "
-                      << "rc=" << rc << ",cc=" << (int)cc << std::endl;
+            lg2::error( "Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0", rc, "KEY1", (int)cc);
+
             return;
         }
         ordered_json output;
@@ -382,8 +383,7 @@ class GetFRURecordByOption : public CommandInterface
 
         if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
         {
-            std::cerr << "Response Message Error: "
-                      << "rc=" << rc << ",cc=" << (int)cc << std::endl;
+            lg2::error( "Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0", rc, "KEY1", (int)cc);
             return;
         }
 
@@ -434,8 +434,8 @@ class GetFruRecordTable : public CommandInterface
 
         if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
         {
-            std::cerr << "Response Message Error: "
-                      << "rc=" << rc << ",cc=" << (int)cc << std::endl;
+            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0", rc, "KEY1", (int)cc);
+
             return;
         }
 

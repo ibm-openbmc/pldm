@@ -7,6 +7,7 @@
 #include "common/bios_utils.hpp"
 
 #include <xyz/openbmc_project/BIOSConfig/Manager/server.hpp>
+#include <phosphor-logging/lg2.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -472,8 +473,7 @@ void BIOSConfig::updateBaseBIOSTableProperty()
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to update BaseBIOSTable property, ERROR="
-                  << e.what() << "\n";
+        lg2::error("failed to update BaseBIOSTable property, ERROR={KEY0}", "KEY0", e.what());
     }
 }
 
@@ -521,8 +521,7 @@ void BIOSConfig::buildAndStoreAttrTables(const Table& stringTable)
     // bios-settings-manager in sync
     catch (const std::exception& e)
     {
-        std::cerr << "Failed to read BaseBIOSTable property, ERROR=" << e.what()
-                  << "\n";
+        lg2::error("Failed to read BaseBIOSTable property, ERROR={KEY0}", "KEY0", e.what());
     }
 
     Table attrTable, attrValueTable;
@@ -547,8 +546,7 @@ void BIOSConfig::buildAndStoreAttrTables(const Table& stringTable)
         }
         catch (const std::exception& e)
         {
-            std::cerr << "Construct Table Entry Error, AttributeName = "
-                      << attr->name << std::endl;
+            lg2::error("Construct Table Entry Error, AttributeName = {KEY0}", "KEY0", attr->name);
         }
     }
 
@@ -630,16 +628,13 @@ void BIOSConfig::load(const fs::path& filePath, ParseHandler handler)
                 }
                 catch (const std::exception& e)
                 {
-                    std::cerr
-                        << "Failed to parse JSON config file(entry handler) : "
-                        << filePath.c_str() << ", " << e.what() << std::endl;
+                    lg2::error("Failed to parse JSON config file(entry handler) : {KEY0}, {KEY1}", "KEY0", filePath.c_str(), "KEY1", e.what());
                 }
             }
         }
         catch (const std::exception& e)
         {
-            std::cerr << "Failed to parse JSON config file : "
-                      << filePath.c_str() << std::endl;
+            lg2::error("Failed to parse JSON config file : {KEY0}", "KEY0", filePath.c_str());
         }
     }
 }
@@ -716,6 +711,7 @@ void BIOSConfig::traceBIOSUpdate(
         {
             auto value =
                 table::attribute_value::decodeIntegerEntry(attrValueEntry);
+            //boolalphaError
             std::cout << "BIOS:" << attrName << ", updated to value: " << value
                       << ", by BMC:" << std::boolalpha << isBMC << std::endl;
             break;
@@ -725,6 +721,7 @@ void BIOSConfig::traceBIOSUpdate(
         {
             auto value =
                 table::attribute_value::decodeStringEntry(attrValueEntry);
+            //boolalphaError
             std::cout << "BIOS:" << attrName << " updated to value: " << value
                       << ", by BMC:" << std::boolalpha << isBMC << std::endl;
             break;
@@ -757,8 +754,7 @@ int BIOSConfig::checkAttrValueToUpdate(
             }
             if (value[0] >= pvHdls.size())
             {
-                std::cerr << "Enum: Illgeal index, Index = " << (int)value[0]
-                          << std::endl;
+                lg2::error("Enum: Illgeal index, Index = {KEY0}", "KEY0", (int)value[0]);
                 return PLDM_ERROR_INVALID_DATA;
             }
             return PLDM_SUCCESS;
@@ -773,8 +769,7 @@ int BIOSConfig::checkAttrValueToUpdate(
 
             if (value < lower || value > upper)
             {
-                std::cerr << "Integer: out of bound, value = " << value
-                          << std::endl;
+                lg2::error("Integer: out of bound, value = {KEY0}", "KEY0", value);
                 return PLDM_ERROR_INVALID_DATA;
             }
             return PLDM_SUCCESS;
@@ -788,15 +783,14 @@ int BIOSConfig::checkAttrValueToUpdate(
             if (value.size() < stringConf.minLength ||
                 value.size() > stringConf.maxLength)
             {
-                std::cerr << "String: Length error, string = " << value
-                          << " length = " << value.size() << std::endl;
+                lg2::error("String: Length error, string = {KEY0} length {KEY1}", "KEY0", value, "KEY1", value.size());
+
                 return PLDM_ERROR_INVALID_LENGTH;
             }
             return PLDM_SUCCESS;
         }
         default:
-            std::cerr << "ReadOnly or Unspported type, type = " << attrType
-                      << std::endl;
+            lg2::error("ReadOnly or Unspported type, type = {KEY0}", "KEY0", attrType);
             return PLDM_ERROR;
     };
 }
@@ -860,7 +854,7 @@ int BIOSConfig::setAttrValue(const void* entry, size_t size, bool isBMC,
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Set attribute value error: " << e.what() << std::endl;
+        lg2::error("Set attribute value error: {KEY0}", "KEY0", e.what());
         return PLDM_ERROR;
     }
 
@@ -881,7 +875,7 @@ void BIOSConfig::removeTables()
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Remove the tables error: " << e.what() << std::endl;
+        lg2::error("Remove the tables error: {KEY0}", "KEY0", e.what());
     }
 }
 
@@ -902,7 +896,7 @@ void BIOSConfig::processBiosAttrChangeNotification(
     auto stringTable = getBIOSTable(PLDM_BIOS_STRING_TABLE);
     if (!stringTable.has_value())
     {
-        std::cerr << "BIOS string table unavailable\n";
+        lg2::error("BIOS string table unavailable");
         return;
     }
     BIOSStringTable biosStringTable(*stringTable);
@@ -913,23 +907,21 @@ void BIOSConfig::processBiosAttrChangeNotification(
     }
     catch (const std::invalid_argument& e)
     {
-        std::cerr << "Could not find handle for BIOS string, ATTRIBUTE="
-                  << attrName.c_str() << "\n";
+        lg2::error("Could not find handle for BIOS string, ATTRIBUTE={KEY0}", "KEY0", attrName.c_str());
         return;
     }
 
     auto attrTable = getBIOSTable(PLDM_BIOS_ATTR_TABLE);
     if (!attrTable.has_value())
     {
-        std::cerr << "Attribute table not present\n";
+        lg2::error("Attribute table not present");
         return;
     }
     const struct pldm_bios_attr_table_entry* tableEntry =
         table::attribute::findByStringHandle(*attrTable, attrNameHdl);
     if (tableEntry == nullptr)
     {
-        std::cerr << "Attribute not found in attribute table, name= "
-                  << attrName.c_str() << "name handle=" << attrNameHdl << "\n";
+        lg2::error("Attribute not found in attribute table, name= {KEY0} name handle={KEY1}", "KEY0", attrName.c_str(),"KEY1", attrNameHdl);
         return;
     }
 
@@ -940,7 +932,7 @@ void BIOSConfig::processBiosAttrChangeNotification(
 
     if (!attrValueSrcTable.has_value())
     {
-        std::cerr << "Attribute value table not present\n";
+        lg2::error("Attribute value table not present");
         return;
     }
 
@@ -949,9 +941,7 @@ void BIOSConfig::processBiosAttrChangeNotification(
         newValue, attrHdl, attrType, newPropVal);
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "Could not update the attribute value table for attribute "
-                     "handle="
-                  << attrHdl << " and type=" << (uint32_t)attrType << "\n";
+        lg2::error("Could not update the attribute value table for attribute handle={KEY0} and type={KEY1}", "KEY0", attrHdl, "KEY1", (uint32_t)attrType);
         return;
     }
     auto destTable = table::attribute_value::updateTable(
@@ -964,8 +954,7 @@ void BIOSConfig::processBiosAttrChangeNotification(
     rc = setAttrValue(newValue.data(), newValue.size(), true, false);
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "could not setAttrValue on base bios table and dbus, rc = "
-                  << rc << "\n";
+        lg2::error("could not setAttrValue on base bios table and dbus, rc = {KEY0}", "KEY0", rc);
     }
 }
 
@@ -1026,8 +1015,7 @@ void BIOSConfig::constructPendingAttribute(
             type != BIOSConfigManager::AttributeType::String &&
             type != BIOSConfigManager::AttributeType::Integer)
         {
-            std::cerr << "Attribute type not supported, attributeType = "
-                      << attributeType << std::endl;
+            lg2::error("Attribute type not supported, attributeType = {KEY0}", "KEY0", attributeType);
             continue;
         }
 

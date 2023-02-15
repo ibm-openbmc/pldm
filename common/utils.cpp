@@ -8,6 +8,7 @@
 #include <sys/time.h>
 
 #include <xyz/openbmc_project/Common/error.hpp>
+#include <phosphor-logging/lg2.hpp>
 
 #include <algorithm>
 #include <array>
@@ -76,8 +77,8 @@ std::vector<std::vector<uint8_t>> findStateEffecterPDR(uint8_t /*tid*/,
     }
     catch (const std::exception& e)
     {
-        std::cerr << " Failed to obtain a record. ERROR =" << e.what()
-                  << std::endl;
+        lg2::error(" Failed to obtain a record. ERROR = {KEY0}","KEY0", e.what());
+
     }
 
     return pdrs;
@@ -130,8 +131,8 @@ std::vector<std::vector<uint8_t>> findStateSensorPDR(uint8_t /*tid*/,
     }
     catch (const std::exception& e)
     {
-        std::cerr << " Failed to obtain a record. ERROR =" << e.what()
-                  << std::endl;
+        lg2::error(" Failed to obtain a record. ERROR = {KEY0}", "KEY0", e.what());
+
     }
 
     return pdrs;
@@ -141,9 +142,13 @@ uint8_t readHostEID()
 {
     uint8_t eid{};
     std::ifstream eidFile{HOST_EID_PATH};
+    
     if (!eidFile.good())
     {
-        std::cerr << "Could not open host EID file: " << HOST_EID_PATH << "\n";
+        // std::string eidStr;
+        // eidStr= HOST_EID_PATH.c_str();
+        //FilePathError
+        lg2::error("Could not open host EID file: {KEY0}", "KEY0", std::string(HOST_EID_PATH));
     }
     else
     {
@@ -155,8 +160,7 @@ uint8_t readHostEID()
         }
         else
         {
-            std::cerr << "Host EID file was empty"
-                      << "\n";
+            lg2::error( "Host EID file was empty");
         }
     }
 
@@ -281,8 +285,7 @@ void reportError(const char* errorMsg, const Severity& sev)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to make a d-bus call to create error log, ERROR="
-                  << e.what() << "\n";
+        lg2::error("failed to make a d-bus call to create error log, ERROR={KEY0}", "KEY0", e.what());
     }
 }
 
@@ -323,6 +326,7 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
                 dBusMap.objectPath ==
                     "/xyz/openbmc_project/network/hypervisor/eth1/ipv4/addr0")
             {
+                //FilePathError
                 std::cout << " ,service :" << service.c_str()
                           << " , interface : " << dBusMap.interface.c_str()
                           << " , path : " << dBusMap.objectPath.c_str()
@@ -355,8 +359,7 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
         {
             if (!std::get<bool>(value))
             {
-                std::cerr << "Guard event on DIMM : [ "
-                          << dBusMap.objectPath.c_str() << " ] \n";
+                lg2::error("Guard event on DIMM : [ {KEY0} ]", "KEY0", dBusMap.objectPath.c_str());
             }
         }
 
@@ -404,7 +407,8 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
     }
     else
     {
-        std::cerr << "Property Type is:" << dBusMap.propertyType << std::endl;
+        //FilePathError
+        lg2::error("Property Type is: {KEY0} ", "KEY0",dBusMap.propertyType);
         throw std::invalid_argument("UnSpported Dbus Type");
     }
 }
@@ -482,7 +486,7 @@ PropertyValue jsonEntryToDbusVal(std::string_view type,
     }
     else
     {
-        std::cerr << "Unknown D-Bus property type, TYPE=" << type << "\n";
+        lg2::error("Unknown D-Bus property type, TYPE={KEY0}", "KEY0", type);
     }
 
     return propValue;
@@ -545,8 +549,7 @@ int emitStateSensorEventSignal(uint8_t tid, uint16_t sensorId,
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Error emitting pldm event signal:"
-                  << "ERROR=" << e.what() << "\n";
+       lg2::error("Error emitting pldm event signal:ERROR={KEY0}", "KEY0", e.what());
         return PLDM_ERROR;
     }
 
@@ -669,9 +672,7 @@ std::string getBiosAttrValue(const std::string& dbusAttrName)
     }
     catch (const sdbusplus::exception::SdBusError& e)
     {
-        std::cout << "Error getting the bios attribute"
-                  << "ERROR=" << e.what() << "ATTRIBUTE=" << dbusAttrName
-                  << std::endl;
+       lg2::error("Error getting the bios attribute ERROR={KEY0} ATTRIBUTE={KEY1}", "KEY0", e.what(), "KEY1", dbusAttrName);
         return {};
     }
 
@@ -710,9 +711,7 @@ void setBiosAttr(const BiosAttributeList& biosAttrList)
         }
         catch (const sdbusplus::exception::SdBusError& e)
         {
-            std::cout << "Error setting the bios attribute"
-                      << "ERROR=" << e.what() << "ATTRIBUTE=" << dbusAttrName
-                      << "ATTRIBUTE VALUE=" << biosAttrStr << std::endl;
+            lg2::error("Error setting the bios attribute ERROR = {KEY0} ATTRIBUTE= {KEY1} ATTRIBUTE VALUE={KEY2}", "KEY0", e.what(), "KEY1", dbusAttrName.c_str(), "KEY2", biosAttrStr.c_str());
             return;
         }
     }
@@ -921,8 +920,8 @@ bool checkForFruPresence(const std::string& objPath)
     }
     catch (const sdbusplus::exception::SdBusError& e)
     {
-        std::cerr << "Failed to check for FRU presence for " << objPath
-                  << " ERROR =" << e.what() << std::endl;
+        lg2::error("Failed to check for FRU presence for {KEY0} ERROR = {KEY1}", "KEY0", objPath.c_str(), "KEY1", e.what());
+
     }
     return isPresent;
 }

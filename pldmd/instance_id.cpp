@@ -2,6 +2,8 @@
 
 #include "instance_id.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <stdexcept>
 
 namespace pldm
@@ -19,7 +21,7 @@ uint8_t InstanceId::next()
     {
         // check all the instance ids and free up the one
         // that is acquired oldest
-        std::cerr << "all the Instance ids are exhausted \n";
+        lg2::error("lg2 all the Instance ids are exhausted");
 
         auto instance = returnOldestId();
         if (instance.has_value())
@@ -63,8 +65,7 @@ std::optional<uint8_t> InstanceId::returnOldestId()
     }
     if (skipInstance)
     {
-        std::cerr
-            << "None of the instance id's are older then the pldm instance id expiration time\n";
+        lg2::error("lg2 None of the instance id's are older then the pldm instance id expiration time");
         return std::nullopt;
     }
     const std::time_t t_c =

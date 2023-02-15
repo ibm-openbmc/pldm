@@ -123,6 +123,7 @@ Response Handler::getDateTime(const pldm_msg* request, size_t /*payloadLength*/)
     }
     catch (const sdbusplus::exception_t& e)
     {
+        //timeIssue
         std::cerr << "Error getting time, PATH=" << bmcTimePath
                   << " TIME INTERACE=" << timeInterface << "\n";
 
@@ -177,6 +178,7 @@ Response Handler::setDateTime(const pldm_msg* request, size_t payloadLength)
     }
     catch (const std::exception& e)
     {
+        //timeIssue
         std::cerr << "Error getting the time sync property, PATH="
                   << timeSyncPath << "INTERFACE=" << timeSyncInterface
                   << "PROPERTY=" << timeSyncProperty << "ERROR=" << e.what()
@@ -207,6 +209,7 @@ Response Handler::setDateTime(const pldm_msg* request, size_t payloadLength)
     }
     catch (const std::exception& e)
     {
+        //timeIssue
         std::cerr << "Error Setting time,PATH=" << setTimePath
                   << "TIME INTERFACE=" << setTimeInterface
                   << "ERROR=" << e.what() << "\n";

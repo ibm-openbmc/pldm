@@ -4,6 +4,8 @@
 
 #include "libpldmresponder/pdr.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 namespace pldm
 {
 
@@ -41,8 +43,7 @@ void DbusToPLDMEvent::sendEventMsg(uint8_t eventType,
     if (rc != PLDM_SUCCESS)
     {
         requester.markFree(mctp_eid, instanceId);
-        std::cerr << "Failed to encode_platform_event_message_req, rc = " << rc
-                  << std::endl;
+        lg2::error("lg2 Failed to encode_platform_event_message_req, rc = {KEY0}", "KEY0", rc);
         return;
     }
 
@@ -51,8 +52,7 @@ void DbusToPLDMEvent::sendEventMsg(uint8_t eventType,
                                                   size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
-            std::cerr
-                << "Failed to receive response for platform event message \n";
+            lg2::error("lg2 Failed to receive response for platform event message");
             return;
         }
         uint8_t completionCode{};
@@ -61,10 +61,8 @@ void DbusToPLDMEvent::sendEventMsg(uint8_t eventType,
                                                      &completionCode, &status);
         if (rc || completionCode)
         {
-            std::cerr << "Failed to decode_platform_event_message_resp: "
-                      << "rc=" << rc
-                      << ", cc=" << static_cast<unsigned>(completionCode)
-                      << std::endl;
+            auto cc = unsigned(completionCode);
+            lg2::error("lg2 Failed to decode_platform_event_message_resp: rc = {KEY0}, cc = {KEY1}", "KEY0", rc, "KEY1", cc);
         }
     };
 
@@ -73,7 +71,7 @@ void DbusToPLDMEvent::sendEventMsg(uint8_t eventType,
         std::move(requestMsg), std::move(platformEventMessageResponseHandler));
     if (rc)
     {
-        std::cerr << "Failed to send the platform event message \n";
+        lg2::error("lg2 Failed to send the platform event message");
     }
 }
 

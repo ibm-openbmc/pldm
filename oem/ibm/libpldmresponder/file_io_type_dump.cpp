@@ -13,6 +13,7 @@
 
 #include <sdbusplus/server.hpp>
 #include <xyz/openbmc_project/Dump/NewDump/server.hpp>
+#include <phosphor-logging/lg2.hpp>
 
 #include <exception>
 #include <filesystem>
@@ -111,9 +112,7 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
 
     catch (const std::exception& e)
     {
-        std::cerr
-            << "Failure with GetManagedObjects in findDumpObjPath call, ERROR="
-            << e.what() << "\n";
+        lg2::error("Failure with GetManagedObjects in findDumpObjPath call, ERROR={KEY0}", "KEY0", e.what());
         pldm::utils::reportError(
             "xyz.openbmc_project.PLDM.Error.findDumpObjPath.GetManagedObjectsFail",
             pldm::PelSeverity::WARNING);
@@ -147,6 +146,7 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
                     }
                     else
                     {
+                        //FilePathError
                         std::cerr
                             << "Invalid SourceDumpId in curResDumpEntryPath "
                             << curResDumpEntryPath
@@ -165,7 +165,7 @@ int DumpHandler::newFileAvailable(uint64_t length)
     static constexpr auto dumpInterface = "xyz.openbmc_project.Dump.NewDump";
     auto& bus = pldm::utils::DBusHandler::getBus();
 
-    std::cout << "newFileAvailable for NewDump" << std::endl;
+    lg2::info("newFileAvailable for NewDump");
     auto notifyObjPath = dumpObjPath;
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
     {
@@ -185,9 +185,7 @@ int DumpHandler::newFileAvailable(uint64_t length)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to make a d-bus call to notify"
-                     " a new dump request using newFileAvailable, ERROR="
-                  << e.what() << "\n";
+        lg2::error("failed to make a d-bus call to notify a new dump request using newFileAvailable, ERROR={KEY0}", "KEY0", e.what());
         pldm::utils::reportError(
             "xyz.openbmc_project.PLDM.Error.newFileAvailable.NewDumpNotifyFail",
             pldm::PelSeverity::ERROR);
@@ -205,8 +203,8 @@ void DumpHandler::resetOffloadUri()
         return;
     }
 
-    std::cout << "DumpHandler::resetOffloadUri path = " << path.c_str()
-              << " fileHandle = " << fileHandle << std::endl;
+    lg2::error("DumpHandler::resetOffloadUri path = {KEY0} fileHandle = {KEY1}", "KEY0", path.c_str(), "KEY1", fileHandle);
+
     PropertyValue offloadUriValue{""};
     DBusMapping dbusMapping{path, dumpEntry, "OffloadUri", "string"};
     try
@@ -216,8 +214,7 @@ void DumpHandler::resetOffloadUri()
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Failed to set the OffloadUri dbus property, ERROR="
-                  << e.what() << "\n";
+        lg2::error("Failed to set the OffloadUri dbus property, ERROR={KEY0}", "KEY0", e.what());
         pldm::utils::reportError(
             "xyz.openbmc_project.PLDM.Error.fileAck.DumpEntryOffloadUriSetFail",
             pldm::PelSeverity::ERROR);
@@ -228,8 +225,7 @@ void DumpHandler::resetOffloadUri()
 std::string DumpHandler::getOffloadUri(uint32_t fileHandle)
 {
     auto path = findDumpObjPath(fileHandle);
-    std::cout << "DumpHandler::getOffloadUri path = " << path.c_str()
-              << " fileHandle = " << fileHandle << std::endl;
+    lg2::error("DumpHandler::getOffloadUri path = {KEY0} fileHandle = {KEY1}", "KEY0", path.c_str(), "KEY1", fileHandle);
     if (path.empty())
     {
         return {};
@@ -242,12 +238,11 @@ std::string DumpHandler::getOffloadUri(uint32_t fileHandle)
         socketInterface =
             pldm::utils::DBusHandler().getDbusProperty<std::string>(
                 path.c_str(), "OffloadUri", dumpEntry);
-        std::cout << "socketInterface=" << socketInterface << std::endl;
+        lg2::error("socketInterface={KEY0}", "KEY0",socketInterface);
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Failed to get the OffloadUri d-bus property, ERROR="
-                  << e.what() << "\n";
+        lg2::error("Failed to get the OffloadUri d-bus property, ERROR={KEY0}", "KEY0", e.what());
         pldm::utils::reportError(
             "xyz.openbmc_project.PLDM.Error.DumpHandler.getOffloadUriFail",
             pldm::PelSeverity::ERROR);
@@ -267,9 +262,7 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
         {
             sock = -errno;
             close(DumpHandler::fd);
-            std::cerr
-                << "DumpHandler::writeFromMemory: setupUnixSocket() failed"
-                << std::endl;
+            lg2::error("DumpHandler::writeFromMemory: setupUnixSocket() failed");
             std::remove(socketInterface.c_str());
             resetOffloadUri();
             return PLDM_ERROR;
@@ -279,9 +272,7 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
         auto rc = transferFileDataToSocket(DumpHandler::fd, length, address);
         if (rc < 0)
         {
-            std::cerr
-                << "DumpHandler::writeFromMemory: transferFileDataToSocket failed"
-                << std::endl;
+            lg2::error("DumpHandler::writeFromMemory: transferFileDataToSocket failed");
             if (DumpHandler::fd >= 0)
             {
                 close(DumpHandler::fd);
@@ -296,9 +287,7 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
 
     if (socketWriteStatus == Error)
     {
-        std::cerr
-            << "DumpHandler::writeFromMemory: Error while writing to Unix socket"
-            << std::endl;
+        lg2::error("DumpHandler::writeFromMemory: Error while writing to Unix socket");
         if (DumpHandler::fd >= 0)
         {
             close(DumpHandler::fd);
@@ -317,9 +306,8 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
     auto rc = transferFileDataToSocket(DumpHandler::fd, length, address);
     if (rc < 0)
     {
-        std::cerr
-            << "DumpHandler::writeFromMemory: transferFileDataToSocket failed"
-            << std::endl;
+        lg2::info("DumpHandler::writeFromMemory: transferFileDataToSocket failed");
+
         if (DumpHandler::fd >= 0)
         {
             close(DumpHandler::fd);
@@ -336,13 +324,11 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
 int DumpHandler::write(const char* buffer, uint32_t, uint32_t& length,
                        oem_platform::Handler* /*oemPlatformHandler*/)
 {
-    std::cout << "Enter DumpHandler::write length = " << length
-              << " DumpHandler::fd = " << DumpHandler::fd << std::endl;
+    lg2::info("Enter DumpHandler::write length = {KEY0} DumpHandler::fd ={KEY1}", "KEY0", length, "KEY1", DumpHandler::fd);
 
     if (socketWriteStatus == Error)
     {
-        std::cerr << "DumpHandler::write: Error while writing to Unix socket"
-                  << std::endl;
+        lg2::error("DumpHandler::write: Error while writing to Unix socket");
         close(fd);
         auto socketInterface = getOffloadUri(fileHandle);
         std::remove(socketInterface.c_str());
@@ -376,7 +362,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
     {
         if (fileStatus != PLDM_SUCCESS)
         {
-            std::cerr << "Failue in resource dump file ack" << std::endl;
+            lg2::error("Failue in resource dump file ack"); 
             pldm::utils::reportError(
                 "xyz.openbmc_project.PLDM.Error.fileAck.ResourceDumpFileAckFail",
                 PelSeverity::INFORMATIONAL);
@@ -391,10 +377,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
             }
             catch (const std::exception& e)
             {
-                std::cerr
-                    << "Failure in setting Progress as OperationStatus.Failed"
-                       "in fileAck, ERROR="
-                    << e.what() << "\n";
+                lg2::error("Failure in setting Progress as OperationStatus.Failed in fileAck, ERROR={KEY0}", "KEY0", e.what());
             }
         }
 
@@ -430,10 +413,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
                 }
                 catch (const std::exception& e)
                 {
-                    std::cerr << "Failed to make a d-bus call to DUMP "
-                                 "manager to reset source dump id of "
-                              << path.c_str() << ", with ERROR=" << e.what()
-                              << "\n";
+                    lg2::error("Failed to make a d-bus call to DUMP manager to reset source dump id of {KEY0}, with ERROR={KEY1}", "KEY0", path.c_str(), "KEY1", e.what());
                     pldm::utils::reportError(
                         "xyz.openbmc_project.PLDM.Error.fileAck.SourceDumpIdResetFail",
                         pldm::PelSeverity::ERROR);
@@ -451,9 +431,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
             }
             catch (const std::exception& e)
             {
-                std::cerr
-                    << "Failed to make a d-bus method to delete the dump entry "
-                    << path.c_str() << ", with ERROR=" << e.what() << "\n";
+                lg2::error("Failed to make a d-bus method to delete the dump entry {KEY0}, with ERROR={KEY1}", "KEY0", path.c_str(), "KEY1", e.what());
                 pldm::utils::reportError(
                     "xyz.openbmc_project.PLDM.Error.fileAck.DumpEntryDeleteFail",
                     pldm::PelSeverity::ERROR);
@@ -478,9 +456,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
             }
             catch (const std::exception& e)
             {
-                std::cerr
-                    << "Failed to set the Offloaded dbus property to true, ERROR="
-                    << e.what() << "\n";
+                lg2::error("Failed to set the Offloaded dbus property to true, ERROR={KEY0}", "KEY0", e.what());
                 pldm::utils::reportError(
                     "xyz.openbmc_project.PLDM.Error.fileAck.DumpEntryOffloadedSetFail",
                     pldm::PelSeverity::ERROR);
@@ -528,9 +504,8 @@ int DumpHandler::readIntoMemory(uint32_t offset, uint32_t& length,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "Failed to fetch the filepath of the dump entry"
-                      << std::hex << fileHandle << ", error = " << e.what()
-                      << "\n";
+            lg2::error("Failed to fetch the filepath of the dump entry {KEY0}, ERROR={KEY1}", "KEY0", lg2::hex, fileHandle, "KEY1", e.what());
+
             pldm::utils::reportError(
                 "xyz.openbmc_project.PLDM.Error.readIntoMemory.GetFilepathFail",
                 pldm::PelSeverity::ERROR);
@@ -564,9 +539,7 @@ int DumpHandler::read(uint32_t offset, uint32_t& length, Response& response,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "Failed to fetch the filepath of the dump entry"
-                      << std::hex << fileHandle << ", error = " << e.what()
-                      << "\n";
+            lg2::error("Failed to fetch the filepath of the dump entry {KEY0}, ERROR={KEY1}", "KEY0", lg2::hex, fileHandle, "KEY1", e.what());
             pldm::utils::reportError(
                 "xyz.openbmc_project.PLDM.Error.read.GetFilepathFail",
                 pldm::PelSeverity::ERROR);
@@ -596,8 +569,7 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         pldm::utils::PropertyValue value =
             "com.ibm.Dump.Entry.Resource.HostResponse.Success";
 
-        std::cout << "fileAckWithMetaData with token: " << metaDataValue1
-                  << " and status: " << metaDataValue2 << std::endl;
+        lg2::error("fileAckWithMetaData with token: {KEY0} and status: {KEY1}", "KEY0", metaDataValue1, "KEY1", metaDataValue2);
         if (statusCode == DumpRequestStatus::ResourceSelectorInvalid)
         {
             value =
@@ -647,17 +619,13 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         }
         catch (const std::exception& e)
         {
-            std::cerr
-                << "failed to set DumpRequestStatus property for resource dump entry, "
-                   "ERROR="
-                << e.what() << "\n";
+            lg2::error("failed to set DumpRequestStatus property for resource dump entry, ERROR={KEY0}", "KEY0", e.what());
             return PLDM_ERROR;
         }
 
         if (statusCode != DumpRequestStatus::Success)
         {
-            std::cerr << "Failue in resource dump file ack with metadata"
-                      << std::endl;
+            lg2::error("Failue in resource dump file ack with metadata");
             pldm::utils::reportError(
                 "xyz.openbmc_project.PLDM.Error.fileAck.ResourceDumpFileAckWithMetaDataFail",
                 pldm::PelSeverity::INFORMATIONAL);
@@ -673,10 +641,7 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
             }
             catch (const std::exception& e)
             {
-                std::cerr
-                    << "Failure in setting Progress as OperationStatus.Failed"
-                       "in fileAckWithMetaData, ERROR="
-                    << e.what() << "\n";
+                lg2::error("Failure in setting Progress as OperationStatus.Failed in fileAckWithMetaData, ERROR={KEY0}", "KEY0", e.what());
             }
         }
 
@@ -700,9 +665,7 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
             }
             catch (const std::exception& e)
             {
-                std::cerr
-                    << "Failed to set the Offloaded dbus property to true, ERROR="
-                    << e.what() << "\n";
+                lg2::error("Failed to set the Offloaded dbus property to true, ERROR={KEY0}", "KEY0", e.what());
                 pldm::utils::reportError(
                     "xyz.openbmc_project.PLDM.Error.fileAckWithMetaData.DumpEntryOffloadedSetFail",
                     pldm::PelSeverity::ERROR);
@@ -730,8 +693,7 @@ int DumpHandler::newFileAvailableWithMetaData(uint64_t length,
     static constexpr auto dumpInterface = "xyz.openbmc_project.Dump.NewDump";
     auto& bus = pldm::utils::DBusHandler::getBus();
 
-    std::cout << "newFileAvailableWithMetaData for NewDump with token :"
-              << metaDataValue1 << std::endl;
+    lg2::info("newFileAvailableWithMetaData for NewDump with token :{KEY1}", "KEY1", metaDataValue1);
     auto notifyObjPath = dumpObjPath;
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
     {
@@ -754,10 +716,7 @@ int DumpHandler::newFileAvailableWithMetaData(uint64_t length,
     }
     catch (const std::exception& e)
     {
-        std::cerr
-            << "failed to make a d-bus call to notify"
-               " a new dump request using newFileAvailableWithMetaData, ERROR="
-            << e.what() << "\n";
+        lg2::error("failed to make a d-bus call to notify a new dump request using newFileAvailableWithMetaData, ERROR={KEY0}", "KEY0", e.what());
         pldm::utils::reportError(
             "xyz.openbmc_project.PLDM.Error.newFileAvailableWithMetaData.NewDumpNotifyFail",
             pldm::PelSeverity::ERROR);

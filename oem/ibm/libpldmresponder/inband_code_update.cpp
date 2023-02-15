@@ -6,6 +6,8 @@
 #include "oem_ibm_handler.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <arpa/inet.h>
 
 #include <sdbusplus/server.hpp>
@@ -73,7 +75,7 @@ int CodeUpdate::setCurrentBootSide(const std::string& currSide)
 
 int CodeUpdate::setNextBootSide(const std::string& nextSide)
 {
-    std::cout << "setNextBootSide, nextSide=" << nextSide << std::endl;
+    lg2::info("setNextBootSide, nextSide={KEY0}", "KEY0", nextSide);
     pldm_boot_side_data pldmBootSideData = readBootSideFile();
     currBootSide =
         (pldmBootSideData.current_boot_side == "Perm" ? Pside : Tside);
@@ -82,19 +84,19 @@ int CodeUpdate::setNextBootSide(const std::string& nextSide)
     std::string objPath{};
     if (nextBootSide == currBootSide)
     {
-        std::cout << "Current bootside is same as next boot side,\n"
-                  << "setting priority of running version 0" << std::endl;
+        lg2::info("Current bootside is same as next boot side");
+        lg2::info("setting priority of running version 0" );
         objPath = runningVersion;
     }
     else
     {
-        std::cout << "Current bootside is not same as next boot side,\n"
-                  << "setting priority of non running version 0" << std::endl;
+        lg2::info("Current bootside is not same as next boot side");
+        lg2::info("setting priority of non running version 0");
         objPath = nonRunningVersion;
     }
     if (objPath.empty())
     {
-        std::cerr << "no nonRunningVersion present \n";
+        lg2::error("no nonRunningVersion present");
         return PLDM_PLATFORM_INVALID_STATE_VALUE;
     }
 
@@ -125,8 +127,8 @@ int CodeUpdate::setNextBootSide(const std::string& nextSide)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to set the next boot side to " << objPath.c_str()
-                  << " ERROR=" << e.what() << "\n";
+        //FilePathError
+        lg2::error("failed to set the next boot side to {KEY0} ERROR=", "KEY0", objPath.c_str(), "KEY1", e.what());
         return PLDM_ERROR;
     }
     writeBootSideFile(pldmBootSideData);
@@ -149,8 +151,7 @@ int CodeUpdate::setRequestedApplyTime()
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Failed To set RequestedApplyTime property "
-                  << "ERROR=" << e.what() << std::endl;
+        lg2::error("Failed To set RequestedApplyTime property ERROR={KEY0}", "KEY0",e.what());
         rc = PLDM_ERROR;
     }
     return rc;
@@ -172,8 +173,7 @@ int CodeUpdate::setRequestedActivation()
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Failed To set RequestedActivation property"
-                  << "ERROR=" << e.what() << std::endl;
+        lg2::error("Failed To set RequestedActivation property ERROR={KEY0}", "KEY0",e.what());
         rc = PLDM_ERROR;
     }
     return rc;
@@ -240,13 +240,15 @@ void CodeUpdate::setVersions()
         else
         {
             pldm_boot_side_data pldmBootSideData = readBootSideFile();
+            std::string runningVers;
+            runningVers = pldmBootSideData.running_version_object;
             if (pldmBootSideData.running_version_object != runningPath)
             {
-                std::cout << "BMC have booted with the new image runningPath="
-                          << runningPath << std::endl;
-                std::cout << "Previous Image was: "
-                          << pldmBootSideData.running_version_object
-                          << std::endl;
+                //FilePathError
+                
+                lg2::info( "BMC have booted with the new image runningPath={KEY0}", "KEY0", runningPath.c_str());
+                lg2::info( "Previous Image was: {KEY0}", "KEY0", runningVers);
+
                 auto current_boot_side =
                     (pldmBootSideData.current_boot_side == "Temp" ? "Perm"
                                                                   : "Temp");
@@ -262,9 +264,8 @@ void CodeUpdate::setVersions()
             }
             else
             {
-                std::cout
-                    << "BMC have booted with the previous image runningPath="
-                    << pldmBootSideData.running_version_object << std::endl;
+                
+                lg2::info("BMC have booted with the previous image runningPath={KEY0}", "KEY0", runningVers);
                 pldm_boot_side_data pldmBootSideData = readBootSideFile();
                 pldmBootSideData.next_boot_side =
                     pldmBootSideData.current_boot_side;
@@ -283,9 +284,7 @@ void CodeUpdate::setVersions()
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to make a d-bus call to Object Mapper "
-                     "Association, ERROR="
-                  << e.what() << "\n";
+        lg2::error("failed to make a d-bus call to Object Mapper Association, ERROR={KEY0}", "KEY0", e.what());
         if (retrySetVersion < maxVersionRetry)
         {
             retrySetVersion++;
@@ -334,7 +333,7 @@ void CodeUpdate::setVersions()
 
                         if (isCodeUpdateInProgress())
                         {
-                            std::cout << "Inband Code update is InProgress\n";
+                            lg2::info("Inband Code update is InProgress");
                             // Inband update
                             newImageId = path.str;
                             if (!imageActivationMatch)
@@ -360,10 +359,7 @@ void CodeUpdate::setVersions()
                                                 "xyz.openbmc_project.Software."
                                                 "Activation.Activations.Active")
                                             {
-                                                std::cout
-                                                    << "Received Active signal, Sending "
-                                                    << "success on End update sensor event "
-                                                    << "to PHYP\n";
+                                                lg2::info("Received Active signal, Sending success on End update sensor event to PHYP");
                                                 CodeUpdateState state =
                                                     CodeUpdateState::END;
                                                 setCodeUpdateProgress(false);
@@ -389,10 +385,7 @@ void CodeUpdate::setVersions()
                                                          "Activations."
                                                          "Invalid")
                                             {
-                                                std::cout
-                                                    << "Image activation Failed or image "
-                                                    << "Invalid, sending Failure on End "
-                                                    << "update to PHYP\n";
+                                                lg2::info( "Image activation Failed or image Invalid, sending Failure on End update to PHYP");
                                                 CodeUpdateState state =
                                                     CodeUpdateState::FAIL;
                                                 setCodeUpdateProgress(false);
@@ -420,8 +413,7 @@ void CodeUpdate::setVersions()
                                     sensorId, PLDM_STATE_SENSOR_STATE, 0,
                                     uint8_t(state),
                                     uint8_t(CodeUpdateState::START));
-                                std::cerr
-                                    << "could not set RequestedActivation \n";
+                                lg2::error("could not set RequestedActivation");
                             }
                             break;
                         }
@@ -433,10 +425,8 @@ void CodeUpdate::setVersions()
                     }
                     catch (const sdbusplus::exception::exception& e)
                     {
-                        std::cerr << "Error in getting Activation status,"
-                                  << "ERROR=" << e.what()
-                                  << ", INTERFACE=" << imageInterface
-                                  << ", OBJECT PATH=" << imageObjPath << "\n";
+                        //FilePathError
+                        lg2::error( "Error in getting Activation status,ERROR= {KEY0}, INTERFACE={KEY1}, OBJECT PATH={KEY2}", "KEY0", e.what(), "KEY1", imageInterface, "KEY2", imageObjPath);
                     }
                 }
             }
@@ -445,7 +435,7 @@ void CodeUpdate::setVersions()
 
 void CodeUpdate::processRenameEvent()
 {
-    std::cout << "Processing Rename Event" << std::endl;
+    lg2::info("Processing Rename Event");
 
     BiosAttributeList biosAttrList;
     pldm_boot_side_data pldmBootSideData = readBootSideFile();
@@ -576,7 +566,7 @@ void CodeUpdate::deleteImage()
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Failed to delete image, ERROR=" << e.what() << "\n";
+        lg2::error("Failed to delete image, ERROR={KEY0}", "KEY0", e.what());
         return;
     }
 }
@@ -671,7 +661,7 @@ int processCodeUpdateLid(const std::string& filePath)
     std::ifstream ifs(filePath, std::ios::in | std::ios::binary);
     if (!ifs)
     {
-        std::cerr << "ifstream open error: " << filePath << "\n";
+        lg2::error("ifstream open error: {KEY0}", "KEY0", filePath.c_str());
         return PLDM_ERROR;
     }
     ifs.seekg(0);
@@ -690,7 +680,8 @@ int processCodeUpdateLid(const std::string& filePath)
     constexpr auto magicNumber = 0x0222;
     if (htons(header.magicNumber) != magicNumber)
     {
-        std::cerr << "Invalid magic number: " << filePath << "\n";
+        //FilePathError
+        lg2::error("Invalid magic number: {KEY0}", "KEY0", filePath.c_str());
         ifs.close();
         return PLDM_ERROR;
     }
@@ -709,8 +700,7 @@ int processCodeUpdateLid(const std::string& filePath)
                         ec);
         if (ec)
         {
-            std::cerr << "Failed to set the lid directory permissions: "
-                      << ec.message() << std::endl;
+            lg2::error("Failed to set the lid directory permissions:{KEY0}", "KEY0", ec.message());
             return PLDM_ERROR;
         }
     }
@@ -745,8 +735,7 @@ int processCodeUpdateLid(const std::string& filePath)
                         fs::perm_options::replace, ec);
         if (ec)
         {
-            std::cerr << "Failed to set the lid file permissions: "
-                      << ec.message() << std::endl;
+            lg2::error("Failed to set the lid file permissions: {KEY0}", "KEY0", ec.message());
             return PLDM_ERROR;
         }
     }
@@ -776,8 +765,7 @@ int CodeUpdate::assembleCodeUpdateImage()
                                 "-mkfs-time", "0", "-all-time", "0");
                 if (rc < 0)
                 {
-                    std::cerr << "Error occurred during the mksqusquashfs call"
-                              << std::endl;
+                    lg2::error("Error occurred during the mksqusquashfs call");
                     setCodeUpdateProgress(false);
                     auto sensorId = getFirmwareUpdateSensor();
                     sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
@@ -788,9 +776,7 @@ int CodeUpdate::assembleCodeUpdateImage()
             }
             catch (const std::exception& e)
             {
-                std::cerr << "Failed during the mksqusquashfs call, "
-                             "ERROR="
-                          << e.what() << "\n";
+                lg2::error("Failed during the mksqusquashfs call, ERROR={KEY0}", "KEY0", e.what());
                 return PLDM_ERROR;
             }
 
@@ -813,9 +799,7 @@ int CodeUpdate::assembleCodeUpdateImage()
             }
             catch (const std::exception& e)
             {
-                std::cerr << "Failed to Extract the BMC tarball content, "
-                             "ERROR="
-                          << e.what() << "\n";
+                lg2::error("Failed to Extract the BMC tarball content, ERROR={KEY0}", "KEY0", e.what());
                 return PLDM_ERROR;
             }
 
@@ -834,9 +818,7 @@ int CodeUpdate::assembleCodeUpdateImage()
                                 updateDirPath);
                 if (rc < 0)
                 {
-                    std::cerr
-                        << "Error occurred during the generation of the tarball"
-                        << std::endl;
+                    lg2::error("Error occurred during the generation of the tarball");
                     setCodeUpdateProgress(false);
                     auto sensorId = getFirmwareUpdateSensor();
                     sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
@@ -847,10 +829,7 @@ int CodeUpdate::assembleCodeUpdateImage()
             }
             catch (const std::exception& e)
             {
-                std::cerr
-                    << "Failed to Remove the tarball file, then re-generate it, "
-                       "ERROR="
-                    << e.what() << "\n";
+                lg2::error("Failed to Remove the tarball file, then re-generate it, ERROR={KEY0}", "KEY0", e.what());
                 return PLDM_ERROR;
             }
 
@@ -868,8 +847,7 @@ int CodeUpdate::assembleCodeUpdateImage()
         }
         else if (nextPid < 0)
         {
-            std::cerr << "Error occurred during fork. ERROR=" << errno
-                      << std::endl;
+            lg2::error("Error occurred during fork. ERROR={KEY0}", "KEY0", errno);
             exit(EXIT_FAILURE);
         }
 
@@ -882,21 +860,19 @@ int CodeUpdate::assembleCodeUpdateImage()
         int status;
         if (waitpid(pid, &status, 0) < 0)
         {
-            std::cerr << "Error occurred during waitpid. ERROR=" << errno
-                      << std::endl;
+            lg2::error("Error occurred during waitpid. ERROR={KEY0}", "KEY0", errno);
+                     
             return PLDM_ERROR;
         }
         else if (WEXITSTATUS(status) != 0)
         {
-            std::cerr
-                << "Failed to execute the assembling of the image. STATUS="
-                << status << std::endl;
+            lg2::error("Failed to execute the assembling of the image. STATUS={KEY0}", "KEY0",status);
             return PLDM_ERROR;
         }
     }
     else
     {
-        std::cerr << "Error occurred during fork. ERROR=" << errno << std::endl;
+        lg2::error("Error occurred during fork. ERROR={KEY0}", "KEY0",errno);
         return PLDM_ERROR;
     }
 

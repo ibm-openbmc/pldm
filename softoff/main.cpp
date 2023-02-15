@@ -1,6 +1,8 @@
 #include "common/utils.hpp"
 #include "softoff.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <getopt.h>
 
 #include <iostream>
@@ -16,7 +18,7 @@ int main(int argc, char* argv[])
     {
         case 't':
             noTimeOut = true;
-            std::cout << "Not applying any time outs\n";
+            lg2::info("Not applying any time outs");
             break;
         case -1:
             break;
@@ -37,15 +39,13 @@ int main(int argc, char* argv[])
 
     if (softPower.isError())
     {
-        std::cerr << "Host failed to gracefully shutdown, exiting "
-                     "pldm-softpoweroff app\n";
+        lg2::error("Host failed to gracefully shutdown, exiting pldm-softpoweroff app");
         return -1;
     }
 
     if (softPower.isCompleted())
     {
-        std::cerr << "Host current state is not Running, exiting "
-                     "pldm-softpoweroff app\n";
+        lg2::error("Host current state is not Running, exiting pldm-softpoweroff app");
         return 0;
     }
 
@@ -53,8 +53,7 @@ int main(int argc, char* argv[])
     // wait the host gracefully shutdown.
     if (softPower.hostSoftOff(event))
     {
-        std::cerr << "pldm-softpoweroff:Failure in sending soft off request to "
-                     "the host. Exiting pldm-softpoweroff app\n";
+        lg2::error("pldm-softpoweroff:Failure in sending soft off request to the host. Exiting pldm-softpoweroff app");
 
         return -1;
     }
@@ -77,14 +76,10 @@ int main(int argc, char* argv[])
         }
         catch (const sdbusplus::exception::exception& e)
         {
-            std::cerr << "SoftPowerOff:Failed to create BMC dump, ERROR="
-                      << e.what() << std::endl;
+            lg2::error("SoftPowerOff:Failed to create BMC dump, ERROR={KEY0}", "KEY0", e.what());
         }
 
-        std::cerr
-            << "PLDM host soft off: ERROR! Wait for the host soft off timeout."
-            << "Exit the pldm-softpoweroff "
-            << "\n";
+        lg2::error("PLDM host soft off: ERROR! Wait for the host soft off timeout. Exit the pldm-softpoweroff");
         return -1;
     }
 

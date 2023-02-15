@@ -7,6 +7,8 @@
 #include "host-bmc/dbus/custom_dbus.hpp"
 #include "host-bmc/dbus/serialize.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <stdint.h>
 
 #include <iostream>
@@ -70,14 +72,14 @@ int PCIeInfoHandler::writeFromMemory(
     std::ofstream pcieData(infoFile, std::ios::out | std::ios::binary);
     if (!pcieData)
     {
-        std::cerr << "PCIe Info file creation error " << std::endl;
+       lg2::error("PCIe Info file creation error ");
         return PLDM_ERROR;
     }
 
     auto rc = transferFileData(infoFile, false, offset, length, address);
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "transferFileData failed with rc= " << rc << " \n";
+        lg2::error("transferFileData failed with rc= {KEY0}", "KEY0", rc);
         return rc;
     }
 
@@ -97,7 +99,7 @@ int PCIeInfoHandler::write(const char* buffer, uint32_t, uint32_t& length,
                            std::ios::out | std::ios::binary | std::ios::app);
     if (!pcieData)
     {
-        std::cerr << "PCIe Info file creation error: " << infoFile << std::endl;
+        lg2::error("PCIe Info file creation error: {KEY0}", "KEY0",infoFile.c_str());
         return PLDM_ERROR;
     }
 
@@ -114,8 +116,7 @@ int PCIeInfoHandler::fileAck(uint8_t /*fileStatus*/)
 {
     if (receivedFiles.find(infoType) == receivedFiles.end())
     {
-        std::cerr << "Received FileAck for the file which is not received"
-                  << std::endl;
+        lg2::error("Received FileAck for the file which is not received");
     }
     receivedFiles[infoType] = true;
 
@@ -137,7 +138,7 @@ int PCIeInfoHandler::fileAck(uint8_t /*fileStatus*/)
 
             for (const auto& cable : cables)
             {
-                std::cerr << "Removing cable object [ " << cable << " ]\n";
+                lg2::error("Removing cable object [ {KEY0} ]", "KEY0", cable);
                 pldm::dbus::CustomDBus::getCustomDBus().deleteObject(cable);
             }
             cables.clear();
@@ -176,9 +177,7 @@ void PCIeInfoHandler::setProperty(
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Failed To set " << propertyName << "property"
-                  << "and path :" << objPath << "ERROR=" << e.what()
-                  << std::endl;
+        lg2::error("Failed To set {KEY0} property and path :{KEY1}, ERROR={KEY2}", "KEY0", propertyName, "KEY1", objPath.c_str(), "KEY2", e.what());
     }
 }
 
@@ -311,10 +310,7 @@ void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
 
             std::filesystem::path slot(slotAndAdapter.first);
 
-            std::cerr << "Primary Link, "
-                      << " BusId - [" << std::hex << std::showbase << linkId
-                      << "] LinkStatus - [" << linkStatus << "] on [ "
-                      << slot.filename() << "] \n";
+            lg2::error("Primary Link, BusId - [{KEY0}] LinkStatus - [{KEY1}] on [{KEY2}]", "KEY0", lg2::hex, linkId, "KEY1", linkStatus, "KEY2", slot.filename());
         }
         else
         {
@@ -341,10 +337,7 @@ void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
             std::filesystem::path printSlot = slot.parent_path().filename();
             printSlot /= slot.filename();
 
-            std::cerr << "Secondary Link, "
-                      << " BusId - [ " << std::hex << std::showbase << linkId
-                      << " ] LinkStatus - [" << linkStatus << "] on [ "
-                      << printSlot << "] \n";
+            lg2::error("Secondary Link, BusId - [{KEY0}] LinkStatus - [{KEY1}] on [{KEY2}]", "KEY0", lg2::hex, linkId, "KEY1", linkStatus, "KEY2", printSlot);
         }
     }
     if (!slotAndAdapter.second.empty())
@@ -360,16 +353,13 @@ void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
                         itemPCIeDevice, "int64_t");
             std::filesystem::path adapter(slotAndAdapter.second);
 
-            std::cerr << "Primary Link, "
-                      << " GenerationInUse - [" << link_speed[linkSpeed]
-                      << "] LanesInUse - [" << linkWidth << "] on [ "
-                      << adapter.filename() << "]\n";
+            lg2::error("Primary Link, GenerationInUse - [{KEY0}] LanesInUse - [{KEY1}] on [{KEY2}]", "KEY0", link_speed[linkSpeed], "KEY1", linkWidth, "KEY2", adapter.filename());
         }
         else
         {
             if (isHostedByPLDM)
             {
-                // std::cerr << "secondary link not empty adapter \n";
+                // lg2::error("secondary link not empty adapter \n";
                 //  its a secondary link so update the link speed on mex adapter
                 if (linkStatus ==
                         "xyz.openbmc_project.Inventory.Item.PCIeSlot.Status.Open" ||
@@ -412,9 +402,7 @@ void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
             printAdapter /= adapter.parent_path().filename();
             printAdapter /= adapter.filename();
 
-            std::cerr << "Secondary Link, GenerationInUse - ["
-                      << link_speed[linkSpeed] << "] LanesInUse - ["
-                      << linkWidth << "] on [ " << printAdapter << "]\n";
+            lg2::error("Secondary Link, GenerationInUse - [{KEY0}] LanesInUse - [{KEY1}] on [{KEY2}]", "KEY0", link_speed[linkSpeed], "KEY1", linkWidth, "KEY2", printAdapter);
         }
     }
 }
@@ -624,8 +612,7 @@ void PCIeInfoHandler::parseSpeciallink(linkId_t linkId,
                 // out the slot
                 auto slotAndAdapter = pldm::responder::utils::getSlotAndAdapter(
                     localPortLocCode.first);
-                std::cerr << "Special processing for link - [ " << linkId
-                          << " ] \n";
+                lg2::error("Special processing for link - [{KEY0}]", "KEY0", linkId);
                 setTopologyOnSlotAndAdapter(
                     std::get<1>(linkInfo), slotAndAdapter, linkId,
                     std::get<0>(linkInfo), std::get<2>(linkInfo),
@@ -658,8 +645,7 @@ void PCIeInfoHandler::setTopologyAttrsOnDbus()
                     std::get<0>(info), std::get<2>(info), std::get<3>(info));
                 break;
             case Unknown:
-                std::cerr << "link type is unkown : " << (unsigned)link
-                          << std::endl;
+                lg2::error("link type is unkown : {KEY0}", "KEY0", (unsigned)link);
                 switch (linkTypeInfo[link])
                 {
                     case Primary:
@@ -734,15 +720,10 @@ void PCIeInfoHandler::setTopologyAttrsOnDbus()
 
         pldm::dbus::CustomDBus::getCustomDBus().setAssociations(
             cableObjectPath.string(), associations);
+        //stdGetError
+        lg2::error("Hosted Cable [ {KEY0} ] Length - [ {KEY1} ] Type - [ {KEY2} ] Status - [ {KEY3} ] PN - [ {KEY4}", "KEY0",  cable_no, "KEY1", std::get<4>(info), "KEY2", std::get<5>(info), "KEY3", std::get<6>(info), "KEY4", std::get<3>(info));
 
-        std::cerr << "Hosted Cable [ " << cable_no << " ] Length - [ "
-                  << std::get<4>(info) << " ] Type - [ " << std::get<5>(info)
-                  << " ] Status - [ " << std::get<6>(info) << " ] PN - [ "
-                  << std::get<3>(info) << " ]\n";
-        std::cerr << "Hosted Cable [ " << cable_no << " ] UPConnector - [ "
-                  << upstreamInformation << " ] DNConnector - [ "
-                  << downstreamInformation << " ] DChassis - [ "
-                  << downstreamChassis << " ]\n";
+        lg2::error("Hosted Cable [ {KEY0} ] UPConnector - [ {KEY1} ] DNConnector - [ {KEY2} ] DChassis - [ {KEY3} ]", "KEY0", cable_no, "KEY1", upstreamInformation, "KEY2", downstreamInformation, "KEY3", downstreamChassis);
 
         cables.push_back(cableObjectPath.string());
     }
@@ -786,7 +767,7 @@ void PCIeInfoHandler::parseTopologyData()
     if (MAP_FAILED == file_in_memory)
     {
         int rc = -errno;
-        std::cerr << "mmap on topology file failed, RC=" << rc << std::endl;
+        lg2::error("mmap on topology file failed, RC={KEY0}", "KEY0", rc);
         return;
     }
 
@@ -802,8 +783,7 @@ void PCIeInfoHandler::parseTopologyData()
     }
     else
     {
-        std::cerr
-            << "Parsing of topology file failed : pcie_link_list is null\n";
+        lg2::error("Parsing of topology file failed : pcie_link_list is null");
         return;
     }
 
@@ -812,7 +792,7 @@ void PCIeInfoHandler::parseTopologyData()
 
     if (single_entry_data == nullptr)
     {
-        std::cerr << "Parsing of topology file failed : single_link is null \n";
+        lg2::error("Parsing of topology file failed : single_link is null");
         return;
     }
 
@@ -911,8 +891,7 @@ void PCIeInfoHandler::parseTopologyData()
 
         if (slot_data == nullptr)
         {
-            std::cerr
-                << "Parsing the topology file failed : slot_data is null \n";
+            lg2::error("Parsing the topology file failed : slot_data is null");
             return;
         }
         // get the Slot location code common part
@@ -929,7 +908,7 @@ void PCIeInfoHandler::parseTopologyData()
                                        slot_data->slotLocCodesCmnPrtSize);
         if (slot_loc_suf_data == nullptr)
         {
-            std::cerr << "slot location suffix data is nullptr \n";
+            lg2::error("slot location suffix data is nullptr");
             return;
         }
 
@@ -1009,7 +988,7 @@ void PCIeInfoHandler::parseCableInfo()
     if (MAP_FAILED == file_in_memory)
     {
         int rc = -errno;
-        std::cerr << "mmap on cable ifno file failed, RC=" << rc << std::endl;
+        lg2::error("mmap on cable ifno file failed, RC={KEY0}", "KEY0", rc);
         return;
     }
 
@@ -1027,7 +1006,7 @@ void PCIeInfoHandler::parseCableInfo()
 
     if (cable_data == nullptr)
     {
-        std::cerr << "Cable info parsing failed , cable_data = nullptr \n";
+        lg2::error("Cable info parsing failed , cable_data = nullptr");
         return;
     }
 
@@ -1115,8 +1094,7 @@ void PCIeInfoHandler::deleteTopologyFiles()
         }
         catch (const fs::filesystem_error& err)
         {
-            std::cerr << "Topology file deletion failed " << pciePath << " : "
-                      << err.what() << "\n";
+            lg2::error("Topology file deletion failed {KEY0} : {KEY1}", "KEY0", pciePath, "KEY1", err.what());
         }
     }
 }

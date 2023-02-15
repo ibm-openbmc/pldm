@@ -1,6 +1,7 @@
 #include "bios_integer_attribute.hpp"
 
 #include "common/utils.hpp"
+#include <phosphor-logging/lg2.hpp>
 
 using namespace pldm::utils;
 
@@ -33,13 +34,7 @@ BIOSIntegerAttribute::BIOSIntegerAttribute(const Json& entry,
     auto rc = pldm_bios_table_attr_entry_integer_info_check(&info, &errmsg);
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "Wrong filed for integer attribute, ATTRIBUTE_NAME="
-                  << attr.c_str() << " ERRMSG=" << errmsg
-                  << " LOWER_BOUND=" << integerInfo.lowerBound
-                  << " UPPER_BOUND=" << integerInfo.upperBound
-                  << " DEFAULT_VALUE=" << integerInfo.defaultValue
-                  << " SCALAR_INCREMENT=" << integerInfo.scalarIncrement
-                  << "\n";
+        lg2::error("Wrong filed for integer attribute, ATTRIBUTE_NAME={KEY0} ERRMSG= {KEY1} LOWER_BOUND={KEY2} UPPER_BOUND={KEY3} DEFAULT_VALUE={KEY4} SCALAR_INCREMENT={KEY5}", "KEY0", attr.c_str(), "KEY1", errmsg, "KEY2", integerInfo.lowerBound, "KEY3", integerInfo.upperBound, "KEY4", integerInfo.defaultValue, "KEY5", integerInfo.scalarIncrement);
         throw std::invalid_argument("Wrong field for integer attribute");
     }
 }
@@ -95,8 +90,7 @@ void BIOSIntegerAttribute::setAttrValueOnDbus(
                                             static_cast<double>(currentValue));
     }
 
-    std::cerr << "Unsupported property type on dbus: " << dBusMap->propertyType
-              << std::endl;
+    lg2::error("Unsupported property type on dbus: {KEY0}", "KEY0", dBusMap->propertyType);
     throw std::invalid_argument("dbus type error");
 }
 
@@ -137,9 +131,7 @@ void BIOSIntegerAttribute::constructEntry(
     if (currentValue < (int64_t)integerInfo.lowerBound ||
         currentValue > (int64_t)integerInfo.upperBound)
     {
-        std::cerr << "Setting to default value " << integerInfo.defaultValue
-                  << " For Attribute " << name
-                  << " Received value: " << currentValue << std::endl;
+        lg2::error("Setting to default value {KEY0} For Attribute {KEY1} Received value: {KEY2}", "KEY0", integerInfo.defaultValue, "KEY1", name, "KEY2", currentValue);
         currentValue = integerInfo.defaultValue;
     }
 
@@ -184,8 +176,7 @@ uint64_t BIOSIntegerAttribute::getAttrValue(const PropertyValue& propertyValue)
     }
     else
     {
-        std::cerr << "Unsupported property type for getAttrValue: "
-                  << dBusMap->propertyType << std::endl;
+        lg2::error("Unsupported property type for getAttrValue: {KEY0}", "KEY0", dBusMap->propertyType);
         throw std::invalid_argument("dbus type error");
     }
     return value;
@@ -208,8 +199,7 @@ uint64_t BIOSIntegerAttribute::getAttrValue()
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Get Integer Attribute Value Error: AttributeName = "
-                  << name << std::endl;
+        lg2::error("Get Integer Attribute Value Error: AttributeName = {KEY0}", "KEY0", name);
         return integerInfo.defaultValue;
     }
 }

@@ -3,6 +3,8 @@
 #include "libpldm/entity.h"
 #include "libpldm/state_set.h"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include "common/types.hpp"
 #include "common/utils.hpp"
 #include "event_parser.hpp"
@@ -68,7 +70,7 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
 {
     for (const auto& directory : dir)
     {
-        std::cerr << "checking if : " << directory << "exists" << std::endl;
+        lg2::error("checking if : {KEY0} exists", "KEY0", directory.c_str());
         if (!fs::exists(directory))
         {
             return;
@@ -138,23 +140,18 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
             }
             catch (const InternalFailure& e)
             {
-                std::cerr
-                    << "PDR config directory does not exist or empty, TYPE= "
-                    << pdrType << "PATH= " << dirEntry << " ERROR=" << e.what()
-                    << "\n";
+                lg2::error("PDR config directory does not exist or empty, TYPE= {KEY0} PATH= {KEY1} ERROR={KEY2}", "KEY0", pdrType, "KEY1", dirEntry.path().string(), "KEY3", e.what());
             }
             catch (const Json::exception& e)
             {
-                std::cerr << "Failed parsing PDR JSON file, TYPE= " << pdrType
-                          << " ERROR=" << e.what() << "\n";
+                lg2::error("Failed parsing PDR JSON file, TYPE= {KEY0} ERROR={KEY1}", "KEY0",  pdrType, "KEY1", e.what());
                 pldm::utils::reportError(
                     "xyz.openbmc_project.PLDM.Error.Generate.PDRJsonFileParseFail",
                     pldm::PelSeverity::ERROR);
             }
             catch (const std::exception& e)
             {
-                std::cerr << "Failed parsing PDR JSON file, TYPE= " << pdrType
-                          << " ERROR=" << e.what() << "\n";
+                lg2::error("Failed parsing PDR JSON file, TYPE= {KEY0} ERROR={KEY1}", "KEY0",  pdrType, "KEY1", e.what());
                 pldm::utils::reportError(
                     "xyz.openbmc_project.PLDM.Error.Generate.PDRJsonFileParseFail",
                     pldm::PelSeverity::ERROR);
@@ -311,8 +308,7 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Error accessing PDR, HANDLE=" << recordHandle
-                  << " ERROR=" << e.what() << "\n";
+        lg2::error("Error accessing PDR, HANDLE={KEY0} ERROR={KEY1}", "KEY0", recordHandle, "KEY1", e.what());
         return CmdHandler::ccOnlyResponse(request, PLDM_ERROR);
     }
     return response;
@@ -554,8 +550,7 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                                        uint8_t /*formatVersion*/, uint8_t tid,
                                        size_t eventDataOffset)
 {
-    std::cerr << "Got a repo change event from TID: " << (unsigned)tid
-              << std::endl;
+    lg2::error("Got a repo change event from TID: {KEY0}", "KEY0", (unsigned)tid);
     uint8_t eventDataFormat{};
     uint8_t eventDataOperation{};
     uint8_t numberOfChangeRecords{};
@@ -598,8 +593,7 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                 return rc;
             }
 
-            std::cout << "pldmPDRRepositoryChgEvent eventDataOperation : "
-                      << (unsigned)eventDataOperation << std::endl;
+            lg2::error("pldmPDRRepositoryChgEvent eventDataOperation : {KEY0}", "KEY0",(unsigned)eventDataOperation);
 
             if (eventDataOperation == PLDM_RECORDS_ADDED ||
                 eventDataOperation == PLDM_RECORDS_DELETED)
@@ -686,7 +680,7 @@ int Handler::getPDRRecordHandles(const ChangeEntry* changeEntryData,
     }
     for (const auto& i : pdrRecordHandles)
     {
-        std::cerr << "Record handles sent down to BMC: " << i << std::endl;
+        lg2::error("Record handles sent down to BMC: {KEY0}", "KEY0", i); 
     }
     return PLDM_SUCCESS;
 }
@@ -865,7 +859,7 @@ bool isOemNumericEffecter(Handler& handler, uint16_t effecterId,
 
     if (numericEffecterPDRs.empty())
     {
-        std::cerr << "Failed to get record by PDR type\n";
+        lg2::error("Failed to get record by PDR type");
         return false;
     }
 
@@ -923,7 +917,7 @@ bool isOemStateSensor(Handler& handler, uint16_t sensorId,
     getRepoByType(handler.getRepo(), stateSensorPDRs, PLDM_STATE_SENSOR_PDR);
     if (stateSensorPDRs.empty())
     {
-        std::cerr << "Failed to get record by PDR type\n";
+        lg2::error("Failed to get record by PDR type");
         return false;
     }
 
@@ -950,10 +944,7 @@ bool isOemStateSensor(Handler& handler, uint16_t sensorId,
 
         if (sensorRearmCount > tmpCompSensorCnt)
         {
-            std::cerr << "The requester sent wrong sensorRearm"
-                      << " count for the sensor, SENSOR_ID=" << sensorId
-                      << "SENSOR_REARM_COUNT=" << (uint16_t)sensorRearmCount
-                      << "\n";
+            lg2::error("The requester sent wrong sensorRearm count for the sensor, SENSOR_ID={KEY0} SENSOR_REARM_COUNT={KEY1}", "KEY0", sensorId, "KEY1", (uint16_t)sensorRearmCount);
             break;
         }
 
@@ -990,7 +981,7 @@ bool isOemStateEffecter(Handler& handler, uint16_t effecterId,
                   PLDM_STATE_EFFECTER_PDR);
     if (stateEffecterPDRs.empty())
     {
-        std::cerr << "Failed to get record by PDR type\n";
+        lg2::error("Failed to get record by PDR type");
         return false;
     }
 
@@ -1016,9 +1007,7 @@ bool isOemStateEffecter(Handler& handler, uint16_t effecterId,
 
         if (compEffecterCnt > pdr->composite_effecter_count)
         {
-            std::cerr << "The requester sent wrong composite effecter"
-                      << " count for the effecter, EFFECTER_ID=" << effecterId
-                      << "COMP_EFF_CNT=" << (uint16_t)compEffecterCnt << "\n";
+            lg2::error("The requester sent wrong composite effecter count for the effecter, EFFECTER_ID={KEY0} COMP_EFF_CNT={KEY1}", "KEY0", effecterId, "KEY1", (uint16_t)compEffecterCnt);
             return false;
         }
 

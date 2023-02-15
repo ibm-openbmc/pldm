@@ -6,6 +6,8 @@
 #include "libpldm/pldm.h"
 #include "libpldm/state_set.h"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include "common/types.hpp"
 #include "common/utils.hpp"
 
@@ -91,9 +93,7 @@ uint16_t HostLampTest::getEffecterID()
 
     if (stateEffecterPDRs.empty())
     {
-        std::cerr
-            << "Lamp Test: The state set PDR can not be found, entityType = "
-            << entityType << std::endl;
+        lg2::error("Lamp Test: The state set PDR can not be found, entityType = {KEY0}", "KEY0", entityType);
         return effecterID;
     }
 
@@ -123,8 +123,7 @@ void HostLampTest::setHostStateEffecter(uint16_t effecterID, uint8_t& rc)
     if (rc != PLDM_SUCCESS)
     {
         requester.markFree(mctp_eid, instanceId);
-        std::cerr << "Failed to encode_set_state_effecter_states_req, rc = "
-                  << rc << std::endl;
+        lg2::error("Failed to encode_set_state_effecter_states_req, rc = {KEY0}", "KEY0", (int)rc);
         return;
     }
 
@@ -133,8 +132,7 @@ void HostLampTest::setHostStateEffecter(uint16_t effecterID, uint8_t& rc)
                                                        size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
-            std::cerr << "Failed to receive response for the Set State "
-                         "Effecter States\n";
+            lg2::error("Failed to receive response for the Set State Effecter States");
             return;
         }
 
@@ -145,10 +143,7 @@ void HostLampTest::setHostStateEffecter(uint16_t effecterID, uint8_t& rc)
 
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
-            std::cerr << "Failed to decode_set_state_effecter_states_resp: "
-                      << "rc=" << rc
-                      << ", cc=" << static_cast<unsigned>(completionCode)
-                      << std::endl;
+            lg2::error("Failed to decode_set_state_effecter_states_resp: rc={KEY0}, cc={KEY1}", "KEY0", rc, "KEY1", unsigned(completionCode));
         }
     };
 
@@ -158,8 +153,7 @@ void HostLampTest::setHostStateEffecter(uint16_t effecterID, uint8_t& rc)
         std::move(setStateEffecterStatesResponseHandler));
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr
-            << "Failed to send the the Set State Effecter States request\n";
+        lg2::error("Failed to send the the Set State Effecter States request");
     }
 
     return;

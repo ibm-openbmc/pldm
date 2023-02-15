@@ -8,6 +8,7 @@
 #include <cereal/types/tuple.hpp>
 #include <cereal/types/variant.hpp>
 #include <cereal/types/vector.hpp>
+#include <phosphor-logging/lg2.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -91,8 +92,9 @@ bool Serialize::deserialize()
 {
     if (!fs::exists(filePath))
     {
-        std::cerr << "File does not exist, FILE_PATH = " << filePath
-                  << std::endl;
+        //FilePathError
+        //lg2::error("File does not exist, FILE_PATH = {KEY0}", "KEY0" ,filePath);
+       
         return false;
     }
 
@@ -107,8 +109,8 @@ bool Serialize::deserialize()
     }
     catch (const cereal::Exception& e)
     {
-        std::cerr << "Failed to restore groups, ERROR = " << e.what()
-                  << std::endl;
+        lg2::error("Failed to restore groups, ERROR = {KEY0}", "KEY0", e.what());
+
         fs::remove(filePath);
     }
 
@@ -140,8 +142,7 @@ void Serialize::reSerialize(const std::vector<uint16_t> types)
     {
         if (savedObjs.contains(type))
         {
-            std::cerr << "Removing objects of type : " << (unsigned)type
-                      << " from the persistent cache\n";
+            lg2::error("Removing objects of type : {KEY0} from the persistent cache", "KEY0", (unsigned)type);
             savedObjs.erase(savedObjs.find(type));
         }
     }

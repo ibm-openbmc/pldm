@@ -2,6 +2,8 @@
 
 #include <xyz/openbmc_project/Common/error.hpp>
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -27,8 +29,8 @@ StateSensorHandler::StateSensorHandler(const std::string& dirPath)
     fs::path dir(dirPath);
     if (!fs::exists(dir) || fs::is_empty(dir))
     {
-        std::cerr << "Event config directory does not exist or empty, DIR="
-                  << dirPath << "\n";
+        //FilePathError
+        lg2::error("Event config directory does not exist or empty, DIR={KEY0}", "KEY0", dirPath.c_str());
         return;
     }
 
@@ -39,8 +41,8 @@ StateSensorHandler::StateSensorHandler(const std::string& dirPath)
         auto data = Json::parse(jsonFile, nullptr, false);
         if (data.is_discarded())
         {
-            std::cerr << "Parsing Event state sensor JSON file failed, FILE="
-                      << file.path();
+            //FilePathError
+            lg2::error("Parsing Event state sensor JSON file failed, FILE={KEY0}", "KEY0", file.path().c_str());
             continue;
         }
 
@@ -74,12 +76,8 @@ StateSensorHandler::StateSensorHandler(const std::string& dirPath)
                 dbusInfo.propertyName.empty() ||
                 (supportedDbusPropertyTypes.find(dbusInfo.propertyType) ==
                  supportedDbusPropertyTypes.end()))
-            {
-                std::cerr << "Invalid dbus config,"
-                          << " OBJPATH=" << dbusInfo.objectPath << " INTERFACE="
-                          << dbusInfo.interface << " PROPERTY_NAME="
-                          << dbusInfo.propertyName
-                          << " PROPERTY_TYPE=" << dbusInfo.propertyType << "\n";
+            { //FilePathError
+                lg2::error("Invalid dbus config, OBJPATH= {KEY0} INTERFACE={KEY1} PROPERTY_NAME={KEY2} PROPERTY_TYPE={KEY3}", "KEY0", dbusInfo.objectPath.c_str(), "KEY1", dbusInfo.interface, "KEY2", dbusInfo.propertyName, "KEY3", dbusInfo.propertyType);
                 continue;
             }
 
@@ -87,11 +85,9 @@ StateSensorHandler::StateSensorHandler(const std::string& dirPath)
             auto propertyValues = dbus.value("property_values", emptyJsonList);
             if ((eventStates.size() == 0) || (propertyValues.size() == 0) ||
                 (eventStates.size() != propertyValues.size()))
-            {
-                std::cerr << "Invalid event state JSON config,"
-                          << " EVENT_STATE_SIZE=" << eventStates.size()
-                          << " PROPERTY_VALUE_SIZE=" << propertyValues.size()
-                          << "\n";
+            { 
+                lg2::error("Invalid event state JSON config, EVENT_STATE_SIZE={KEY0} PROPERTY_VALUE_SIZE={KEY1}", "KEY0", eventStates.size(), "KEY1", propertyValues.size());
+                    
                 continue;
             }
 
@@ -145,8 +141,7 @@ int StateSensorHandler::eventAction(StateSensorEntry entry,
         }
         catch (const std::out_of_range& e)
         {
-            std::cerr << "Invalid event state" << static_cast<unsigned>(state)
-                      << '\n';
+            lg2::error("Invalid event state {KEY0}", "KEY0", unsigned(state));
             return PLDM_ERROR_INVALID_DATA;
         }
 
@@ -156,10 +151,7 @@ int StateSensorHandler::eventAction(StateSensorEntry entry,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "Error setting property, ERROR=" << e.what()
-                      << " PROPERTY=" << dbusMapping.propertyName
-                      << " INTERFACE=" << dbusMapping.interface << " PATH="
-                      << dbusMapping.objectPath << "\n";
+            lg2::error( "Error setting property, ERROR={KEY0} PROPERTY={KEY1} INTERFACE={KEY2} PATH = {KEY3}", "KEY0", e.what(), "KEY1", dbusMapping.propertyName , "KEY2", dbusMapping.interface, "KEY3", dbusMapping.objectPath.c_str());
             return PLDM_ERROR;
         }
     }

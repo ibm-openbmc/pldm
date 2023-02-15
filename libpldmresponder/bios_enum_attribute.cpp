@@ -2,6 +2,8 @@
 
 #include "bios_enum_attribute.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include "common/utils.hpp"
 
 #include <iostream>
@@ -114,8 +116,7 @@ void BIOSEnumAttribute::buildValMap(const Json& dbusVals)
         }
         else
         {
-            std::cerr << "Unknown D-Bus property type, TYPE="
-                      << dBusMap->propertyType << "\n";
+            lg2::error("Unknown D-Bus property type, TYPE={KEY0}", "KEY0", dBusMap->propertyType);
             throw std::invalid_argument("Unknown D-BUS property type");
         }
         valMap.emplace(value, possibleValues[pos]);
@@ -222,9 +223,7 @@ void BIOSEnumAttribute::constructEntry(
             }
             catch (std::invalid_argument const& ex)
             {
-                std::cerr << "Enum Value " << currValue
-                          << " is not one of the possible values. Error: "
-                          << ex.what() << " for Attribute " << name << '\n';
+                lg2::error("Enum Value {KEY0} is not one of the possible values. Error:{KEY1} for Attribute {KEY2}", "KEY0", currValue, "KEY1", ex.what(), "KEY2", name);
                 currValueIndices[0] =
                     getValueIndex(defaultValue, possibleValues);
             }
@@ -250,8 +249,7 @@ int BIOSEnumAttribute::updateAttrVal(Table& newValue, uint16_t attrHdl,
     auto iter = valMap.find(newPropVal);
     if (iter == valMap.end())
     {
-        std::cerr << "Could not find index for new BIOS enum, value="
-                  << std::get<std::string>(newPropVal) << "\n";
+        lg2::error("Could not find index for new BIOS enum, value={KEY0}", "KEY1", std::get<std::string>(newPropVal));
         return PLDM_ERROR;
     }
     auto currentValue = iter->second;

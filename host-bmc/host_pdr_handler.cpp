@@ -2,6 +2,8 @@
 
 #include "host_pdr_handler.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include "libpldm/fru.h"
 #include "libpldm/pldm.h"
 #include "libpldm/state_set.h"
@@ -118,7 +120,7 @@ HostPDRHandler::HostPDRHandler(
             auto data = Json::parse(jsonFile, nullptr, false);
             if (data.is_discarded())
             {
-                std::cerr << "Parsing Host FRU json file failed" << std::endl;
+                lg2::error("Parsing Host FRU json file failed");
             }
             else
             {
@@ -136,8 +138,8 @@ HostPDRHandler::HostPDRHandler(
         }
         catch (const std::exception& e)
         {
-            std::cerr << "Parsing Host FRU json file failed, exception = "
-                      << e.what() << std::endl;
+            lg2::error("Parsing Host FRU json file failed, exception = {KEY0}", "KEY0", e.what());
+                    
         }
     }
 
@@ -257,9 +259,7 @@ HostPDRHandler::HostPDRHandler(
                         }
                         catch (const std::exception& e)
                         {
-                            std::cerr
-                                << "Unable to set the slot power state to Off "
-                                << "ERROR=" << e.what() << "\n";
+                            lg2::error("Unable to set the slot power state to Off, ERROR = {KEY0}", "KEY0", e.what());
                         }
                     }
                 }
@@ -357,7 +357,7 @@ void HostPDRHandler::getHostPDR(uint32_t nextRecordHandle)
     if (rc != PLDM_SUCCESS)
     {
         requester.markFree(mctp_eid, instanceId);
-        std::cerr << "Failed to encode_get_pdr_req, rc = " << rc << std::endl;
+        lg2::error("Failed to encode_get_pdr_req, rc = {KEY0}", "KEY0", rc); 
         return;
     }
 
@@ -367,7 +367,7 @@ void HostPDRHandler::getHostPDR(uint32_t nextRecordHandle)
         std::move(std::bind_front(&HostPDRHandler::processHostPDRs, this)));
     if (rc)
     {
-        std::cerr << "Failed to send the GetPDR request to Host \n";
+       lg2::error("Failed to send the GetPDR request to Host");
     }
 }
 std::string HostPDRHandler::updateLedGroupPath(const std::string& path)
@@ -405,6 +405,7 @@ int HostPDRHandler::handleStateSensorEvent(
                 auto ledGroupPath = updateLedGroupPath(entity.first);
                 if (!ledGroupPath.empty())
                 {
+                    //FilePathError
                     std::cout
                         << "led state event for [ " << ledGroupPath << " ] , [ "
                         << node_entity.entity_type << " ,"
@@ -430,8 +431,8 @@ int HostPDRHandler::handleStateSensorEvent(
                 stateSetId[0] == PLDM_STATE_SET_HEALTH_STATE &&
                 strstr(entity.first.c_str(), "core"))
             {
-                std::cerr << "Guard event on CORE : [" << entity.first
-                          << "] \n";
+                
+                lg2::error("Guard event on CORE : [{KEY0}]", "KEY0", entity.first.c_str());
             }
             CustomDBus::getCustomDBus().setOperationalStatus(
                 entity.first, state == PLDM_OPERATIONAL_NORMAL,
@@ -442,8 +443,7 @@ int HostPDRHandler::handleStateSensorEvent(
         else if (stateSetId[0] == PLDM_STATE_SET_VERSION)
         {
             // There is a version changed on any of the dbus objects
-            std::cout
-                << "Got a signal from Host about a possible change in Version\n";
+            lg2::error("Got a signal from Host about a possible change in Version");
             createDbusObjects();
             return PLDM_SUCCESS;
         }
@@ -452,8 +452,8 @@ int HostPDRHandler::handleStateSensorEvent(
     auto rc = stateSensorHandler.eventAction(entry, state);
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "Failed to fetch and update D-bus property, rc = " << rc
-                  << std::endl;
+        lg2::error("Failed to fetch and update D-bus property, rc = {KEY0}", "KEY0", rc);
+
         return rc;
     }
 
@@ -527,8 +527,7 @@ void HostPDRHandler::mergeEntityAssociations(
         pldm_find_entity_ref_in_tree(entityTree, entities[0], &node);
         if (node == nullptr)
         {
-            std::cerr
-                << "\ncould not find referrence of the entity in the tree \n";
+            lg2::error("could not find referrence of the entity in the tree");
         }
         else
         {
@@ -570,9 +569,7 @@ void HostPDRHandler::mergeEntityAssociations(
 void HostPDRHandler::sendPDRRepositoryChgEvent(std::vector<uint8_t>&& pdrTypes,
                                                uint8_t eventDataFormat)
 {
-    std::cerr
-        << "Sending the repo change event after merging the PDRs, MCTP_ID:"
-        << (unsigned)mctp_eid << std::endl;
+    lg2::error("Sending the repo change event after merging the PDRs, MCTP_ID: {KEY0}", "KEY0", (unsigned)mctp_eid);
     assert(eventDataFormat == FORMAT_IS_PDR_HANDLES);
 
     // Extract from the PDR repo record handles of PDRs we want the host
@@ -636,9 +633,8 @@ void HostPDRHandler::sendPDRRepositoryChgEvent(std::vector<uint8_t>&& pdrTypes,
         &firstEntry, eventData, &actualSize, maxSize);
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr
-            << "Failed to encode_pldm_pdr_repository_chg_event_data, rc = "
-            << rc << std::endl;
+        lg2::error("Failed to encode_pldm_pdr_repository_chg_event_data, rc = {KEY0}", "KEY0", rc);
+
         return;
     }
     auto instanceId = requester.getInstanceId(mctp_eid);
@@ -653,8 +649,8 @@ void HostPDRHandler::sendPDRRepositoryChgEvent(std::vector<uint8_t>&& pdrTypes,
     if (rc != PLDM_SUCCESS)
     {
         requester.markFree(mctp_eid, instanceId);
-        std::cerr << "Failed to encode_platform_event_message_req, rc = " << rc
-                  << std::endl;
+        lg2::error("Failed to encode_platform_event_message_req, rc = {KEY0}", "KEY0", rc);
+        
         return;
     }
 
@@ -663,9 +659,8 @@ void HostPDRHandler::sendPDRRepositoryChgEvent(std::vector<uint8_t>&& pdrTypes,
                                                   size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
-            std::cerr << "Failed to receive response for the PDR repository "
-                         "changed event"
-                      << "\n";
+            lg2::error("Failed to receive response for the PDR repository changed event");
+
             return;
         }
 
@@ -676,10 +671,8 @@ void HostPDRHandler::sendPDRRepositoryChgEvent(std::vector<uint8_t>&& pdrTypes,
                                                      &completionCode, &status);
         if (rc || completionCode)
         {
-            std::cerr << "Failed to decode_platform_event_message_resp: "
-                      << "rc=" << rc
-                      << ", cc=" << static_cast<unsigned>(completionCode)
-                      << std::endl;
+            lg2::error("Failed to decode_platform_event_message_resp: {KEY0}, cc = {KEY1}", "KEY0", rc, "KEY1", (unsigned)completionCode);
+
         }
     };
 
@@ -688,8 +681,8 @@ void HostPDRHandler::sendPDRRepositoryChgEvent(std::vector<uint8_t>&& pdrTypes,
         std::move(requestMsg), std::move(platformEventMessageResponseHandler));
     if (rc)
     {
-        std::cerr << "Failed to send the PDR repository changed event request"
-                  << "\n";
+        lg2::error("Failed to send the PDR repository changed event request");
+
     }
 }
 
@@ -736,8 +729,7 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
     uint8_t transferCRC{};
     if (response == nullptr || !respMsgLen)
     {
-        std::cerr << "Failed to receive response for the GetPDR"
-                     " command \n";
+        lg2::error("Failed to receive response for the GetPDR command");
         return;
     }
 
@@ -750,7 +742,7 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
     memcpy(responsePDRMsg.data(), response, respMsgLen + sizeof(pldm_msg_hdr));
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "Failed to decode_get_pdr_resp, rc = " << rc << std::endl;
+        lg2::error("Failed to decode_get_pdr_resp, rc = {KEY0}", "KEY0", rc);
         return;
     }
     else
@@ -762,11 +754,8 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                                  respCount, &transferCRC);
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
-            std::cerr << "Failed to decode_get_pdr_resp: "
-                      << "rc= "
-                      << ", NextRecordhandle :" << rc << nextRecordHandle
-                      << ", cc=" << static_cast<unsigned>(completionCode)
-                      << std::endl;
+            lg2::error("Failed to decode_get_pdr_resp: rc = {KEY0}, NextRecordhandle : {KEY1}, cc = {KEY2}", "KEY0", rc, "KEY1", nextRecordHandle, "KEY2", (unsigned)completionCode);
+                      
             return;
         }
         else
@@ -805,12 +794,8 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
 
                     terminusHandle = tlpdr->terminus_handle;
                     tid = tlpdr->tid;
-                    std::cerr
-                        << "Got a terminus Locator PDR with TID:"
-                        << (unsigned)tid
-                        << " and Terminus handle:" << terminusHandle
-                        << " with Valid bit as:" << (unsigned)tlpdr->validity
-                        << std::endl;
+                    lg2::error("Got a terminus Locator PDR with TID: {KEY0} and Terminus handle: {KEY1} with Valid bit as: {KEY2}", "KEY0", (unsigned)tid, "KEY1", terminusHandle, "KEY2",(unsigned)tlpdr->validity); 
+                    
                     auto terminus_locator_type = tlpdr->terminus_locator_type;
                     if (terminus_locator_type ==
                         PLDM_TERMINUS_LOCATOR_TYPE_MCTP_EID)
@@ -951,10 +936,8 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
     {
         pldm_pdr_record* firstRecord = repo->first;
         pldm_pdr_record* lastRecord = repo->last;
-        std::cerr << "First Record in the repo after PDR exchange is: "
-                  << firstRecord->record_handle << std::endl;
-        std::cerr << "Last Record in the repo after PDR exchange is:"
-                  << lastRecord->record_handle << std::endl;
+        lg2::error("First Record in the repo after PDR exchange is: {KEY0}", "KEY0", firstRecord->record_handle);
+        lg2::error("Last Record in the repo after PDR exchange is: {KEY0}", "KEY0", lastRecord->record_handle);
 
         pldm::hostbmc::utils::updateEntityAssociation(
             entityAssociations, entityTree, objPathMap, oemPlatformHandler);
@@ -972,7 +955,7 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
         this->createDbusObjects();
         if (isHostUp())
         {
-            std::cout << "Host is UP & Completed the PDR Exchange with host\n";
+            lg2::error("Host is UP & Completed the PDR Exchange with host");
             this->setHostSensorState();
         }
 
@@ -1049,8 +1032,8 @@ void HostPDRHandler::setHostFirmwareCondition()
                                      PLDM_BASE, request);
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "GetPLDMVersion encode failure. PLDM error code = "
-                  << std::hex << std::showbase << rc << "\n";
+        lg2::error("GetPLDMVersion encode failure. PLDM error code = {KEY0}", "KEY0", lg2::hex, rc);
+                  //<< std::hex << std::showbase << rc << "\n";
         requester.markFree(mctp_eid, instanceId);
         return;
     }
@@ -1060,13 +1043,10 @@ void HostPDRHandler::setHostFirmwareCondition()
                                         size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
-            std::cerr << "Failed to receive response for "
-                      << "getPLDMVersion command, Host seems to be off \n";
+            lg2::error("Failed to receive response for getPLDMVersion command, Host seems to be off");
             return;
         }
-        std::cout << "Getting the response. PLDM RC = " << std::hex
-                  << std::showbase
-                  << static_cast<uint16_t>(response->payload[0]) << "\n";
+        lg2::error( "Getting the response. PLDM RC = {KEY0}", "KEY0", lg2::hex, (uint16_t)response->payload[0]); 
         this->responseReceived = true;
     };
     rc = handler->registerRequest(mctp_eid, instanceId, PLDM_BASE,
@@ -1074,7 +1054,7 @@ void HostPDRHandler::setHostFirmwareCondition()
                                   std::move(getPLDMVersionHandler));
     if (rc)
     {
-        std::cerr << "Failed to discover Host state. Assuming Host as off \n";
+        lg2::error("Failed to discover Host state. Assuming Host as off");
     }
 }
 
@@ -1093,8 +1073,7 @@ void HostPDRHandler::_setHostSensorState()
 {
     if (isHostOff)
     {
-        std::cerr
-            << "set host state sensor begin : Host is off, stopped sending sensor state commands\n";
+        lg2::error("set host state sensor begin : Host is off, stopped sending sensor state commands");
         return;
     }
     if (sensorIndex != stateSensorPDRs.end())
@@ -1106,7 +1085,7 @@ void HostPDRHandler::_setHostSensorState()
 
         if (!pdr)
         {
-            std::cerr << "Failed to get State sensor PDR" << std::endl;
+            lg2::error("Failed to get State sensor PDR");
             pldm::utils::reportError(
                 "xyz.openbmc_project.PLDM.Error.SetHostSensorState.GetStateSensorPDRFail",
                 pldm::PelSeverity::ERROR);
@@ -1139,9 +1118,8 @@ void HostPDRHandler::_setHostSensorState()
                 if (rc != PLDM_SUCCESS)
                 {
                     requester.markFree(mctpEid, instanceId);
-                    std::cerr << "Failed to "
-                                 "encode_get_state_sensor_readings_req, rc = "
-                              << rc << " SensorId=" << sensorId << std::endl;
+                    lg2::error("Failed to encode_get_state_sensor_readings_req, rc = {KEY0}, SensorId = {KEY1}", "KEY0", rc, "KEY1", sensorId);
+
                     pldm::utils::reportError(
                         "xyz.openbmc_project.PLDM.Error.SetHostSensorState.EncodeStateSensorFail",
                         pldm::PelSeverity::ERROR);
@@ -1155,14 +1133,11 @@ void HostPDRHandler::_setHostSensorState()
                                                             size_t respMsgLen) {
                     if (response == nullptr || !respMsgLen)
                     {
-                        std::cerr
-                            << "Failed to receive response for "
-                               "getStateSensorReading command for sensor id="
-                            << sensorId << std::endl;
+                        lg2::error("Failed to receive response for getStateSensorReading command for sensor id = {KEY0}", "KEY0", sensorId);
+
                         if (this->isHostOff)
                         {
-                            std::cerr
-                                << "set host state sensor : Host is off, stopped sending sensor state commands\n";
+                            lg2::error("set host state sensor : Host is off, stopped sending sensor state commands");
                             return;
                         }
                         if (sensorIndex == stateSensorPDRs.end())
@@ -1183,12 +1158,8 @@ void HostPDRHandler::_setHostSensorState()
 
                     if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
                     {
-                        std::cerr
-                            << "Failed to "
-                               "decode_get_state_sensor_readings_resp, rc = "
-                            << rc
-                            << " cc=" << static_cast<unsigned>(completionCode)
-                            << " SensorId=" << sensorId << std::endl;
+                        lg2::error("Failed to decode_get_state_sensor_readings_resp, rc = {KEY0} cc = {KEY1} SensorId = {KEY2}", "KEY0", rc, "KEY1", (unsigned)completionCode, "KEY2", sensorId);
+                        
                         if (sensorIndex == stateSensorPDRs.end())
                         {
                             return;
@@ -1235,17 +1206,15 @@ void HostPDRHandler::_setHostSensorState()
                             }
                             catch (const std::out_of_range& e)
                             {
-                                std::cerr << "No mapping for the events"
-                                          << std::endl;
+                                lg2::error("No mapping for the events");
+                               
                                 continue;
                             }
                         }
 
                         if (sensorOffset > compositeSensorStates.size())
                         {
-                            std::cerr
-                                << " Error Invalid data, Invalid sensor offset,"
-                                << " SensorId=" << sensorId << std::endl;
+                            lg2::error(" Error Invalid data, Invalid sensor offset, SensorId = {KEY0}", "KEY0", sensorId);
                             return;
                         }
 
@@ -1254,9 +1223,7 @@ void HostPDRHandler::_setHostSensorState()
                         if (possibleStates.find(eventState) ==
                             possibleStates.end())
                         {
-                            std::cerr
-                                << " Error invalid_data, Invalid event state,"
-                                << " SensorId=" << sensorId << std::endl;
+                            lg2::error(" Error invalid_data, Invalid event state, SensorId = {KEY0}", "KEY0", sensorId);
                             return;
                         }
                         const auto& [containerId, entityType, entityInstance] =
@@ -1284,9 +1251,7 @@ void HostPDRHandler::_setHostSensorState()
 
                 if (rc != PLDM_SUCCESS)
                 {
-                    std::cerr << " Failed to send request to get State sensor "
-                                 "reading on Host,"
-                              << " SensorId=" << sensorId << std::endl;
+                    lg2::error(" Failed to send request to get State sensor reading on Host, SensorId={KEY0}", "KEY0", sensorId );
                 }
             }
         }
@@ -1306,8 +1271,7 @@ void HostPDRHandler::getFRURecordTableMetadataByHost()
     if (rc != PLDM_SUCCESS)
     {
         requester.markFree(mctp_eid, instanceId);
-        std::cerr << "Failed to encode_get_fru_record_table_metadata_req, rc = "
-                  << rc << std::endl;
+        lg2::error("Failed to encode_get_fru_record_table_metadata_req, rc = {KEY0}", "KEY0", rc);
         return;
     }
 
@@ -1317,8 +1281,7 @@ void HostPDRHandler::getFRURecordTableMetadataByHost()
                                                            size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
-            std::cerr << "Failed to receive response for the Get FRU Record "
-                         "Table Metadata\n";
+            lg2::error("Failed to receive response for the Get FRU Record Table Metadata");
             return;
         }
 
@@ -1336,9 +1299,8 @@ void HostPDRHandler::getFRURecordTableMetadataByHost()
 
         if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
         {
-            std::cerr << "Faile to decode get fru record table metadata resp, "
-                         "Message Error: "
-                      << "rc=" << rc << ",cc=" << (int)cc << std::endl;
+            lg2::error("Failed to decode get fru record table metadata resp, Message Error: rc = {KEY0}, cc = {KEY1}", "KEY0", rc, "KEY1", (int)cc);
+            
             return;
         }
 
@@ -1352,8 +1314,7 @@ void HostPDRHandler::getFRURecordTableMetadataByHost()
         std::move(getFruRecordTableMetadataResponseHandler));
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr
-            << "Failed to send the the Set State Effecter States request\n";
+        lg2::error("Failed to send the the Set State Effecter States request");
     }
 
     return;
@@ -1380,8 +1341,8 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records)
     if (rc != PLDM_SUCCESS)
     {
         requester.markFree(mctp_eid, instanceId);
-        std::cerr << "Failed to encode_get_fru_record_table_req, rc = " << rc
-                  << std::endl;
+        lg2::error("Failed to encode_get_fru_record_table_req, rc = {KEY0}", "KEY0",  rc);
+
         return;
     }
 
@@ -1391,8 +1352,7 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records)
                                                    size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
-            std::cerr << "Failed to receive response for the Get FRU Record "
-                         "Table\n";
+            lg2::error("Failed to receive response for the Get FRU Record Table");
             return;
         }
 
@@ -1409,9 +1369,8 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records)
 
         if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
         {
-            std::cerr
-                << "Failed to decode get fru record table resp, Message Error: "
-                << "rc=" << rc << ",cc=" << (int)cc << std::endl;
+            lg2::error("Failed to decode get fru record table resp, Message Error: rc = {KEY0}, cc = {KEY1}", "KEY0", rc, "KEY1", (int)cc);
+            
             return;
         }
 
@@ -1422,7 +1381,7 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records)
         {
             fruRecordData.clear();
 
-            std::cerr << "failed to parse fru recrod data format.\n";
+            lg2::error("failed to parse fru recrod data format.");
             return;
         }
 
@@ -1434,8 +1393,7 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records)
         std::move(requestMsg), std::move(getFruRecordTableResponseHandler));
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr
-            << "Failed to send the the Set State Effecter States request\n";
+        lg2::error("Failed to send the the Set State Effecter States request");
     }
 }
 
@@ -1469,8 +1427,8 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
     if (rc != PLDM_SUCCESS)
     {
         requester.markFree(mctpEid, instanceId);
-        std::cerr << "Failed to encode_get_state_sensor_readings_req, rc = "
-                  << rc << std::endl;
+        lg2::error("Failed to encode_get_state_sensor_readings_req, rc = {KEY0}", "KEY0", rc);
+
         return;
     }
 
@@ -1482,16 +1440,14 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
                                                      size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
-            std::cerr
-                << "Failed to receive response for get_state_sensor_readings command, sensor id : "
-                << sensorId << std::endl;
+            lg2::error("Failed to receive response for get_state_sensor_readings command, sensor id : {KEY0}", "KEY0", sensorId);
+
             // even when for some reason , if we fail to get a response
             // to one sensor, try all the dbus objects
 
             if (this->isHostOff)
             {
-                std::cerr
-                    << "Host is off, stopped sending sensor states command\n";
+                lg2::error("Host is off, stopped sending sensor states command");
                 return;
             }
 
@@ -1516,9 +1472,8 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
             stateField.data());
         if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
         {
-            std::cerr << "Faile to decode get state sensor readings resp, "
-                         "Message Error: "
-                      << "rc=" << rc << ",cc=" << (int)cc << std::endl;
+            lg2::error("Failed to decode get state sensor readings resp, Message Error: rc = {KEY0}, cc = {KEY1}", "KEY0", rc, "KEY1", (int)cc);
+            
             ++sensorMapIndex;
             if (sensorMapIndex == sensorMap.end())
             {
@@ -1579,7 +1534,7 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
         std::move(getStateSensorReadingsResponseHandler));
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "Failed to get the State Sensor Readings request\n";
+        lg2::error("Failed to get the State Sensor Readings request");
     }
 
     return;
@@ -1645,6 +1600,7 @@ void HostPDRHandler::setLocationCode(
                     if (tlv.fruFieldType == PLDM_FRU_FIELD_TYPE_VERSION &&
                         node.entity_type == PLDM_ENTITY_SYSTEM_CHASSIS)
                     {
+                        //FilePathError
                         std::cout << "Refreshing the mex firmware version : "
                                   << std::string(reinterpret_cast<const char*>(
                                                      tlv.fruFieldValue.data()),
@@ -1773,7 +1729,7 @@ void HostPDRHandler::setAvailabilityState(const std::string& path)
 
 void HostPDRHandler::createDbusObjects()
 {
-    std::cerr << "Refreshing dbus hosted by pldm Started \n";
+    lg2::error("Refreshing dbus hosted by pldm Started");
 
     objMapIndex = objPathMap.begin();
 
@@ -1855,7 +1811,7 @@ void HostPDRHandler::createDbusObjects()
 
     // update xyz.openbmc_project.State.Decorator.OperationalStatus
     setOperationStatus();
-    std::cerr << "Refreshing dbus hosted by pldm Completed \n";
+    lg2::error("Refreshing dbus hosted by pldm Completed");
 }
 
 void HostPDRHandler::deleteDbusObjects(const std::vector<uint16_t> types)
@@ -1873,15 +1829,15 @@ void HostPDRHandler::deleteDbusObjects(const std::vector<uint16_t> types)
             continue;
         }
 
-        std::cerr << "Deleting the dbus objects of type : " << (unsigned)type
-                  << std::endl;
+        lg2::error("Deleting the dbus objects of type : {KEY0} ", "KEY0", (unsigned)type);
+       
         for (const auto& [path, entites] : savedObjs.at(type))
         {
             if (type !=
                 (PLDM_ENTITY_PROC | 0x8000)) // other than CPU core object
             {
-                std::cout << "Erasing Dbus Path from ObjectMap " << path
-                          << std::endl;
+                lg2::info("Erasing Dbus Path from ObjectMap {KEY0}", "KEY0", path.c_str());
+                        
                 objPathMap.erase(path);
                 // Delete the Mex Led Dbus Object paths
                 auto ledGroupPath = updateLedGroupPath(path);
@@ -1948,6 +1904,7 @@ void HostPDRHandler::setRecordPresent(uint32_t recordHandle)
                 recordEntity.entity_instance_num &&
             dbusEntity.entity_container_id == recordEntity.entity_container_id)
         {
+            //FilePathError
             std::cerr << "Removing Host FRU "
                       << "[ " << path << " ]  with entityid [ "
                       << recordEntity.entity_type << ","
@@ -1967,7 +1924,7 @@ void HostPDRHandler::deletePDRFromRepo(PDRRecordHandles&& recordHandles)
 {
     for (auto& recordHandle : recordHandles)
     {
-        std::cerr << "Record handle deleted: " << recordHandle << std::endl;
+        lg2::error("Record handle deleted: {KEY0}", "KEY0", recordHandle);
         this->setRecordPresent(recordHandle);
         pldm_delete_by_record_handle(repo, recordHandle, true);
     }

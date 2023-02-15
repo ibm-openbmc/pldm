@@ -5,6 +5,8 @@
 #include "common/utils.hpp"
 #include "xyz/openbmc_project/Software/Version/server.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <functional>
 
 namespace pldm
@@ -26,8 +28,7 @@ void InventoryManager::discoverFDs(const std::vector<mctp_eid_t>& eids)
         if (rc)
         {
             requester.markFree(eid, instanceId);
-            std::cerr << "encode_query_device_identifiers_req failed, EID="
-                      << unsigned(eid) << ", RC=" << rc << "\n";
+            lg2::error("encode_query_device_identifiers_req failed, EID={KEY0}, RC = {KEY1}", "KEY0", unsigned(eid), "KEY1", rc);
             continue;
         }
 
@@ -38,8 +39,8 @@ void InventoryManager::discoverFDs(const std::vector<mctp_eid_t>& eids)
                                       this)));
         if (rc)
         {
-            std::cerr << "Failed to send QueryDeviceIdentifiers request, EID="
-                      << unsigned(eid) << ", RC=" << rc << "\n ";
+            lg2::error("Failed to send QueryDeviceIdentifiers request, EID={KEY0}, RC = {KEY1}", "KEY0", unsigned(eid), "KEY1", rc);
+
         }
     }
 }
@@ -50,8 +51,7 @@ void InventoryManager::queryDeviceIdentifiers(mctp_eid_t eid,
 {
     if (response == nullptr || !respMsgLen)
     {
-        std::cerr << "No response received for QueryDeviceIdentifiers, EID="
-                  << unsigned(eid) << "\n";
+        lg2::error("No response received for QueryDeviceIdentifiers, EID={KEY0}", "KEY0", unsigned(eid));
         return;
     }
 
@@ -65,17 +65,13 @@ void InventoryManager::queryDeviceIdentifiers(mctp_eid_t eid,
         &descriptorCount, &descriptorPtr);
     if (rc)
     {
-        std::cerr << "Decoding QueryDeviceIdentifiers response failed, EID="
-                  << unsigned(eid) << ", RC=" << rc << "\n";
+        lg2::error("Decoding QueryDeviceIdentifiers response failed, EID={KEY0}, RC = {KEY1}", "KEY0", unsigned(eid), "KEY1", rc);
         return;
     }
 
     if (completionCode)
     {
-        std::cerr << "QueryDeviceIdentifiers response failed with error "
-                     "completion code, EID="
-                  << unsigned(eid) << ", CC=" << unsigned(completionCode)
-                  << "\n";
+        lg2::error("QueryDeviceIdentifiers response failed with error completion code, EID={KEY0}, CC = {KEY1}", "KEY0", unsigned(eid), "KEY1", unsigned(completionCode));
         return;
     }
 
@@ -90,9 +86,7 @@ void InventoryManager::queryDeviceIdentifiers(mctp_eid_t eid,
             &descriptorData);
         if (rc)
         {
-            std::cerr
-                << "Decoding descriptor type, length and value failed, EID="
-                << unsigned(eid) << ", RC=" << rc << "\n ";
+            lg2::error("Decoding descriptor type, length and value failed, EID={KEY0}, RC = {KEY1}", "KEY0", unsigned(eid), "KEY1", rc);
             return;
         }
 
@@ -114,9 +108,7 @@ void InventoryManager::queryDeviceIdentifiers(mctp_eid_t eid,
                 &vendorDefinedDescriptorData);
             if (rc)
             {
-                std::cerr
-                    << "Decoding Vendor-defined descriptor value failed, EID="
-                    << unsigned(eid) << ", RC=" << rc << "\n ";
+                lg2::error("Decoding Vendor-defined descriptor value failed, EID={KEY0}, RC = {KEY1}", "KEY0", unsigned(eid), "KEY1", rc);
                 return;
             }
 
@@ -155,8 +147,7 @@ void InventoryManager::sendGetFirmwareParametersRequest(mctp_eid_t eid)
     if (rc)
     {
         requester.markFree(eid, instanceId);
-        std::cerr << "encode_get_firmware_parameters_req failed, EID="
-                  << unsigned(eid) << ", RC=" << rc << "\n";
+        lg2::error("encode_get_firmware_parameters_req failed, EID={KEY0}, RC = {KEY1}", "KEY0", unsigned(eid), "KEY1", rc);
         return;
     }
 
@@ -167,8 +158,7 @@ void InventoryManager::sendGetFirmwareParametersRequest(mctp_eid_t eid)
             std::bind_front(&InventoryManager::getFirmwareParameters, this)));
     if (rc)
     {
-        std::cerr << "Failed to send GetFirmwareParameters request, EID="
-                  << unsigned(eid) << ", RC=" << rc << "\n ";
+        lg2::error("Failed to send GetFirmwareParameters request, EID={KEY0}, RC = {KEY1}", "KEY0", unsigned(eid), "KEY1", rc);
     }
 }
 
@@ -178,8 +168,7 @@ void InventoryManager::getFirmwareParameters(mctp_eid_t eid,
 {
     if (response == nullptr || !respMsgLen)
     {
-        std::cerr << "No response received for GetFirmwareParameters, EID="
-                  << unsigned(eid) << "\n";
+        lg2::error("No response received for GetFirmwareParameters, EID={KEY0}", "KEY0", unsigned(eid));
         descriptorMap.erase(eid);
         return;
     }
@@ -194,17 +183,13 @@ void InventoryManager::getFirmwareParameters(mctp_eid_t eid,
         &pendingCompImageSetVerStr, &compParamTable);
     if (rc)
     {
-        std::cerr << "Decoding GetFirmwareParameters response failed, EID="
-                  << unsigned(eid) << ", RC=" << rc << "\n";
+        lg2::error("Decoding GetFirmwareParameters response failed, EID={KEY0}, RC = {KEY1}", "KEY0", unsigned(eid), "KEY1", rc);
         return;
     }
 
     if (fwParams.completion_code)
     {
-        std::cerr << "GetFirmwareParameters response failed with error "
-                     "completion code, EID="
-                  << unsigned(eid)
-                  << ", CC=" << unsigned(fwParams.completion_code) << "\n";
+        lg2::error("GetFirmwareParameters response failed with error completion code, EID={KEY0}, CC = {KEY1}", "KEY0", unsigned(eid), "KEY1", unsigned(fwParams.completion_code));
         return;
     }
 
@@ -222,8 +207,7 @@ void InventoryManager::getFirmwareParameters(mctp_eid_t eid,
             &pendingCompVerStr);
         if (rc)
         {
-            std::cerr << "Decoding component parameter table entry failed, EID="
-                      << unsigned(eid) << ", RC=" << rc << "\n";
+            lg2::error("Decoding component parameter table entry failed, EID={KEY0}, RC = {KEY1}", "KEY0", unsigned(eid), "KEY1", rc);
             return;
         }
 
