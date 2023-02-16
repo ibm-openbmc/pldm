@@ -5,6 +5,7 @@
 
 #include <sys/time.h>
 
+#include <phosphor-logging/lg2.hpp>
 #include <xyz/openbmc_project/Common/error.hpp>
 
 #include <algorithm>
@@ -17,6 +18,8 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+PHOSPHOR_LOG2_USING;
 
 namespace pldm
 {
@@ -73,8 +76,8 @@ std::vector<std::vector<uint8_t>> findStateEffecterPDR(uint8_t /*tid*/,
     }
     catch (const std::exception& e)
     {
-        std::cerr << " Failed to obtain a record. ERROR =" << e.what()
-                  << std::endl;
+        error(" Failed to obtain a record. ERROR = {ERR_EXCEP}", "ERR_EXCEP",
+              e.what());
     }
 
     return pdrs;
@@ -127,8 +130,8 @@ std::vector<std::vector<uint8_t>> findStateSensorPDR(uint8_t /*tid*/,
     }
     catch (const std::exception& e)
     {
-        std::cerr << " Failed to obtain a record. ERROR =" << e.what()
-                  << std::endl;
+        error(" Failed to obtain a record. ERROR = {ERR_EXCEP}", "ERR_EXCEP",
+              e.what());
     }
 
     return pdrs;
@@ -140,7 +143,8 @@ uint8_t readHostEID()
     std::ifstream eidFile{HOST_EID_PATH};
     if (!eidFile.good())
     {
-        std::cerr << "Could not open host EID file: " << HOST_EID_PATH << "\n";
+        error("Could not open host EID file: {HOST_EID_PATH}", "HOST_EID_PATH",
+              std::string(HOST_EID_PATH));
     }
     else
     {
@@ -152,8 +156,7 @@ uint8_t readHostEID()
         }
         else
         {
-            std::cerr << "Host EID file was empty"
-                      << "\n";
+            error("Host EID file was empty");
         }
     }
 
@@ -290,8 +293,9 @@ void reportError(const char* errorMsg, const Severity& sev)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to make a d-bus call to create error log, ERROR="
-                  << e.what() << "\n";
+        error(
+            "failed to make a d-bus call to create error log, ERROR={ERR_EXCEP}",
+            "ERR_EXCEP", e.what());
     }
 }
 
@@ -332,10 +336,10 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
                 dBusMap.objectPath ==
                     "/xyz/openbmc_project/network/hypervisor/eth1/ipv4/addr0")
             {
-                std::cout << " ,service :" << service.c_str()
-                          << " , interface : " << dBusMap.interface.c_str()
-                          << " , path : " << dBusMap.objectPath.c_str()
-                          << std::endl;
+                info(
+                    " service :{SERV} , interface : {INTF} , path : {DBUS_OBJ_PATH}",
+                    "SERV", service.c_str(), "INTF", dBusMap.interface.c_str(),
+                    "DBUS_OBJ_PATH", dBusMap.objectPath.c_str());
             }
             method.append(dBusMap.interface.c_str(),
                           dBusMap.propertyName.c_str(), variant);
@@ -356,7 +360,7 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
             dBusMap.objectPath ==
                 "/xyz/openbmc_project/network/hypervisor/eth1/ipv4/addr0")
         {
-            std::cout << " value : " << std::get<bool>(value);
+            info(" value : {VAL}", "VAL", std::get<bool>(value));
         }
         if (strstr(dBusMap.objectPath.c_str(), "dimm") &&
             (dBusMap.interface ==
@@ -364,8 +368,8 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
         {
             if (!std::get<bool>(value))
             {
-                std::cerr << "Guard event on DIMM : [ "
-                          << dBusMap.objectPath.c_str() << " ] \n";
+                error("Guard event on DIMM : [ {DBUS_OBJ_PATH} ]",
+                      "DBUS_OBJ_PATH", dBusMap.objectPath.c_str());
             }
         }
 
@@ -413,7 +417,8 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
     }
     else
     {
-        std::cerr << "Property Type is:" << dBusMap.propertyType << std::endl;
+        error("Property Type is: {DBUS_PROP_TYP} ", "DBUS_PROP_TYP",
+              dBusMap.propertyType);
         throw std::invalid_argument("UnSpported Dbus Type");
     }
 }
@@ -495,7 +500,8 @@ PropertyValue jsonEntryToDbusVal(std::string_view type,
     }
     else
     {
-        std::cerr << "Unknown D-Bus property type, TYPE=" << type << "\n";
+        error("Unknown D-Bus property type, TYPE={DBUS_PROP_TYP}",
+              "DBUS_PROP_TYP", type);
     }
 
     return propValue;
@@ -558,8 +564,8 @@ int emitStateSensorEventSignal(uint8_t tid, uint16_t sensorId,
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Error emitting pldm event signal:"
-                  << "ERROR=" << e.what() << "\n";
+        error("Error emitting pldm event signal:ERROR={ERR_EXCEP}", "ERR_EXCEP",
+              e.what());
         return PLDM_ERROR;
     }
 
@@ -684,9 +690,9 @@ std::string getBiosAttrValue(const std::string& dbusAttrName)
     }
     catch (const sdbusplus::exception::SdBusError& e)
     {
-        std::cout << "Error getting the bios attribute"
-                  << "ERROR=" << e.what() << "ATTRIBUTE=" << dbusAttrName
-                  << std::endl;
+        info(
+            "Error getting the bios attribute ERROR={ERR_EXCEP} ATTRIBUTE={BIOS_ATTR}",
+            "ERR_EXCEP", e.what(), "BIOS_ATTR", dbusAttrName);
         return {};
     }
 
@@ -725,9 +731,10 @@ void setBiosAttr(const BiosAttributeList& biosAttrList)
         }
         catch (const sdbusplus::exception::SdBusError& e)
         {
-            std::cout << "Error setting the bios attribute"
-                      << "ERROR=" << e.what() << "ATTRIBUTE=" << dbusAttrName
-                      << "ATTRIBUTE VALUE=" << biosAttrStr << std::endl;
+            info(
+                "Error setting the bios attribute ERROR = {ERR_EXCEP} ATTRIBUTE= {DBUS_ATTR} ATTRIBUTE VALUE={BIOS_ATTR}",
+                "ERR_EXCEP", e.what(), "DBUS_ATTR", dbusAttrName.c_str(),
+                "BIOS_ATTR", biosAttrStr.c_str());
             return;
         }
     }
@@ -936,8 +943,9 @@ bool checkForFruPresence(const std::string& objPath)
     }
     catch (const sdbusplus::exception::SdBusError& e)
     {
-        std::cerr << "Failed to check for FRU presence for " << objPath
-                  << " ERROR =" << e.what() << std::endl;
+        error(
+            "Failed to check for FRU presence for {OBJ_PATH} ERROR = {ERR_EXCEP}",
+            "OBJ_PATH", objPath.c_str(), "ERR_EXCEP", e.what());
     }
     return isPresent;
 }

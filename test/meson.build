@@ -13,6 +13,7 @@ foreach t : tests
                      build_rpath: get_option('oe-sdk').enabled() ? rpath : '',
                      dependencies: [
                          libpldm_dep,
+			 phosphor_logging_dep,
                          nlohmann_json,
                          gtest,
                          test_src]),

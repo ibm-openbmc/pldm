@@ -22,8 +22,7 @@ using ::testing::Return;
 class HandlerTest : public testing::Test
 {
   protected:
-    HandlerTest() : event(sdeventplus::Event::get_default()), instanceIdDb()
-    {}
+    HandlerTest() : event(sdeventplus::Event::get_default()), instanceIdDb() {}
 
     int fd = 0;
     mctp_eid_t eid = 0;

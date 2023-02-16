@@ -6,9 +6,12 @@
 #include "common/utils.hpp"
 #include "libpldmresponder/pdr.hpp"
 
+#include <phosphor-logging/lg2.hpp>
 #include <xyz/openbmc_project/Common/error.hpp>
 
 #include <iostream>
+
+PHOSPHOR_LOG2_USING;
 
 namespace pldm
 {
@@ -16,7 +19,6 @@ namespace responder
 {
 namespace platform
 {
-
 int sendBiosAttributeUpdateEvent(
     uint8_t eid, pldm::InstanceIdDb* instanceIdDb,
     const std::vector<uint16_t>& handles,
@@ -66,8 +68,8 @@ int sendBiosAttributeUpdateEvent(
         requestMsg.size() - sizeof(pldm_msg_hdr), request);
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "Message encode failure 1. PLDM error code = " << std::hex
-                  << std::showbase << rc << "\n";
+        error("Message encode failure 1. PLDM error code = {RC}", "RC",
+              lg2::hex, rc);
         instanceIdDb->free(eid, instanceId);
         return rc;
     }
@@ -87,8 +89,7 @@ int sendBiosAttributeUpdateEvent(
         [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
-            std::cerr
-                << "Failed to receive response for platform event message \n";
+            error("Failed to receive response for platform event message");
             return;
         }
         uint8_t completionCode{};
@@ -97,10 +98,9 @@ int sendBiosAttributeUpdateEvent(
                                                      &completionCode, &status);
         if (rc || completionCode)
         {
-            std::cerr << "Failed to decode_platform_event_message_resp: "
-                      << "rc=" << rc
-                      << ", cc=" << static_cast<unsigned>(completionCode)
-                      << std::endl;
+            error(
+                "Failed to decode_platform_event_message_resp: RC = {RC}, cc = {CC}",
+                "RC", rc, "CC", static_cast<unsigned>(completionCode));
         }
     };
     rc = handler->registerRequest(
@@ -108,7 +108,7 @@ int sendBiosAttributeUpdateEvent(
         std::move(requestMsg), std::move(platformEventMessageResponseHandler));
     if (rc)
     {
-        std::cerr << "Failed to send the platform event message \n";
+        error("Failed to send the platform event message");
     }
 
     return rc;

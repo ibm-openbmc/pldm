@@ -4,11 +4,14 @@
 #include "libpldm/state_set.h"
 #include "libpldm/states.h"
 
+#include <phosphor-logging/lg2.hpp>
+
+PHOSPHOR_LOG2_USING;
+
 namespace pldm
 {
 namespace dbus
 {
-
 bool Link::linkReset(bool value)
 {
     std::vector<set_effecter_state_field> stateField;
@@ -27,7 +30,7 @@ bool Link::linkReset(bool value)
 
     if (value && hostEffecterParser)
     {
-        std::cerr << "Got a link reset request on : " << path << std::endl;
+        error("Got a link reset request on : {PATH}", "PATH", path.c_str());
         uint16_t effecterID = getEffecterID();
 
         if (effecterID == 0)
@@ -35,13 +38,15 @@ bool Link::linkReset(bool value)
             return false;
         }
 
-        std::cerr
-            << "[link reset] : Sending a effecter call to host with effecter id: "
-            << effecterID << std::endl;
+        error(
+            "[link reset] : Sending a effecter call to host with effecter id: {EFFECTER_ID}",
+            "EFFECTER_ID", effecterID);
         hostEffecterParser->sendSetStateEffecterStates(
             mctpEid, effecterID, 1, stateField, nullptr, value);
-        std::cerr << "Link reset on path : " << path
-                  << " is successful setting it back to false" << std::endl;
+        error(
+            "Link reset on path : {PATH} is successful setting it back to false",
+            "PATH", path.c_str());
+
         return sdbusplus::com::ibm::Control::Host::server::PCIeLink::linkReset(
             false);
     }
@@ -60,9 +65,9 @@ uint16_t Link::getEffecterID()
 
     if (stateEffecterPDRs.empty())
     {
-        std::cerr
-            << "PCIe LinkReset: The state set PDR can not be found, entityType = "
-            << entityType << std::endl;
+        error(
+            "PCIe LinkReset: The state set PDR can not be found, entityType = {ENTITY_TYP}",
+            "ENTITY_TYP", entityType);
         return effecterID;
     }
 
@@ -71,8 +76,8 @@ uint16_t Link::getEffecterID()
     entityInstance = pldm::responder::utils::getLinkResetInstanceNumber(path);
 #endif
 
-    std::cerr << "CustomDBus: BusID of the link is: " << entityInstance
-              << std::endl;
+    error("CustomDBus: BusID of the link is: {ENTITY_INST}", "ENTITY_INST",
+          entityInstance);
     for (auto& rep : stateEffecterPDRs)
     {
         auto pdr = reinterpret_cast<pldm_state_effecter_pdr*>(rep.data());

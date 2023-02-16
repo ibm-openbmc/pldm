@@ -8,6 +8,7 @@
 #include "requester/handler.hpp"
 
 #include <nlohmann/json.hpp>
+#include <phosphor-logging/lg2.hpp>
 
 #include <functional>
 #include <iostream>
@@ -16,6 +17,8 @@
 #include <set>
 #include <string>
 #include <vector>
+
+PHOSPHOR_LOG2_USING;
 
 namespace pldm
 {
@@ -223,8 +226,8 @@ class BIOSConfig
         }
         catch (const std::exception& e)
         {
-            std::cerr << "Constructs Attribute Error, " << e.what()
-                      << std::endl;
+            error("Constructs Attribute Error, {ERR_EXCEP}", "ERR_EXCEP",
+                  e.what());
         }
     }
 

@@ -31,6 +31,7 @@ foreach t : tests
                          libpldm_dep,
                          libpldmresponder_dep,
                          libpldmutils,
+			 phosphor_logging_dep,
                          gtest,
                          gmock,
                          nlohmann_json,

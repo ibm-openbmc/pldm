@@ -15,9 +15,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <filesystem>
 #include <iostream>
 #include <vector>
+
+PHOSPHOR_LOG2_USING;
 
 namespace pldm
 {
@@ -25,7 +29,6 @@ namespace responder
 {
 namespace dma
 {
-
 // The minimum data size of dma transfer in bytes
 constexpr uint32_t minSize = 16;
 
@@ -114,7 +117,8 @@ Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
     int file = open(path.string().c_str(), flags);
     if (file == -1)
     {
-        std::cerr << "File does not exist, path = " << path.string() << "\n";
+        error("File does not exist, path = {FILE_PATH}", "FILE_PATH",
+              path.string());
         encode_rw_file_memory_resp(instanceId, command, PLDM_ERROR, 0,
                                    responsePtr);
         return response;
@@ -301,8 +305,8 @@ class Handler : public CmdHandler
                                 .emplace_back(
                                     std::make_unique<pldm::requester::oem_ibm::
                                                          DbusToFileHandler>(
-                                        hostSockFd, hostEid, instanceIdDb,
-                                        path, handler))
+                                        hostSockFd, hostEid, instanceIdDb, path,
+                                        handler))
                                 ->newCsrFileAvailable(csr, fileHandle);
                             break;
                         }

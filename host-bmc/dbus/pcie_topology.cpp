@@ -5,11 +5,14 @@
 
 #include "host-bmc/dbus/custom_dbus.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
+PHOSPHOR_LOG2_USING;
+
 namespace pldm
 {
 namespace dbus
 {
-
 bool PCIETopology::pcIeTopologyRefresh() const
 {
     return sdbusplus::com::ibm::PLDM::server::PCIeTopology::
@@ -157,9 +160,9 @@ uint16_t PCIETopology::getEffecterID()
         hostEffecterParser->getPldmPDR());
     if (stateEffecterPDRs.empty())
     {
-        std::cerr
-            << "PCIe Topology: The state set PDR can not be found, entityType = "
-            << entityType << std::endl;
+        error(
+            "PCIe Topology: The state set PDR can not be found, entityType = {ENTITY_TYPE}",
+            "ENTITY_TYPE", entityType);
         return effecterID;
     }
     for (auto& rep : stateEffecterPDRs)
