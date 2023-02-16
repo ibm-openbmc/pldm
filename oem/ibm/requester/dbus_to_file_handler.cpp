@@ -5,6 +5,10 @@
 
 #include "common/utils.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
+PHOSPHOR_LOG2_USING;
+
 namespace pldm
 {
 namespace requester
@@ -37,8 +41,8 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
 {
     if (requester == NULL)
     {
-        std::cerr << "Failed to send resource dump parameters as requester is "
-                     "not set";
+        error(
+            "Failed to send resource dump parameters as requester is not set");
         pldm::utils::reportError(
             "xyz.openbmc_project.PLDM.Error.sendNewFileAvailableCmd.SendDumpParametersFail",
             pldm::PelSeverity::ERROR);
@@ -57,7 +61,7 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
     if (rc != PLDM_SUCCESS)
     {
         requester->markFree(mctp_eid, instanceId);
-        std::cerr << "Failed to encode_new_file_req, rc = " << rc << std::endl;
+        error("Failed to encode_new_file_req, rc = {RC}", "RC", rc);
         return;
     }
 
@@ -66,19 +70,16 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
                                               size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
-            std::cerr
-                << "Failed to receive response for NewFileAvailable command \n";
+            error("Failed to receive response for NewFileAvailable command");
             return;
         }
         uint8_t completionCode{};
         auto rc = decode_new_file_resp(response, respMsgLen, &completionCode);
         if (rc || completionCode)
         {
-            std::cerr << "Failed to decode_new_file_resp or"
-                      << " Host returned error for new_file_available"
-                      << " rc=" << rc
-                      << ", cc=" << static_cast<unsigned>(completionCode)
-                      << "\n";
+            error(
+                "Failed to decode_new_file_resp or Host returned error for new_file_available rc={RC}, cc = {CC}",
+                "RC", rc, "CC", static_cast<unsigned>(completionCode));
             reportResourceDumpFailure("decodeNewFileResp");
         }
     };
@@ -87,7 +88,7 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
         std::move(requestMsg), std::move(newFileAvailableRespHandler));
     if (rc)
     {
-        std::cerr << "Failed to send NewFileAvailable Request to Host \n";
+        error("Failed to send NewFileAvailable Request to Host");
         reportResourceDumpFailure("newFileAvailableRequest");
     }
 }
@@ -108,9 +109,8 @@ void DbusToFileHandler::reportResourceDumpFailure(std::string str)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to set resource dump operation status, "
-                     "ERROR="
-                  << e.what() << "\n";
+        error("failed to set resource dump operation status, ERROR={ERR_EXCEP}",
+              "ERR_EXCEP", e.what());
     }
 }
 
@@ -132,7 +132,7 @@ void DbusToFileHandler::processNewResourceDump(
     }
     catch (const sdbusplus::exception::exception& e)
     {
-        std::cerr << "Error in getting current resource dump status \n";
+        error("Error in getting current resource dump status");
         return;
     }
 
@@ -153,8 +153,8 @@ void DbusToFileHandler::processNewResourceDump(
 
     if (!fileHandleFd)
     {
-        std::cerr << "resource dump file open error: " << resDumpFilePath
-                  << "\n";
+        error("resource dump file open error:{RES_DUMP_PATH}", "RES_DUMP_PATH",
+              resDumpFilePath);
         PropertyValue value{resDumpStatus};
         DBusMapping dbusMapping{resDumpCurrentObjPath, resDumpProgressIntf,
                                 "Status", "string"};
@@ -164,9 +164,9 @@ void DbusToFileHandler::processNewResourceDump(
         }
         catch (const std::exception& e)
         {
-            std::cerr << "failed to set resource dump operation status, "
-                         "ERROR="
-                      << e.what() << "\n";
+            error(
+                "failed to set resource dump operation status, ERROR={ERR_EXCEP}",
+                "ERR_EXCEP", e.what());
         }
         return;
     }
@@ -231,7 +231,8 @@ void DbusToFileHandler::newCsrFileAvailable(const std::string& csr,
 
     if (!certFile)
     {
-        std::cerr << "cert file open error: " << certFilePath << "\n";
+        error("cert file open error: {CERT_FILE}", "CERT_FILE",
+              certFilePath.c_str());
         return;
     }
 
@@ -265,7 +266,8 @@ void DbusToFileHandler::newLicFileAvailable(const std::string& licenseStr)
 
     if (!licFile)
     {
-        std::cerr << "License file open error: " << licFilePath << "\n";
+        error("License file open error: {LIC_FILE}", "LIC_FILE",
+              licFilePath.c_str());
         return;
     }
 
@@ -284,7 +286,7 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
 {
     if (requester == NULL)
     {
-        std::cerr << "newFileAvailableSendToHost:Failed to send file to host.";
+        error("newFileAvailableSendToHost:Failed to send file to host.");
         pldm::utils::reportError(
             "xyz.openbmc_project.PLDM.Error.SendFileToHostFail",
             pldm::PelSeverity::ERROR);
@@ -300,21 +302,20 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
     if (rc != PLDM_SUCCESS)
     {
         requester->markFree(mctp_eid, instanceId);
-        std::cerr
-            << "newFileAvailableSendToHost:Failed to encode_new_file_req, rc = "
-            << rc << std::endl;
+        error(
+            "newFileAvailableSendToHost:Failed to encode_new_file_req, rc = {RC}",
+            "RC", rc);
         return;
     }
-    std::cout
-        << "newFileAvailableSendToHost:Sending Sign CSR request to Host for fileHandle: "
-        << fileHandle << std::endl;
+    info(
+        "newFileAvailableSendToHost:Sending Sign CSR request to Host for fileHandle: {FILE_HNDL}",
+        "FILE_HNDL", fileHandle);
     auto newFileAvailableRespHandler =
         [fileHandle, type](mctp_eid_t /*eid*/, const pldm_msg* response,
                            size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
-            std::cerr << "Failed to receive response for NewFileAvailable "
-                         "command\n";
+            error("Failed to receive response for NewFileAvailable command");
             if (type == PLDM_FILE_TYPE_CERT_SIGNING_REQUEST)
             {
                 std::string filePath = certFilePath;
@@ -333,10 +334,9 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
                 }
                 catch (const std::exception& e)
                 {
-                    std::cerr
-                        << "newFileAvailableSendToHost:Failed to set status property of certicate entry, "
-                           "ERROR="
-                        << e.what() << "\n";
+                    error(
+                        "newFileAvailableSendToHost:Failed to set status property of certicate entry, ERROR={ERR_EXCEP}",
+                        "ERR_EXCEP", e.what());
                 }
 
                 pldm::utils::reportError(
@@ -349,11 +349,9 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
         auto rc = decode_new_file_resp(response, respMsgLen, &completionCode);
         if (rc || completionCode)
         {
-            std::cerr << "Failed to decode_new_file_resp for file, or"
-                      << " Host returned error for new_file_available"
-                      << " rc=" << rc
-                      << ", cc=" << static_cast<unsigned>(completionCode)
-                      << "\n";
+            error(
+                "Failed to decode_new_file_resp for file, or Host returned error for new_file_available rc = {RC}, cc= {CC}",
+                "RC", rc, "CC", static_cast<unsigned>(completionCode));
             if (rc)
             {
                 pldm::utils::reportError(
@@ -367,8 +365,8 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
         std::move(requestMsg), std::move(newFileAvailableRespHandler));
     if (rc)
     {
-        std::cerr
-            << "newFileAvailableSendToHost:Failed to send NewFileAvailable Request to Host\n";
+        error(
+            "newFileAvailableSendToHost:Failed to send NewFileAvailable Request to Host");
         pldm::utils::reportError(
             "xyz.openbmc_project.PLDM.Error.NewFileAvailableRequestFail",
             pldm::PelSeverity::ERROR);
