@@ -5,6 +5,10 @@
 #include "serialize.hpp"
 #include "type.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
+PHOSPHOR_LOG2_USING;
+
 namespace pldm
 {
 namespace dbus
@@ -612,8 +616,8 @@ void CustomDBus::removeDBus(const std::vector<uint16_t> types)
             continue;
         }
 
-        std::cerr << "Deleting the dbus objects of type : " << (unsigned)type
-                  << std::endl;
+        error("Deleting the dbus objects of type : {DBUS_OBJ_TYP}",
+              "DBUS_OBJ_TYP", (unsigned)type);
         for (const auto& [path, entites] : savedObjs.at(type))
         {
             deleteObject(path);

@@ -6,6 +6,9 @@
 #include "serialize.hpp"
 
 #include <nlohmann/json.hpp>
+#include <phosphor-logging/lg2.hpp>
+
+PHOSPHOR_LOG2_USING;
 
 namespace pldm
 {
@@ -186,8 +189,8 @@ std::pair<std::set<uint16_t>, std::set<uint16_t>>
 
     if (!fs::exists(path) || fs::is_empty(path))
     {
-        std::cerr << "The file does not exist or is empty, FILE_PATH = " << path
-                  << std::endl;
+        error("The file does not exist or is empty, FILE_PATH = {FILE_PATH}",
+              "FILE_PATH", path.c_str());
         return std::make_pair(restoreTypes, storeTypes);
     }
 
@@ -214,8 +217,9 @@ std::pair<std::set<uint16_t>, std::set<uint16_t>>
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Failed to parse config file, FILE_PATH = " << path
-                  << ", ERROR = " << e.what() << std::endl;
+        error(
+            "Failed to parse config file, FILE_PATH = {FILE_PATH}, ERROR = {ERR_EXCEP}",
+            "FILE_PATH", path.c_str(), "ERR_EXCEP", e.what());
     }
 
     return std::make_pair(restoreTypes, storeTypes);
@@ -246,7 +250,7 @@ void restoreDbusObj(HostPDRHandler* hostPDRHandler)
             continue;
         }
 
-        std::cout << "Restoring dbus of type : " << type << std::endl;
+        info("Restoring dbus of type : {DBUS_TYP}", "DBUS_TYP", type);
         // updateObjectPathMaps();
         for (auto& [path, entites] : objs)
         {
@@ -260,9 +264,8 @@ void restoreDbusObj(HostPDRHandler* hostPDRHandler)
             {
                 if (!ibmDbusHandler.contains(name))
                 {
-                    std::cerr
-                        << "name is not in ibmDbusHandler, name = " << name
-                        << std::endl;
+                    error("name is not in ibmDbusHandler, name = {NAME}",
+                          "NAME", name);
                     continue;
                 }
                 ibmDbusHandler.at(name)(path, propertyValue);

@@ -48,6 +48,7 @@ foreach t : tests
                          gtest,
                          gmock,
                          host_bmc_test_src,
+			 phosphor_logging_dep,
                          libpldm_dep,
                          libpldmutils,
                          nlohmann_json,

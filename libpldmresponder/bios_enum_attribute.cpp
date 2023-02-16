@@ -4,9 +4,13 @@
 
 #include "common/utils.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <iostream>
 
 using namespace pldm::utils;
+
+PHOSPHOR_LOG2_USING;
 
 namespace pldm
 {
@@ -14,7 +18,6 @@ namespace responder
 {
 namespace bios
 {
-
 BIOSEnumAttribute::BIOSEnumAttribute(const Json& entry,
                                      DBusHandler* const dbusHandler) :
     BIOSAttribute(entry, dbusHandler)
@@ -114,8 +117,8 @@ void BIOSEnumAttribute::buildValMap(const Json& dbusVals)
         }
         else
         {
-            std::cerr << "Unknown D-Bus property type, TYPE="
-                      << dBusMap->propertyType << "\n";
+            error("Unknown D-Bus property type, TYPE={DBUS_PROP_TYP}",
+                  "DBUS_PROP_TYP", dBusMap->propertyType);
             throw std::invalid_argument("Unknown D-BUS property type");
         }
         valMap.emplace(value, possibleValues[pos]);
@@ -222,9 +225,10 @@ void BIOSEnumAttribute::constructEntry(
             }
             catch (std::invalid_argument const& ex)
             {
-                std::cerr << "Enum Value " << currValue
-                          << " is not one of the possible values. Error: "
-                          << ex.what() << " for Attribute " << name << '\n';
+                error(
+                    "Enum Value {ENUM_VAL} is not one of the possible values. Error:{ERR_EXCEP} for Attribute {ATTR_NAME}",
+                    "ENUM_VAL", currValue, "ERR_EXCEP", ex.what(), "ATTR_NAME",
+                    name);
                 currValueIndices[0] =
                     getValueIndex(defaultValue, possibleValues);
             }
@@ -250,8 +254,8 @@ int BIOSEnumAttribute::updateAttrVal(Table& newValue, uint16_t attrHdl,
     auto iter = valMap.find(newPropVal);
     if (iter == valMap.end())
     {
-        std::cerr << "Could not find index for new BIOS enum, value="
-                  << std::get<std::string>(newPropVal) << "\n";
+        error("Could not find index for new BIOS enum, value={ENUM_VAL}",
+              "ENUM_VAL", std::get<std::string>(newPropVal));
         return PLDM_ERROR;
     }
     auto currentValue = iter->second;

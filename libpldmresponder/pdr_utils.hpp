@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include <nlohmann/json.hpp>
+#include <phosphor-logging/lg2.hpp>
 #include <xyz/openbmc_project/Common/error.hpp>
 
 #include <filesystem>
@@ -15,6 +16,8 @@
 #include <functional>
 #include <iostream>
 #include <string>
+
+PHOSPHOR_LOG2_USING;
 
 using InternalFailure =
     sdbusplus::xyz::openbmc_project::Common::Error::InternalFailure;
@@ -98,7 +101,7 @@ inline Json readJson(const std::string& path)
     std::ifstream jsonFile(path);
     if (!jsonFile.is_open())
     {
-        std::cerr << "Error opening PDR JSON file, PATH=" << path << "\n";
+        error("Error opening PDR JSON file, PATH={PDR_JSON}", "PDR_JSON", path);
         return {};
     }
 
