@@ -451,48 +451,60 @@
             "readOnly": true
         },
         {
-            "attribute_name": "pvm_keep_and_clear",
-            "possible_values": ["Disabled", "Enabled"],
+            "attribute_name": "hb_power_PS0_functional",
+            "possible_values": ["Enabled", "Disabled"],
             "default_values": ["Disabled"],
-            "helpText": "The hypervisor needs to clear most of PHYP NVRAM, but preserve the NVRAM for the manufacturing default partition",
-            "displayName": "pvm_keep_and_clear"
+            "helpText": "Specifies if Power Supply 0 is functional or not. (Enabled is Functional)",
+            "displayName": "Power Supply 0 is functional",
+            "dbus": {
+                "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply0",
+                "interface": "xyz.openbmc_project.State.Decorator.OperationalStatus",
+                "property_name": "Functional",
+                "property_type": "bool",
+                "property_values": [true, false]
+            }
         },
         {
-            "attribute_name": "pvm_clear_nvram",
-            "possible_values": ["Disabled", "Enabled"],
+            "attribute_name": "hb_power_PS1_functional",
+            "possible_values": ["Enabled", "Disabled"],
             "default_values": ["Disabled"],
-            "helpText": "Specifies if the hypervisor needs to clear PHYP NVRAM",
-            "displayName": "pvm_clear_nvram"
+            "helpText": "Specifies if Power Supply 1 is functional or not. (Enabled is Functional)",
+            "displayName": "Power Supply 1 is functional",
+            "dbus": {
+                "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply1",
+                "interface": "xyz.openbmc_project.State.Decorator.OperationalStatus",
+                "property_name": "Functional",
+                "property_type": "bool",
+                "property_values": [true, false]
+            }
         },
         {
-            "attribute_name": "hb_lateral_cast_out_mode",
-            "possible_values": ["Disabled", "Enabled"],
-            "default_values": ["Enabled"],
-            "helpText": "Only change this value if instructed by service provider as it might degrade system performance. Specifies if Lateral Cast Out mode is disabled or enabled, requires a reboot for a change to be applied.",
-            "displayName": "Lateral Cast Out mode (pending)"
-        },
-        {
-            "attribute_name": "hb_lateral_cast_out_mode_current",
-            "possible_values": ["Disabled", "Enabled"],
-            "default_values": ["Enabled"],
-            "helpText": "Only change this value if instructed by service provider as it might degrade system performance. Specifies if Lateral Cast Out mode is disabled or enabled. Do not set this attribute directly; set hb_lateral_cast_out_mode instead.",
-            "displayName": "Lateral Cast Out mode (current)",
-            "readOnly": true
-        },
-        {
-            "attribute_name": "pvm_create_default_lpar",
-            "possible_values": ["Disabled", "Enabled"],
+            "attribute_name": "hb_power_PS2_functional",
+            "possible_values": ["Enabled", "Disabled"],
             "default_values": ["Disabled"],
-            "helpText": "When enabled creates a new default partition after NVRAM is cleared. This is primarily for machines that are managed by hardware management console.",
-            "displayName": "pvm_create_default_lpar (pending)"
+            "helpText": "Specifies if Power Supply 2 is functional or not. (Enabled is Functional)",
+            "displayName": "Power Supply 2 is functional",
+            "dbus": {
+                "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply2",
+                "interface": "xyz.openbmc_project.State.Decorator.OperationalStatus",
+                "property_name": "Functional",
+                "property_type": "bool",
+                "property_values": [true, false]
+            }
         },
         {
-            "attribute_name": "pvm_create_default_lpar_current",
-            "possible_values": ["Disabled", "Enabled"],
+            "attribute_name": "hb_power_PS3_functional",
+            "possible_values": ["Enabled", "Disabled"],
             "default_values": ["Disabled"],
-            "helpText": "When enabled creates a new default partition after NVRAM is cleared. This is primarily for machines that are managed by hardware management console.Do not set this attribute directly; set pvm_create_default_lpar instead.",
-            "displayName": "pvm_create_default_lpar (current)",
-            "readOnly": true
+            "helpText": "Specifies if Power Supply 3 is functional or not. (Enabled is Functional)",
+            "displayName": "Power Supply 3 is functional",
+            "dbus": {
+                "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply3",
+                "interface": "xyz.openbmc_project.State.Decorator.OperationalStatus",
+                "property_name": "Functional",
+                "property_type": "bool",
+                "property_values": [true, false]
+            }
         }
     ]
 }
