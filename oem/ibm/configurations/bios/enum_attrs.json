@@ -537,8 +537,8 @@
             "displayName": "Power Supply 0 is functional",
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply0",
-                "interface": "xyz.openbmc_project.State.Decorator.OperationalStatus",
-                "property_name": "Functional",
+                "interface": "xyz.openbmc_project.Inventory.Item",
+                "property_name": "Present",
                 "property_type": "bool",
                 "property_values": [true, false]
             }
@@ -551,8 +551,8 @@
             "displayName": "Power Supply 1 is functional",
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply1",
-                "interface": "xyz.openbmc_project.State.Decorator.OperationalStatus",
-                "property_name": "Functional",
+                "interface": "xyz.openbmc_project.Inventory.Item",
+                "property_name": "Present",
                 "property_type": "bool",
                 "property_values": [true, false]
             }
@@ -565,8 +565,8 @@
             "displayName": "Power Supply 2 is functional",
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply2",
-                "interface": "xyz.openbmc_project.State.Decorator.OperationalStatus",
-                "property_name": "Functional",
+                "interface": "xyz.openbmc_project.Inventory.Item",
+                "property_name": "Present",
                 "property_type": "bool",
                 "property_values": [true, false]
             }
@@ -579,8 +579,8 @@
             "displayName": "Power Supply 3 is functional",
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply3",
-                "interface": "xyz.openbmc_project.State.Decorator.OperationalStatus",
-                "property_name": "Functional",
+                "interface": "xyz.openbmc_project.Inventory.Item",
+                "property_name": "Present",
                 "property_type": "bool",
                 "property_values": [true, false]
             }
