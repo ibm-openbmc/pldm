@@ -4,6 +4,7 @@
 
 #include "common/utils.hpp"
 #include "host-bmc/dbus/custom_dbus.hpp"
+#include <phosphor-logging/lg2.hpp>
 
 #include <sys/mman.h>
 #include <sys/socket.h>
@@ -59,7 +60,7 @@ int setupUnixSocket(const std::string& socketInterface)
     if (strnlen(socketInterface.c_str(), sizeof(addr.sun_path)) ==
         sizeof(addr.sun_path))
     {
-        std::cerr << "setupUnixSocket: UNIX socket path too long" << std::endl;
+        lg2::error("setupUnixSocket: UNIX socket path too long");
         return -1;
     }
 
@@ -67,21 +68,20 @@ int setupUnixSocket(const std::string& socketInterface)
 
     if ((sock = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
     {
-        std::cerr << "setupUnixSocket: socket() call failed" << std::endl;
+        lg2::error("setupUnixSocket: socket() call failed");
         return -1;
     }
 
     if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) == -1)
     {
-        std::cerr << "setupUnixSocket: bind() call failed  with errno " << errno
-                  << std::endl;
+        lg2::error("setupUnixSocket: bind() call failed  with errno {KEY0}", "KEY0", errno);
         close(sock);
         return -1;
     }
 
     if (listen(sock, 1) == -1)
     {
-        std::cerr << "setupUnixSocket: listen() call failed" << std::endl;
+        lg2::error("setupUnixSocket: listen() call failed");
         close(sock);
         return -1;
     }
@@ -99,8 +99,8 @@ int setupUnixSocket(const std::string& socketInterface)
     int retval = select(nfd, &rfd, NULL, NULL, &tv);
     if (retval < 0)
     {
-        std::cerr << "setupUnixSocket: select call failed " << errno
-                  << std::endl;
+        lg2::error("setupUnixSocket: select call failed {KEY0}", "KEY0", errno);
+
         close(sock);
         return -1;
     }
@@ -110,8 +110,7 @@ int setupUnixSocket(const std::string& socketInterface)
         fd = accept(sock, NULL, NULL);
         if (fd < 0)
         {
-            std::cerr << "setupUnixSocket: accept() call failed " << errno
-                      << std::endl;
+            lg2::error("setupUnixSocket: accept() call failed {KEY0}", "KEY0", errno);
             close(sock);
             return -1;
         }
@@ -147,8 +146,7 @@ void writeToUnixSocket(const int sock, const char* buf,
         int retval = select(nfd, NULL, &wfd, NULL, &tv);
         if (retval < 0)
         {
-            std::cerr << "writeToUnixSocket: select call failed " << errno
-                      << std::endl;
+            lg2::error("writeToUnixSocket: select call failed {KEY0}", "KEY0", errno);
             close(sock);
             socketWriteStatus = Error;
             munmap((void*)buf, blockSize);
@@ -167,14 +165,11 @@ void writeToUnixSocket(const int sock, const char* buf,
             {
                 if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
                 {
-                    std::cerr << "writeToUnixSocket: Write call failed with "
-                                 "EAGAIN or EWOULDBLOCK or EINTR"
-                              << std::endl;
+                    lg2::error("writeToUnixSocket: Write call failed with EAGAIN or EWOULDBLOCK or EINTR");
                     nwrite = 0;
                     continue;
                 }
-                std::cerr << "writeToUnixSocket: Failed to write " << errno
-                          << std::endl;
+                lg2::error("writeToUnixSocket: Failed to write {KEY1}", "KEY0", errno);
                 close(sock);
                 socketWriteStatus = Error;
                 munmap((void*)buf, blockSize);
@@ -458,7 +453,7 @@ void findPortObjects(const std::string& cardObjPath,
     }
     catch (const std::exception& e)
     {
-        std::cerr << "no ports under card " << cardObjPath << "\n";
+        lg2::error("no ports under card {KEY0}", "KEY0", cardObjPath.c_str());
     }
 }
 
@@ -532,8 +527,7 @@ std::string getObjectPathByLocationCode(const std::string& locationCode,
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Look up of inventory objects failed for location "
-                  << locationCode << std::endl;
+        lg2::error("Look up of inventory objects failed for location {KEY0}", "KEY0", locationCode);
         return path;
     }
 
@@ -555,8 +549,7 @@ std::string getObjectPathByLocationCode(const std::string& locationCode,
             }
         }
     }
-    std::cerr << "Location not found " << locationCode << " for Item type "
-              << inventoryItemType << std::endl;
+    lg2::error("Location not found {KEY0} for Item type {KEY1}", "KEY0", locationCode, "KEY1", inventoryItemType);
     return path;
 }
 
@@ -588,7 +581,7 @@ void findSlotObjects(const std::string& boardObjPath,
     }
     catch (const std::exception& e)
     {
-        std::cerr << "no cec slots under motherboard" << boardObjPath << "\n";
+        lg2::error("no cec slots under motherboard {KEY0}", "KEY0", boardObjPath.c_str());
     }
 }
 

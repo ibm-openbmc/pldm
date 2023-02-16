@@ -5,6 +5,8 @@
 
 #include "common/utils.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <stdint.h>
 
 #include <iostream>
@@ -29,8 +31,7 @@ int CertHandler::writeFromMemory(uint32_t offset, uint32_t length,
     auto it = certMap.find(certType);
     if (it == certMap.end())
     {
-        std::cerr << "CertHandler::writeFromMemory:file for type " << certType
-                  << " doesn't exist\n";
+        lg2::error("CertHandler::writeFromMemory:file for type {KEY0} doesn't exist", "KEY0", certType);
         return PLDM_ERROR;
     }
 
@@ -71,9 +72,7 @@ int CertHandler::readIntoMemory(uint32_t offset, uint32_t& length,
 int CertHandler::read(uint32_t offset, uint32_t& length, Response& response,
                       oem_platform::Handler* /*oemPlatformHandler*/)
 {
-    std::cout
-        << "CertHandler::read:Read file response for Sign CSR, file handle: "
-        << fileHandle << std::endl;
+    lg2::error("CertHandler::read:Read file response for Sign CSR, file handle: {KEY0}", "KEY0", fileHandle);
     std::string filePath = certFilePath;
     filePath += "CSR_" + std::to_string(fileHandle);
     if (certType != PLDM_FILE_TYPE_CERT_SIGNING_REQUEST)
@@ -95,8 +94,7 @@ int CertHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
     auto it = certMap.find(certType);
     if (it == certMap.end())
     {
-        std::cerr << "CertHandler::write:file for type " << certType
-                  << " doesn't exist\n";
+        lg2::error("CertHandler::write:file for type {KEY0} doesn't exist", "KEY0", certType);
         return PLDM_ERROR;
     }
 
@@ -104,15 +102,13 @@ int CertHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
     int rc = lseek(fd, offset, SEEK_SET);
     if (rc == -1)
     {
-        std::cerr << "CertHandler::write:lseek failed, ERROR=" << errno
-                  << ", OFFSET=" << offset << "\n";
+        lg2::error("CertHandler::write:lseek failed, ERROR={KEY0}, OFFSET={KEY1}", "KEY0", errno, "KEY1", offset);
         return PLDM_ERROR;
     }
     rc = ::write(fd, buffer, length);
     if (rc == -1)
     {
-        std::cerr << "CertHandler::write:file write failed, ERROR=" << errno
-                  << ", LENGTH=" << length << ", OFFSET=" << offset << "\n";
+        lg2::error("CertHandler::write:file write failed, ERROR={KEY0}, LENGTH={KEY1}, OFFSET={KEY2}", "KEY0", errno, "KEY1", length, "KEY2", offset);
         return PLDM_ERROR;
     }
     length = rc;
@@ -152,10 +148,7 @@ int CertHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
             }
             catch (const std::exception& e)
             {
-                std::cerr
-                    << "CertHandler::write:failed to set Client certificate, "
-                       "ERROR="
-                    << e.what() << "\n";
+                lg2::error("CertHandler::write:failed to set Client certificate, ERROR={KEY0}", "KEY0", e.what());
                 return PLDM_ERROR;
             }
             PropertyValue valueStatus{
@@ -165,18 +158,13 @@ int CertHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
                                           certEntryIntf, "Status", "string"};
             try
             {
-                std::cout
-                    << "CertHandler::write:Client cert write, status: complete. File handle: "
-                    << fileHandle << std::endl;
+                lg2::error("CertHandler::write:Client cert write, status: complete. File handle: {KEY0}", "KEY0", fileHandle);
                 pldm::utils::DBusHandler().setDbusProperty(dbusMappingStatus,
                                                            valueStatus);
             }
             catch (const std::exception& e)
             {
-                std::cerr
-                    << "CertHandler::write:failed to set status property of certicate entry, "
-                       "ERROR="
-                    << e.what() << "\n";
+                lg2::error("CertHandler::write:failed to set status property of certicate entry, ERROR={KEY0}", "KEY0", e.what());
                 return PLDM_ERROR;
             }
             fs::remove(filePath);
@@ -188,17 +176,12 @@ int CertHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
                                     certEntryIntf, "Status", "string"};
             try
             {
-                std::cout
-                    << "CertHandler::write:Client cert write, status: Bad CSR. File handle: "
-                    << fileHandle << std::endl;
+                lg2::error("CertHandler::write:Client cert write, status: Bad CSR. File handle: {KEY0}", "KEY0", fileHandle);
                 pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
             }
             catch (const std::exception& e)
             {
-                std::cerr
-                    << "CertHandler::write:failed to set status property of certicate entry, "
-                       "ERROR="
-                    << e.what() << "\n";
+                lg2::error("CertHandler::write:failed to set status property of certicate entry, {KEY0}", "KEY0", e.what());
                 return PLDM_ERROR;
             }
         }
@@ -221,9 +204,7 @@ int CertHandler::newFileAvailable(uint64_t length)
     }
     if (certType == PLDM_FILE_TYPE_SIGNED_CERT)
     {
-        std::cout
-            << "CertHandler::newFileAvailable:new file available client cert file, file handle: "
-            << fileHandle << std::endl;
+        lg2::error("CertHandler::newFileAvailable:new file available client cert file, file handle: {KEY0}", "KEY0", fileHandle);
         fileFd = open(
             (filePath + "ClientCert_" + std::to_string(fileHandle)).c_str(),
             flags, S_IRUSR | S_IWUSR);
@@ -235,9 +216,7 @@ int CertHandler::newFileAvailable(uint64_t length)
     }
     if (fileFd == -1)
     {
-        std::cerr
-            << "CertHandler::newFileAvailable:failed to open file for type "
-            << certType << " ERROR=" << errno << "\n";
+        lg2::error("CertHandler::newFileAvailable:failed to open file for type {KEY0} ERROR={KEY1}", "KEY0", certType, "KEY1", errno);
         return PLDM_ERROR;
     }
     certMap.emplace(certType, std::tuple(fileFd, length));
@@ -266,18 +245,14 @@ int CertHandler::newFileAvailableWithMetaData(uint64_t length,
     {
         if (certSigningStatus == PLDM_SUCCESS)
         {
-            std::cerr
-                << "CertHandler::newFileAvailableWithMetaData:new file available client cert file, file handle: "
-                << fileHandle << std::endl;
+            lg2::error("CertHandler::newFileAvailableWithMetaData:new file available client cert file, file handle: {KEY0}", "KEY0", fileHandle);
             fileFd = open(
                 (filePath + "ClientCert_" + std::to_string(fileHandle)).c_str(),
                 flags, S_IRUSR | S_IWUSR);
         }
         else if (certSigningStatus == PLDM_INVALID_CERT_DATA)
         {
-            std::cerr
-                << "newFileAvailableWithMetaData:client cert file Invalid data, file handle: "
-                << fileHandle << std::endl;
+            lg2::error("newFileAvailableWithMetaData:client cert file Invalid data, file handle: {KEY0}", "KEY0", fileHandle);
             DBusMapping dbusMapping{certObjPath + std::to_string(fileHandle),
                                     certEntryIntf, "Status", "string"};
             std::string status = "xyz.openbmc_project.Certs.Entry.State.BadCSR";
@@ -288,10 +263,7 @@ int CertHandler::newFileAvailableWithMetaData(uint64_t length,
             }
             catch (const std::exception& e)
             {
-                std::cerr
-                    << "newFileAvailableWithMetaData:Failed to set status property of certicate entry, "
-                       "ERROR="
-                    << e.what() << "\n";
+                lg2::error("newFileAvailableWithMetaData:Failed to set status property of certicate entry, ERROR= {KEY0}", "KEY0", e.what());
                 return PLDM_ERROR;
             }
         }
@@ -303,9 +275,7 @@ int CertHandler::newFileAvailableWithMetaData(uint64_t length,
     }
     if (fileFd == -1)
     {
-        std::cerr
-            << "newFileAvailableWithMetaData:failed to open file for type "
-            << certType << " ERROR=" << errno << "\n";
+        lg2::error("newFileAvailableWithMetaData:failed to open file for type {KEY0} ERROR={KEY1}", "KEY0", certType, "KEY1", errno);
         return PLDM_ERROR;
     }
     certMap.emplace(certType, std::tuple(fileFd, length));
@@ -340,10 +310,7 @@ int CertHandler::fileAckWithMetaData(uint8_t fileStatus,
         }
         catch (const std::exception& e)
         {
-            std::cerr
-                << "CertHandler::fileAckWithMetaData:Failed to set status property of certicate entry, "
-                   "ERROR="
-                << e.what() << "\n";
+            lg2::error("CertHandler::fileAckWithMetaData:Failed to set status property of certicate entry, ERROR={KEY0}", "KEY0", e.what());
             return PLDM_ERROR;
         }
     }

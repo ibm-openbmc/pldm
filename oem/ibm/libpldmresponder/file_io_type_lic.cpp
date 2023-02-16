@@ -5,6 +5,8 @@
 
 #include "common/utils.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <stdint.h>
 
 #include <iostream>
@@ -34,8 +36,7 @@ int LicenseHandler::updateBinFileAndLicObjs(const fs::path& newLicJsonFilePath)
     auto dataNew = Json::parse(jsonFileNew, nullptr, false);
     if (dataNew.is_discarded())
     {
-        std::cerr << "Parsing the new license json file failed, FILE="
-                  << newLicJsonFilePath << "\n";
+        lg2::error("Parsing the new license json file failed, FILE={KEY0}", "KEY0", newLicJsonFilePath.c_str());
         throw InternalFailure();
     }
 
@@ -46,8 +47,7 @@ int LicenseHandler::updateBinFileAndLicObjs(const fs::path& newLicJsonFilePath)
     rc = createOrUpdateLicenseObjs();
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "createOrUpdateLicenseObjs failed with rc= " << rc
-                  << " \n";
+       lg2::error("createOrUpdateLicenseObjs failed with rc= {KEY0}", "KEY0", rc);
         return rc;
     }
     return PLDM_SUCCESS;
@@ -69,8 +69,8 @@ int LicenseHandler::writeFromMemory(
                               std::ios::out | std::ios::binary);
     if (!licJsonFile)
     {
-        std::cerr << "license json file create error: " << newLicJsonFilePath
-                  << std::endl;
+        lg2::error("license json file create error: {KEY0}", "KEY0", newLicJsonFilePath.c_str());
+
         return -1;
     }
 
@@ -78,7 +78,7 @@ int LicenseHandler::writeFromMemory(
         transferFileData(newLicJsonFilePath, false, offset, length, address);
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "transferFileData failed with rc= " << rc << " \n";
+        lg2::error("transferFileData failed with rc= {KEY0}", "KEY0", rc );
         return rc;
     }
 
@@ -87,8 +87,7 @@ int LicenseHandler::writeFromMemory(
         rc = updateBinFileAndLicObjs(newLicJsonFilePath);
         if (rc != PLDM_SUCCESS)
         {
-            std::cerr << "updateBinFileAndLicObjs failed with rc= " << rc
-                      << " \n";
+            lg2::error("updateBinFileAndLicObjs failed with rc= {KEY0}", "KEY0", rc);
             return rc;
         }
     }
@@ -107,8 +106,7 @@ int LicenseHandler::write(const char* buffer, uint32_t /*offset*/,
                               std::ios::out | std::ios::binary | std::ios::app);
     if (!licJsonFile)
     {
-        std::cerr << "license json file create error: " << newLicJsonFilePath
-                  << std::endl;
+        lg2::error("license json file create error: {KEY0}", "KEY0", newLicJsonFilePath.c_str());
         return -1;
     }
 
@@ -121,7 +119,7 @@ int LicenseHandler::write(const char* buffer, uint32_t /*offset*/,
     updateBinFileAndLicObjs(newLicJsonFilePath);
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "updateBinFileAndLicObjs failed with rc= " << rc << " \n";
+        lg2::error("updateBinFileAndLicObjs failed with rc= {KEY0}", "KEY0", rc );
         return rc;
     }
 
@@ -178,9 +176,7 @@ int LicenseHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "failed to set status property of license manager, "
-                         "ERROR="
-                      << e.what() << "\n";
+            lg2::error("failed to set status property of license manager, ERROR={KEY0}", "KEY0", e.what());
             return PLDM_ERROR;
         }
     }
@@ -195,9 +191,7 @@ int LicenseHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "failed to set status property of license manager, "
-                         "ERROR="
-                      << e.what() << "\n";
+            lg2::error("failed to set status property of license manager, ERROR={KEY0}", "KEY0", e.what());
             return PLDM_ERROR;
         }
     }
@@ -212,9 +206,7 @@ int LicenseHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "failed to set status property of license manager, "
-                         "ERROR="
-                      << e.what() << "\n";
+            lg2::error("failed to set status property of license manager, ERROR={KEY0}", "KEY0", e.what());
             return PLDM_ERROR;
         }
     }
@@ -229,9 +221,7 @@ int LicenseHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "failed to set status property of license manager, "
-                         "ERROR="
-                      << e.what() << "\n";
+            lg2::error("failed to set status property of license manager, ERROR={KEY0}", "KEY0",e.what() );
             return PLDM_ERROR;
         }
     }
@@ -246,9 +236,7 @@ int LicenseHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "failed to set status property of license manager, "
-                         "ERROR="
-                      << e.what() << "\n";
+            lg2::error("failed to set status property of license manager, ERROR={KEY0}", "KEY0", e.what());
             return PLDM_ERROR;
         }
     }
@@ -263,9 +251,7 @@ int LicenseHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "failed to set status property of license manager, "
-                         "ERROR="
-                      << e.what() << "\n";
+            lg2::error( "failed to set status property of license manager, ERROR={KEY0}", "KEY0", e.what());
             return PLDM_ERROR;
         }
     }
@@ -280,9 +266,7 @@ int LicenseHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "failed to set status property of license manager, "
-                         "ERROR="
-                      << e.what() << "\n";
+            lg2::error("failed to set status property of license manager, ERROR={KEY0}", "KEY0", e.what());
             return PLDM_ERROR;
         }
     }

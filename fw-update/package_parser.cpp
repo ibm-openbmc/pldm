@@ -5,6 +5,8 @@
 
 #include "common/utils.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <xyz/openbmc_project/Common/error.hpp>
 
 #include <iostream>
@@ -39,8 +41,7 @@ size_t PackageParser::parseFDIdentificationArea(
             &compImageSetVersionStr, &recordDescriptors, &fwDevicePkgData);
         if (rc)
         {
-            std::cerr << "Decoding firmware device ID record failed, RC=" << rc
-                      << "\n";
+            lg2::error("Decoding firmware device ID record failed, RC={KEY0}", "KEY0", rc);
             throw InternalFailure();
         }
 
@@ -56,9 +57,7 @@ size_t PackageParser::parseFDIdentificationArea(
                 &descriptorType, &descriptorData);
             if (rc)
             {
-                std::cerr
-                    << "Decoding descriptor type, length and value failed, RC="
-                    << rc << "\n";
+                lg2::error("Decoding descriptor type, length and value failed, RC={KEY0}", "KEY0", rc);
                 throw InternalFailure();
             }
 
@@ -80,9 +79,7 @@ size_t PackageParser::parseFDIdentificationArea(
                     &descTitleStrType, &descTitleStr, &vendorDefinedDescData);
                 if (rc)
                 {
-                    std::cerr << "Decoding Vendor-defined descriptor value "
-                                 "failed, RC="
-                              << rc << "\n";
+                    lg2::error("Decoding Vendor-defined descriptor value failed, RC={KEY0}", "KEY0", rc);
                     throw InternalFailure();
                 }
 
@@ -151,8 +148,7 @@ size_t PackageParser::parseCompImageInfoArea(ComponentImageCount compImageCount,
                                               &compImageInfo, &compVersion);
         if (rc)
         {
-            std::cerr << "Decoding component image information failed, RC="
-                      << rc << "\n";
+            lg2::error("Decoding component image information failed, RC={KEY0}", "KEY0", rc);
             throw InternalFailure();
         }
 
@@ -194,6 +190,7 @@ void PackageParser::validatePkgTotalSize(uintmax_t pkgSize)
 
         if (compLocOffset != calcPkgSize)
         {
+            //static_castError
             std::cerr << "Validating the component location offset failed, "
                          "COMP_VERSION="
                       << std::get<static_cast<size_t>(
@@ -208,9 +205,7 @@ void PackageParser::validatePkgTotalSize(uintmax_t pkgSize)
 
     if (calcPkgSize != pkgSize)
     {
-        std::cerr
-            << "Package size does not match calculated package size, PKG_SIZE="
-            << pkgSize << " ,CALC_PKG_SIZE=" << calcPkgSize << "\n";
+        lg2::error("Package size does not match calculated package size, PKG_SIZE={KEY0}, CALC_PKG_SIZE={KEY1}", "KEY0", pkgSize, "KEY1", calcPkgSize);
         throw InternalFailure();
     }
 }
@@ -220,16 +215,14 @@ void PackageParserV1::parse(const std::vector<uint8_t>& pkgHdr,
 {
     if (pkgHeaderSize != pkgHdr.size())
     {
-        std::cerr << "Package header size is invalid, PKG_HDR_SIZE="
-                  << pkgHeaderSize << "\n";
+        lg2::error("Package header size is invalid, PKG_HDR_SIZE={KEY0}", "KEY0", pkgHeaderSize);
         throw InternalFailure();
     }
 
     size_t offset = sizeof(pldm_package_header_information) + pkgVersion.size();
     if (offset + sizeof(DeviceIDRecordCount) >= pkgHeaderSize)
     {
-        std::cerr << "Parsing package header failed, PKG_HDR_SIZE="
-                  << pkgHeaderSize << "\n";
+        lg2::error("Parsing package header failed, PKG_HDR_SIZE={KEY0}", "KEY0", pkgHeaderSize);
         throw InternalFailure();
     }
 
@@ -239,15 +232,12 @@ void PackageParserV1::parse(const std::vector<uint8_t>& pkgHdr,
     offset = parseFDIdentificationArea(deviceIdRecCount, pkgHdr, offset);
     if (deviceIdRecCount != fwDeviceIDRecords.size())
     {
-        std::cerr
-            << "DeviceIDRecordCount entries not found, DEVICE_ID_REC_COUNT="
-            << deviceIdRecCount << "\n";
+        lg2::error("DeviceIDRecordCount entries not found, DEVICE_ID_REC_COUNT={KEY0}", "KEY0", deviceIdRecCount);
         throw InternalFailure();
     }
     if (offset + sizeof(ComponentImageCount) >= pkgHeaderSize)
     {
-        std::cerr << "Parsing package header failed, PKG_HDR_SIZE="
-                  << pkgHeaderSize << "\n";
+        lg2::error("Parsing package header failed, PKG_HDR_SIZE={KEY0}", "KEY0", pkgHeaderSize );
         throw InternalFailure();
     }
 
@@ -258,15 +248,13 @@ void PackageParserV1::parse(const std::vector<uint8_t>& pkgHdr,
     offset = parseCompImageInfoArea(compImageCount, pkgHdr, offset);
     if (compImageCount != componentImageInfos.size())
     {
-        std::cerr << "ComponentImageCount entries not found, COMP_IMAGE_COUNT="
-                  << compImageCount << "\n";
+        lg2::error("ComponentImageCount entries not found, COMP_IMAGE_COUNT={KEY0}", "KEY0", compImageCount);
         throw InternalFailure();
     }
 
     if (offset + sizeof(PackageHeaderChecksum) != pkgHeaderSize)
     {
-        std::cerr << "Parsing package header failed, PKG_HDR_SIZE="
-                  << pkgHeaderSize << "\n";
+        lg2::error("Parsing package header failed, PKG_HDR_SIZE={KEY0}", "KEY0", pkgHeaderSize);
         throw InternalFailure();
     }
 
@@ -276,8 +264,7 @@ void PackageParserV1::parse(const std::vector<uint8_t>& pkgHdr,
                 (pkgHdr[offset + 2] << 16) | (pkgHdr[offset + 3] << 24)));
     if (calcChecksum != checksum)
     {
-        std::cerr << "Parsing package header failed, CALC_CHECKSUM="
-                  << calcChecksum << ", PKG_HDR_CHECKSUM=" << checksum << "\n";
+        lg2::error("Parsing package header failed, CALC_CHECKSUM={KEY0}, PKG_HDR_CHECKSUM={KEY1}", "KEY0", calcChecksum, "KEY1", checksum);
         throw InternalFailure();
     }
 
@@ -297,8 +284,7 @@ std::unique_ptr<PackageParser> parsePkgHeader(std::vector<uint8_t>& pkgData)
                                               &pkgHeader, &pkgVersion);
     if (rc)
     {
-        std::cerr << "Decoding PLDM package header information failed, RC="
-                  << rc << "\n";
+        lg2::error("Decoding PLDM package header information failed, RC={KEY0}", "KEY0", rc);
         return nullptr;
     }
 

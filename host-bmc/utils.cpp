@@ -2,6 +2,8 @@
 
 #include "libpldm/entity.h"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include "common/utils.hpp"
 #include "utils.hpp"
 
@@ -195,11 +197,8 @@ void updateEntityAssociation(
             }
             catch (const std::exception& e)
             {
-                std::cerr
-                    << "Parent entity not found in the entityMaps, type = "
-                    << parent.entity_type
-                    << ", num = " << parent.entity_instance_num
-                    << ", e = " << e.what() << std::endl;
+                lg2::error("Parent entity not found in the entityMaps, type = {KEY0}, num = {KEY1}, e = {KEY2}", "KEY0", (int)parent.entity_type, "KEY1", (int)parent.entity_instance_num, "KEY2", e.what());
+                    
                 found = false;
                 break;
             }
@@ -272,8 +271,7 @@ void setCoreCount(const EntityAssociations& Associations)
                     }
                     catch (const std::exception& e)
                     {
-                        std::cerr << "failed to set the core count property "
-                                  << " ERROR=" << e.what() << "\n";
+                        lg2::error("failed to set the core count property ERROR={KEY0}", "KEY0", e.what());
                     }
                 }
             }

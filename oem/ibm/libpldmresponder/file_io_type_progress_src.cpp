@@ -2,6 +2,8 @@
 
 #include "common/utils.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 namespace pldm
 {
 
@@ -35,8 +37,7 @@ int ProgressCodeHandler::setRawBootProperty(
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to make a d-bus call to host-postd daemon, ERROR="
-                  << e.what() << "\n";
+        lg2::error("failed to make a d-bus call to host-postd daemon, ERROR={KEY0}", "KEY0", e.what());
         return PLDM_ERROR;
     }
 

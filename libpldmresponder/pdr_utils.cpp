@@ -5,6 +5,8 @@
 
 #include <config.h>
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <bitset>
 #include <climits>
 
@@ -83,10 +85,7 @@ StatestoDbusVal populateMapping(const std::string& type, const Json& dBusValues,
     StatestoDbusVal valueMap;
     if (dBusValues.size() != pv.size())
     {
-        std::cerr
-            << "dBusValues size is not equal to pv size, dBusValues Size: "
-            << dBusValues.size() << ", pv Size: " << pv.size() << "\n";
-
+        lg2::error("dBusValues size is not equal to pv size, dBusValues Size: {KEY0}, pv Size: {KEY1}", "KEY0", dBusValues.size(), "KEY1", pv.size());
         return {};
     }
 
@@ -134,8 +133,7 @@ StatestoDbusVal populateMapping(const std::string& type, const Json& dBusValues,
         }
         else
         {
-            std::cerr << "Unknown D-Bus property type, TYPE=" << type.c_str()
-                      << "\n";
+            lg2::error("Unknown D-Bus property type, TYPE={KEY0}", "KEY0", type.c_str());
             return {};
         }
 
@@ -277,8 +275,7 @@ std::vector<uint8_t> fetchBitMap(const std::vector<std::vector<uint8_t>>& pdrs)
                 tempStream << std::setfill('0') << std::setw(2) << std::hex
                            << byte << " ";
             }
-            std::cout << "Panel:BitMap received: " << tempStream.str()
-                      << std::endl;
+            lg2::error("Panel:BitMap received: {KEY0}", "KEY0", tempStream.str());
             if (compEffCount)
             {
                 statesPtr += sizeof(state_effecter_possible_states) +

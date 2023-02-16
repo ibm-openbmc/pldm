@@ -1,6 +1,7 @@
 #include "file_table.hpp"
 
 #include "libpldm/utils.h"
+#include <phosphor-logging/lg2.hpp>
 
 #include <fstream>
 #include <iostream>
@@ -16,16 +17,15 @@ FileTable::FileTable(const std::string& fileTableConfigPath)
     std::ifstream jsonFile(fileTableConfigPath);
     if (!jsonFile.is_open())
     {
-        std::cerr << "File table config file does not exist, FILE="
-                  << fileTableConfigPath.c_str() << "\n";
+        //FilePathError
+        lg2::error("File table config file does not exist, FILE={KEY0}", "KEY0", fileTableConfigPath.c_str());
         return;
     }
 
     auto data = Json::parse(jsonFile, nullptr, false);
     if (data.is_discarded())
     {
-        std::cerr << "Parsing config file failed"
-                  << "\n";
+        lg2::error("Parsing config file failed");
         return;
     }
 

@@ -3,6 +3,8 @@
 #include "oem_ibm_handler.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 namespace pldm
 {
 
@@ -11,6 +13,7 @@ namespace responder
 using namespace oem_ibm_platform;
 void SlotHandler::timeOutHandler()
 {
+    //FilePathError
     std::cerr
         << "Timer expired waiting for Event from Inventory on following pldm_entity: [ "
         << current_on_going_slot_entity.entity_type << ","
@@ -37,7 +40,7 @@ void SlotHandler::enableSlot(uint16_t effecterId,
                              uint8_t stateFileValue)
 
 {
-    std::cerr << "CM: slot enable effecter id: " << effecterId << std::endl;
+    lg2::error("CM: slot enable effecter id: {KEY0}", "KEY0", effecterId);
     const pldm_entity entity = getEntityIDfromEffecterID(effecterId);
 
     for (const auto& [key, value] : fruAssociationMap)
@@ -60,8 +63,7 @@ void SlotHandler::processSlotOperations(const std::string& slotObjectPath,
                                         const pldm_entity& entity,
                                         uint8_t stateFiledValue)
 {
-    std::cerr << "CM: processing the slot operations, SlotObject: "
-              << slotObjectPath << std::endl;
+    lg2::error("CM: processing the slot operations, SlotObject: {KEY0}", "KEY0", slotObjectPath);
 
     std::string adapterObjPath;
     try
@@ -74,8 +76,7 @@ void SlotHandler::processSlotOperations(const std::string& slotObjectPath,
         return;
     }
 
-    std::cerr << "CM: Found an adapter under the slot, adapter object:"
-              << adapterObjPath << std::endl;
+    lg2::error("CM: Found an adapter under the slot, adapter object:{KEY0}", "KEY0", adapterObjPath);
     // create a presence match for the adpter present property
     createPresenceMatch(adapterObjPath, entity, stateFiledValue);
 
@@ -116,9 +117,8 @@ void SlotHandler::callVPDManager(const std::string& adapterObjPath,
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to make a d-bus call to VPD Manager , Operation ="
-                  << (unsigned)stateFiledValue << ", ERROR=" << e.what()
-                  << "\n";
+        lg2::error("failed to make a d-bus call to VPD Manager , Operation = {KEY0}, ERROR={KEY1}", "KEY0", (unsigned)stateFiledValue, "KEY1", e.what());
+
     }
 }
 
@@ -201,9 +201,7 @@ void SlotHandler::processPropertyChangeFromVPD(
             sensorOpState = uint8_t(SLOT_STATE_DISABLED);
         }
     }
-    std::cerr
-        << "CM: processing the property change from VPD Present value and sensor opState:"
-        << presentValue << "and" << (unsigned)sensorOpState << std::endl;
+    lg2::error("CM: processing the property change from VPD Present value and sensor opState: {KEY0} and {KEY1}", "KEY0", presentValue, "KEY1", (unsigned)sensorOpState);
     // set the sensor state based on the stateFieldValue
     this->sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
                                sensorOpState, uint8_t(SLOT_STATE_UNKOWN));
@@ -261,6 +259,7 @@ uint8_t SlotHandler::fetchSlotSensorState(const std::string& slotObjectPath)
     }
     catch (const std::bad_optional_access& e)
     {
+        //FilePathError
         std::cerr
             << "Failed to get the adapterObjectPath from slotObjectPath : "
             << slotObjectPath << e.what() << '\n';
@@ -314,8 +313,7 @@ bool SlotHandler::fetchSensorStateFromDbus(const std::string& adapterObjectPath)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to make a d-bus call to Inventory manager, ERROR="
-                  << e.what() << "\n";
+        lg2::error("failed to make a d-bus call to Inventory manager, ERROR={KEY0}", "KEY0", e.what());
     }
 
     return false;

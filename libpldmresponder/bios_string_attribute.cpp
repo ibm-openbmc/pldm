@@ -2,6 +2,8 @@
 
 #include "common/utils.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <iostream>
 #include <tuple>
 #include <variant>
@@ -23,8 +25,7 @@ BIOSStringAttribute::BIOSStringAttribute(const Json& entry,
     auto iter = strTypeMap.find(strTypeTmp);
     if (iter == strTypeMap.end())
     {
-        std::cerr << "Wrong string type, STRING_TYPE=" << strTypeTmp
-                  << " ATTRIBUTE_NAME=" << name << "\n";
+        lg2::error("Wrong string type, STRING_TYPE={KEY0} ATTRIBUTE_NAME={KEY1}", "KEY0", strTypeTmp, "KEY1", name);
         throw std::invalid_argument("Wrong string type");
     }
     stringInfo.stringType = static_cast<uint8_t>(iter->second);
@@ -48,12 +49,7 @@ BIOSStringAttribute::BIOSStringAttribute(const Json& entry,
     auto rc = pldm_bios_table_attr_entry_string_info_check(&info, &errmsg);
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "Wrong field for string attribute, ATTRIBUTE_NAME=" << name
-                  << " ERRMSG=" << errmsg
-                  << " MINIMUM_STRING_LENGTH=" << stringInfo.minLength
-                  << " MAXIMUM_STRING_LENGTH=" << stringInfo.maxLength
-                  << " DEFAULT_STRING_LENGTH=" << stringInfo.defLength
-                  << " DEFAULT_STRING=" << stringInfo.defString << "\n";
+        lg2::error("Wrong field for string attribute, ATTRIBUTE_NAME={KEY0} ERRMSG={KEY1} MINIMUM_STRING_LENGTH={KEY2} MAXIMUM_STRING_LENGTH={KEY3} DEFAULT_STRING_LENGTH={KEY4} DEFAULT_STRING={KEY5}", "KEY0", name, "KEY1", errmsg, "KEY2", stringInfo.minLength, "KEY3",stringInfo.maxLength, "KEY4", stringInfo.defLength, "KEY5", stringInfo.defString);
         throw std::invalid_argument("Wrong field for string attribute");
     }
 }
@@ -86,8 +82,7 @@ std::string BIOSStringAttribute::getAttrValue()
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Get String Attribute Value Error: AttributeName = "
-                  << name << std::endl;
+        lg2::error("Get String Attribute Value Error: AttributeName = {KEY0}", "KEY0", name);
         return stringInfo.defString;
     }
 }
@@ -129,8 +124,7 @@ void BIOSStringAttribute::constructEntry(
     if (currStr.size() < stringInfo.minLength ||
         currStr.size() > stringInfo.maxLength)
     {
-        std::cerr << "Setting to default. Received string size "
-                  << currStr.size() << " For Attribute " << name << std::endl;
+        lg2::error("Setting to default. Received string size {KEY0} For Attribute {KEY1}", "KEY0", currStr.size(), "KEY1", name);
         currStr = stringInfo.defString;
     }
 
@@ -150,8 +144,7 @@ int BIOSStringAttribute::updateAttrVal(Table& newValue, uint16_t attrHdl,
     }
     catch (const std::bad_variant_access& e)
     {
-        std::cerr << "invalid value passed for the property, error: "
-                  << e.what() << "\n";
+        lg2::error("invalid value passed for the property, error: {KEY0}", "KEY0", e.what()); 
         return PLDM_ERROR;
     }
     return PLDM_SUCCESS;

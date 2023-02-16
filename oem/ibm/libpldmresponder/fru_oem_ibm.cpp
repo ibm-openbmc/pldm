@@ -1,5 +1,7 @@
 #include "fru_oem_ibm.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 namespace pldm
 {
 namespace responder
@@ -151,8 +153,7 @@ void Handler::dbus_map_update(const std::string& adapterObjPath,
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Failed To set " << propertyName << "property"
-                  << "ERROR=" << e.what() << std::endl;
+        lg2::error("Failed To set {KEY0} property ERROR={KEY1}", "KEY0", propertyName, "KEY1", e.what());
     }
 }
 
@@ -170,15 +171,13 @@ void Handler::setFruPresence(const std::string& adapterObjPath)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Failed to set the present property"
-                  << "ERROR=" << e.what() << std::endl;
+        lg2::error("Failed to set the present property ERROR={KEY0}", "KEY0", e.what());
     }
 }
 
 void Handler::setFirmwareUAK(std::vector<uint8_t> data)
 {
-    std::cout << "Got a SetFRURecordTable cmd from host to set the firmware UAK"
-              << std::endl;
+    lg2::info("Got a SetFRURecordTable cmd from host to set the firmware UAK");
     static constexpr auto uakObjPath = "/com/ibm/VPD/Manager";
     static constexpr auto uakInterface = "com.ibm.VPD.Manager";
 
@@ -200,8 +199,7 @@ void Handler::setFirmwareUAK(std::vector<uint8_t> data)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to make a DBus call to VPD manager, ERROR="
-                  << e.what() << "\n";
+        lg2::error("failed to make a DBus call to VPD manager, ERROR={KEY0}", "KEY0", e.what());
         return;
     }
 }

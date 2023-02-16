@@ -2,6 +2,8 @@
 
 #include <xyz/openbmc_project/Common/error.hpp>
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <fstream>
 #include <iostream>
 
@@ -21,8 +23,9 @@ void HostAssociationsParser::parseHostAssociations(const std::string& jsonPath)
     fs::path jsonDir(jsonPath);
     if (!fs::exists(jsonDir) || fs::is_empty(jsonDir))
     {
-        std::cerr << "Host Associations json path does not exist, DIR="
-                  << jsonPath << "\n";
+        //FilePathError 
+        lg2::error("Host Associations json path does not exist, DIR = {KEY0}", "KEY0", jsonPath.c_str());
+        
         return;
     }
 
@@ -30,7 +33,8 @@ void HostAssociationsParser::parseHostAssociations(const std::string& jsonPath)
 
     if (!fs::exists(jsonFilePath))
     {
-        std::cerr << "json does not exist, PATH=" << jsonFilePath << "\n";
+        //FilePathError 
+        lg2::error("json does not exist, PATH = {KEY0}", "KEY0", jsonFilePath.c_str()); 
         throw InternalFailure();
     }
 
@@ -38,7 +42,8 @@ void HostAssociationsParser::parseHostAssociations(const std::string& jsonPath)
     auto data = Json::parse(jsonFile, nullptr, false);
     if (data.is_discarded())
     {
-        std::cerr << "Parsing json file failed, FILE=" << jsonFilePath << "\n";
+        //FilePathError 
+        lg2::error("Parsing json file failed, FILE = {KEY0}", "KEY0", jsonFilePath.c_str());
         throw InternalFailure();
     }
     const Json empty{};

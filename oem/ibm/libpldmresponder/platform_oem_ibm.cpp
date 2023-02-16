@@ -7,6 +7,7 @@
 #include "libpldmresponder/pdr.hpp"
 
 #include <xyz/openbmc_project/Common/error.hpp>
+#include <phosphor-logging/lg2.hpp>
 
 #include <iostream>
 
@@ -68,8 +69,7 @@ int sendBiosAttributeUpdateEvent(
         requestMsg.size() - sizeof(pldm_msg_hdr), request);
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "Message encode failure 1. PLDM error code = " << std::hex
-                  << std::showbase << rc << "\n";
+        lg2::error("Message encode failure 1. PLDM error code = {KEY0}", "KEY0", lg2::hex, rc);
         requester->markFree(eid, instanceId);
         return rc;
     }
@@ -90,8 +90,7 @@ int sendBiosAttributeUpdateEvent(
                                                   size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
-            std::cerr
-                << "Failed to receive response for platform event message \n";
+            lg2::error("Failed to receive response for platform event message");
             return;
         }
         uint8_t completionCode{};
@@ -100,10 +99,8 @@ int sendBiosAttributeUpdateEvent(
                                                      &completionCode, &status);
         if (rc || completionCode)
         {
-            std::cerr << "Failed to decode_platform_event_message_resp: "
-                      << "rc=" << rc
-                      << ", cc=" << static_cast<unsigned>(completionCode)
-                      << std::endl;
+            lg2::error("Failed to decode_platform_event_message_resp: RC = {KEY0}, cc = {KEY1}", "KEY0", rc, "KEY1", unsigned(completionCode));
+
         }
     };
     rc = handler->registerRequest(
@@ -111,7 +108,7 @@ int sendBiosAttributeUpdateEvent(
         std::move(requestMsg), std::move(platformEventMessageResponseHandler));
     if (rc)
     {
-        std::cerr << "Failed to send the platform event message \n";
+        lg2::error("Failed to send the platform event message");
     }
 
     return rc;

@@ -4,6 +4,8 @@
 #include "common/utils.hpp"
 #include "package_parser.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <cassert>
 #include <cmath>
 #include <filesystem>
@@ -35,9 +37,7 @@ int UpdateManager::processPackage(const std::filesystem::path& packageFilePath)
         if (activation->activation() ==
             software::Activation::Activations::Activating)
         {
-            std::cerr
-                << "Activation of PLDM FW update package already in progress"
-                << ", PACKAGE_VERSION=" << parser->pkgVersion << "\n";
+            lg2::error("Activation of PLDM FW update package already in progress, PACKAGE_VERSION={KEY0}", "KEY0", parser->pkgVersion);
             std::filesystem::remove(packageFilePath);
             return -1;
         }
@@ -51,9 +51,7 @@ int UpdateManager::processPackage(const std::filesystem::path& packageFilePath)
                  std::ios::binary | std::ios::in | std::ios::ate);
     if (!package.good())
     {
-        std::cerr << "Opening the PLDM FW update package failed, ERR="
-                  << unsigned(errno) << ", PACKAGEFILE=" << packageFilePath
-                  << "\n";
+        lg2::error("Opening the PLDM FW update package failed, ERR={KEY0}, PACKAGEFILE={KEY1}", "KEY0", unsigned(errno), "KEY1", packageFilePath.c_str());
         package.close();
         std::filesystem::remove(packageFilePath);
         return -1;
@@ -62,9 +60,7 @@ int UpdateManager::processPackage(const std::filesystem::path& packageFilePath)
     uintmax_t packageSize = package.tellg();
     if (packageSize < sizeof(pldm_package_header_information))
     {
-        std::cerr << "PLDM FW update package length less than the length of "
-                     "the package header information, PACKAGESIZE="
-                  << packageSize << "\n";
+        lg2::error("PLDM FW update package length less than the length of the package header information, PACKAGESIZE={KEY0}", "KEY0", packageSize);
         package.close();
         std::filesystem::remove(packageFilePath);
         return -1;
@@ -89,8 +85,7 @@ int UpdateManager::processPackage(const std::filesystem::path& packageFilePath)
     parser = parsePkgHeader(packageHeader);
     if (parser == nullptr)
     {
-        std::cerr << "Invalid PLDM package header information"
-                  << "\n";
+        lg2::error("Invalid PLDM package header information");
         package.close();
         std::filesystem::remove(packageFilePath);
         return -1;
@@ -110,8 +105,7 @@ int UpdateManager::processPackage(const std::filesystem::path& packageFilePath)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Invalid PLDM package header"
-                  << "\n";
+        lg2::error("Invalid PLDM package header");
         activation = std::make_unique<Activation>(
             pldm::utils::DBusHandler::getBus(), objPath,
             software::Activation::Activations::Invalid, this);
@@ -125,9 +119,7 @@ int UpdateManager::processPackage(const std::filesystem::path& packageFilePath)
                               totalNumComponentUpdates);
     if (!deviceUpdaterInfos.size())
     {
-        std::cerr
-            << "No matching devices found with the PLDM firmware update package"
-            << "\n";
+        lg2::error( "No matching devices found with the PLDM firmware update package");
         activation = std::make_unique<Activation>(
             pldm::utils::DBusHandler::getBus(), objPath,
             software::Activation::Activations::Invalid, this);
@@ -203,6 +195,7 @@ void UpdateManager::updateDeviceCompletion(mctp_eid_t eid, bool status)
         }
 
         auto endTime = std::chrono::steady_clock::now();
+        //chronoTimeIssue
         std::cerr << "Firmware update time: "
                   << std::chrono::duration<double, std::milli>(endTime -
                                                                startTime)

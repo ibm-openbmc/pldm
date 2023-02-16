@@ -7,6 +7,8 @@
 #include "libpldm/platform.h"
 #include "libpldm/pldm.h"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include "base.hpp"
 #include "common/utils.hpp"
 #include "libpldmresponder/pdr.hpp"
@@ -196,8 +198,7 @@ void Handler::processSetEventReceiver(
     if (rc != PLDM_SUCCESS)
     {
         requester.markFree(eid, instanceId);
-        std::cerr << "Failed to encode_set_event_receiver_req, rc = "
-                  << std::hex << std::showbase << rc << std::endl;
+        lg2::error("Failed to encode_set_event_receiver_req, rc = {KEY0}", "KEY0", lg2::hex, rc);
         return;
     }
 
@@ -206,8 +207,7 @@ void Handler::processSetEventReceiver(
                                               size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
-            std::cerr << "Failed to receive response for "
-                         "setEventReceiver command \n";
+            lg2::error("Failed to receive response for setEventReceiver command");
             return;
         }
 
@@ -216,9 +216,7 @@ void Handler::processSetEventReceiver(
                                                  &completionCode);
         if (rc || completionCode)
         {
-            std::cerr << "Failed to decode setEventReceiver command response,"
-                      << " rc=" << rc << "cc=" << (unsigned)completionCode
-                      << "\n";
+            lg2::error("Failed to decode setEventReceiver command response, rc = {KEY0}, cc = {KEY1}", "KEY0", rc, "KEY1",(unsigned)completionCode); 
             pldm::utils::reportError(
                 "xyz.openbmc_project.bmc.pldm.InternalFailure",
                 pldm::PelSeverity::ERROR);
@@ -230,8 +228,7 @@ void Handler::processSetEventReceiver(
 
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "Failed to send the setEventReceiver request"
-                  << "\n";
+        lg2::error("Failed to send the setEventReceiver request");
     }
 
     if (oemPlatformHandler)
