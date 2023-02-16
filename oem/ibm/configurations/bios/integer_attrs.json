@@ -202,7 +202,7 @@
             "scalar_increment": 1,
             "default_value": 0,
             "readOnly": true,
-            "helpText": "Specifies power supply 0 input power voltage(volts)",
+            "helpText": "Specifies power supply 0 input voltage(volts)",
             "displayName": "Power Supply 0 input Voltage",
             "dbus": {
                 "object_path": "/xyz/openbmc_project/sensors/voltage/ps0_input_voltage_rating",
@@ -218,7 +218,7 @@
             "scalar_increment": 1,
             "default_value": 0,
             "readOnly": true,
-            "helpText": "Specifies power supply 1 input power voltage(volts)",
+            "helpText": "Specifies power supply 1 input voltage(volts)",
             "displayName": "Power Supply 1 input Voltage",
             "dbus": {
                 "object_path": "/xyz/openbmc_project/sensors/voltage/ps1_input_voltage_rating",
@@ -234,7 +234,7 @@
             "scalar_increment": 1,
             "default_value": 0,
             "readOnly": true,
-            "helpText": "Specifies power supply 2 input power voltage(volts)",
+            "helpText": "Specifies power supply 2 input voltage(volts)",
             "displayName": "Power Supply 2 input Voltage",
             "dbus": {
                 "object_path": "/xyz/openbmc_project/sensors/voltage/ps2_input_voltage_rating",
@@ -250,7 +250,7 @@
             "scalar_increment": 1,
             "default_value": 0,
             "readOnly": true,
-            "helpText": "Specifies power supply 3 input power voltage(volts)",
+            "helpText": "Specifies power supply 3 input voltage(volts)",
             "displayName": "Power Supply 3 input Voltage",
             "dbus": {
                 "object_path": "/xyz/openbmc_project/sensors/voltage/ps3_input_voltage_rating",

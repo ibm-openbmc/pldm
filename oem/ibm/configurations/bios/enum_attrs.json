@@ -493,12 +493,12 @@
             "attribute_name": "hb_power_PS0_functional",
             "possible_values": ["Enabled", "Disabled"],
             "default_values": ["Disabled"],
-            "helpText": "Specifies if Power Supply 0 is functional or not. (Enabled is Functional)",
-            "displayName": "Power Supply 0 is functional",
+            "helpText": "Specifies if Power Supply 0 is present. (Enabled is Present)",
+            "displayName": "Power Supply 0 is present",
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply0",
-                "interface": "xyz.openbmc_project.State.Decorator.OperationalStatus",
-                "property_name": "Functional",
+                "interface": "xyz.openbmc_project.Inventory.Item",
+                "property_name": "Present",
                 "property_type": "bool",
                 "property_values": [true, false]
             }
@@ -507,12 +507,12 @@
             "attribute_name": "hb_power_PS1_functional",
             "possible_values": ["Enabled", "Disabled"],
             "default_values": ["Disabled"],
-            "helpText": "Specifies if Power Supply 1 is functional or not. (Enabled is Functional)",
-            "displayName": "Power Supply 1 is functional",
+            "helpText": "Specifies if Power Supply 1 is present or not. (Enabled is present)",
+            "displayName": "Power Supply 1 is present",
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply1",
-                "interface": "xyz.openbmc_project.State.Decorator.OperationalStatus",
-                "property_name": "Functional",
+                "interface": "xyz.openbmc_project.Inventory.Item",
+                "property_name": "Present",
                 "property_type": "bool",
                 "property_values": [true, false]
             }
@@ -521,12 +521,12 @@
             "attribute_name": "hb_power_PS2_functional",
             "possible_values": ["Enabled", "Disabled"],
             "default_values": ["Disabled"],
-            "helpText": "Specifies if Power Supply 2 is functional or not. (Enabled is Functional)",
-            "displayName": "Power Supply 2 is functional",
+            "helpText": "Specifies if Power Supply 2 is Present. (Enabled is Present)",
+            "displayName": "Power Supply 2 is present",
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply2",
-                "interface": "xyz.openbmc_project.State.Decorator.OperationalStatus",
-                "property_name": "Functional",
+                "interface": "xyz.openbmc_project.Inventory.Item",
+                "property_name": "Present",
                 "property_type": "bool",
                 "property_values": [true, false]
             }
@@ -535,12 +535,12 @@
             "attribute_name": "hb_power_PS3_functional",
             "possible_values": ["Enabled", "Disabled"],
             "default_values": ["Disabled"],
-            "helpText": "Specifies if Power Supply 3 is functional or not. (Enabled is Functional)",
-            "displayName": "Power Supply 3 is functional",
+            "helpText": "Specifies if Power Supply 3 is present. (Enabled is Present)",
+            "displayName": "Power Supply 3 is present",
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/powersupply3",
-                "interface": "xyz.openbmc_project.State.Decorator.OperationalStatus",
-                "property_name": "Functional",
+                "interface": "xyz.openbmc_project.Inventory.Item",
+                "property_name": "Present",
                 "property_type": "bool",
                 "property_values": [true, false]
             }
