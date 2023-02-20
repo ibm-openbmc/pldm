@@ -75,6 +75,7 @@
             "entityType": 66,
             "entityInstance": 0,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm0",
@@ -88,6 +89,7 @@
             "entityType": 66,
             "entityInstance": 1,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm1",
@@ -101,6 +103,7 @@
             "entityType": 66,
             "entityInstance": 2,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm2",
@@ -114,6 +117,7 @@
             "entityType": 66,
             "entityInstance": 3,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm3",
@@ -127,6 +131,7 @@
             "entityType": 66,
             "entityInstance": 4,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm4",
@@ -140,6 +145,7 @@
             "entityType": 66,
             "entityInstance": 5,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm5",
@@ -153,6 +159,7 @@
             "entityType": 66,
             "entityInstance": 6,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm6",
@@ -166,6 +173,7 @@
             "entityType": 66,
             "entityInstance": 7,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm7",
@@ -179,6 +187,7 @@
             "entityType": 66,
             "entityInstance": 8,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm8",
@@ -192,6 +201,7 @@
             "entityType": 66,
             "entityInstance": 9,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm9",
@@ -205,6 +215,7 @@
             "entityType": 66,
             "entityInstance": 10,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm10",
@@ -218,6 +229,7 @@
             "entityType": 66,
             "entityInstance": 11,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm11",
@@ -231,6 +243,7 @@
             "entityType": 66,
             "entityInstance": 12,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm12",
@@ -244,6 +257,7 @@
             "entityType": 66,
             "entityInstance": 13,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm13",
@@ -257,6 +271,7 @@
             "entityType": 66,
             "entityInstance": 14,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm14",
@@ -270,6 +285,7 @@
             "entityType": 66,
             "entityInstance": 15,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm15",
@@ -283,6 +299,7 @@
             "entityType": 66,
             "entityInstance": 16,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm16",
@@ -296,6 +313,7 @@
             "entityType": 66,
             "entityInstance": 17,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm17",
@@ -309,6 +327,7 @@
             "entityType": 66,
             "entityInstance": 18,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm18",
@@ -322,6 +341,7 @@
             "entityType": 66,
             "entityInstance": 19,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm19",
@@ -335,6 +355,7 @@
             "entityType": 66,
             "entityInstance": 20,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm20",
@@ -348,6 +369,7 @@
             "entityType": 66,
             "entityInstance": 21,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm21",
@@ -361,6 +383,7 @@
             "entityType": 66,
             "entityInstance": 22,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm22",
@@ -374,6 +397,7 @@
             "entityType": 66,
             "entityInstance": 23,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm23",
@@ -387,6 +411,7 @@
             "entityType": 66,
             "entityInstance": 24,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm24",
@@ -400,6 +425,7 @@
             "entityType": 66,
             "entityInstance": 25,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm25",
@@ -413,6 +439,7 @@
             "entityType": 66,
             "entityInstance": 26,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm26",
@@ -426,6 +453,7 @@
             "entityType": 66,
             "entityInstance": 27,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm27",
@@ -439,6 +467,7 @@
             "entityType": 66,
             "entityInstance": 28,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm28",
@@ -452,6 +481,7 @@
             "entityType": 66,
             "entityInstance": 29,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm29",
@@ -465,6 +495,7 @@
             "entityType": 66,
             "entityInstance": 30,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm30",
@@ -478,6 +509,7 @@
             "entityType": 66,
             "entityInstance": 31,
             "sensorOffset": 0,
+            "stateSetId": 1,
             "event_states": [1, 3],
             "dbus": {
                 "object_path": "/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm31",
