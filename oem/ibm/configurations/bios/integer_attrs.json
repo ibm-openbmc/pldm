@@ -187,6 +187,15 @@
             "displayName": "Requested Core Freq MHZ (current)"
         },
         {
+            "attribute_name": "pvm_rpd_scheduled_tod",
+            "lower_bound": 0,
+            "upper_bound": 86399,
+            "scalar_increment": 1,
+            "default_value": 0,
+            "helpText": "Only used when pvm_rpd_policy is set to “Scheduled”. This value represents the time of day in seconds at which to run the processor diagnostics.",
+            "displayName": "RPD Scheduled Run Time of Day in Seconds"
+        },
+        {
             "attribute_name": "hb_power_PS0_input_voltage",
             "lower_bound": 0,
             "upper_bound": 65535,
