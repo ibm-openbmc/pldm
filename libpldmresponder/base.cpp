@@ -25,12 +25,10 @@
 
 namespace pldm
 {
-
 using Type = uint8_t;
 
 namespace responder
 {
-
 using Cmd = std::vector<uint8_t>;
 
 static const std::map<Type, Cmd> capabilities{
@@ -60,18 +58,17 @@ static const std::map<Type, Cmd> capabilities{
 };
 
 static const std::map<Type, ver32_t> versions{
-    {PLDM_BASE, {0x00, 0xf0, 0xf0, 0xf1}},
-    {PLDM_PLATFORM, {0x00, 0xf0, 0xf2, 0xf1}},
-    {PLDM_BIOS, {0x00, 0xf0, 0xf0, 0xf1}},
-    {PLDM_FRU, {0x00, 0xf0, 0xf0, 0xf1}},
+    {PLDM_BASE, {0xF1, 0xF0, 0xF0, 0x00}},
+    {PLDM_PLATFORM, {0xF1, 0xF2, 0xF0, 0x00}},
+    {PLDM_BIOS, {0xF1, 0xF0, 0xF0, 0x00}},
+    {PLDM_FRU, {0xF1, 0xF0, 0xF0, 0x00}},
 #ifdef OEM_IBM
-    {PLDM_OEM, {0x00, 0xf0, 0xf0, 0xf1}},
+    {PLDM_OEM, {0xF1, 0xF0, 0xF0, 0x00}},
 #endif
 };
 
 namespace base
 {
-
 Response Handler::getPLDMTypes(const pldm_msg* request,
                                size_t /*payloadLength*/)
 {
