@@ -99,17 +99,17 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
     }
 
     dbus::ObjectValueTree objects;
-    auto method =
-        bus.new_method_call(DUMP_MANAGER_BUSNAME, DUMP_MANAGER_PATH,
-                            OBJECT_MANAGER_INTERFACE, "GetManagedObjects");
 
     try
     {
+        auto method =
+            bus.new_method_call(DUMP_MANAGER_BUSNAME, DUMP_MANAGER_PATH,
+                                OBJECT_MANAGER_INTERFACE, "GetManagedObjects");
         auto reply = bus.call(method);
         reply.read(objects);
     }
 
-    catch (const std::exception& e)
+    catch (const sdbusplus::exception_t& e)
     {
         std::cerr
             << "Failure with GetManagedObjects in findDumpObjPath call, ERROR="
@@ -183,7 +183,7 @@ int DumpHandler::newFileAvailable(uint64_t length)
         method.append(fileHandle, length);
         bus.call(method);
     }
-    catch (const std::exception& e)
+    catch (const sdbusplus::exception_t& e)
     {
         std::cerr << "failed to make a d-bus call to notify"
                      " a new dump request using newFileAvailable, ERROR="
@@ -214,7 +214,7 @@ void DumpHandler::resetOffloadUri()
         pldm::utils::DBusHandler().setDbusProperty(dbusMapping,
                                                    offloadUriValue);
     }
-    catch (const std::exception& e)
+    catch (const sdbusplus::exception_t& e)
     {
         std::cerr << "Failed to set the OffloadUri dbus property, ERROR="
                   << e.what() << "\n";
@@ -244,7 +244,7 @@ std::string DumpHandler::getOffloadUri(uint32_t fileHandle)
                 path.c_str(), "OffloadUri", dumpEntry);
         std::cout << "socketInterface=" << socketInterface << std::endl;
     }
-    catch (const std::exception& e)
+    catch (const sdbusplus::exception_t& e)
     {
         std::cerr << "Failed to get the OffloadUri d-bus property, ERROR="
                   << e.what() << "\n";
@@ -389,7 +389,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
             {
                 pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
             }
-            catch (const std::exception& e)
+            catch (const sdbusplus::exception_t& e)
             {
                 std::cerr
                     << "Failure in setting Progress as OperationStatus.Failed"
@@ -428,7 +428,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
                     pldm::utils::DBusHandler().setDbusProperty(dbusMapping,
                                                                value);
                 }
-                catch (const std::exception& e)
+                catch (const sdbusplus::exception_t& e)
                 {
                     std::cerr << "Failed to make a d-bus call to DUMP "
                                  "manager to reset source dump id of "
@@ -449,7 +449,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
                     "xyz.openbmc_project.Object.Delete", "Delete");
                 bus.call(method);
             }
-            catch (const std::exception& e)
+            catch (const sdbusplus::exception_t& e)
             {
                 std::cerr
                     << "Failed to make a d-bus method to delete the dump entry "
@@ -476,7 +476,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
             {
                 pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
             }
-            catch (const std::exception& e)
+            catch (const sdbusplus::exception_t& e)
             {
                 std::cerr
                     << "Failed to set the Offloaded dbus property to true, ERROR="
@@ -526,7 +526,7 @@ int DumpHandler::readIntoMemory(uint32_t offset, uint32_t& length,
                                        address);
             return rc;
         }
-        catch (const std::exception& e)
+        catch (const sdbusplus::exception_t& e)
         {
             std::cerr << "Failed to fetch the filepath of the dump entry"
                       << std::hex << fileHandle << ", error = " << e.what()
@@ -562,7 +562,7 @@ int DumpHandler::read(uint32_t offset, uint32_t& length, Response& response,
             auto rc = readFile(filePath.c_str(), offset, length, response);
             return rc;
         }
-        catch (const std::exception& e)
+        catch (const sdbusplus::exception_t& e)
         {
             std::cerr << "Failed to fetch the filepath of the dump entry"
                       << std::hex << fileHandle << ", error = " << e.what()
@@ -645,7 +645,7 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         {
             pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
         }
-        catch (const std::exception& e)
+        catch (const sdbusplus::exception_t& e)
         {
             std::cerr
                 << "failed to set DumpRequestStatus property for resource dump entry, "
@@ -671,7 +671,7 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
             {
                 pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
             }
-            catch (const std::exception& e)
+            catch (const sdbusplus::exception_t& e)
             {
                 std::cerr
                     << "Failure in setting Progress as OperationStatus.Failed"
@@ -698,7 +698,7 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
             {
                 pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
             }
-            catch (const std::exception& e)
+            catch (const sdbusplus::exception_t& e)
             {
                 std::cerr
                     << "Failed to set the Offloaded dbus property to true, ERROR="
@@ -752,7 +752,7 @@ int DumpHandler::newFileAvailableWithMetaData(uint64_t length,
                                            // dump manager changes are merged
         bus.call(method);
     }
-    catch (const std::exception& e)
+    catch (const sdbusplus::exception_t& e)
     {
         std::cerr
             << "failed to make a d-bus call to notify"

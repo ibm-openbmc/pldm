@@ -65,14 +65,15 @@ int main(int argc, char* argv[])
             "xyz.openbmc_project.PLDM.Error.SoftPowerOff.HostSoftOffTimeOut",
             pldm::PelSeverity::ERROR);
 
-        auto method = bus.new_method_call(
-            "xyz.openbmc_project.Dump.Manager", "/xyz/openbmc_project/dump/bmc",
-            "xyz.openbmc_project.Dump.Create", "CreateDump");
-        method.append(
-            std::vector<
-                std::pair<std::string, std::variant<std::string, uint64_t>>>());
         try
         {
+            auto method = bus.new_method_call(
+                "xyz.openbmc_project.Dump.Manager",
+                "/xyz/openbmc_project/dump/bmc",
+                "xyz.openbmc_project.Dump.Create", "CreateDump");
+            method.append(
+                std::vector<std::pair<std::string,
+                                      std::variant<std::string, uint64_t>>>());
             bus.call_noreply(method);
         }
         catch (const sdbusplus::exception::exception& e)
