@@ -47,6 +47,8 @@ int keywordHandler::read(uint32_t offset, uint32_t& length, Response& response,
 
     if (length < keywrdSize)
     {
+        std::cerr << "length requested is less the keyword size, length: "
+                  << length << " keyword size: " << keywrdSize << std::endl;
         return PLDM_ERROR_INVALID_DATA;
     }
 
@@ -80,6 +82,9 @@ int keywordHandler::read(uint32_t offset, uint32_t& length, Response& response,
                   << std::endl;
     }
     keywrdFile.close();
+
+    // length of keyword data should be same as keyword data size in dbus object
+    length = (uint32_t)keywrdSize;
 
     auto rc = readFile(keywrdFilePath, offset, keywrdSize, response);
     fs::remove(keywrdFilePath);
