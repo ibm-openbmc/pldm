@@ -36,11 +36,20 @@ using namespace sdbusplus::xyz::openbmc_project::Common::Error;
 int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
                                   uint32_t& length, uint64_t address)
 {
+    std::cout << "KK transferFileData::attching event into dbus \n";
+    // Get a default event loop
+    auto event = sdeventplus::Event::get_default();
+    // Get a handle to system D-Bus.
+    //  auto& bus = pldm::utils::DBusHandler::getBus();
+    // Attach the bus to sd_event to service user requests
+    // bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
     dma::DMA xdmaInterface;
+    std::cout << "KK calling transferFileData through interface" << fd << ' '
+              << upstream;
     while (length > dma::maxSize)
     {
         auto rc = xdmaInterface.transferDataHost(fd, offset, dma::maxSize,
-                                                 address, upstream);
+                                                 address, upstream, event);
         if (rc < 0)
         {
             return PLDM_ERROR;
@@ -49,8 +58,9 @@ int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
         length -= dma::maxSize;
         address += dma::maxSize;
     }
-    auto rc =
-        xdmaInterface.transferDataHost(fd, offset, length, address, upstream);
+
+    auto rc = xdmaInterface.transferDataHost(fd, offset, length, address,
+                                             upstream, event);
     return rc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
 }
 
@@ -113,7 +123,7 @@ int FileHandler::transferFileData(const fs::path& path, bool upstream,
     {
         flags = O_WRONLY;
     }
-    int file = open(path.string().c_str(), flags);
+    int file = open(path.string().c_str(), flags | O_NONBLOCK);
     if (file == -1)
     {
         std::cerr << "File does not exist, PATH = " << path.string() << "\n";
@@ -121,7 +131,8 @@ int FileHandler::transferFileData(const fs::path& path, bool upstream,
         return PLDM_ERROR;
     }
     pldm::utils::CustomFD fd(file);
-
+    std::cout << "KK FileHandler::transferFileData file opening"
+              << "\n";
     return transferFileData(fd(), upstream, offset, length, address);
 }
 

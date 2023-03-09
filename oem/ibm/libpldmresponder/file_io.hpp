@@ -18,6 +18,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <sdbusplus/bus.hpp>
+#include <sdbusplus/server.hpp>
+#include <sdbusplus/server/object.hpp>
+#include <sdbusplus/timer.hpp>
+#include <sdeventplus/event.hpp>
+#include <sdeventplus/source/signal.hpp>
+
 #include <filesystem>
 #include <iostream>
 #include <vector>
@@ -35,6 +42,8 @@ constexpr uint32_t minSize = 16;
 constexpr size_t maxSize = DMA_MAXSIZE;
 
 namespace fs = std::filesystem;
+using namespace sdeventplus;
+using sdeventplus::source::Signal;
 
 /**
  * @class DMA
@@ -48,6 +57,15 @@ namespace fs = std::filesystem;
 class DMA
 {
   public:
+    /** @brief The response for the HOST data transfer over flag.
+     */
+    bool responseReceived = false;
+    /** @brief Reference to Timer object */
+    //  auto event = Event::get_default();
+    /** @brief captures if the is a timeout value
+     */
+    bool noTimeOut;
+
     /** @brief API to transfer data between BMC and host using DMA
      *
      * @param[in] path     - pathname of the file to transfer data from or to
@@ -60,7 +78,8 @@ class DMA
      * @return returns 0 on success, negative errno on failure
      */
     int transferDataHost(int fd, uint32_t offset, uint32_t length,
-                         uint64_t address, bool upstream);
+                         uint64_t address, bool upstream,
+                         sdeventplus::Event& event);
 
     /** @brief API to transfer data on to unix socket from host using DMA
      *
@@ -71,6 +90,9 @@ class DMA
      * @return returns 0 on success, negative errno on failure
      */
     int transferHostDataToSocket(int fd, uint32_t length, uint64_t address);
+
+    void interruptSignalCallBack(Signal& /*signal*/,
+                                 const struct signalfd_siginfo*);
 };
 
 /** @brief Transfer the data between BMC and host using DMA.
@@ -97,6 +119,10 @@ Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
                      uint32_t offset, uint32_t length, uint64_t address,
                      bool upstream, uint8_t instanceId)
 {
+    std::cout << "KK transferAll trace 8 \n";
+    // Get a default event loop
+    auto event = sdeventplus::Event::get_default();
+
     uint32_t origLength = length;
     Response response(sizeof(pldm_msg_hdr) + PLDM_RW_FILE_MEM_RESP_BYTES, 0);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
@@ -114,7 +140,8 @@ Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
     {
         flags = O_WRONLY;
     }
-    int file = open(path.string().c_str(), flags);
+    std::cout << "KK transferAll trace 9 \n";
+    int file = open(path.string().c_str(), O_NONBLOCK | flags);
     if (file == -1)
     {
         std::cerr << "File does not exist, path = " << path.string() << "\n";
@@ -122,12 +149,14 @@ Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
                                    responsePtr);
         return response;
     }
+    std::cout << "KK transferAll trace 10 \n";
     pldm::utils::CustomFD fd(file);
-
+    std::cout << "KK transferAll length:" << length
+              << "dma::maxSize:" << dma::maxSize << "\n";
     while (length > dma::maxSize)
     {
         auto rc = intf->transferDataHost(fd(), offset, dma::maxSize, address,
-                                         upstream);
+                                         upstream, event);
         if (rc < 0)
         {
             encode_rw_file_memory_resp(instanceId, command, PLDM_ERROR, 0,
@@ -140,7 +169,8 @@ Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
         address += dma::maxSize;
     }
 
-    auto rc = intf->transferDataHost(fd(), offset, length, address, upstream);
+    auto rc =
+        intf->transferDataHost(file, offset, length, address, upstream, event);
     if (rc < 0)
     {
         encode_rw_file_memory_resp(instanceId, command, PLDM_ERROR, 0,

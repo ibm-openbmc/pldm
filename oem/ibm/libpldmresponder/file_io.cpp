@@ -15,6 +15,12 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <sdeventplus/clock.hpp>
+#include <sdeventplus/event.hpp>
+#include <sdeventplus/source/io.hpp>
+#include <sdeventplus/utility/timer.hpp>
+#include <stdplus/signal.hpp>
+
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -25,6 +31,20 @@ namespace pldm
 {
 using namespace pldm::responder::utils;
 using namespace sdbusplus::xyz::openbmc_project::Common::Error;
+using namespace sdeventplus;
+using sdeventplus::Clock;
+using sdeventplus::ClockId;
+using sdeventplus::Event;
+using namespace sdeventplus::source;
+
+constexpr auto clockId = ClockId::RealTime;
+using Timer = sdeventplus::utility::Timer<clockId>;
+// using namespace sdeventplus;
+// using namespace sdeventplus::source;
+// constexpr auto clockId = sdeventplus::ClockId::RealTime;
+// using Clock = Clock<clockId>;
+// using Timer = Time<clockId>;
+using namespace std;
 
 namespace responder
 {
@@ -116,7 +136,7 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
 
     return 0;
 }
-
+/*
 int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
                           uint64_t address, bool upstream)
 {
@@ -193,10 +213,10 @@ int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
         }
         if (rc != static_cast<int>(length))
         {
-            std::cerr
-                << "transferDataHost upstream : mismatch between number of characters to read and "
-                << "the length read, LENGTH=" << length << " COUNT=" << rc
-                << "\n";
+            std::cerr << "transferDataHost upstream : mismatch between number of
+characters to read and "
+                    << "the length read, LENGTH=" << length << " COUNT=" << rc
+                    << "\n";
             return -1;
         }
         memcpy(static_cast<char*>(vgaMemPtr.get()), buffer.data(),
@@ -241,6 +261,182 @@ int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
     }
 
     return 0;
+}
+*/
+
+void DMA::interruptSignalCallBack(Signal& /*signal*/,
+                                  const struct signalfd_siginfo*)
+{
+    std::cerr << "\nKK Received SIGUR1(10) Signal interrupt\n";
+}
+int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
+                          uint64_t address, bool upstream,
+                          sdeventplus::Event& event)
+{
+    // pldm::utils::CustomFD fd(file);
+    static const size_t pageSize = getpagesize();
+    uint32_t numPages = length / pageSize;
+    uint32_t pageAlignedLength = numPages * pageSize;
+    std::cout << "KK function begin....length:" << length
+              << "pageAlignedLength: " << pageAlignedLength
+              << "pageSize:" << pageSize << "offset" << offset << "\n";
+    if (length > pageAlignedLength)
+    {
+        pageAlignedLength += pageSize;
+    }
+    int rc = 0;
+    auto mmapCleanup = [pageAlignedLength, &rc](void* vgaMem) {
+        if (rc != -EINTR)
+        {
+            munmap(vgaMem, pageAlignedLength);
+        }
+        else
+        {
+            std::cerr
+                << "KK Received interrupt during DMA transfer. Skipping Unmap"
+                << std::endl;
+        }
+    };
+    // auto event = Event::get_default();
+
+    std::cout << "KK timer callback begin....\n";
+    auto timerCb = [&](Timer&) {
+        std::cout << "KK timer callback called....responseReceived:"
+                  << responseReceived << "\n";
+        if (!responseReceived)
+        {
+            std::cout << "KK inside respose received"
+                      << "\n";
+        }
+    };
+    Timer timer(event, std::move(timerCb), std::chrono::seconds{5});
+    int dmaFd = -1;
+    dmaFd = open(xdmaDev, O_NONBLOCK | O_RDWR);
+    if (dmaFd < 0)
+    {
+        rc = -errno;
+        std::cerr << "KK transferDataHost : Failed to open the XDMA device, RC="
+                  << rc << "\n";
+        return rc;
+    }
+
+    pldm::utils::CustomFD xdmaFd(dmaFd);
+
+    void* vgaMem;
+    vgaMem = mmap(nullptr, pageAlignedLength, upstream ? PROT_WRITE : PROT_READ,
+                  MAP_SHARED, xdmaFd(), 0);
+    if (MAP_FAILED == vgaMem)
+    {
+        rc = -errno;
+        std::cerr << "KK transferDataHost : Failed to mmap the XDMA device, RC="
+                  << rc << "\n";
+        return rc;
+    }
+    auto& bus = pldm::utils::DBusHandler::getBus();
+    bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
+    auto ioCb = [=, this](IO& io, int dmaFd, uint32_t) mutable {
+        std::cout << "KK IO callback started....";
+
+        /*   if (!(revents & EPOLLIN))
+           {
+               return;
+           }*/
+        std::unique_ptr<void, decltype(mmapCleanup)> vgaMemPtr(vgaMem,
+                                                               mmapCleanup);
+        timer.setEnabled(true);
+        if (upstream)
+        {
+            rc = lseek(fd, offset, SEEK_SET);
+            if (rc == -1)
+            {
+                std::cerr
+                    << "KK transferDataHost upstream : lseek failed, ERROR="
+                    << errno << ", UPSTREAM=" << upstream
+                    << ", OFFSET=" << offset << "\n";
+                io.get_event().exit(0);
+            }
+            // Writing to the VGA memory should be aligned at page boundary,
+            // otherwise write data into a buffer aligned at page boundary
+            // and then write to the VGA memory.
+            std::vector<char> buffer{};
+            buffer.resize(pageAlignedLength);
+            rc = read(fd, buffer.data(), length);
+            std::cout << "KK total length of read from DMA:" << length
+                      << " read out of total length RC value" << rc << "\n";
+
+            if (rc == -1)
+            {
+                std::cerr
+                    << "KK transferDataHost upstream : file read failed, ERROR="
+                    << errno << ", UPSTREAM=" << upstream
+                    << ", LENGTH=" << length << ", OFFSET=" << offset
+                    << "COUNT=" << rc << "\n";
+                io.get_event().exit(0);
+            }
+            if (rc != static_cast<int>(length))
+            {
+                std::cerr
+                    << "KK transferDataHost upstream : mismatch between number of characters to read and"
+                    << "the length read, LENGTH=" << length << " RC=" << rc
+                    << "\n";
+                io.get_event().exit(0);
+            }
+            memcpy(static_cast<char*>(vgaMemPtr.get()), buffer.data(),
+                   pageAlignedLength);
+            responseReceived = true;
+        }
+
+        AspeedXdmaOp xdmaOp;
+        xdmaOp.upstream = upstream ? 1 : 0;
+        xdmaOp.hostAddr = address;
+        xdmaOp.len = length;
+        // pldm::utils::CustomFD xdmaFd(dmaFd);
+        rc = write(dmaFd, &xdmaOp, sizeof(xdmaOp));
+        std::cout << "KK total length of write0 from DMA:" << length
+                  << " read out of total length RC value" << rc << "\n";
+        if (rc < 0)
+        {
+            rc = -errno;
+            std::cerr
+                << "KK transferDataHost : Failed to execute the DMA operation, RC = "
+                << rc << " UPSTREAM=" << upstream << " ADDRESS=" << address
+                << " LENGTH=" << length << "RC=" << rc << "\n";
+            io.get_event().exit(0);
+        }
+
+        if (!upstream)
+        {
+            rc = lseek(fd, offset, SEEK_SET);
+            if (rc == -1)
+            {
+                std::cerr
+                    << "KK transferDataHost downstream : lseek failed, ERROR="
+                    << errno << ", UPSTREAM=" << upstream
+                    << ", OFFSET=" << offset << "RC=" << rc << "\n";
+                io.get_event().exit(0);
+            }
+            rc = write(fd, static_cast<const char*>(vgaMemPtr.get()), length);
+            std::cout << "KK total length of write1 from DMA:" << length
+                      << " read out of total length RC value" << rc << "\n";
+            if (rc == -1)
+            {
+                std::cerr
+                    << "KK transferDataHost downstream : file write failed,ERROR = "
+                    << errno << ", UPSTREAM=" << upstream
+                    << ", LENGTH=" << length << ", OFFSET=" << offset
+                    << "RC=" << rc << "\n";
+                io.get_event().exit(0);
+            }
+        }
+        io.set_enabled(Enabled::Off);
+        std::cout << "KK callback Ended....";
+    };
+    std::cout << "KK Adding callback to Event Loop....\n";
+    IO ioSource(event, xdmaFd(), EPOLLIN, std::move(ioCb));
+    std::cout << "KK:Completed Event loop" << std::endl;
+    rc = event.loop();
+    std::cout << "KK:RC =" << rc << "\n";
+    return rc;
 }
 
 } // namespace dma
@@ -322,7 +518,7 @@ Response Handler::readFileIntoMemory(const pldm_msg* request,
                                    PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
         return response;
     }
-
+    std::cout << "KK readFileIntoMemory trace 0 \n";
     using namespace dma;
     DMA intf;
     return transferAll<DMA>(&intf, PLDM_READ_FILE_INTO_MEMORY, value.fsPath,
@@ -337,7 +533,7 @@ Response Handler::writeFileFromMemory(const pldm_msg* request,
     uint32_t offset = 0;
     uint32_t length = 0;
     uint64_t address = 0;
-
+    std::cout << "KK writeFileFromMemory trace 0 \n";
     Response response(sizeof(pldm_msg_hdr) + PLDM_RW_FILE_MEM_RESP_BYTES, 0);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
 
@@ -348,10 +544,10 @@ Response Handler::writeFileFromMemory(const pldm_msg* request,
                                    PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
         return response;
     }
-
+    std::cout << "KK writeFileFromMemory trace 1 \n";
     decode_rw_file_memory_req(request, payloadLength, &fileHandle, &offset,
                               &length, &address);
-
+    std::cout << "KK writeFileFromMemory trace 2 \n";
     if ((length == 0) || (length % dma::minSize))
     {
         std::cerr << "Write length is not a multiple of DMA minSize, LENGTH="
@@ -361,11 +557,11 @@ Response Handler::writeFileFromMemory(const pldm_msg* request,
                                    PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
         return response;
     }
-
+    std::cout << "KK writeFileFromMemory trace 3 \n";
     using namespace pldm::filetable;
     auto& table = buildFileTable(FILE_TABLE_JSON);
     FileEntry value{};
-
+    std::cout << "KK writeFileFromMemory trace 4 \n";
     try
     {
         value = table.at(fileHandle);
@@ -379,7 +575,7 @@ Response Handler::writeFileFromMemory(const pldm_msg* request,
                                    PLDM_INVALID_FILE_HANDLE, 0, responsePtr);
         return response;
     }
-
+    std::cout << "KK writeFileFromMemory trace 5 \n";
     if (!fs::exists(value.fsPath))
     {
         std::cerr << "File does not exist, HANDLE=" << fileHandle << "\n";
@@ -388,7 +584,7 @@ Response Handler::writeFileFromMemory(const pldm_msg* request,
                                    PLDM_INVALID_FILE_HANDLE, 0, responsePtr);
         return response;
     }
-
+    std::cout << "KK writeFileFromMemory trace 6 \n";
     auto fileSize = fs::file_size(value.fsPath);
     if (offset >= fileSize)
     {
@@ -399,7 +595,7 @@ Response Handler::writeFileFromMemory(const pldm_msg* request,
                                    PLDM_DATA_OUT_OF_RANGE, 0, responsePtr);
         return response;
     }
-
+    std::cout << "KK writeFileFromMemory trace 7 \n";
     using namespace dma;
     DMA intf;
     return transferAll<DMA>(&intf, PLDM_WRITE_FILE_FROM_MEMORY, value.fsPath,
