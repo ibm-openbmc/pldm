@@ -1808,6 +1808,10 @@ void HostPDRHandler::createDbusObjects()
                 CustomDBus::getCustomDBus().implementPowerSupplyInterface(
                     entity.first);
                 break;
+            case PLDM_ENTITY_CHASSIS_FRONT_PANEL_BOARD:
+                CustomDBus::getCustomDBus().implementPanelInterface(
+                    entity.first);
+                break;
             case PLDM_ENTITY_FAN:
                 CustomDBus::getCustomDBus().implementFanInterface(entity.first);
                 break;
@@ -1828,6 +1832,9 @@ void HostPDRHandler::createDbusObjects()
                 CustomDBus::getCustomDBus().implementConnecterInterface(
                     entity.first);
                 break;
+            case PLDM_ENTITY_COOLING_DEVICE:
+            case PLDM_ENTITY_EXTERNAL_ENVIRONMENT:
+            case PLDM_ENTITY_BOARD:
             case PLDM_ENTITY_MODULE:
                 CustomDBus::getCustomDBus().implementBoard(entity.first);
                 break;

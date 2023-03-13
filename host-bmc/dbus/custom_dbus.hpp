@@ -23,6 +23,7 @@
 #include "location_code.hpp"
 #include "motherboard.hpp"
 #include "operational_status.hpp"
+#include "panel.hpp"
 #include "pcie_device.hpp"
 #include "pcie_slot.hpp"
 #include "pcie_topology.hpp"
@@ -155,6 +156,8 @@ class CustomDBus
     void implementCableInterface(const std::string& path);
 
     void implementAssetInterface(const std::string& path);
+
+    void implementPanelInterface(const std::string& path);
     /**
      * @brief Implement the xyz.openbmc_project.Object.Enable interface
      *
@@ -335,6 +338,7 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
     std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
     std::unordered_map<ObjectPath, std::unique_ptr<Link>> link;
+    std::unordered_map<ObjectPath, std::unique_ptr<Panel>> panel;
 };
 
 } // namespace dbus
