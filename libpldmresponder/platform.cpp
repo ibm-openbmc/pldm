@@ -256,10 +256,6 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
             PLDM_ENTITY_IO_MODULE,
             PLDM_ENTITY_SLOT | 0x8000,
             PLDM_ENTITY_SYS_BOARD,
-            PLDM_ENTITY_BOARD,
-            PLDM_ENTITY_CHASSIS_FRONT_PANEL_BOARD,
-            PLDM_ENTITY_COOLING_DEVICE,
-            PLDM_ENTITY_EXTERNAL_ENVIRONMENT,
             PLDM_ENTITY_SYSTEM_CHASSIS,
         };
         hostPDRHandler->deleteDbusObjects(types);

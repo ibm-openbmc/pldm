@@ -25,7 +25,7 @@ using ObjectPathMaps = std::map<ObjectPath, pldm_entity_node*>;
 
 const std::map<EntityType, EntityName> entityMaps = {
     {PLDM_ENTITY_SYSTEM_CHASSIS, "chassis"},
-    {PLDM_ENTITY_BOARD, "board"},
+    {PLDM_ENTITY_BOARD, "io_board"},
     {PLDM_ENTITY_SYS_BOARD, "motherboard"},
     {PLDM_ENTITY_POWER_SUPPLY, "powersupply"},
     {PLDM_ENTITY_PROC, "cpu"},
@@ -40,9 +40,6 @@ const std::map<EntityType, EntityName> entityMaps = {
     {PLDM_ENTITY_CONNECTOR, "connector"},
     {PLDM_ENTITY_CARD, "adapter"},
     {PLDM_ENTITY_SOCKET, "socket"},
-    {PLDM_ENTITY_EXTERNAL_ENVIRONMENT, "temp_sensor"},
-    {PLDM_ENTITY_COOLING_DEVICE, "cooling_device"},
-    {PLDM_ENTITY_CHASSIS_FRONT_PANEL_BOARD, "panel"},
     {PLDM_ENTITY_SLOT | 0x8000, "logical_slot"}};
 
 namespace hostbmc
