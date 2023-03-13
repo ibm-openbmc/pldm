@@ -6,6 +6,30 @@
             "forward_association": "assembly",
             "reverse_association": "inventory"
         },
+	{
+            "from_entity_type":45,
+            "to_entity_type":60,
+            "forward_association":"assembly",
+            "reverse_association":"inventory"
+        },
+	{
+            "from_entity_type":45,
+            "to_entity_type":69,
+            "forward_association":"assembly",
+            "reverse_association":"inventory"
+        },
+	{
+            "from_entity_type":45,
+            "to_entity_type":5,
+            "forward_association":"assembly",
+            "reverse_association":"inventory"
+        },
+	{
+            "from_entity_type":45,
+            "to_entity_type":90,
+            "forward_association":"assembly",
+            "reverse_association":"inventory"
+        },
         {
             "from_entity_type": 45,
             "to_entity_type": 93,
