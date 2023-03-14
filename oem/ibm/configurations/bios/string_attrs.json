@@ -16,7 +16,6 @@
                "property_name" : "AssetTag",
                "property_type" : "string"
             }
-<<<<<<< HEAD
       },
       {
          "attribute_name" : "vmi_hostname",
