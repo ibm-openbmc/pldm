@@ -182,7 +182,8 @@
             ],
             "default_values": ["Normal"],
             "helpText": "Specifies the current boot type for an AIX/Linux partition. Do not set this attribute directly; set pvm_rpa_boot_mode instead.",
-            "displayName": "AIX/Linux Partition Boot Mode (current)"
+            "displayName": "AIX/Linux Partition Boot Mode (current)",
+            "readOnly": true
         },
         {
             "attribute_name": "pvm_os_boot_type",
@@ -375,7 +376,8 @@
             "possible_values": ["Disabled", "Enabled"],
             "default_values": ["Enabled"],
             "helpText": "Only change this value if instructed by service provider as it might degrade system performance. Specifies if Lateral Cast Out mode is disabled or enabled. Do not set this attribute directly; set hb_lateral_cast_out_mode instead.",
-            "displayName": "Lateral Cast Out mode (current)"
+            "displayName": "Lateral Cast Out mode (current)",
+            "readOnly": true
         },
         {
             "attribute_name": "hb_proc_favor_aggressive_prefetch",
@@ -404,7 +406,8 @@
             "possible_values": ["Disabled", "Enabled"],
             "default_values": ["Disabled"],
             "helpText": "When enabled creates a new default partition after NVRAM is cleared. This is primarily for machines that are managed by hardware management console.Do not set this attribute directly; set pvm_create_default_lpar instead.",
-            "displayName": "pvm_create_default_lpar (current)"
+            "displayName": "pvm_create_default_lpar (current)",
+            "readOnly": true
         },
         {
             "attribute_name": "pvm_keep_and_clear",
@@ -451,50 +454,6 @@
             "readOnly": true
         },
         {
-            "attribute_name": "pvm_keep_and_clear",
-            "possible_values": ["Disabled", "Enabled"],
-            "default_values": ["Disabled"],
-            "helpText": "The hypervisor needs to clear most of PHYP NVRAM, but preserve the NVRAM for the manufacturing default partition",
-            "displayName": "pvm_keep_and_clear"
-        },
-        {
-            "attribute_name": "pvm_clear_nvram",
-            "possible_values": ["Disabled", "Enabled"],
-            "default_values": ["Disabled"],
-            "helpText": "Specifies if the hypervisor needs to clear PHYP NVRAM",
-            "displayName": "pvm_clear_nvram"
-        },
-        {
-            "attribute_name": "hb_lateral_cast_out_mode",
-            "possible_values": ["Disabled", "Enabled"],
-            "default_values": ["Enabled"],
-            "helpText": "Only change this value if instructed by service provider as it might degrade system performance. Specifies if Lateral Cast Out mode is disabled or enabled, requires a reboot for a change to be applied.",
-            "displayName": "Lateral Cast Out mode (pending)"
-        },
-        {
-            "attribute_name": "hb_lateral_cast_out_mode_current",
-            "possible_values": ["Disabled", "Enabled"],
-            "default_values": ["Enabled"],
-            "helpText": "Only change this value if instructed by service provider as it might degrade system performance. Specifies if Lateral Cast Out mode is disabled or enabled. Do not set this attribute directly; set hb_lateral_cast_out_mode instead.",
-            "displayName": "Lateral Cast Out mode (current)",
-            "readOnly": true
-        },
-        {
-            "attribute_name": "pvm_create_default_lpar",
-            "possible_values": ["Disabled", "Enabled"],
-            "default_values": ["Disabled"],
-            "helpText": "When enabled creates a new default partition after NVRAM is cleared. This is primarily for machines that are managed by hardware management console.",
-            "displayName": "pvm_create_default_lpar (pending)"
-        },
-        {
-            "attribute_name": "pvm_create_default_lpar_current",
-            "possible_values": ["Disabled", "Enabled"],
-            "default_values": ["Disabled"],
-            "helpText": "When enabled creates a new default partition after NVRAM is cleared. This is primarily for machines that are managed by hardware management console.Do not set this attribute directly; set pvm_create_default_lpar instead.",
-            "displayName": "pvm_create_default_lpar (current)",
-            "readOnly": true
-        },
-        {
             "attribute_name": "pvm_rpd_gard_policy",
             "possible_values": ["Enabled", "Disabled"],
             "default_values": ["Enabled"],
@@ -527,7 +486,8 @@
             "possible_values": ["Enabled", "Disabled", "Automatic"],
             "default_values": ["Automatic"],
             "helpText": "Controls whether or not the Runtime Processor Diagnostics (RPD) Feature will be configured on the system. Enabled ( The RPD feature will be configured regardless of the amount of installed memory), Automatic (The RPD feature will be configured on systems with at least 128GB of installed memory and not configured on systems with less than 128GB), Disabled (The RPD feature will not be configured).",
-            "displayName": "Runtime Processor Diagnostics Feature"
+            "displayName": "Runtime Processor Diagnostics Feature",
+            "readOnly": true
         },
         {
             "attribute_name": "hb_power_PS0_functional",
