@@ -235,7 +235,8 @@ std::string DBusHandler::getService(const char* path,
         mapper.append(path, DbusInterfaceList({}));
     }
 
-    auto mapperResponseMsg = bus.call(mapper);
+    std::chrono::microseconds timeout = std::chrono::microseconds(DBUS_TIMEOUT);
+    auto mapperResponseMsg = bus.call(mapper, timeout.count());
     mapperResponseMsg.read(mapperResponse);
     return mapperResponse.begin()->first;
 }
@@ -248,10 +249,12 @@ GetSubTreeResponse
     GetSubTreeResponse response{};
     try
     {
+        std::chrono::microseconds timeout =
+            std::chrono::microseconds(DBUS_TIMEOUT);
         auto method = bus.new_method_call(mapperBusName, mapperPath,
                                           mapperInterface, "GetSubTree");
         method.append(searchPath, depth, ifaceList);
-        auto reply = bus.call(method);
+        auto reply = bus.call(method, timeout.count());
         reply.read(response);
     }
     catch (const std::exception& e)
@@ -419,13 +422,14 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
 PropertyValue DBusHandler::getDbusPropertyVariant(
     const char* objPath, const char* dbusProp, const char* dbusInterface) const
 {
+    std::chrono::microseconds timeout = std::chrono::microseconds(DBUS_TIMEOUT);
     auto& bus = DBusHandler::getBus();
     auto service = getService(objPath, dbusInterface);
     auto method =
         bus.new_method_call(service.c_str(), objPath, dbusProperties, "Get");
     method.append(dbusInterface, dbusProp);
     PropertyValue value{};
-    auto reply = bus.call(method);
+    auto reply = bus.call(method, timeout.count());
     reply.read(value);
     return value;
 }
@@ -433,12 +437,13 @@ PropertyValue DBusHandler::getDbusPropertyVariant(
 ObjectValueTree DBusHandler::getManagedObj(const char* service,
                                            const char* rootPath)
 {
+    std::chrono::microseconds timeout = std::chrono::microseconds(DBUS_TIMEOUT);
     ObjectValueTree objects;
     auto& bus = DBusHandler::getBus();
     auto method = bus.new_method_call(service, rootPath,
                                       "org.freedesktop.DBus.ObjectManager",
                                       "GetManagedObjects");
-    auto reply = bus.call(method);
+    auto reply = bus.call(method, timeout.count());
     reply.read(objects);
     return objects;
 }
@@ -665,13 +670,15 @@ std::string getBiosAttrValue(const std::string& dbusAttrName)
     auto& bus = DBusHandler::getBus();
     try
     {
+        std::chrono::microseconds timeout =
+            std::chrono::microseconds(DBUS_TIMEOUT);
         auto service = pldm::utils::DBusHandler().getService(biosConfigPath,
                                                              biosConfigIntf);
         auto method = bus.new_method_call(
             service.c_str(), biosConfigPath,
             "xyz.openbmc_project.BIOSConfig.Manager", "GetAttribute");
         method.append(dbusAttrName);
-        auto reply = bus.call(method);
+        auto reply = bus.call(method, timeout.count());
         reply.read(var1, var2, var3);
     }
     catch (const sdbusplus::exception::SdBusError& e)
