@@ -23,7 +23,8 @@ class ProgressCodeHandler : public FileHandler
 
     int writeFromMemory(uint32_t /*offset*/, uint32_t /*length*/,
                         uint64_t /*address*/,
-                        oem_platform::Handler* /*oemPlatformHandler*/) override
+                        oem_platform::Handler* /*oemPlatformHandler*/,
+                        sdeventplus::Event& /*event*/) override
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
@@ -33,7 +34,8 @@ class ProgressCodeHandler : public FileHandler
 
     int readIntoMemory(uint32_t /*offset*/, uint32_t& /*length*/,
                        uint64_t /*address*/,
-                       oem_platform::Handler* /*oemPlatformHandler*/) override
+                       oem_platform::Handler* /*oemPlatformHandler*/,
+                       sdeventplus::Event& /*event*/) override
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }

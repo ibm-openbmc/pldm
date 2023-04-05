@@ -93,8 +93,10 @@ Entry::Level getEntryLevelFromPEL(const std::string& pelFileName)
 
 int PelHandler::readIntoMemory(uint32_t offset, uint32_t& length,
                                uint64_t address,
-                               oem_platform::Handler* /*oemPlatformHandler*/)
+                               oem_platform::Handler* /*oemPlatformHandler*/,
+                               sdeventplus::Event& event)
 {
+    std::cout << "KK readIntoMemory begin...\n";
     static constexpr auto logObjPath = "/xyz/openbmc_project/logging";
     static constexpr auto logInterface = "org.open_power.Logging.PEL";
 
@@ -110,7 +112,7 @@ int PelHandler::readIntoMemory(uint32_t offset, uint32_t& length,
         auto reply = bus.call(method);
         sdbusplus::message::unix_fd fd{};
         reply.read(fd);
-        auto rc = transferFileData(fd, true, offset, length, address);
+        auto rc = transferFileData(fd, true, offset, length, address, event);
         return rc;
     }
     catch (const std::exception& e)
@@ -119,7 +121,7 @@ int PelHandler::readIntoMemory(uint32_t offset, uint32_t& length,
                   << fileHandle << ", error = " << e.what() << "\n";
         return PLDM_ERROR;
     }
-
+    std::cout << "KK readIntoMemory end...\n";
     return PLDM_SUCCESS;
 }
 
@@ -192,8 +194,10 @@ int PelHandler::read(uint32_t offset, uint32_t& length, Response& response,
 
 int PelHandler::writeFromMemory(uint32_t offset, uint32_t length,
                                 uint64_t address,
-                                oem_platform::Handler* /*oemPlatformHandler*/)
+                                oem_platform::Handler* /*oemPlatformHandler*/,
+                                sdeventplus::Event& event)
 {
+    std::cout << "KK writeFromMemory begin...\n";
     char tmpFile[] = "/tmp/pel.XXXXXX";
     int fd = mkstemp(tmpFile);
     if (fd == -1)
@@ -205,11 +209,12 @@ int PelHandler::writeFromMemory(uint32_t offset, uint32_t length,
     close(fd);
     fs::path path(tmpFile);
 
-    auto rc = transferFileData(path, false, offset, length, address);
+    auto rc = transferFileData(path, false, offset, length, address, event);
     if (rc == PLDM_SUCCESS)
     {
         rc = storePel(path.string());
     }
+    std::cout << "KK writeFromMemory end...\n";
     return rc;
 }
 

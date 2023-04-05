@@ -14,14 +14,23 @@
 
 #include <fcntl.h>
 #include <stdint.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <function2/function2.hpp>
+#include <sdbusplus/bus.hpp>
+#include <sdbusplus/server.hpp>
+#include <sdbusplus/server/object.hpp>
+#include <sdbusplus/timer.hpp>
+#include <sdeventplus/event.hpp>
+#include <sdeventplus/source/io.hpp>
+#include <sdeventplus/source/signal.hpp>
+
 #include <filesystem>
 #include <iostream>
 #include <vector>
-
 namespace pldm
 {
 namespace responder
@@ -29,13 +38,57 @@ namespace responder
 namespace dma
 {
 
+struct CustomFDL
+{
+    CustomFDL(const CustomFDL&) = delete;
+    CustomFDL& operator=(const CustomFDL&) = delete;
+    CustomFDL(CustomFDL&&) = delete;
+    CustomFDL& operator=(CustomFDL&&) = delete;
+
+    CustomFDL(int fd) : fd(fd)
+    {}
+
+    ~CustomFDL()
+    {
+        if (fd >= 0)
+        {
+            std::cout << "KK closing socket from custom local fd:" << fd
+                      << "\n";
+            close(fd);
+        }
+    }
+
+    int operator()() const
+    {
+        return fd;
+    }
+
+  private:
+    int fd = -1;
+};
+
+struct IOPart
+{
+    uint32_t length;
+    uint32_t offset;
+    uint64_t address;
+};
+
 // The minimum data size of dma transfer in bytes
 constexpr uint32_t minSize = 16;
 
 constexpr size_t maxSize = DMA_MAXSIZE;
 
 namespace fs = std::filesystem;
-
+using namespace sdeventplus;
+using sdeventplus::Clock;
+using sdeventplus::ClockId;
+// using sdeventplus::Event;
+using sdeventplus::source::IO;
+using sdeventplus::source::Signal;
+using namespace sdeventplus::source;
+constexpr auto clockId = ClockId::RealTime;
+using Timer = sdeventplus::utility::Timer<clockId>;
 /**
  * @class DMA
  *
@@ -48,14 +101,108 @@ namespace fs = std::filesystem;
 class DMA
 {
   public:
+    DMA()
+    {
+        responseReceived = false;
+    }
+    DMA(uint32_t length)
+    {
+        std::cout << "KK DMA constructor called\n";
+        responseReceived = false;
+        m_length = length;
+        static const size_t pageSize = getpagesize();
+        uint32_t numPages = m_length / pageSize;
+        pageAlignedLength = numPages * pageSize;
+        if (m_length > pageAlignedLength)
+        {
+            pageAlignedLength += pageSize;
+        }
+    }
+
+    ~DMA()
+    {
+        std::cout << "KK DMA destructor called\n";
+        if (addr && addr != MAP_FAILED)
+        {
+            std::cout << "KK deleting memory from destructor\n";
+            munmap(addr, pageAlignedLength);
+            addr = nullptr;
+        }
+        if (xdmaFd != -1)
+        {
+            std::cout << "KK closing from destructor socket xdmaFd:" << xdmaFd;
+            close(xdmaFd);
+            xdmaFd = -1;
+        }
+        if (ioPtr != nullptr)
+        {
+            delete ioPtr;
+            ioPtr = nullptr;
+        }
+    }
+
+    int dmaFd(bool nonBlokingMode, bool Reopensocket)
+    {
+        if (Reopensocket)
+        {
+            std::cout << "KK closing existing opened socket xdmaFd:" << xdmaFd
+                      << "\n";
+            close(xdmaFd);
+            xdmaFd = -1;
+        }
+        if (xdmaFd > 0)
+        {
+            return xdmaFd;
+        }
+        if (nonBlokingMode)
+        {
+            xdmaFd = open("/dev/aspeed-xdma", O_RDWR | O_NONBLOCK);
+        }
+        else
+        {
+            xdmaFd = open("/dev/aspeed-xdma", O_RDWR);
+        }
+        std::cout << "KK opening socket xdmaFd:" << xdmaFd
+                  << " nonBlokingMode:" << nonBlokingMode << "\n";
+        if (xdmaFd < 0)
+        {
+            rc = -errno;
+        }
+        return xdmaFd;
+    }
+
+    int32_t getpageAlignedLength()
+    {
+        return pageAlignedLength;
+    }
+    void* dmaAddr()
+    {
+        std::cout << "KK allocating memory size pageAlignedLength:"
+                  << pageAlignedLength << "\n";
+        addr = mmap(nullptr, pageAlignedLength, PROT_WRITE | PROT_READ,
+                    MAP_SHARED, xdmaFd, 0);
+        if (MAP_FAILED == addr)
+        {
+            rc = -errno;
+            return MAP_FAILED;
+        }
+        return addr;
+    }
+
+    int error()
+    {
+        return rc;
+    }
+
     /** @brief API to transfer data between BMC and host using DMA
      *
-     * @param[in] path     - pathname of the file to transfer data from or to
+     * @param[in] path     - pathname of the file to transfer data from or
+     * to
      * @param[in] offset   - offset in the file
      * @param[in] length   - length of the data to transfer
      * @param[in] address  - DMA address on the host
-     * @param[in] upstream - indicates direction of the transfer; true indicates
-     *                       transfer to the host
+     * @param[in] upstream - indicates direction of the transfer; true
+     * indicates transfer to the host
      *
      * @return returns 0 on success, negative errno on failure
      */
@@ -64,13 +211,23 @@ class DMA
 
     /** @brief API to transfer data on to unix socket from host using DMA
      *
-     * @param[in] path     - pathname of the file to transfer data from or to
+     * @param[in] path     - pathname of the file to transfer data from or
+     * to
      * @param[in] length   - length of the data to transfer
      * @param[in] address  - DMA address on the host
      *
      * @return returns 0 on success, negative errno on failure
      */
     int transferHostDataToSocket(int fd, uint32_t length, uint64_t address);
+    IO* ioPtr = nullptr;
+    bool responseReceived = false;
+
+  private:
+    int xdmaFd = -1;
+    void* addr = nullptr;
+    int rc = 0;
+    uint32_t pageAlignedLength = 0;
+    uint32_t m_length;
 };
 
 /** @brief Transfer the data between BMC and host using DMA.
@@ -92,8 +249,8 @@ class DMA
  * @return PLDM response message
  */
 
-template <class DMAInterface>
-Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
+// template <class DMAInterface>
+/*Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
                      uint32_t offset, uint32_t length, uint64_t address,
                      bool upstream, uint8_t instanceId)
 {
@@ -151,6 +308,128 @@ Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
     encode_rw_file_memory_resp(instanceId, command, PLDM_SUCCESS, origLength,
                                responsePtr);
     return response;
+}*/
+template <class DMAInterface>
+Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
+                     uint32_t offset, uint32_t length, uint64_t address,
+                     bool upstream, uint8_t instanceId,
+                     sdeventplus::Event& event)
+{
+    Response response(sizeof(pldm_msg_hdr) + command, 0);
+    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    std::cout << "KK transferAll calling...\n";
+    int flags{};
+    if (upstream)
+    {
+        flags = O_RDONLY;
+    }
+    else if (fs::exists(path))
+    {
+        flags = O_RDWR;
+    }
+    else
+    {
+        flags = O_WRONLY;
+    }
+    std::cout << "KK transferAll trace 0 \n";
+    static int file = open(path.string().c_str(), O_NONBLOCK | flags);
+    if (file == -1)
+    {
+        std::cerr << "File does not exist, path = " << path.string() << "\n";
+        encode_rw_file_memory_resp(instanceId, command, PLDM_ERROR, 0,
+                                   responsePtr);
+        return response;
+    }
+    std::cout << "KK transferAll trace 1 \n";
+    static CustomFDL fd(file); // = new CustomFDL(file);
+    uint32_t origLength = length;
+    static auto& bus = pldm::utils::DBusHandler::getBus();
+    bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
+    static IOPart part;
+    part.length = length;
+    part.offset = offset;
+    part.address = address;
+    std::cout << "KK t0 part.length:" << part.length
+              << " part.offset:" << part.offset
+              << " part.address:" << part.address
+              << " origLength:" << origLength
+              << " dma::maxSize:" << dma::maxSize << "\n ";
+
+    auto timerCb = [&](dma::Timer&) {
+        std::cout
+            << "KK timer callback called....xdmaInterface.responseReceived:"
+            << intf->responseReceived << "\n";
+        if (!intf->responseReceived)
+        {
+            std::cout << "KK inside respose received"
+                      << "\n";
+        }
+    };
+    dma::Timer timer(event, std::move(timerCb), std::chrono::seconds{5});
+
+    int xdmaFd = intf->dmaFd(true, true);
+    auto callback = [=](IO& io, int xdmaFd, uint32_t revents) {
+        if (!(revents & (EPOLLIN)))
+        {
+            return;
+        }
+        std::cout << "KK t1 part.length:" << part.length
+                  << " part.offset:" << part.offset
+                  << " part.address:" << part.address
+                  << " dma::maxSize:" << dma::maxSize << " revents:" << revents
+                  << " EPOLLIN:" << EPOLLIN << "\n ";
+        io.set_fd(xdmaFd);
+        while (part.length > dma::maxSize)
+        {
+            auto rc = intf->transferDataHost(fd(), part.offset, dma::maxSize,
+                                             part.address, upstream);
+
+            std::cout << "KK t2 part.length:" << part.length
+                      << " part.offset:" << part.offset
+                      << " part.address:" << part.address
+                      << " dma::maxSize:" << dma::maxSize << "\n";
+            part.length -= dma::maxSize;
+            part.offset += dma::maxSize;
+            part.address += dma::maxSize;
+            std::cout << "KK t3 part.length:" << part.length
+                      << " part.offset:" << part.offset
+                      << " part.address:" << part.address
+                      << " dma::maxSize:" << dma::maxSize << " rc:" << rc
+                      << "\n";
+            if (rc < 0)
+            {
+                encode_rw_file_memory_resp(instanceId, command, PLDM_ERROR, 0,
+                                           responsePtr);
+                // bus.detach_event();
+                return;
+            }
+        }
+        auto rc = intf->transferDataHost(fd(), part.offset, part.length,
+                                         part.address, upstream);
+        std::cout << "KK t4 part.length:" << part.length
+                  << " part.offset:" << part.offset
+                  << " part.address:" << part.address << " rc:" << rc << "\n";
+        if (rc < 0)
+        {
+            encode_rw_file_memory_resp(instanceId, command, PLDM_ERROR, 0,
+                                       responsePtr);
+            // bus.detach_event();
+            return;
+        }
+        intf->responseReceived = true;
+        encode_rw_file_memory_resp(instanceId, command, PLDM_SUCCESS,
+                                   origLength, responsePtr);
+        // bus.detach_event();
+        return;
+    };
+    static IO io(event, xdmaFd, EPOLLIN, std::move(callback));
+
+    encode_rw_file_memory_resp(instanceId, command, PLDM_SUCCESS, 0,
+                               responsePtr);
+    std::cout << "KK returning from transferAll end"
+              << "\n";
+
+    return response;
 }
 
 } // namespace dma
@@ -174,7 +453,8 @@ class Handler : public CmdHandler
             pldm::requester::Handler<pldm::requester::Request>* handler) :
         oemPlatformHandler(oemPlatformHandler),
         hostSockFd(hostSockFd), hostEid(hostEid),
-        dbusImplReqester(dbusImplReqester), handler(handler)
+        dbusImplReqester(dbusImplReqester), handler(handler),
+        event(sdeventplus::Event::get_default())
     {
         handlers.emplace(PLDM_READ_FILE_INTO_MEMORY,
                          [this](const pldm_msg* request, size_t payloadLength) {
@@ -502,6 +782,7 @@ class Handler : public CmdHandler
     pldm::requester::Handler<pldm::requester::Request>* handler;
     std::vector<std::unique_ptr<pldm::requester::oem_ibm::DbusToFileHandler>>
         dbusToFileHandlers;
+    sdeventplus::Event event;
 };
 
 } // namespace oem_ibm

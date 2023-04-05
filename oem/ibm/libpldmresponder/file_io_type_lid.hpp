@@ -115,8 +115,10 @@ class LidHandler : public FileHandler
 
     virtual int writeFromMemory(uint32_t offset, uint32_t length,
                                 uint64_t address,
-                                oem_platform::Handler* oemPlatformHandler)
+                                oem_platform::Handler* oemPlatformHandler,
+                                sdeventplus::Event& event)
     {
+        std::cout << "KK writeFromMemory begin...\n";
         int rc = PLDM_SUCCESS;
         bool codeUpdateInProgress = false;
         if (oemPlatformHandler != nullptr)
@@ -154,7 +156,7 @@ class LidHandler : public FileHandler
         }
         close(fd);
 
-        rc = transferFileData(lidPath, false, offset, length, address);
+        rc = transferFileData(lidPath, false, offset, length, address, event);
         if (rc != PLDM_SUCCESS)
         {
             std::cerr << "writeFileFromMemory failed with rc= " << rc << " \n";
@@ -182,16 +184,21 @@ class LidHandler : public FileHandler
         {
             rc = processCodeUpdateLid(lidPath);
         }
+        std::cout << "KK writeFromMemory end...\n";
         return rc;
     }
 
     virtual int readIntoMemory(uint32_t offset, uint32_t& length,
                                uint64_t address,
-                               oem_platform::Handler* oemPlatformHandler)
+                               oem_platform::Handler* oemPlatformHandler,
+                               sdeventplus::Event& event)
     {
+        std::cout << "KK readIntoMemory begin...\n";
         if (constructLIDPath(oemPlatformHandler))
         {
-            return transferFileData(lidPath, true, offset, length, address);
+            std::cout << "KK readIntoMemory end...\n";
+            return transferFileData(lidPath, true, offset, length, address,
+                                    event);
         }
         return PLDM_ERROR;
     }

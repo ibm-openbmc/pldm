@@ -9,7 +9,34 @@ namespace responder
 {
 
 namespace fs = std::filesystem;
+struct CustomFDL
+{
+    CustomFDL(const CustomFDL&) = delete;
+    CustomFDL& operator=(const CustomFDL&) = delete;
+    CustomFDL(CustomFDL&&) = delete;
+    CustomFDL& operator=(CustomFDL&&) = delete;
 
+    CustomFDL(int fd) : fd(fd)
+    {}
+
+    ~CustomFDL()
+    {
+        if (fd >= 0)
+        {
+            // std::cout << "KK closing socket from custom local fd:" << fd
+            //         << "\n";
+            // close(fd);
+        }
+    }
+
+    int operator()() const
+    {
+        return fd;
+    }
+
+  private:
+    int fd = -1;
+};
 /**
  *  @class FileHandler
  *
@@ -30,7 +57,8 @@ class FileHandler
      */
     virtual int writeFromMemory(uint32_t offset, uint32_t length,
                                 uint64_t address,
-                                oem_platform::Handler* oemPlatformHandler) = 0;
+                                oem_platform::Handler* oemPlatformHandler,
+                                sdeventplus::Event& event) = 0;
 
     /** @brief Method to read an oem file type into host memory. Individual
      *  file types need to override this method to do the file specific
@@ -44,7 +72,8 @@ class FileHandler
      */
     virtual int readIntoMemory(uint32_t offset, uint32_t& length,
                                uint64_t address,
-                               oem_platform::Handler* oemPlatformHandler) = 0;
+                               oem_platform::Handler* oemPlatformHandler,
+                               sdeventplus::Event& event) = 0;
 
     /** @brief Method to read an oem file type's content into the PLDM response.
      *  @param[in] offset - offset to read
@@ -137,13 +166,15 @@ class FileHandler
      */
     virtual int transferFileData(const fs::path& path, bool upstream,
                                  uint32_t offset, uint32_t& length,
-                                 uint64_t address);
+                                 uint64_t address, sdeventplus::Event& event);
 
-    virtual int transferFileData(int fd, bool upstream, uint32_t offset,
-                                 uint32_t& length, uint64_t address);
+    virtual int transferFileData(int32_t fd, bool upstream, uint32_t offset,
+                                 uint32_t& length, uint64_t address,
+                                 sdeventplus::Event& event);
 
-    virtual int transferFileDataToSocket(int fd, uint32_t& length,
-                                         uint64_t address);
+    virtual int transferFileDataToSocket(int32_t fd, uint32_t& length,
+                                         uint64_t address,
+                                         sdeventplus::Event& event);
 
     /** @brief Constructor to create a FileHandler object
      */

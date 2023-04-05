@@ -24,8 +24,11 @@ CertMap CertHandler::certMap;
 
 int CertHandler::writeFromMemory(uint32_t offset, uint32_t length,
                                  uint64_t address,
-                                 oem_platform::Handler* /*oemPlatformHandler*/)
+                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                 sdeventplus::Event& event)
 {
+    std::cout << "KK cert writeFromMemory calling certType:" << certType
+              << "\n ";
     auto it = certMap.find(certType);
     if (it == certMap.end())
     {
@@ -36,7 +39,7 @@ int CertHandler::writeFromMemory(uint32_t offset, uint32_t length,
 
     auto fd = std::get<0>(it->second);
     auto& remSize = std::get<1>(it->second);
-    auto rc = transferFileData(fd, false, offset, length, address);
+    auto rc = transferFileData(fd, false, offset, length, address, event);
     if (rc == PLDM_SUCCESS)
     {
         remSize -= length;
@@ -46,25 +49,31 @@ int CertHandler::writeFromMemory(uint32_t offset, uint32_t length,
             certMap.erase(it);
         }
     }
+    std::cout << "KK cert writeFromMemory exiting RC:" << rc << "\n";
     return rc;
 }
 
 int CertHandler::readIntoMemory(uint32_t offset, uint32_t& length,
                                 uint64_t address,
-                                oem_platform::Handler* /*oemPlatformHandler*/)
+                                oem_platform::Handler* /*oemPlatformHandler*/,
+                                sdeventplus::Event& event)
 {
+    std::cout << "KK cert readIntoMemory begin...\n";
     std::string filePath = certFilePath;
     filePath += "CSR_" + std::to_string(fileHandle);
     if (certType != PLDM_FILE_TYPE_CERT_SIGNING_REQUEST)
     {
         return PLDM_ERROR_INVALID_DATA;
     }
-    auto rc = transferFileData(filePath.c_str(), true, offset, length, address);
+
+    auto rc = transferFileData(filePath.c_str(), true, offset, length, address,
+                               event);
     fs::remove(filePath);
     if (rc)
     {
         return PLDM_ERROR;
     }
+    std::cout << "KK cert readIntoMemory end...RC:" << rc << "\n";
     return PLDM_SUCCESS;
 }
 
@@ -72,7 +81,7 @@ int CertHandler::read(uint32_t offset, uint32_t& length, Response& response,
                       oem_platform::Handler* /*oemPlatformHandler*/)
 {
     std::cout
-        << "CertHandler::read:Read file response for Sign CSR, file handle: "
+        << "KK CertHandler::read:Read file response for Sign CSR, file handle: "
         << fileHandle << std::endl;
     std::string filePath = certFilePath;
     filePath += "CSR_" + std::to_string(fileHandle);
@@ -80,18 +89,21 @@ int CertHandler::read(uint32_t offset, uint32_t& length, Response& response,
     {
         return PLDM_ERROR_INVALID_DATA;
     }
+    std::cout << "KK cert read begin...\n";
     auto rc = readFile(filePath.c_str(), offset, length, response);
     fs::remove(filePath);
     if (rc)
     {
         return PLDM_ERROR;
     }
+    std::cout << "KK cert read end...rc:" << rc << "\n";
     return PLDM_SUCCESS;
 }
 
 int CertHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
                        oem_platform::Handler* /*oemPlatformHandler*/)
 {
+    std::cout << "KK cert write begin...\n";
     auto it = certMap.find(certType);
     if (it == certMap.end())
     {
@@ -108,6 +120,8 @@ int CertHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
                   << ", OFFSET=" << offset << "\n";
         return PLDM_ERROR;
     }
+    std::cout << "KK cert write data fd" << fd << " buffer" << buffer
+              << " length" << length << "\n";
     rc = ::write(fd, buffer, length);
     if (rc == -1)
     {
@@ -123,7 +137,8 @@ int CertHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
         close(fd);
         certMap.erase(it);
     }
-
+    std::cout << "KK cert write data certType:" << certType
+              << " remSize:" << remSize << "\n";
     if (certType == PLDM_FILE_TYPE_SIGNED_CERT)
     {
         constexpr auto certObjPath = "/xyz/openbmc_project/certs/ca/entry/";
@@ -208,6 +223,8 @@ int CertHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
 
 int CertHandler::newFileAvailable(uint64_t length)
 {
+    std::cout << "KK newFileAvailable certFilePath:" << certFilePath
+              << "certType:" << certType << "\n";
     fs::create_directories(certFilePath);
     fs::permissions(certFilePath,
                     fs::perms::others_read | fs::perms::owner_write);
@@ -250,6 +267,8 @@ int CertHandler::newFileAvailableWithMetaData(uint64_t length,
                                               uint32_t /*metaDataValue3*/,
                                               uint32_t /*metaDataValue4*/)
 {
+    std::cout << "KK newFileAvailableWithMetaData certFilePath:" << certFilePath
+              << "certType:" << certType << "\n";
     uint8_t certSigningStatus = (uint8_t)metaDataValue1;
     fs::create_directories(certFilePath);
     fs::permissions(certFilePath,
@@ -318,6 +337,9 @@ int CertHandler::fileAckWithMetaData(uint8_t fileStatus,
                                      uint32_t /*metaDataValue3*/,
                                      uint32_t /*metaDataValue4*/)
 {
+    std::cout << "KK fileAckWithMetaData certObjPath:"
+              << certObjPath + std::to_string(fileHandle)
+              << "certType:" << certType << "\n";
     if (certType == PLDM_FILE_TYPE_CERT_SIGNING_REQUEST)
     {
         DBusMapping dbusMapping{certObjPath + std::to_string(fileHandle),
