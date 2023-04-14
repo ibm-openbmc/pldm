@@ -258,7 +258,8 @@ std::string DumpHandler::getOffloadUri(uint32_t fileHandle)
 
 int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
                                  oem_platform::Handler* /*oemPlatformHandler*/,
-                                 sdeventplus::Event& event)
+                                 ResponseHdr& /*responseHdr*/,
+                                 sdeventplus::Event& /*event*/)
 {
     if (DumpHandler::fd == -1)
     {
@@ -277,8 +278,7 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
         }
 
         DumpHandler::fd = sock;
-        auto rc =
-            transferFileDataToSocket(DumpHandler::fd, length, address, event);
+        auto rc = transferFileDataToSocket(DumpHandler::fd, length, address);
         if (rc < 0)
         {
             std::cerr
@@ -316,7 +316,7 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
         return PLDM_ERROR_NOT_READY;
     }
 
-    auto rc = transferFileDataToSocket(DumpHandler::fd, length, address, event);
+    auto rc = transferFileDataToSocket(DumpHandler::fd, length, address);
     if (rc < 0)
     {
         std::cerr
@@ -508,6 +508,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
 int DumpHandler::readIntoMemory(uint32_t offset, uint32_t& length,
                                 uint64_t address,
                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                ResponseHdr& responseHdr,
                                 sdeventplus::Event& event)
 {
     auto path = findDumpObjPath(fileHandle);
@@ -525,9 +526,9 @@ int DumpHandler::readIntoMemory(uint32_t offset, uint32_t& length,
             auto filePath =
                 pldm::utils::DBusHandler().getDbusProperty<std::string>(
                     path.c_str(), "Path", dumpFilepathInterface);
-            auto rc = transferFileData(fs::path(filePath), true, offset, length,
-                                       address, event);
-            return rc;
+            transferFileData(fs::path(filePath), true, offset, length, address,
+                             responseHdr, event);
+            return -1;
         }
         catch (const sdbusplus::exception_t& e)
         {
@@ -540,8 +541,9 @@ int DumpHandler::readIntoMemory(uint32_t offset, uint32_t& length,
             return PLDM_ERROR;
         }
     }
-    return transferFileData(resDumpRequestDirPath, true, offset, length,
-                            address, event);
+    transferFileData(resDumpRequestDirPath, true, offset, length, address,
+                     responseHdr, event);
+    return -1;
 }
 
 int DumpHandler::read(uint32_t offset, uint32_t& length, Response& response,

@@ -116,9 +116,9 @@ class LidHandler : public FileHandler
     virtual int writeFromMemory(uint32_t offset, uint32_t length,
                                 uint64_t address,
                                 oem_platform::Handler* oemPlatformHandler,
+                                ResponseHdr& responseHdr,
                                 sdeventplus::Event& event)
     {
-        std::cout << "KK writeFromMemory begin...\n";
         int rc = PLDM_SUCCESS;
         bool codeUpdateInProgress = false;
         if (oemPlatformHandler != nullptr)
@@ -156,11 +156,12 @@ class LidHandler : public FileHandler
         }
         close(fd);
 
-        rc = transferFileData(lidPath, false, offset, length, address, event);
+        rc = transferFileData(lidPath, false, offset, length, address,
+                              responseHdr, event);
         if (rc != PLDM_SUCCESS)
         {
             std::cerr << "writeFileFromMemory failed with rc= " << rc << " \n";
-            return rc;
+            return -1;
         }
         if (lidType == PLDM_FILE_TYPE_LID_MARKER)
         {
@@ -184,23 +185,22 @@ class LidHandler : public FileHandler
         {
             rc = processCodeUpdateLid(lidPath);
         }
-        std::cout << "KK writeFromMemory end...\n";
-        return rc;
+        return -1;
     }
 
     virtual int readIntoMemory(uint32_t offset, uint32_t& length,
                                uint64_t address,
                                oem_platform::Handler* oemPlatformHandler,
+                               ResponseHdr& responseHdr,
                                sdeventplus::Event& event)
     {
-        std::cout << "KK readIntoMemory begin...\n";
         if (constructLIDPath(oemPlatformHandler))
         {
-            std::cout << "KK readIntoMemory end...\n";
-            return transferFileData(lidPath, true, offset, length, address,
-                                    event);
+            transferFileData(lidPath, true, offset, length, address,
+                             responseHdr, event);
+            return -1;
         }
-        return PLDM_ERROR;
+        return -1;
     }
 
     virtual int write(const char* buffer, uint32_t offset, uint32_t& length,

@@ -30,7 +30,6 @@ int LicenseHandler::updateBinFileAndLicObjs(const fs::path& newLicJsonFilePath)
     int rc = PLDM_SUCCESS;
     fs::path newLicFilePath(fs::path(licFilePath) / newLicenseFile);
     std::ifstream jsonFileNew(newLicJsonFilePath);
-    std::cout << "KK parshing file is:" << newLicJsonFilePath << "\n";
     auto dataNew = Json::parse(jsonFileNew, nullptr, false);
     if (dataNew.is_discarded())
     {
@@ -55,9 +54,9 @@ int LicenseHandler::updateBinFileAndLicObjs(const fs::path& newLicJsonFilePath)
 
 int LicenseHandler::writeFromMemory(
     uint32_t offset, uint32_t length, uint64_t address,
-    oem_platform::Handler* /*oemPlatformHandler*/, sdeventplus::Event& event)
+    oem_platform::Handler* /*oemPlatformHandler*/, ResponseHdr& responseHdr,
+    sdeventplus::Event& event)
 {
-    std::cout << "KK LicenseHandler starting\n";
     namespace fs = std::filesystem;
     if (!fs::exists(licFilePath))
     {
@@ -76,15 +75,12 @@ int LicenseHandler::writeFromMemory(
     }
 
     auto rc = transferFileData(newLicJsonFilePath, false, offset, length,
-                               address, event);
+                               address, responseHdr, event);
     if (rc != PLDM_SUCCESS)
     {
         std::cerr << "transferFileData failed with rc= " << rc << " \n";
-        return rc;
+        return -1;
     }
-    std::cout << "KK calling json parsing from writeFromMemory length:"
-              << length << " licLength:" << licLength
-              << " newLicJsonFilePath:" << newLicJsonFilePath << "\n";
     if (length == licLength)
     {
         rc = updateBinFileAndLicObjs(newLicJsonFilePath);
@@ -92,11 +88,10 @@ int LicenseHandler::writeFromMemory(
         {
             std::cerr << "updateBinFileAndLicObjs failed with rc= " << rc
                       << " \n";
-            return rc;
+            return -1;
         }
     }
-    std::cout << "KK LicenseHandler exiting\n";
-    return PLDM_SUCCESS;
+    return -1;
 }
 
 int LicenseHandler::write(const char* buffer, uint32_t /*offset*/,
@@ -120,7 +115,6 @@ int LicenseHandler::write(const char* buffer, uint32_t /*offset*/,
         licJsonFile.write(buffer, length);
     }
     licJsonFile.close();
-    std::cout << "KK calling json parsing from write\n";
     updateBinFileAndLicObjs(newLicJsonFilePath);
     if (rc != PLDM_SUCCESS)
     {
