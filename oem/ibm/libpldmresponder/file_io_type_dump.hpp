@@ -24,11 +24,13 @@ class DumpHandler : public FileHandler
     virtual int writeFromMemory(uint32_t offset, uint32_t length,
                                 uint64_t address,
                                 oem_platform::Handler* /*oemPlatformHandler*/,
-                                sdeventplus::Event& event);
+                                ResponseHdr& /*responseHdr*/,
+                                sdeventplus::Event& /*event*/);
 
     virtual int readIntoMemory(uint32_t offset, uint32_t& length,
                                uint64_t address,
-                               oem_platform::Handler* /*oemPlatformHandler*/,
+                               oem_platform::Handler* oemPlatformHandler,
+                               ResponseHdr& responseHdr,
                                sdeventplus::Event& event);
 
     virtual int read(uint32_t offset, uint32_t& length, Response& response,

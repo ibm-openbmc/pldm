@@ -26,11 +26,13 @@ class LicenseHandler : public FileHandler
     virtual int writeFromMemory(uint32_t offset, uint32_t length,
                                 uint64_t address,
                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                ResponseHdr& responseHdr,
                                 sdeventplus::Event& event);
 
     virtual int readIntoMemory(uint32_t /*offset*/, uint32_t& /*length*/,
                                uint64_t /*address*/,
                                oem_platform::Handler* /*oemPlatformHandler*/,
+                               ResponseHdr& /*responseHdr*/,
                                sdeventplus::Event& /*event*/)
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;

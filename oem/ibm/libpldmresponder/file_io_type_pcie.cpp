@@ -52,7 +52,8 @@ PCIeInfoHandler::PCIeInfoHandler(uint32_t fileHandle, uint16_t fileType) :
 }
 int PCIeInfoHandler::writeFromMemory(
     uint32_t offset, uint32_t length, uint64_t address,
-    oem_platform::Handler* /*oemPlatformHandler*/, sdeventplus::Event& event)
+    oem_platform::Handler* /*oemPlatformHandler*/, ResponseHdr& responseHdr,
+    sdeventplus::Event& event)
 {
     if (!fs::exists(pciePath))
     {
@@ -74,14 +75,15 @@ int PCIeInfoHandler::writeFromMemory(
         return PLDM_ERROR;
     }
 
-    auto rc = transferFileData(infoFile, false, offset, length, address, event);
+    auto rc = transferFileData(infoFile, false, offset, length, address,
+                               responseHdr, event);
     if (rc != PLDM_SUCCESS)
     {
         std::cerr << "transferFileData failed with rc= " << rc << " \n";
-        return rc;
+        return -1;
     }
 
-    return PLDM_SUCCESS;
+    return -1;
 }
 
 int PCIeInfoHandler::write(const char* buffer, uint32_t, uint32_t& length,
@@ -1073,7 +1075,7 @@ int PCIeInfoHandler::newFileAvailable(uint64_t)
 
 int PCIeInfoHandler::readIntoMemory(
     uint32_t, uint32_t&, uint64_t,
-    oem_platform::Handler* /*oemPlatformHandler*/,
+    oem_platform::Handler* /*oemPlatformHandler*/, ResponseHdr& /*responseHdr*/,
     sdeventplus::Event& /*event*/)
 {
     return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
