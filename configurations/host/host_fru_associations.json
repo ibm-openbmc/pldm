@@ -33,8 +33,8 @@
         {
             "from_entity_type": 45,
             "to_entity_type": 93,
-            "forward_association": "all_sensors",
-            "reverse_association": "chassis"
+            "forward_association": "cooled_by",
+            "reverse_association": "cooling"
         },
         {
             "from_entity_type": 45,
@@ -57,8 +57,8 @@
         {
             "from_entity_type": 120,
             "to_entity_type": 45,
-            "forward_association": "chassis",
-            "reverse_association": "inventory"
+            "forward_association": "powering",
+            "reverse_association": "powered_by"
         },
         {
             "from_entity_type": 186,

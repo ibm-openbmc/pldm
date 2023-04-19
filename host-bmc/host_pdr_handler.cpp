@@ -35,6 +35,8 @@ using Json = nlohmann::json;
 namespace fs = std::filesystem;
 using namespace pldm::dbus;
 constexpr auto fruJson = "host_frus.json";
+constexpr auto ledFwdAssociation = "identifying";
+constexpr auto ledReverseAssociation = "identified_by";
 const Json emptyJson{};
 const std::vector<Json> emptyJsonList{};
 
@@ -1557,8 +1559,8 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
                     state == PLDM_STATE_SET_IDENTIFY_STATE_ASSERTED,
                     hostEffecterParser, mctpEid);
                 std::vector<std::tuple<std::string, std::string, std::string>>
-                    associations{{"identify_led_group",
-                                  "identify_inventory_object", ledGroupPath}};
+                    associations{{ledFwdAssociation, ledReverseAssociation,
+                                  ledGroupPath}};
                 CustomDBus::getCustomDBus().setAssociations(path, associations);
             }
         }
