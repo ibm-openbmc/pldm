@@ -8,6 +8,7 @@
 #include "dbus_impl_requester.hpp"
 #include "fw-update/manager.hpp"
 #include "host-bmc/dbus/deserialize.hpp"
+#include "instance_id.hpp"
 #include "invoker.hpp"
 #include "requester/handler.hpp"
 #include "requester/mctp_endpoint_discovery.hpp"
@@ -207,7 +208,10 @@ int main(int argc, char** argv)
         bus, "/xyz/openbmc_project/license");
     sdbusplus::server::manager::manager ledManager(
         bus, "/xyz/openbmc_project/led/groups");
-    dbus_api::Requester dbusImplReq(bus, "/xyz/openbmc_project/pldm");
+
+    InstanceIdDb instanceIdDb;
+    dbus_api::Requester dbusImplReq(bus, "/xyz/openbmc_project/pldm",
+                                    instanceIdDb);
 
     Invoker invoker{};
     requester::Handler<requester::Request> reqHandler(
