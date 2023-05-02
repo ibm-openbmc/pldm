@@ -26,7 +26,6 @@ namespace bios
 {
 namespace
 {
-
 using BIOSConfigManager =
     sdbusplus::xyz::openbmc_project::BIOSConfig::server::Manager;
 
@@ -645,6 +644,96 @@ void BIOSConfig::load(const fs::path& filePath, ParseHandler handler)
     }
 }
 
+std::string BIOSConfig::decodeStringFromStringEntry(
+    const pldm_bios_string_table_entry* stringEntry)
+{
+    auto strLength =
+        pldm_bios_table_string_entry_decode_string_length(stringEntry);
+    std::vector<char> buffer(strLength + 1 /* sizeof '\0' */);
+    pldm_bios_table_string_entry_decode_string(stringEntry, buffer.data(),
+                                               buffer.size());
+    return std::string(buffer.data(), buffer.data() + strLength);
+}
+
+std::string
+    BIOSConfig::displayStringHandle(uint16_t handle, uint8_t index,
+                                    const std::optional<Table>& attrTable,
+                                    const std::optional<Table>& stringTable)
+{
+    auto attrEntry = pldm_bios_table_attr_find_by_handle(
+        attrTable->data(), attrTable->size(), handle);
+    auto pvNum = pldm_bios_table_attr_entry_enum_decode_pv_num(attrEntry);
+    std::vector<uint16_t> pvHandls(pvNum);
+    pldm_bios_table_attr_entry_enum_decode_pv_hdls(attrEntry, pvHandls.data(),
+                                                   pvHandls.size());
+
+    std::string displayString = std::to_string(pvHandls[index]);
+
+    auto stringEntry = pldm_bios_table_string_find_by_handle(
+        stringTable->data(), stringTable->size(), pvHandls[index]);
+
+    auto decodedStr = decodeStringFromStringEntry(stringEntry);
+
+    return decodedStr + "(" + displayString + ")";
+}
+
+void BIOSConfig::traceBIOSUpdate(
+    const pldm_bios_attr_val_table_entry* attrValueEntry,
+    const pldm_bios_attr_table_entry* attrEntry, bool isBMC)
+{
+    auto stringTable = getBIOSTable(PLDM_BIOS_STRING_TABLE);
+    auto attrTable = getBIOSTable(PLDM_BIOS_ATTR_TABLE);
+
+    auto [attrHandle, attrType] =
+        table::attribute_value::decodeHeader(attrValueEntry);
+
+    auto attrHeader = table::attribute::decodeHeader(attrEntry);
+    BIOSStringTable biosStringTable(*stringTable);
+    auto attrName = biosStringTable.findString(attrHeader.stringHandle);
+
+    switch (attrType)
+    {
+        case PLDM_BIOS_ENUMERATION:
+        case PLDM_BIOS_ENUMERATION_READ_ONLY:
+        {
+            auto count = pldm_bios_table_attr_value_entry_enum_decode_number(
+                attrValueEntry);
+            std::vector<uint8_t> handles(count);
+            pldm_bios_table_attr_value_entry_enum_decode_handles(
+                attrValueEntry, handles.data(), handles.size());
+
+            for (uint8_t handle : handles)
+            {
+                std::cout << "BIOS:" << attrName << ", updated to value: "
+                          << displayStringHandle(attrHandle, handle, attrTable,
+                                                 stringTable)
+                          << ", by BMC: " << std::boolalpha << isBMC << "\n";
+            }
+            break;
+        }
+        case PLDM_BIOS_INTEGER:
+        case PLDM_BIOS_INTEGER_READ_ONLY:
+        {
+            auto value =
+                table::attribute_value::decodeIntegerEntry(attrValueEntry);
+            std::cout << "BIOS:" << attrName << ", updated to value: " << value
+                      << ", by BMC:" << std::boolalpha << isBMC << std::endl;
+            break;
+        }
+        case PLDM_BIOS_STRING:
+        case PLDM_BIOS_STRING_READ_ONLY:
+        {
+            auto value =
+                table::attribute_value::decodeStringEntry(attrValueEntry);
+            std::cout << "BIOS:" << attrName << " updated to value: " << value
+                      << ", by BMC:" << std::boolalpha << isBMC << std::endl;
+            break;
+        }
+        default:
+            break;
+    };
+}
+
 int BIOSConfig::checkAttrValueToUpdate(
     const pldm_bios_attr_val_table_entry* attrValueEntry,
     const pldm_bios_attr_table_entry* attrEntry, Table&)
@@ -672,7 +761,6 @@ int BIOSConfig::checkAttrValueToUpdate(
                           << std::endl;
                 return PLDM_ERROR_INVALID_DATA;
             }
-
             return PLDM_SUCCESS;
         }
         case PLDM_BIOS_INTEGER:
@@ -713,8 +801,8 @@ int BIOSConfig::checkAttrValueToUpdate(
     };
 }
 
-int BIOSConfig::setAttrValue(const void* entry, size_t size, bool updateDBus,
-                             bool updateBaseBIOSTable)
+int BIOSConfig::setAttrValue(const void* entry, size_t size, bool isBMC,
+                             bool updateDBus, bool updateBaseBIOSTable)
 {
     auto attrValueTable = getBIOSTable(PLDM_BIOS_ATTR_VAL_TABLE);
     auto attrTable = getBIOSTable(PLDM_BIOS_ATTR_TABLE);
@@ -756,7 +844,6 @@ int BIOSConfig::setAttrValue(const void* entry, size_t size, bool updateDBus,
 
         BIOSStringTable biosStringTable(*stringTable);
         auto attrName = biosStringTable.findString(attrHeader.stringHandle);
-
         auto iter = std::find_if(
             biosAttributes.begin(), biosAttributes.end(),
             [&attrName](const auto& attr) { return attr->name == attrName; });
@@ -778,6 +865,8 @@ int BIOSConfig::setAttrValue(const void* entry, size_t size, bool updateDBus,
     }
 
     setBIOSTable(PLDM_BIOS_ATTR_VAL_TABLE, *destTable, updateBaseBIOSTable);
+
+    traceBIOSUpdate(attrValueEntry, attrEntry, isBMC);
 
     return PLDM_SUCCESS;
 }
@@ -872,7 +961,7 @@ void BIOSConfig::processBiosAttrChangeNotification(
         storeTable(tableDir / attrValueTableFile, *destTable);
     }
 
-    rc = setAttrValue(newValue.data(), newValue.size(), false);
+    rc = setAttrValue(newValue.data(), newValue.size(), true, false);
     if (rc != PLDM_SUCCESS)
     {
         std::cerr << "could not setAttrValue on base bios table and dbus, rc = "
@@ -956,7 +1045,7 @@ void BIOSConfig::constructPendingAttribute(
 
         (*iter)->generateAttributeEntry(attributevalue, attrValueEntry);
 
-        setAttrValue(attrValueEntry.data(), attrValueEntry.size());
+        setAttrValue(attrValueEntry.data(), attrValueEntry.size(), true);
     }
 
     if (listOfHandles.size())
