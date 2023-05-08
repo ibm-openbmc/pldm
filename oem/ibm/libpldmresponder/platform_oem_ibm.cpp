@@ -18,7 +18,7 @@ namespace platform
 {
 
 int sendBiosAttributeUpdateEvent(
-    uint8_t eid, dbus_api::Requester* requester,
+    uint8_t eid, pldm::InstanceIdDb* instanceIdDb,
     const std::vector<uint16_t>& handles,
     pldm::requester::Handler<pldm::requester::Request>* handler)
 {
@@ -50,7 +50,7 @@ int sendBiosAttributeUpdateEvent(
          * attribute update event to host so this is not and error case */
     }
 
-    auto instanceId = requester->getInstanceId(eid);
+    auto instanceId = instanceIdDb->next(eid);
 
     std::vector<uint8_t> requestMsg(
         sizeof(pldm_msg_hdr) + sizeof(pldm_bios_attribute_update_event_req) -
@@ -68,7 +68,7 @@ int sendBiosAttributeUpdateEvent(
     {
         std::cerr << "Message encode failure 1. PLDM error code = " << std::hex
                   << std::showbase << rc << "\n";
-        requester->markFree(eid, instanceId);
+        instanceIdDb->free(eid, instanceId);
         return rc;
     }
 

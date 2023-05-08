@@ -3,7 +3,7 @@
 #include "common/utils.hpp"
 #include "fw-update/device_updater.hpp"
 #include "fw-update/package_parser.hpp"
-#include "pldmd/dbus_impl_requester.hpp"
+#include "pldmd/instance_id.hpp"
 #include "requester/handler.hpp"
 
 #include <gmock/gmock.h>

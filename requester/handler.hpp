@@ -1,7 +1,7 @@
 #pragma once
 
 #include "common/types.hpp"
-#include "pldmd/dbus_impl_requester.hpp"
+#include "pldmd/instance_id.hpp"
 #include "request.hpp"
 
 #include <libpldm/base.h>
@@ -88,7 +88,7 @@ class Handler
      *
      *  @param[in] fd - fd of MCTP communications socket
      *  @param[in] event - reference to PLDM daemon's main event loop
-     *  @param[in] requester - reference to Requester object
+     *  @param[in] instanceIdDb - reference to an InstanceIdDb
      *  @param[in] currentSendbuffSize - current send buffer size
      *  @param[in] verbose - verbose tracing flag
      *  @param[in] instanceIdExpiryInterval - instance ID expiration interval
@@ -96,7 +96,7 @@ class Handler
      *  @param[in] responseTimeOut - time to wait between each retry
      */
     explicit Handler(
-        int fd, sdeventplus::Event& event, pldm::dbus_api::Requester& requester,
+        int fd, sdeventplus::Event& event, pldm::InstanceIdDb& instanceIdDb,
         int currentSendbuffSize, bool verbose,
         std::chrono::seconds instanceIdExpiryInterval =
             std::chrono::seconds(INSTANCE_ID_EXPIRATION_INTERVAL),
@@ -104,7 +104,7 @@ class Handler
         std::chrono::milliseconds responseTimeOut =
             std::chrono::milliseconds(RESPONSE_TIME_OUT)) :
         fd(fd),
-        event(event), requester(requester),
+        event(event), instanceIdDb(instanceIdDb),
         currentSendbuffSize(currentSendbuffSize), verbose(verbose),
         instanceIdExpiryInterval(instanceIdExpiryInterval),
         numRetries(numRetries), responseTimeOut(responseTimeOut)
@@ -172,7 +172,7 @@ class Handler
         auto rc = request->start();
         if (rc)
         {
-            requester.markFree(eid, instanceId);
+            instanceIdDb.free(eid, instanceId);
             std::cerr << "Failure to send the PLDM request message"
                       << "\n";
             return rc;
@@ -185,7 +185,7 @@ class Handler
         }
         catch (const std::runtime_error& e)
         {
-            requester.markFree(eid, instanceId);
+            instanceIdDb.free(eid, instanceId);
             std::cerr << "Failed to start the instance ID expiry timer. RC = "
                       << e.what() << "\n";
             return PLDM_ERROR;
@@ -223,7 +223,7 @@ class Handler
                     << rc << "\n";
             }
             responseHandler(eid, response, respMsgLen);
-            requester.markFree(key.eid, key.instanceId);
+            instanceIdDb.free(key.eid, key.instanceId);
             handlers.erase(key);
         }
         else
@@ -232,16 +232,16 @@ class Handler
             // request handler, so freeing up the instance ID, this can be other
             // OpenBMC applications relying on PLDM D-Bus apis like
             // openpower-occ-control and softoff
-            requester.markFree(key.eid, key.instanceId);
+            instanceIdDb.free(key.eid, key.instanceId);
         }
     }
 
   private:
     int fd; //!< file descriptor of MCTP communications socket
     sdeventplus::Event& event; //!< reference to PLDM daemon's main event loop
-    pldm::dbus_api::Requester& requester; //!< reference to Requester object
-    int currentSendbuffSize;              //!< current Send Buffer size
-    bool verbose;                         //!< verbose tracing flag
+    pldm::InstanceIdDb& instanceIdDb; //!< reference to an InstanceIdDb
+    int currentSendbuffSize;          //!< current Send Buffer size
+    bool verbose;                     //!< verbose tracing flag
     std::chrono::seconds
         instanceIdExpiryInterval;         //!< Instance ID expiration interval
     uint8_t numRetries;                   //!< number of request retries
@@ -275,7 +275,7 @@ class Handler
         if (removeRequestContainer.contains(key))
         {
             removeRequestContainer[key].reset();
-            requester.markFree(key.eid, key.instanceId);
+            instanceIdDb.free(key.eid, key.instanceId);
             handlers.erase(key);
             removeRequestContainer.erase(key);
         }

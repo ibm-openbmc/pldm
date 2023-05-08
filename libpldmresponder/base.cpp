@@ -178,7 +178,7 @@ void Handler::processSetEventReceiver(
     std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
                                     PLDM_SET_EVENT_RECEIVER_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
-    auto instanceId = requester.getInstanceId(eid);
+    auto instanceId = instanceIdDb.next(eid);
     uint8_t eventMessageGlobalEnable =
         PLDM_EVENT_MESSAGE_GLOBAL_ENABLE_ASYNC_KEEP_ALIVE;
     uint8_t transportProtocolType = PLDM_TRANSPORT_PROTOCOL_TYPE_MCTP;
@@ -190,7 +190,7 @@ void Handler::processSetEventReceiver(
         eventReceiverAddressInfo, heartbeatTimer, request);
     if (rc != PLDM_SUCCESS)
     {
-        requester.markFree(eid, instanceId);
+        instanceIdDb.free(eid, instanceId);
         std::cerr << "Failed to encode_set_event_receiver_req, rc = "
                   << std::hex << std::showbase << rc << std::endl;
         return;

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pldmd/dbus_impl_pdr.hpp"
-#include "pldmd/dbus_impl_requester.hpp"
+#include "pldmd/instance_id.hpp"
 #include "requester/handler.hpp"
 
 #include <sdbusplus/server/object.hpp>
@@ -47,17 +47,17 @@ class HostLampTest : public HostLampTestInterfaces, public LEDGroupObj
      * @param[in] objPath   - The D-Bus path that hosts LED group
      * @param[in] mctp_fd   - MCTP file descriptor
      * @param[in] mctp_eid  - MCTP EID
-     * @param[in] requester - Reference to Requester object
+     * @param[in] instanceIdDb - reference to an InstanceIdDb object
      * @param[in] repo      - pointer to BMC's primary PDR repo
      * @param[in] handler   - PLDM request handler
      */
     HostLampTest(sdbusplus::bus::bus& bus, const std::string& objPath,
-                 int mctp_fd, uint8_t mctp_eid, Requester& requester,
-                 pldm_pdr* repo,
+                 int mctp_fd, uint8_t mctp_eid,
+                 pldm::InstanceIdDb& instanceIdDb, pldm_pdr* repo,
                  pldm::requester::Handler<pldm::requester::Request>& handler) :
         LEDGroupObj(bus, objPath.c_str()),
         path(objPath), mctp_fd(mctp_fd), mctp_eid(mctp_eid),
-        requester(requester), pdrRepo(repo), handler(handler)
+        instanceIdDb(instanceIdDb), pdrRepo(repo), handler(handler)
     {}
 
     /** @brief Property SET Override function
@@ -96,10 +96,10 @@ class HostLampTest : public HostLampTestInterfaces, public LEDGroupObj
     /** @brief MCTP EID of host firmware */
     uint8_t mctp_eid;
 
-    /** @brief reference to Requester object, primarily used to access API to
-     *  obtain PLDM instance id.
+    /** @brief reference to instance Id database object, primarily used to
+     * access API to obtain PLDM instance id.
      */
-    Requester& requester;
+    pldm::InstanceIdDb& instanceIdDb;
 
     /** @brief pointer to BMC's primary PDR repo */
     const pldm_pdr* pdrRepo;

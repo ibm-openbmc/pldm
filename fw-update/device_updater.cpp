@@ -15,7 +15,7 @@ namespace fw_update
 
 void DeviceUpdater::startFwUpdateFlow()
 {
-    auto instanceId = updateManager->requester.getInstanceId(eid);
+    auto instanceId = updateManager->instanceIdDb.next(eid);
     // NumberOfComponents
     const auto& applicableComponents =
         std::get<ApplicableComponents>(fwDeviceIDRecord);
@@ -44,7 +44,7 @@ void DeviceUpdater::startFwUpdateFlow()
         sizeof(struct pldm_request_update_req) + compImgSetVerStrInfo.length);
     if (rc)
     {
-        updateManager->requester.markFree(eid, instanceId);
+        updateManager->instanceIdDb.free(eid, instanceId);
         std::cerr << "encode_request_update_req failed, EID=" << unsigned(eid)
                   << ", RC=" << rc << "\n";
         // Handle error scenario
@@ -104,7 +104,7 @@ void DeviceUpdater::sendPassCompTableRequest(size_t offset)
 {
     pldmRequest.reset();
 
-    auto instanceId = updateManager->requester.getInstanceId(eid);
+    auto instanceId = updateManager->instanceIdDb.next(eid);
     // TransferFlag
     const auto& applicableComponents =
         std::get<ApplicableComponents>(fwDeviceIDRecord);
@@ -167,7 +167,7 @@ void DeviceUpdater::sendPassCompTableRequest(size_t offset)
         sizeof(pldm_pass_component_table_req) + compVerStrInfo.length);
     if (rc)
     {
-        updateManager->requester.markFree(eid, instanceId);
+        updateManager->instanceIdDb.free(eid, instanceId);
         std::cerr << "encode_pass_component_table_req failed, EID="
                   << unsigned(eid) << ", RC=" << rc << "\n";
         // Handle error scenario
@@ -245,7 +245,7 @@ void DeviceUpdater::sendUpdateComponentRequest(size_t offset)
 {
     pldmRequest.reset();
 
-    auto instanceId = updateManager->requester.getInstanceId(eid);
+    auto instanceId = updateManager->instanceIdDb.next(eid);
     const auto& applicableComponents =
         std::get<ApplicableComponents>(fwDeviceIDRecord);
     const auto& comp = compImageInfos[applicableComponents[offset]];
@@ -293,7 +293,7 @@ void DeviceUpdater::sendUpdateComponentRequest(size_t offset)
         sizeof(pldm_update_component_req) + compVerStrInfo.length);
     if (rc)
     {
-        updateManager->requester.markFree(eid, instanceId);
+        updateManager->instanceIdDb.free(eid, instanceId);
         std::cerr << "encode_update_component_req failed, EID=" << unsigned(eid)
                   << ", RC=" << rc << "\n";
         // Handle error scenario
@@ -615,7 +615,7 @@ Response DeviceUpdater::applyComplete(const pldm_msg* request,
 void DeviceUpdater::sendActivateFirmwareRequest()
 {
     pldmRequest.reset();
-    auto instanceId = updateManager->requester.getInstanceId(eid);
+    auto instanceId = updateManager->instanceIdDb.next(eid);
     Request request(sizeof(pldm_msg_hdr) +
                     sizeof(struct pldm_activate_firmware_req));
     auto requestMsg = reinterpret_cast<pldm_msg*>(request.data());
@@ -625,7 +625,7 @@ void DeviceUpdater::sendActivateFirmwareRequest()
         sizeof(pldm_activate_firmware_req));
     if (rc)
     {
-        updateManager->requester.markFree(eid, instanceId);
+        updateManager->instanceIdDb.free(eid, instanceId);
         std::cerr << "encode_activate_firmware_req failed, EID="
                   << unsigned(eid) << ", RC=" << rc << "\n";
     }

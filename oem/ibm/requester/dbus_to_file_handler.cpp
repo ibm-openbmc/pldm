@@ -25,17 +25,17 @@ static constexpr auto certFilePath = "/var/lib/ibm/bmcweb/";
 constexpr auto certObjPath = "/xyz/openbmc_project/certs/ca/entry/";
 constexpr auto certEntryIntf = "xyz.openbmc_project.Certs.Entry";
 DbusToFileHandler::DbusToFileHandler(
-    int mctp_fd, uint8_t mctp_eid, dbus_api::Requester* requester,
+    int mctp_fd, uint8_t mctp_eid, pldm::InstanceIdDb* instanceIdDb,
     sdbusplus::message::object_path resDumpCurrentObjPath,
     pldm::requester::Handler<pldm::requester::Request>* handler) :
     mctp_fd(mctp_fd),
-    mctp_eid(mctp_eid), requester(requester),
+    mctp_eid(mctp_eid), instanceIdDb(instanceIdDb),
     resDumpCurrentObjPath(resDumpCurrentObjPath), handler(handler)
 {}
 
 void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
 {
-    if (requester == NULL)
+    if (instanceIdDb == NULL)
     {
         std::cerr << "Failed to send resource dump parameters as requester is "
                      "not set";
@@ -44,7 +44,7 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
             pldm::PelSeverity::ERROR);
         return;
     }
-    auto instanceId = requester->getInstanceId(mctp_eid);
+    auto instanceId = instanceIdDb->next(mctp_eid);
     std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
                                     PLDM_NEW_FILE_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
@@ -56,7 +56,7 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
                                   fileHandle, fileSize, request);
     if (rc != PLDM_SUCCESS)
     {
-        requester->markFree(mctp_eid, instanceId);
+        instanceIdDb->free(mctp_eid, instanceId);
         std::cerr << "Failed to encode_new_file_req, rc = " << rc << std::endl;
         return;
     }
@@ -282,7 +282,7 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
                                                    const uint32_t fileHandle,
                                                    const uint16_t type)
 {
-    if (requester == NULL)
+    if (instanceIdDb == NULL)
     {
         std::cerr << "newFileAvailableSendToHost:Failed to send file to host.";
         pldm::utils::reportError(
@@ -290,7 +290,7 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
             pldm::PelSeverity::ERROR);
         return;
     }
-    auto instanceId = requester->getInstanceId(mctp_eid);
+    auto instanceId = instanceIdDb->next(mctp_eid);
     std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
                                     PLDM_NEW_FILE_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
@@ -299,7 +299,7 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
                                   request);
     if (rc != PLDM_SUCCESS)
     {
-        requester->markFree(mctp_eid, instanceId);
+        instanceIdDb->free(mctp_eid, instanceId);
         std::cerr
             << "newFileAvailableSendToHost:Failed to encode_new_file_req, rc = "
             << rc << std::endl;

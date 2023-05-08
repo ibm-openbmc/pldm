@@ -898,7 +898,7 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
                 sizeof(set_effecter_state_field) * compEffecterCount,
             0);
 
-        auto instanceId = requester.getInstanceId(mctp_eid);
+        auto instanceId = instanceIdDb.next(mctp_eid);
 
         auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
         std::vector<set_effecter_state_field> stateField;
@@ -920,7 +920,7 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
             std::cerr
                 << " Set state effecter state command failure. PLDM error code ="
                 << rc << std::endl;
-            requester.markFree(mctp_eid, instanceId);
+            instanceIdDb.free(mctp_eid, instanceId);
             return;
         }
         auto setStateEffecterStatesRespHandler =
@@ -1078,7 +1078,7 @@ void pldm::responder::oem_ibm_platform::Handler::sendStateSensorEvent(
     eventClass->sensor_offset = sensorOffset;
     eventClass->event_state = eventState;
     eventClass->previous_event_state = prevEventState;
-    auto instanceId = requester.getInstanceId(mctp_eid);
+    auto instanceId = instanceIdDb.next(mctp_eid);
     std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
                                     PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES +
                                     sensorEventDataVec.size());
@@ -1088,7 +1088,7 @@ void pldm::responder::oem_ibm_platform::Handler::sendStateSensorEvent(
     {
         std::cerr << "Failed to encode state sensor event, rc = " << rc
                   << std::endl;
-        requester.markFree(mctp_eid, instanceId);
+        instanceIdDb.free(mctp_eid, instanceId);
         return;
     }
     rc = sendEventToHost(requestMsg, instanceId);

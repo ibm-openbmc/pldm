@@ -71,7 +71,7 @@ class Handler : public oem_platform::Handler
     Handler(const pldm::utils::DBusHandler* dBusIntf,
             pldm::responder::CodeUpdate* codeUpdate,
             pldm::responder::SlotHandler* slotHandler, int mctp_fd,
-            uint8_t mctp_eid, pldm::dbus_api::Requester& requester,
+            uint8_t mctp_eid, pldm::InstanceIdDb& instanceIdDb,
             sdeventplus::Event& event, pldm_pdr* repo,
             pldm::requester::Handler<pldm::requester::Request>* handler,
             pldm_entity_association_tree* bmcEntityTree,
@@ -79,7 +79,7 @@ class Handler : public oem_platform::Handler
         oem_platform::Handler(dBusIntf),
         codeUpdate(codeUpdate), slotHandler(slotHandler),
         platformHandler(nullptr), mctp_fd(mctp_fd), mctp_eid(mctp_eid),
-        requester(requester), event(event), pdrRepo(repo), handler(handler),
+        instanceIdDb(instanceIdDb), event(event), pdrRepo(repo), handler(handler),
         bmcEntityTree(bmcEntityTree), hostEffecterParser(hostEffecterParser),
         timer(event, std::bind(std::mem_fn(&Handler::setSurvTimer), this,
                                HYPERVISOR_TID, false))
@@ -476,10 +476,9 @@ class Handler : public oem_platform::Handler
     /** @brief MCTP EID of host firmware */
     uint8_t mctp_eid;
 
-    /** @brief reference to Requester object, primarily used to access API to
-     *  obtain PLDM instance id.
-     */
-    pldm::dbus_api::Requester& requester;
+    /** @brief reference to an InstanceIdDb object, used to obtain a PLDM
+     * instance id. */
+    pldm::InstanceIdDb& instanceIdDb;
     /** @brief sdeventplus event source */
     std::unique_ptr<sdeventplus::source::Defer> assembleImageEvent;
     std::unique_ptr<sdeventplus::source::Defer> startUpdateEvent;
