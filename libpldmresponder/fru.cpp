@@ -973,7 +973,7 @@ void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
             << rc << std::endl;
         return;
     }
-    auto instanceId = requester.getInstanceId(mctp_eid);
+    auto instanceId = instanceIdDb.next(mctp_eid);
     std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
                                     PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES +
                                     actualSize);
@@ -984,7 +984,7 @@ void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
         actualSize + PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES);
     if (rc != PLDM_SUCCESS)
     {
-        requester.markFree(mctp_eid, instanceId);
+        instanceIdDb.free(mctp_eid, instanceId);
         std::cerr << "Failed to encode_platform_event_message_req, rc = " << rc
                   << std::endl;
         return;

@@ -110,7 +110,7 @@ uint16_t HostLampTest::getEffecterID()
 void HostLampTest::setHostStateEffecter(uint16_t effecterID, uint8_t& rc)
 {
     constexpr uint8_t effecterCount = 1;
-    auto instanceId = requester.getInstanceId(mctp_eid);
+    auto instanceId = instanceIdDb.next(mctp_eid);
 
     std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) + sizeof(effecterID) +
                                     sizeof(effecterCount) +
@@ -122,7 +122,7 @@ void HostLampTest::setHostStateEffecter(uint16_t effecterID, uint8_t& rc)
         instanceId, effecterID, effecterCount, &stateField, request);
     if (rc != PLDM_SUCCESS)
     {
-        requester.markFree(mctp_eid, instanceId);
+        instanceIdDb.free(mctp_eid, instanceId);
         std::cerr << "Failed to encode_set_state_effecter_states_req, rc = "
                   << rc << std::endl;
         return;

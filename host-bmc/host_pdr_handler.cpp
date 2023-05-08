@@ -25,7 +25,6 @@
 
 namespace pldm
 {
-using namespace pldm::dbus_api;
 using namespace pldm::responder::events;
 using namespace pldm::utils;
 using namespace sdbusplus::bus::match::rules;
@@ -93,7 +92,7 @@ HostPDRHandler::HostPDRHandler(
     const std::string& eventsJsonsDir, pldm_entity_association_tree* entityTree,
     pldm_entity_association_tree* bmcEntityTree,
     pldm::host_effecters::HostEffecterParser* hostEffecterParser,
-    Requester& requester,
+    pldm::InstanceIdDb& instanceIdDb,
     pldm::requester::Handler<pldm::requester::Request>* handler,
     pldm::host_associations::HostAssociationsParser* associationsParser,
     pldm::responder::oem_platform::Handler* oemPlatformHandler) :
@@ -101,7 +100,7 @@ HostPDRHandler::HostPDRHandler(
     mctp_eid(mctp_eid), event(event), repo(repo),
     stateSensorHandler(eventsJsonsDir), entityTree(entityTree),
     bmcEntityTree(bmcEntityTree), hostEffecterParser(hostEffecterParser),
-    requester(requester), handler(handler),
+    instanceIdDb(instanceIdDb), handler(handler),
     associationsParser(associationsParser),
     oemPlatformHandler(oemPlatformHandler)
 {
@@ -348,14 +347,14 @@ void HostPDRHandler::getHostPDR(uint32_t nextRecordHandle)
     {
         recordHandle = nextRecordHandle;
     }
-    auto instanceId = requester.getInstanceId(mctp_eid);
+    auto instanceId = instanceIdDb.next(mctp_eid);
 
     auto rc = encode_get_pdr_req(instanceId, recordHandle, 0,
                                  PLDM_GET_FIRSTPART, UINT16_MAX, 0, request,
                                  PLDM_GET_PDR_REQ_BYTES);
     if (rc != PLDM_SUCCESS)
     {
-        requester.markFree(mctp_eid, instanceId);
+        instanceIdDb.free(mctp_eid, instanceId);
         std::cerr << "Failed to encode_get_pdr_req, rc = " << rc << std::endl;
         return;
     }
@@ -640,7 +639,7 @@ void HostPDRHandler::sendPDRRepositoryChgEvent(std::vector<uint8_t>&& pdrTypes,
             << rc << std::endl;
         return;
     }
-    auto instanceId = requester.getInstanceId(mctp_eid);
+    auto instanceId = instanceIdDb.next(mctp_eid);
     std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
                                     PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES +
                                     actualSize);
@@ -651,7 +650,7 @@ void HostPDRHandler::sendPDRRepositoryChgEvent(std::vector<uint8_t>&& pdrTypes,
         actualSize + PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES);
     if (rc != PLDM_SUCCESS)
     {
-        requester.markFree(mctp_eid, instanceId);
+        instanceIdDb.free(mctp_eid, instanceId);
         std::cerr << "Failed to encode_platform_event_message_req, rc = " << rc
                   << std::endl;
         return;
@@ -1039,7 +1038,7 @@ void HostPDRHandler::_processFetchPDREvent(
 void HostPDRHandler::setHostFirmwareCondition()
 {
     responseReceived = false;
-    auto instanceId = requester.getInstanceId(mctp_eid);
+    auto instanceId = instanceIdDb.next(mctp_eid);
     std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
                                     PLDM_GET_VERSION_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
@@ -1049,7 +1048,7 @@ void HostPDRHandler::setHostFirmwareCondition()
     {
         std::cerr << "GetPLDMVersion encode failure. PLDM error code = "
                   << std::hex << std::showbase << rc << "\n";
-        requester.markFree(mctp_eid, instanceId);
+        instanceIdDb.free(mctp_eid, instanceId);
         return;
     }
 
@@ -1126,7 +1125,7 @@ void HostPDRHandler::_setHostSensorState()
                 sensorRearm.byte = 0;
                 uint8_t tid = std::get<0>(terminusInfo);
 
-                auto instanceId = requester.getInstanceId(mctpEid);
+                auto instanceId = instanceIdDb.next(mctp_eid);
                 std::vector<uint8_t> requestMsg(
                     sizeof(pldm_msg_hdr) +
                     PLDM_GET_STATE_SENSOR_READINGS_REQ_BYTES);
@@ -1136,7 +1135,7 @@ void HostPDRHandler::_setHostSensorState()
 
                 if (rc != PLDM_SUCCESS)
                 {
-                    requester.markFree(mctpEid, instanceId);
+                    instanceIdDb.free(mctp_eid, instanceId);
                     std::cerr << "Failed to "
                                  "encode_get_state_sensor_readings_req, rc = "
                               << rc << " SensorId=" << sensorId << std::endl;
@@ -1291,7 +1290,7 @@ void HostPDRHandler::_setHostSensorState()
 
 void HostPDRHandler::getFRURecordTableMetadataByHost()
 {
-    auto instanceId = requester.getInstanceId(mctp_eid);
+    auto instanceId = instanceIdDb.next(mctp_eid);
     std::vector<uint8_t> requestMsg(
         sizeof(pldm_msg_hdr) + PLDM_GET_FRU_RECORD_TABLE_METADATA_REQ_BYTES);
 
@@ -1301,7 +1300,7 @@ void HostPDRHandler::getFRURecordTableMetadataByHost()
         instanceId, request, requestMsg.size() - sizeof(pldm_msg_hdr));
     if (rc != PLDM_SUCCESS)
     {
-        requester.markFree(mctp_eid, instanceId);
+        instanceIdDb.free(mctp_eid, instanceId);
         std::cerr << "Failed to encode_get_fru_record_table_metadata_req, rc = "
                   << rc << std::endl;
         return;
@@ -1363,7 +1362,7 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records)
         return;
     }
 
-    auto instanceId = requester.getInstanceId(mctp_eid);
+    auto instanceId = instanceIdDb.next(mctp_eid);
     std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
                                     PLDM_GET_FRU_RECORD_TABLE_REQ_BYTES);
 
@@ -1374,7 +1373,7 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records)
         requestMsg.size() - sizeof(pldm_msg_hdr));
     if (rc != PLDM_SUCCESS)
     {
-        requester.markFree(mctp_eid, instanceId);
+        instanceIdDb.free(mctp_eid, instanceId);
         std::cerr << "Failed to encode_get_fru_record_table_req, rc = " << rc
                   << std::endl;
         return;
@@ -1451,7 +1450,7 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
     pldm::pdr::StateSetId stateSetId)
 {
     auto mctpEid = getMctpEID(tid);
-    auto instanceId = requester.getInstanceId(mctpEid);
+    auto instanceId = instanceIdDb.next(mctp_eid);
     std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
                                     PLDM_GET_STATE_SENSOR_READINGS_REQ_BYTES);
 
@@ -1462,7 +1461,7 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
                                                    request);
     if (rc != PLDM_SUCCESS)
     {
-        requester.markFree(mctpEid, instanceId);
+        instanceIdDb.free(mctp_eid, instanceId);
         std::cerr << "Failed to encode_get_state_sensor_readings_req, rc = "
                   << rc << std::endl;
         return;
