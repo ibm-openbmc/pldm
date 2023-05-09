@@ -121,16 +121,16 @@ HostPDRHandler::HostPDRHandler(
                           "xyz.openbmc_project.State.Host"),
         [this, repo, entityTree, bmcEntityTree,
          oemPlatformHandler](sdbusplus::message::message& msg) {
-            DbusChangedProps props{};
-            std::string intf;
-            msg.read(intf, props);
-            const auto itr = props.find("CurrentHostState");
-            if (itr != props.end())
+        DbusChangedProps props{};
+        std::string intf;
+        msg.read(intf, props);
+        const auto itr = props.find("CurrentHostState");
+        if (itr != props.end())
+        {
+            pldm::utils::PropertyValue value = itr->second;
+            auto propVal = std::get<std::string>(value);
+            if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
             {
-                pldm::utils::PropertyValue value = itr->second;
-                auto propVal = std::get<std::string>(value);
-                if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
-                {
                 // Delete all the remote terminus information
                 std::erase_if(tlPDRInfo, [](const auto& item) {
                     auto const& [key, value] = item;
@@ -153,10 +153,10 @@ HostPDRHandler::HostPDRHandler(
                 isHostTransitioningToOff = false;
                 this->sensorIndex = stateSensorPDRs.begin();
                 this->modifiedCounter = 0;
-                    if (oemPlatformHandler != nullptr)
-                    {
-                        oemPlatformHandler->startStopTimer(false);
-                    }
+                if (oemPlatformHandler != nullptr)
+                {
+                    oemPlatformHandler->startStopTimer(false);
+                }
 
                 // After a power off , the remote nodes will be deleted
                 // from the entity association tree, making the nodes point
@@ -189,6 +189,60 @@ HostPDRHandler::HostPDRHandler(
             }
         }
     });
+<<<<<<< HEAD
+=======
+
+    chassisOffMatch = std::make_unique<sdbusplus::bus::match::match>(
+        pldm::utils::DBusHandler::getBus(),
+        propertiesChanged("/xyz/openbmc_project/state/chassis0",
+                          "xyz.openbmc_project.State.Chassis"),
+        [this, oemPlatformHandler](sdbusplus::message::message& msg) {
+        DbusChangedProps props{};
+        std::string intf;
+        msg.read(intf, props);
+        const auto itr = props.find("CurrentPowerState");
+        if (itr != props.end())
+        {
+            PropertyValue value = itr->second;
+            auto propVal = std::get<std::string>(value);
+            if (propVal == "xyz.openbmc_project.State.Chassis.PowerState.Off")
+            {
+                if (oemPlatformHandler)
+                {
+                    oemPlatformHandler->handleBootTypesAtChassisOff();
+                }
+                static constexpr auto searchpath =
+                    "/xyz/openbmc_project/inventory/system/chassis/motherboard";
+                int depth = 0;
+                std::vector<std::string> powerInterface = {
+                    "xyz.openbmc_project.State.Decorator.PowerState"};
+                pldm::utils::MapperGetSubTreeResponse response =
+                    pldm::utils::DBusHandler().getSubtree(searchpath, depth,
+                                                          powerInterface);
+                for (const auto& [objPath, serviceMap] : response)
+                {
+                    pldm::utils::DBusMapping dbusMapping{
+                        objPath,
+                        "xyz.openbmc_project.State.Decorator.PowerState",
+                        "PowerState", "string"};
+                    value =
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Off";
+                    try
+                    {
+                        pldm::utils::DBusHandler().setDbusProperty(dbusMapping,
+                                                                   value);
+                    }
+                    catch (const std::exception& e)
+                    {
+                        std::cerr
+                            << "Unable to set the slot power state to Off "
+                            << "ERROR=" << e.what() << "\n";
+                    }
+                }
+            }
+        }
+    });
+>>>>>>> 7102e7d4 (Trigger Assemble method and handle response (#402))
 }
 
 void HostPDRHandler::setPresenceFrus()

@@ -36,24 +36,14 @@ auto updateDirPath = fs::path(LID_STAGING_DIR) / "update";
 /** @brief The file name of the code update tarball */
 constexpr auto tarImageName = "image.tar";
 
-/** @brief The file name of the hostfw image */
-constexpr auto hostfwImageName = "image-hostfw";
+/** @brief The path to the code update tarball file */
+auto tarImagePath = fs::path(imageDirPath) / tarImageName;
 
 /** @brief The filename of the file where bootside data will be saved */
 constexpr auto bootSideFileName = "bootSide";
 
 constexpr auto bootSideAttrName = "fw_boot_side_current";
 constexpr auto bootNextSideAttrName = "fw_boot_side";
-
-/** @brief The path to the code update tarball file */
-auto tarImagePath = fs::path(imageDirPath) / tarImageName;
-
-/** @brief The path to the hostfw image */
-auto hostfwImagePath = fs::path(imageDirPath) / hostfwImageName;
-
-/** @brief The path to the tarball file expected by the phosphor software
- *         manager */
-auto updateImagePath = fs::path("/tmp/images") / tarImageName;
 
 /** @brief The filepath of file where bootside data will be saved */
 auto bootSideDirPath = fs::path("/var/lib/pldm/") / bootSideFileName;
@@ -96,21 +86,21 @@ int CodeUpdate::setNextBootSide(const std::string& nextSide)
     }
 
     try
-     {
-         auto priorityPropValue = dBusIntf->getDbusPropertyVariant(
-             objPath.c_str(), "Priority", redundancyIntf);
-         const auto& priorityValue = std::get<uint8_t>(priorityPropValue);
-         if (priorityValue == 0)
-         {
-             // Requested next boot side is already set
-             return PLDM_SUCCESS;
-         }
-     }
-     catch (const std::exception& e)
-     {
-         // Alternate side may not be present due to a failed code update
-         return PLDM_PLATFORM_INVALID_STATE_VALUE;
-     }
+    {
+        auto priorityPropValue = dBusIntf->getDbusPropertyVariant(
+            objPath.c_str(), "Priority", redundancyIntf);
+        const auto& priorityValue = std::get<uint8_t>(priorityPropValue);
+        if (priorityValue == 0)
+        {
+            // Requested next boot side is already set
+            return PLDM_SUCCESS;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        // Alternate side may not be present due to a failed code update
+        return PLDM_PLATFORM_INVALID_STATE_VALUE;
+    }
 
     pldm::utils::DBusMapping dbusMapping{objPath, redundancyIntf, "Priority",
                                          "uint8_t"};
@@ -274,8 +264,8 @@ void CodeUpdate::setVersions()
             }
             currBootSide =
                 (pldmBootSideData.current_boot_side == "Temp" ? Tside : Pside);
-            nextBootSide =
-                (pldmBootSideData.next_boot_side == "Temp" ? Tside : Pside);
+            nextBootSide = (pldmBootSideData.next_boot_side == "Temp" ? Tside
+                                                                      : Pside);
         }
     }
     catch (const std::exception& e)
@@ -323,17 +313,23 @@ void CodeUpdate::setVersions()
                 auto imageInterface = "xyz.openbmc_project.Software.Activation";
                 auto imageObjPath = path.str.c_str();
 
+                // If the version interface is added with the Activation
+                // value as Invalid, it is considered as assemble code
+                // update image failure.
+                // Failure is occurred while assembling
+                // lid files or while creating a tar ball.
+
                 try
                 {
-                    if (isCodeUpdateInProgress())
-                    {
-                        auto propVal =
-                            pldm::utils::DBusHandler().getDbusPropertyVariant(
-                                imageObjPath, "Activation", imageInterface);
-                        const auto& activation = std::get<std::string>(propVal);
+                    auto propVal =
+                        pldm::utils::DBusHandler().getDbusPropertyVariant(
+                            imageObjPath, "Activation", imageInterface);
+                    const auto& activation = std::get<std::string>(propVal);
 
-                        if (activation ==
-                            "xyz.openbmc_project.Software.Activation.Activations.Invalid")
+                    if (activation ==
+                        "xyz.openbmc_project.Software.Activation.Activations.Invalid")
+                    {
+                        if (isCodeUpdateInProgress())
                         {
                             error(
                                 "InbandCodeUpdate Failed: Received Invalid Signal, Sending Error on End update sensor event to PHYP");
@@ -367,74 +363,62 @@ void CodeUpdate::setVersions()
                         {
                             imageActivationMatch =
                                 std::make_unique<sdbusplus::bus::match_t>(
-                                pldm::utils::DBusHandler::getBus(),
-                                propertiesChanged(newImageId,
-                                                  "xyz.openbmc_project."
-                                                  "Software.Activation"),
-                                [this](sdbusplus::message::message& msg) {
-                                    DbusChangedProps props;
-                                    std::string iface;
-                                    msg.read(iface, props);
-                                    const auto itr =
-                                        props.find("Activation");
-                                    if (itr != props.end())
+                                    pldm::utils::DBusHandler::getBus(),
+                                    propertiesChanged(newImageId,
+                                                      "xyz.openbmc_project."
+                                                      "Software.Activation"),
+                                    [this](sdbusplus::message::message& msg) {
+                                DbusChangedProps props;
+                                std::string iface;
+                                msg.read(iface, props);
+                                const auto itr = props.find("Activation");
+                                if (itr != props.end())
+                                {
+                                    PropertyValue value = itr->second;
+                                    auto propVal = std::get<std::string>(value);
+                                    if (propVal ==
+                                        "xyz.openbmc_project.Software."
+                                        "Activation.Activations.Active")
                                     {
-                                        PropertyValue value = itr->second;
-                                        auto propVal =
-                                                std::get<std::string>(value);
-                                        if (propVal ==
-                                            "xyz.openbmc_project.Software."
-                                            "Activation.Activations.Active")
-                                            {
-                                                std::cout
-                                                    << "Received Active signal, Sending "
-                                                    << "success on End update sensor event "
-                                                    << "to PHYP\n";
-                                                CodeUpdateState state =
-                                                    CodeUpdateState::END;
-                                                setCodeUpdateProgress(false);
-                                                auto sensorId =
-                                                    getFirmwareUpdateSensor();
-                                                sendStateSensorEvent(
-                                                    sensorId,
-                                                    PLDM_STATE_SENSOR_STATE, 0,
-                                                    uint8_t(state),
-                                                    uint8_t(CodeUpdateState::
-                                                                START));
-                                                newImageId.clear();
-                                                imageActivationMatch.reset();
-                                            }
-                                            else if (propVal ==
-                                                         "xyz.openbmc_project."
-                                                         "Software.Activation."
-                                                         "Activations.Failed" ||
-                                                     propVal ==
-                                                         "xyz.openbmc_"
-                                                         "project.Software."
-                                                         "Activation."
-                                                         "Activations."
-                                                         "Invalid")
-                                            {
-                                                std::cout
-                                                    << "Image activation Failed or image "
-                                                    << "Invalid, sending Failure on End "
-                                                    << "update to PHYP\n";
-                                                CodeUpdateState state =
-                                                    CodeUpdateState::FAIL;
-                                                setCodeUpdateProgress(false);
-                                                auto sensorId =
-                                                    getFirmwareUpdateSensor();
-                                                sendStateSensorEvent(
-                                                    sensorId,
-                                                    PLDM_STATE_SENSOR_STATE, 0,
-                                                    uint8_t(state),
-                                                    uint8_t(CodeUpdateState::
-                                                                START));
-                                                newImageId.clear();
-                                                imageActivationMatch.reset();
-                                            }
-                                        }
-                                    });
+                                        info(
+                                            "Received Active signal, Sending success on End update sensor event to PHYP");
+                                        CodeUpdateState state =
+                                            CodeUpdateState::END;
+                                        setCodeUpdateProgress(false);
+                                        auto sensorId =
+                                            getFirmwareUpdateSensor();
+                                        sendStateSensorEvent(
+                                            sensorId, PLDM_STATE_SENSOR_STATE,
+                                            0, uint8_t(state),
+                                            uint8_t(CodeUpdateState::START));
+                                        newImageId.clear();
+                                        imageActivationMatch.reset();
+                                    }
+                                    else if (propVal == "xyz.openbmc_project."
+                                                        "Software.Activation."
+                                                        "Activations.Failed" ||
+                                             propVal == "xyz.openbmc_"
+                                                        "project.Software."
+                                                        "Activation."
+                                                        "Activations."
+                                                        "Invalid")
+                                    {
+                                        info(
+                                            "Image activation Failed or image Invalid, sending Failure on End update to PHYP");
+                                        CodeUpdateState state =
+                                            CodeUpdateState::FAIL;
+                                        setCodeUpdateProgress(false);
+                                        auto sensorId =
+                                            getFirmwareUpdateSensor();
+                                        sendStateSensorEvent(
+                                            sensorId, PLDM_STATE_SENSOR_STATE,
+                                            0, uint8_t(state),
+                                            uint8_t(CodeUpdateState::START));
+                                        newImageId.clear();
+                                        imageActivationMatch.reset();
+                                    }
+                                }
+                            });
                         }
                         auto rc = setRequestedActivation();
                         if (rc != PLDM_SUCCESS)
@@ -758,144 +742,33 @@ int processCodeUpdateLid(const std::string& filePath)
 
 int CodeUpdate::assembleCodeUpdateImage()
 {
-    pid_t pid = fork();
+    static constexpr auto UPDATER_SERVICE =
+        "xyz.openbmc_project.Software.BMC.Updater";
+    static constexpr auto SOFTWARE_PATH = "/xyz/openbmc_project/software";
+    static constexpr auto LID_INTERFACE = "xyz.openbmc_project.Software.LID";
 
-    if (pid == 0)
+    auto& bus = dBusIntf->getBus();
+
+    try
     {
-        pid_t nextPid = fork();
-        if (nextPid == 0)
-        {
-            auto rc = 0;
-            // Create the hostfw squashfs image from the LID files without
-            // header
-                rc = executeCmd("/usr/sbin/mksquashfs", lidDirPath.c_str(),
-                                hostfwImagePath.c_str(), "-all-root",
-                                "-no-recovery", "-no-xattrs", "-noI",
-                                "-mkfs-time", "0", "-all-time", "0");
-                if (rc < 0)
-                {
-                    error("Error occurred during the mksqusquashfs call");
-                    setCodeUpdateProgress(false);
-                    auto sensorId = getFirmwareUpdateSensor();
-                    sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
-                                         uint8_t(CodeUpdateState::FAIL),
-                                         uint8_t(CodeUpdateState::START));
-                    exit(EXIT_FAILURE);
-                }
-            }
-            catch (const std::exception& e)
-            {
-                return PLDM_ERROR;
-            }
-
-            fs::create_directories(updateDirPath);
-
-            // Extract the BMC tarball content
-            try
-            {
-                rc = executeCmd("/bin/tar", "-xf", tarImagePath.c_str(), "-C",
-                                updateDirPath);
-                if (rc < 0)
-                {
-                    setCodeUpdateProgress(false);
-                    auto sensorId = getFirmwareUpdateSensor();
-                    sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
-                                         uint8_t(CodeUpdateState::FAIL),
-                                         uint8_t(CodeUpdateState::START));
-                    exit(EXIT_FAILURE);
-                }
-            }
-            catch (const std::exception& e)
-            {
-                std::cerr << "Failed to Extract the BMC tarball content, "
-                             "ERROR="
-                          << e.what() << "\n";
-                return PLDM_ERROR;
-            }
-
-            // Add the hostfw image to the directory where the contents were
-            // extracted
-            fs::copy_file(hostfwImagePath,
-                          fs::path(updateDirPath) / hostfwImageName,
-                          fs::copy_options::overwrite_existing);
-
-            // Remove the tarball file, then re-generate it with so that the
-            // hostfw image becomes part of the tarball
-            fs::remove(tarImagePath);
-            try
-            {
-                rc = executeCmd("/bin/tar", "-cf", tarImagePath, ".", "-C",
-                                updateDirPath);
-                if (rc < 0)
-                {
-                    std::cerr
-                        << "Error occurred during the generation of the tarball"
-                        << std::endl;
-                    setCodeUpdateProgress(false);
-                    auto sensorId = getFirmwareUpdateSensor();
-                    sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
-                                         uint8_t(CodeUpdateState::FAIL),
-                                         uint8_t(CodeUpdateState::START));
-                    exit(EXIT_FAILURE);
-                }
-            }
-            catch (const std::exception& e)
-            {
-                std::cerr
-                    << "Failed to Remove the tarball file, then re-generate it, "
-                       "ERROR="
-                    << e.what() << "\n";
-                return PLDM_ERROR;
-            }
-
-            // Copy the tarball to the update directory to trigger the phosphor
-            // software manager to create a version interface
-            fs::copy_file(tarImagePath, updateImagePath,
-                          fs::copy_options::overwrite_existing);
-
-            // Cleanup
-            fs::remove_all(updateDirPath);
-            fs::remove_all(lidDirPath);
-            fs::remove_all(imageDirPath);
-
-            exit(EXIT_SUCCESS);
-        }
-        else if (nextPid < 0)
-        {
-            error("Failure occurred during fork, error number - {ERROR_NUM}",
-                  "ERROR_NUM", errno);
-            exit(EXIT_FAILURE);
-        }
-
-        // Do nothing as parent. When parent exits, child will be reparented
-        // under init and be reaped properly.
-        exit(0);
+        info("InbandCodeUpdate: AssembleCodeUpdateImage");
+        auto method = bus.new_method_call(UPDATER_SERVICE, SOFTWARE_PATH,
+                                          LID_INTERFACE,
+                                          "AssembleCodeUpdateImage");
+        bus.call_noreply(method);
     }
-    else if (pid > 0)
+    catch (const std::exception& e)
     {
-        int status;
-        if (waitpid(pid, &status, 0) < 0)
-        {
-            error("Error occurred during waitpid, error number - {ERROR_NUM}",
-                  "ERROR_NUM", errno);
-
-            return PLDM_ERROR;
-        }
-        else if (WEXITSTATUS(status) != 0)
-        {
-            error(
-                "Failed to execute the assembling of the image, status is {IMG_STATUS}",
-                "IMG_STATUS", status);
-            return PLDM_ERROR;
-        }
+        error(
+            "InbandCodeUpdate: Failed to Assemble code update image ERROR={ERR_EXCEP}",
+            "ERR_EXCEP", e.what());
+        setCodeUpdateProgress(false);
+        auto sensorId = getFirmwareUpdateSensor();
+        sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
+                             uint8_t(CodeUpdateState::FAIL),
+                             uint8_t(CodeUpdateState::START));
+        return -1;
     }
-    else
-    {
-        error("Error occurred during fork, error number - {ERROR_NUM}}",
-              "ERROR_NUM", errno);
-        return PLDM_ERROR;
-    }
-
     return PLDM_SUCCESS;
 }
 
