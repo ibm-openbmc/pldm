@@ -112,17 +112,17 @@ HostPDRHandler::HostPDRHandler(
         propertiesChanged("/xyz/openbmc_project/state/host0",
                           "xyz.openbmc_project.State.Host"),
         [this, repo, entityTree, bmcEntityTree]
-         sdbusplus::message_t& msg) {
+         (sdbusplus::message_t& msg) {
             DbusChangedProps props{};
             std::string intf;
             msg.read(intf, props);
             const auto itr = props.find("CurrentHostState");
             if (itr != props.end())
             {
-                pldm::utils::PropertyValue value = itr->second;
-                auto propVal = std::get<std::string>(value);
-                if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
-                {
+            pldm::utils::PropertyValue value = itr->second;
+            auto propVal = std::get<std::string>(value);
+            if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
+            {
                 // Delete all the remote terminus information
                 std::erase_if(tlPDRInfo, [](const auto& item) {
                     const auto& [key, value] = item;
@@ -145,10 +145,10 @@ HostPDRHandler::HostPDRHandler(
                 isHostRunning = false;
                 this->sensorIndex = stateSensorPDRs.begin();
                 this->modifiedCounter = 0;
-                    if (oemPlatformHandler != nullptr)
-                    {
-                        oemPlatformHandler->startStopTimer(false);
-                    }
+                if (oemPlatformHandler != nullptr)
+                {
+                    oemPlatformHandler->startStopTimer(false);
+                }
 
                 // After a power off , the remote nodes will be deleted
                 // from the entity association tree, making the nodes point

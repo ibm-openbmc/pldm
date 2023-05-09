@@ -903,7 +903,8 @@ void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
                             "Policy.AlwaysOn";
                     try
                     {
-                        info("InbandCodeUpdate: Setting the one time APR policy");
+                        info(
+                            "InbandCodeUpdate: Setting the one time APR policy");
                         dBusIntf->setDbusProperty(dbusMapping, value);
                     }
                     catch (const std::exception& e)

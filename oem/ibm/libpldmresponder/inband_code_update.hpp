@@ -227,8 +227,7 @@ class CodeUpdate
      *         bootside information */
     pldm_boot_side_data readBootSideFile();
 
-    virtual ~CodeUpdate()
-    {}
+    virtual ~CodeUpdate() {}
 
   private:
     std::string currBootSide;      //!< current boot side

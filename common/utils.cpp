@@ -969,9 +969,9 @@ void setBiosAttr(const BiosAttributeList& biosAttrList)
         {
             auto service = pldm::utils::DBusHandler().getService(
                 biosConfigPath, biosConfigIntf);
-            auto method =
-                bus.new_method_call(service.c_str(), biosConfigPath,
-                                    SYSTEMD_PROPERTY_INTERFACE, "Set");
+            auto method = bus.new_method_call(service.c_str(), biosConfigPath,
+                                              SYSTEMD_PROPERTY_INTERFACE,
+                                              "Set");
             method.append(
                 biosConfigIntf, "PendingAttributes",
                 std::variant<PendingAttributesType>(pendingAttributes));

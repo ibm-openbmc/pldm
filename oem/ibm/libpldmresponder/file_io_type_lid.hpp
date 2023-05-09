@@ -47,9 +47,9 @@ class LidHandler : public FileHandler
     {
         sideToRead = permSide ? Pside : Tside;
         isPatchDir = false;
-        currBootSide =
-            (getBiosAttrValue("fw_boot_side_current") == "Perm" ? Pside
-                                                                : Tside);
+        currBootSide = (getBiosAttrValue("fw_boot_side_current") == "Perm"
+                            ? Pside
+                            : Tside);
         std::string dir;
         if ((currBootSide == sideToRead) ||
             (lidType == PLDM_FILE_TYPE_LID_RUNNING))
