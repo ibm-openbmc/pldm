@@ -26,11 +26,13 @@ class LicenseHandler : public FileHandler
     virtual int writeFromMemory(uint32_t offset, uint32_t length,
                                 uint64_t address,
                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                ResponseHdr& responseHdr,
                                 sdeventplus::Event& event);
 
     virtual int readIntoMemory(uint32_t /*offset*/, uint32_t& /*length*/,
                                uint64_t /*address*/,
                                oem_platform::Handler* /*oemPlatformHandler*/,
+                               ResponseHdr& /*responseHdr*/,
                                sdeventplus::Event& /*event*/)
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
@@ -48,6 +50,7 @@ class LicenseHandler : public FileHandler
     }
 
     virtual int newFileAvailable(uint64_t length);
+    virtual int postDataTransferCallBack(bool IsWriteToMemOp);
 
     virtual int fileAckWithMetaData(uint8_t /*fileStatus*/,
                                     uint32_t metaDataValue1,
@@ -73,6 +76,7 @@ class LicenseHandler : public FileHandler
   private:
     uint16_t licType;   //!< type of the license
     uint64_t licLength; //!< length of the full license data
+    uint32_t m_length;
 
     enum Status
     {

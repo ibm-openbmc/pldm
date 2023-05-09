@@ -23,11 +23,13 @@ class PelHandler : public FileHandler
     virtual int writeFromMemory(uint32_t offset, uint32_t length,
                                 uint64_t address,
                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                ResponseHdr& responseHdr,
                                 sdeventplus::Event& event);
 
     virtual int readIntoMemory(uint32_t offset, uint32_t& length,
                                uint64_t address,
                                oem_platform::Handler* /*oemPlatformHandler*/,
+                               ResponseHdr& responseHdr,
                                sdeventplus::Event& event);
 
     virtual int read(uint32_t offset, uint32_t& length, Response& response,
@@ -45,6 +47,7 @@ class PelHandler : public FileHandler
      *  @param[in] pelFileName - the pel file path
      */
     virtual int storePel(std::string&& pelFileName);
+    virtual int postDataTransferCallBack(bool IsWriteToMemOp);
 
     virtual int newFileAvailable(uint64_t /*length*/)
     {
@@ -73,6 +76,10 @@ class PelHandler : public FileHandler
      */
     ~PelHandler()
     {}
+
+  private:
+    fs::path Pelpath;
+    int fd;
 };
 
 } // namespace responder

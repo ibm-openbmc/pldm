@@ -2,7 +2,8 @@
 
 #include "config.h"
 
-#include "file_io_by_type.hpp"
+// #include "file_io_by_type.hpp"
+#include "file_io.hpp"
 
 #include <filesystem>
 #include <sstream>
@@ -116,19 +117,20 @@ class LidHandler : public FileHandler
     virtual int writeFromMemory(uint32_t offset, uint32_t length,
                                 uint64_t address,
                                 oem_platform::Handler* oemPlatformHandler,
+                                ResponseHdr& responseHdr,
                                 sdeventplus::Event& event)
     {
-        std::cout << "KK writeFromMemory begin...\n";
-        int rc = PLDM_SUCCESS;
-        bool codeUpdateInProgress = false;
+        moemPlatformHandler = oemPlatformHandler;
+        // int rc = PLDM_SUCCESS;
+        //  bool codeUpdateInProgress = false;
         if (oemPlatformHandler != nullptr)
         {
             pldm::responder::oem_ibm_platform::Handler* oemIbmPlatformHandler =
                 dynamic_cast<pldm::responder::oem_ibm_platform::Handler*>(
                     oemPlatformHandler);
-            codeUpdateInProgress =
+            mcodeUpdateInProgress =
                 oemIbmPlatformHandler->codeUpdate->isCodeUpdateInProgress();
-            if (codeUpdateInProgress || lidType == PLDM_FILE_TYPE_LID_MARKER)
+            if (mcodeUpdateInProgress || lidType == PLDM_FILE_TYPE_LID_MARKER)
             {
                 std::string dir = LID_STAGING_DIR;
                 std::stringstream stream;
@@ -156,51 +158,61 @@ class LidHandler : public FileHandler
         }
         close(fd);
 
-        rc = transferFileData(lidPath, false, offset, length, address, event);
-        if (rc != PLDM_SUCCESS)
+        transferFileData(lidPath, false, offset, length, address, responseHdr,
+                         event);
+        m_length = length;
+
+        return -1;
+    }
+
+    virtual int postDataTransferCallBack(bool IsWriteToMemOp)
+    {
+        if (IsWriteToMemOp)
         {
-            std::cerr << "writeFileFromMemory failed with rc= " << rc << " \n";
+            int rc = -1;
+            if (lidType == PLDM_FILE_TYPE_LID_MARKER)
+            {
+                markerLIDremainingSize -= m_length;
+                if (markerLIDremainingSize == 0)
+                {
+                    pldm::responder::oem_ibm_platform::Handler*
+                        oemIbmPlatformHandler = dynamic_cast<
+                            pldm::responder::oem_ibm_platform::Handler*>(
+                            moemPlatformHandler);
+                    auto sensorId =
+                        oemIbmPlatformHandler->codeUpdate->getMarkerLidSensor();
+                    using namespace pldm::responder::oem_ibm_platform;
+                    oemIbmPlatformHandler->sendStateSensorEvent(
+                        sensorId, PLDM_STATE_SENSOR_STATE, 0, VALID, VALID);
+                    // rc = validate api;
+                    rc = PLDM_SUCCESS;
+                }
+            }
+            else if (mcodeUpdateInProgress)
+            {
+                rc = processCodeUpdateLid(lidPath);
+            }
             return rc;
         }
-        if (lidType == PLDM_FILE_TYPE_LID_MARKER)
+        else
         {
-            markerLIDremainingSize -= length;
-            if (markerLIDremainingSize == 0)
-            {
-                pldm::responder::oem_ibm_platform::Handler*
-                    oemIbmPlatformHandler = dynamic_cast<
-                        pldm::responder::oem_ibm_platform::Handler*>(
-                        oemPlatformHandler);
-                auto sensorId =
-                    oemIbmPlatformHandler->codeUpdate->getMarkerLidSensor();
-                using namespace pldm::responder::oem_ibm_platform;
-                oemIbmPlatformHandler->sendStateSensorEvent(
-                    sensorId, PLDM_STATE_SENSOR_STATE, 0, VALID, VALID);
-                // rc = validate api;
-                rc = PLDM_SUCCESS;
-            }
+            return -1;
         }
-        else if (codeUpdateInProgress)
-        {
-            rc = processCodeUpdateLid(lidPath);
-        }
-        std::cout << "KK writeFromMemory end...\n";
-        return rc;
     }
 
     virtual int readIntoMemory(uint32_t offset, uint32_t& length,
                                uint64_t address,
                                oem_platform::Handler* oemPlatformHandler,
+                               ResponseHdr& responseHdr,
                                sdeventplus::Event& event)
     {
-        std::cout << "KK readIntoMemory begin...\n";
         if (constructLIDPath(oemPlatformHandler))
         {
-            std::cout << "KK readIntoMemory end...\n";
-            return transferFileData(lidPath, true, offset, length, address,
-                                    event);
+            transferFileData(lidPath, true, offset, length, address,
+                             responseHdr, event);
+            return -1;
         }
-        return PLDM_ERROR;
+        return -1;
     }
 
     virtual int write(const char* buffer, uint32_t offset, uint32_t& length,
@@ -358,6 +370,9 @@ class LidHandler : public FileHandler
     bool isPatchDir;
     static inline MarkerLIDremainingSize markerLIDremainingSize;
     uint8_t lidType;
+    uint32_t m_length;
+    bool mcodeUpdateInProgress;
+    oem_platform::Handler* moemPlatformHandler;
 };
 
 } // namespace responder

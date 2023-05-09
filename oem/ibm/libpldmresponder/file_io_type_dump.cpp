@@ -256,8 +256,32 @@ std::string DumpHandler::getOffloadUri(uint32_t fileHandle)
     return socketInterface;
 }
 
+int DumpHandler::postDataTransferCallBack(bool IsWriteToMemOp)
+{
+    if (IsWriteToMemOp)
+    {
+        if (grc < 0)
+        {
+            std::cerr
+                << "DumpHandler::writeFromMemory: transferFileDataToSocket failed"
+                << std::endl;
+            if (DumpHandler::fd >= 0)
+            {
+                close(DumpHandler::fd);
+                DumpHandler::fd = -1;
+            }
+            auto socketInterface = getOffloadUri(fileHandle);
+            std::remove(socketInterface.c_str());
+            resetOffloadUri();
+            return PLDM_ERROR;
+        }
+    }
+    return PLDM_SUCCESS;
+}
+
 int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
                                  oem_platform::Handler* /*oemPlatformHandler*/,
+                                 ResponseHdr& responseHdr,
                                  sdeventplus::Event& event)
 {
     if (DumpHandler::fd == -1)
@@ -273,27 +297,20 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
                 << std::endl;
             std::remove(socketInterface.c_str());
             resetOffloadUri();
+            Response response(sizeof(pldm_msg_hdr) + responseHdr.command, 0);
+            auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+            encode_rw_file_by_type_memory_resp(responseHdr.instance_id,
+                                               responseHdr.command, PLDM_ERROR,
+                                               0, responsePtr);
+            responseHdr.respInterface->sendPLDMRespMsg(response,
+                                                       responseHdr.key);
             return PLDM_ERROR;
         }
 
         DumpHandler::fd = sock;
-        auto rc =
-            transferFileDataToSocket(DumpHandler::fd, length, address, event);
-        if (rc < 0)
-        {
-            std::cerr
-                << "DumpHandler::writeFromMemory: transferFileDataToSocket failed"
-                << std::endl;
-            if (DumpHandler::fd >= 0)
-            {
-                close(DumpHandler::fd);
-                DumpHandler::fd = -1;
-            }
-            std::remove(socketInterface.c_str());
-            resetOffloadUri();
-            return PLDM_ERROR;
-        }
-        return rc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
+        grc = transferFileDataToSocket(DumpHandler::fd, length, address,
+                                       responseHdr, event);
+        return grc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
     }
 
     if (socketWriteStatus == Error)
@@ -309,30 +326,28 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
         auto socketInterface = getOffloadUri(fileHandle);
         std::remove(socketInterface.c_str());
         resetOffloadUri();
+        Response response(sizeof(pldm_msg_hdr) + responseHdr.command, 0);
+        auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+        encode_rw_file_by_type_memory_resp(responseHdr.instance_id,
+                                           responseHdr.command, PLDM_ERROR, 0,
+                                           responsePtr);
+        responseHdr.respInterface->sendPLDMRespMsg(response, responseHdr.key);
         return PLDM_ERROR;
     }
     else if (socketWriteStatus == InProgress || socketWriteStatus == NotReady)
     {
+        Response response(sizeof(pldm_msg_hdr) + responseHdr.command, 0);
+        auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+        encode_rw_file_by_type_memory_resp(
+            responseHdr.instance_id, responseHdr.command, PLDM_ERROR_NOT_READY,
+            0, responsePtr);
+        responseHdr.respInterface->sendPLDMRespMsg(response, responseHdr.key);
         return PLDM_ERROR_NOT_READY;
     }
 
-    auto rc = transferFileDataToSocket(DumpHandler::fd, length, address, event);
-    if (rc < 0)
-    {
-        std::cerr
-            << "DumpHandler::writeFromMemory: transferFileDataToSocket failed"
-            << std::endl;
-        if (DumpHandler::fd >= 0)
-        {
-            close(DumpHandler::fd);
-            DumpHandler::fd = -1;
-        }
-        auto socketInterface = getOffloadUri(fileHandle);
-        std::remove(socketInterface.c_str());
-        resetOffloadUri();
-        return PLDM_ERROR;
-    }
-    return rc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
+    grc = transferFileDataToSocket(DumpHandler::fd, length, address,
+                                   responseHdr, event);
+    return grc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
 }
 
 int DumpHandler::write(const char* buffer, uint32_t, uint32_t& length,
@@ -508,6 +523,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
 int DumpHandler::readIntoMemory(uint32_t offset, uint32_t& length,
                                 uint64_t address,
                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                ResponseHdr& responseHdr,
                                 sdeventplus::Event& event)
 {
     auto path = findDumpObjPath(fileHandle);
@@ -525,9 +541,9 @@ int DumpHandler::readIntoMemory(uint32_t offset, uint32_t& length,
             auto filePath =
                 pldm::utils::DBusHandler().getDbusProperty<std::string>(
                     path.c_str(), "Path", dumpFilepathInterface);
-            auto rc = transferFileData(fs::path(filePath), true, offset, length,
-                                       address, event);
-            return rc;
+            transferFileData(fs::path(filePath), true, offset, length, address,
+                             responseHdr, event);
+            return -1;
         }
         catch (const sdbusplus::exception_t& e)
         {
@@ -540,8 +556,9 @@ int DumpHandler::readIntoMemory(uint32_t offset, uint32_t& length,
             return PLDM_ERROR;
         }
     }
-    return transferFileData(resDumpRequestDirPath, true, offset, length,
-                            address, event);
+    transferFileData(resDumpRequestDirPath, true, offset, length, address,
+                     responseHdr, event);
+    return -1;
 }
 
 int DumpHandler::read(uint32_t offset, uint32_t& length, Response& response,

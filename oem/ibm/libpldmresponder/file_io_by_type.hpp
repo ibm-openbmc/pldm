@@ -1,42 +1,51 @@
 #pragma once
 
-#include "file_io.hpp"
+// #include "file_io.hpp"
+#include "oem_ibm_handler.hpp"
+#include "pldmd/PldmRespInterface.hpp"
 
+#include <sdbusplus/bus.hpp>
+#include <sdbusplus/server.hpp>
+#include <sdbusplus/server/object.hpp>
+#include <sdbusplus/timer.hpp>
+#include <sdeventplus/clock.hpp>
+#include <sdeventplus/event.hpp>
+#include <sdeventplus/exception.hpp>
+#include <sdeventplus/source/io.hpp>
+#include <sdeventplus/source/signal.hpp>
+#include <sdeventplus/source/time.hpp>
+#include <stdplus/signal.hpp>
+#include <xyz/openbmc_project/Logging/Entry/server.hpp>
+
+#include <vector>
 namespace pldm
 {
 
 namespace responder
 {
 
-namespace fs = std::filesystem;
-struct CustomFDL
+using namespace sdeventplus;
+using namespace sdeventplus::source;
+constexpr auto clockId = sdeventplus::ClockId::RealTime;
+using Timer = Time<clockId>;
+using Clock = Clock<clockId>;
+
+class FileHandler;
+namespace dma
 {
-    CustomFDL(const CustomFDL&) = delete;
-    CustomFDL& operator=(const CustomFDL&) = delete;
-    CustomFDL(CustomFDL&&) = delete;
-    CustomFDL& operator=(CustomFDL&&) = delete;
+class DMA;
+} // namespace dma
 
-    CustomFDL(int fd) : fd(fd)
-    {}
-
-    ~CustomFDL()
-    {
-        if (fd >= 0)
-        {
-            // std::cout << "KK closing socket from custom local fd:" << fd
-            //         << "\n";
-            // close(fd);
-        }
-    }
-
-    int operator()() const
-    {
-        return fd;
-    }
-
-  private:
-    int fd = -1;
+struct ResponseHdr
+{
+    uint8_t instance_id;
+    uint8_t command;
+    pldm::Response_api::Transport* respInterface;
+    std::shared_ptr<FileHandler> functionPtr = nullptr;
+    int key;
 };
+
+namespace fs = std::filesystem;
 /**
  *  @class FileHandler
  *
@@ -58,6 +67,7 @@ class FileHandler
     virtual int writeFromMemory(uint32_t offset, uint32_t length,
                                 uint64_t address,
                                 oem_platform::Handler* oemPlatformHandler,
+                                ResponseHdr& responseHdr,
                                 sdeventplus::Event& event) = 0;
 
     /** @brief Method to read an oem file type into host memory. Individual
@@ -73,6 +83,7 @@ class FileHandler
     virtual int readIntoMemory(uint32_t offset, uint32_t& length,
                                uint64_t address,
                                oem_platform::Handler* oemPlatformHandler,
+                               ResponseHdr& responseHdr,
                                sdeventplus::Event& event) = 0;
 
     /** @brief Method to read an oem file type's content into the PLDM response.
@@ -166,15 +177,20 @@ class FileHandler
      */
     virtual int transferFileData(const fs::path& path, bool upstream,
                                  uint32_t offset, uint32_t& length,
-                                 uint64_t address, sdeventplus::Event& event);
-
-    virtual int transferFileData(int32_t fd, bool upstream, uint32_t offset,
-                                 uint32_t& length, uint64_t address,
+                                 uint64_t address, ResponseHdr& responseHdr,
                                  sdeventplus::Event& event);
 
-    virtual int transferFileDataToSocket(int32_t fd, uint32_t& length,
+    virtual int transferFileData(int fd, bool upstream, uint32_t offset,
+                                 uint32_t& length, uint64_t address,
+                                 ResponseHdr& responseHdr,
+                                 sdeventplus::Event& event);
+
+    virtual int transferFileDataToSocket(int fd, uint32_t& length,
                                          uint64_t address,
+                                         ResponseHdr& responseHdr,
                                          sdeventplus::Event& event);
+
+    virtual int postDataTransferCallBack(bool IsWriteToMemOp) = 0;
 
     /** @brief Constructor to create a FileHandler object
      */
@@ -198,5 +214,7 @@ class FileHandler
 
 std::unique_ptr<FileHandler> getHandlerByType(uint16_t fileType,
                                               uint32_t fileHandle);
+std::shared_ptr<FileHandler> getSharedHandlerByType(uint16_t fileType,
+                                                    uint32_t fileHandle);
 } // namespace responder
 } // namespace pldm

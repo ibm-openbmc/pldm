@@ -3,6 +3,7 @@
 #include "libpldm/pdr.h"
 #include "libpldm/platform.h"
 
+#include "PldmRespInterface.hpp"
 #include "common/flight_recorder.hpp"
 #include "common/utils.hpp"
 #include "dbus_impl_requester.hpp"
@@ -56,6 +57,7 @@
 #endif
 
 #ifdef OEM_IBM
+
 #include "libpldmresponder/file_io.hpp"
 #include "libpldmresponder/fru_oem_ibm.hpp"
 #include "libpldmresponder/oem_ibm_handler.hpp"
@@ -74,6 +76,9 @@ using namespace pldm::utils;
 using sdeventplus::source::Signal;
 using namespace pldm::flightrecorder;
 
+#ifdef OEM_IBM
+// using namespace pldm::Response_api;
+#endif
 void interruptFlightRecorderCallBack(Signal& /*signal*/,
                                      const struct signalfd_siginfo*)
 {
@@ -212,7 +217,7 @@ int main(int argc, char** argv)
     Invoker invoker{};
     requester::Handler<requester::Request> reqHandler(
         sockfd, event, dbusImplReq, currentSendbuffSize, verbose);
-
+    pldm::Response_api::Interfaces respInterface;
 #ifdef LIBPLDMRESPONDER
     using namespace pldm::state_sensor;
     dbus_api::Host dbusImplHost(bus, "/xyz/openbmc_project/pldm");
@@ -249,6 +254,9 @@ int main(int argc, char** argv)
     }
 
 #ifdef OEM_IBM
+
+    respInterface.transport =
+        std::make_unique<pldm::Response_api::Transport>(sockfd);
     std::unique_ptr<pldm::responder::CodeUpdate> codeUpdate =
         std::make_unique<pldm::responder::CodeUpdate>(&dbusHandler);
     std::unique_ptr<pldm::responder::SlotHandler> slotHandler =
@@ -264,7 +272,8 @@ int main(int argc, char** argv)
     slotHandler->setOemPlatformHandler(oemPlatformHandler.get());
     invoker.registerHandler(PLDM_OEM, std::make_unique<oem_ibm::Handler>(
                                           oemPlatformHandler.get(), sockfd,
-                                          hostEID, &dbusImplReq, &reqHandler));
+                                          hostEID, &dbusImplReq, &reqHandler,
+                                          respInterface.transport.get()));
 
     // host lamp test
     std::unique_ptr<pldm::led::HostLampTest> hostLampTest =
@@ -358,7 +367,8 @@ int main(int argc, char** argv)
         std::make_unique<MctpDiscovery>(bus, fwManager.get());
 
     auto callback = [verbose, &invoker, &reqHandler, currentSendbuffSize,
-                     &fwManager](IO& io, int fd, uint32_t revents) mutable {
+                     &fwManager,
+                     &respInterface](IO& io, int fd, uint32_t revents) mutable {
         if (!(revents & EPOLLIN))
         {
             return;
@@ -409,6 +419,12 @@ int main(int argc, char** argv)
                 }
                 else
                 {
+#ifdef OEM_IBM
+                    if (respInterface.transport)
+                    {
+                        respInterface.transport->setRequestMsgRef(requestMsg);
+                    }
+#endif
                     // process message and send response
                     auto response = processRxMsg(requestMsg, invoker,
                                                  reqHandler, fwManager.get());
