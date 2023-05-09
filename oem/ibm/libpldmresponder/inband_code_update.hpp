@@ -227,8 +227,7 @@ class CodeUpdate
      *         bootside information */
     pldm_boot_side_data readBootSideFile();
 
-    virtual ~CodeUpdate()
-    {}
+    virtual ~CodeUpdate() {}
 
   private:
     std::string currBootSide;      //!< current boot side
@@ -239,7 +238,6 @@ class CodeUpdate
     uint8_t retrySetVersion = 0;
 
     bool codeUpdateInProgress =
-    std::vector<std::unique_ptr<sdbusplus::bus::match_t>>
         false; //!< indicates whether codeupdate is going on
     bool outOfBandCodeUpdateInProgress = false; //!< indicates whether
                                                 //!< out of band codeupdate
