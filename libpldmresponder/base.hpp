@@ -1,5 +1,7 @@
 #pragma once
 
+#include "config.h"
+
 #include "libpldm/base.h"
 
 #include "libpldmresponder/platform.hpp"
@@ -21,7 +23,6 @@ namespace responder
 {
 namespace base
 {
-
 class Handler : public CmdHandler
 {
   public:
