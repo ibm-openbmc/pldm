@@ -200,9 +200,9 @@ void DeviceUpdater::passCompTable(mctp_eid_t eid, const pldm_msg* response,
     uint8_t compResponse = 0;
     uint8_t compResponseCode = 0;
 
-    auto rc =
-        decode_pass_component_table_resp(response, respMsgLen, &completionCode,
-                                         &compResponse, &compResponseCode);
+    auto rc = decode_pass_component_table_resp(response, respMsgLen,
+                                               &completionCode, &compResponse,
+                                               &compResponseCode);
     if (rc)
     {
         // Handle error scenario
@@ -440,8 +440,8 @@ Response DeviceUpdater::transferComplete(const pldm_msg* request,
     auto responseMsg = reinterpret_cast<pldm_msg*>(response.data());
 
     uint8_t transferResult = 0;
-    auto rc =
-        decode_transfer_complete_req(request, payloadLength, &transferResult);
+    auto rc = decode_transfer_complete_req(request, payloadLength,
+                                           &transferResult);
     if (rc)
     {
         std::cerr << "Decoding TransferComplete request failed, EID="

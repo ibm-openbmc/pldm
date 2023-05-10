@@ -126,8 +126,7 @@ StatestoDbusVal populateMapping(const std::string& type, const Json& dBusValues,
 class RepoInterface
 {
   public:
-    RepoInterface(pldm_pdr* repo) : repo(repo)
-    {}
+    RepoInterface(pldm_pdr* repo) : repo(repo) {}
 
     virtual ~RepoInterface() = default;
 
@@ -201,8 +200,7 @@ class RepoInterface
 class Repo : public RepoInterface
 {
   public:
-    Repo(pldm_pdr* repo) : RepoInterface(repo)
-    {}
+    Repo(pldm_pdr* repo) : RepoInterface(repo) {}
 
     pldm_pdr* getPdr() const override;
 
