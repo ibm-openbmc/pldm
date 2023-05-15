@@ -22,8 +22,7 @@ using LEDGroupObj = sdbusplus::server::object::object<
 class HostLampTestInterfaces
 {
   public:
-    virtual ~HostLampTestInterfaces()
-    {}
+    virtual ~HostLampTestInterfaces() {}
 
     virtual uint16_t getEffecterID() = 0;
     virtual void setHostStateEffecter(uint16_t effecterID, uint8_t& rc) = 0;

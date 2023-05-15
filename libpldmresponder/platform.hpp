@@ -134,20 +134,19 @@ class Handler : public CmdHandler
             propertiesChanged("/xyz/openbmc_project/state/host0",
                               "xyz.openbmc_project.State.Host"),
             [this](sdbusplus::message::message& msg) {
-                DbusChangedProps props{};
-                std::string intf;
-                msg.read(intf, props);
-                const auto itr = props.find("CurrentHostState");
-                if (itr != props.end())
+            DbusChangedProps props{};
+            std::string intf;
+            msg.read(intf, props);
+            const auto itr = props.find("CurrentHostState");
+            if (itr != props.end())
+            {
+                utils::PropertyValue value = itr->second;
+                auto propVal = std::get<std::string>(value);
+                if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
                 {
-                    utils::PropertyValue value = itr->second;
-                    auto propVal = std::get<std::string>(value);
-                    if (propVal ==
-                        "xyz.openbmc_project.State.Host.HostState.Off")
-                    {
-                        clearMexObj = true;
-                    }
+                    clearMexObj = true;
                 }
+            }
             });
     }
 

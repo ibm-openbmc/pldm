@@ -94,8 +94,8 @@ void SlotHandler::callVPDManager(const std::string& adapterObjPath,
     auto& bus = pldm::utils::DBusHandler::getBus();
     try
     {
-        auto service =
-            pldm::utils::DBusHandler().getService(VPDObjPath, VPDInterface);
+        auto service = pldm::utils::DBusHandler().getService(VPDObjPath,
+                                                             VPDInterface);
         if (stateFiledValue == uint8_t(ADD))
         {
             auto method = bus.new_method_call(service.c_str(), VPDObjPath,
@@ -154,17 +154,17 @@ void SlotHandler::createPresenceMatch(const std::string& adapterObjectPath,
                           "xyz.openbmc_project.Inventory.Item"),
         [this, adapterObjectPath, stateFieldValue,
          entity](sdbusplus::message::message& msg) {
-            pldm::utils::DbusChangedProps props{};
-            std::string intf;
-            msg.read(intf, props);
-            const auto itr = props.find("Present");
-            if (itr != props.end())
-            {
-                bool value = std::get<bool>(itr->second);
-                // Present Property is found
-                this->processPropertyChangeFromVPD(value, adapterObjectPath,
-                                                   stateFieldValue, entity);
-            }
+        pldm::utils::DbusChangedProps props{};
+        std::string intf;
+        msg.read(intf, props);
+        const auto itr = props.find("Present");
+        if (itr != props.end())
+        {
+            bool value = std::get<bool>(itr->second);
+            // Present Property is found
+            this->processPropertyChangeFromVPD(value, adapterObjectPath,
+                                               stateFieldValue, entity);
+        }
         });
 }
 
@@ -304,9 +304,9 @@ bool SlotHandler::fetchSensorStateFromDbus(const std::string& adapterObjectPath)
     {
         auto service = pldm::utils::DBusHandler().getService(
             adapterObjectPath.c_str(), ItemInterface);
-        auto method =
-            bus.new_method_call(service.c_str(), adapterObjectPath.c_str(),
-                                FreedesktopInterface, GetMethod);
+        auto method = bus.new_method_call(service.c_str(),
+                                          adapterObjectPath.c_str(),
+                                          FreedesktopInterface, GetMethod);
         method.append(ItemInterface, PresentProperty);
         auto reply = bus.call(method);
         reply.read(presentProperty);

@@ -264,7 +264,7 @@ int createOrUpdateLicenseDbusPaths(const uint8_t& flag)
     sdbusplus::com::ibm::License::Entry::server::LicenseEntry::AuthorizationType
         licAuthType = sdbusplus::com::ibm::License::Entry::server::
             LicenseEntry::AuthorizationType::Device;
-    for (auto const& [key, licJson] : licJsonMap)
+    for (const auto& [key, licJson] : licJsonMap)
     {
         auto licName = licJson.value("Name", empty);
 

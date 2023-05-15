@@ -109,8 +109,8 @@ void generateStateSensorPDR(const DBusInterface& dBusIntf, const Json& json,
                 // mentioned in the json, and add this entity to the
                 // parents entity assocation PDR
 
-                std::string parent_entity_path =
-                    e.value("parent_entity_path", "");
+                std::string parent_entity_path = e.value("parent_entity_path",
+                                                         "");
                 if (parent_entity_path != "" &&
                     associatedEntityMap.contains(parent_entity_path))
                 {

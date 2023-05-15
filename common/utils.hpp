@@ -307,8 +307,8 @@ class DBusHandler : public DBusHandlerInterface
      */
     static auto& getInventoryObjects()
     {
-        static ObjectValueTree object =
-            getManagedObj(inventoryService, inventoryPath);
+        static ObjectValueTree object = getManagedObj(inventoryService,
+                                                      inventoryPath);
         return object;
     }
 };

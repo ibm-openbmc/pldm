@@ -384,25 +384,21 @@ class Handler : public CmdHandler
     {
         handlers.emplace(PLDM_GET_FRU_RECORD_TABLE_METADATA,
                          [this](const pldm_msg* request, size_t payloadLength) {
-                             return this->getFRURecordTableMetadata(
-                                 request, payloadLength);
-                         });
+            return this->getFRURecordTableMetadata(request, payloadLength);
+        });
 
         handlers.emplace(PLDM_GET_FRU_RECORD_TABLE,
                          [this](const pldm_msg* request, size_t payloadLength) {
-                             return this->getFRURecordTable(request,
-                                                            payloadLength);
-                         });
+            return this->getFRURecordTable(request, payloadLength);
+        });
         handlers.emplace(PLDM_GET_FRU_RECORD_BY_OPTION,
                          [this](const pldm_msg* request, size_t payloadLength) {
-                             return this->getFRURecordByOption(request,
-                                                               payloadLength);
-                         });
+            return this->getFRURecordByOption(request, payloadLength);
+        });
         handlers.emplace(PLDM_SET_FRU_RECORD_TABLE,
                          [this](const pldm_msg* request, size_t payloadLength) {
-                             return this->setFRURecordTable(request,
-                                                            payloadLength);
-                         });
+            return this->setFRURecordTable(request, payloadLength);
+        });
     }
 
     /** @brief Handler for Get FRURecordTableMetadata

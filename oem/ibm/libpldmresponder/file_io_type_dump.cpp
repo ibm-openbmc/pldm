@@ -55,8 +55,8 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
 
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
     {
-        resDumpRequestDirPath =
-            "/var/lib/pldm/resourcedump/" + std::to_string(fileHandle);
+        resDumpRequestDirPath = "/var/lib/pldm/resourcedump/" +
+                                std::to_string(fileHandle);
     }
 
     // Stores the current resource dump entry path
@@ -64,23 +64,23 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
 
     if (dumpType == PLDM_FILE_TYPE_BMC_DUMP)
     {
-        curResDumpEntryPath =
-            (std::string)bmcDumpObjPath + "/" + std::to_string(fileHandle);
+        curResDumpEntryPath = (std::string)bmcDumpObjPath + "/" +
+                              std::to_string(fileHandle);
     }
     else if (dumpType == PLDM_FILE_TYPE_SBE_DUMP)
     {
-        curResDumpEntryPath =
-            (std::string)sbeDumpObjPath + "/" + std::to_string(fileHandle);
+        curResDumpEntryPath = (std::string)sbeDumpObjPath + "/" +
+                              std::to_string(fileHandle);
     }
     else if (dumpType == PLDM_FILE_TYPE_HOSTBOOT_DUMP)
     {
-        curResDumpEntryPath =
-            (std::string)hostbootDumpObjPath + "/" + std::to_string(fileHandle);
+        curResDumpEntryPath = (std::string)hostbootDumpObjPath + "/" +
+                              std::to_string(fileHandle);
     }
     else if (dumpType == PLDM_FILE_TYPE_HARDWARE_DUMP)
     {
-        curResDumpEntryPath =
-            (std::string)hardwareDumpObjPath + "/" + std::to_string(fileHandle);
+        curResDumpEntryPath = (std::string)hardwareDumpObjPath + "/" +
+                              std::to_string(fileHandle);
     }
 
     std::string dumpEntryIntf{};
@@ -587,8 +587,8 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
     {
         DBusMapping dbusMapping;
-        dbusMapping.objectPath =
-            resDumpEntryObjPath + std::to_string(fileHandle);
+        dbusMapping.objectPath = resDumpEntryObjPath +
+                                 std::to_string(fileHandle);
         dbusMapping.interface = resDumpEntry;
         dbusMapping.propertyName = "DumpRequestStatus";
         dbusMapping.propertyType = "string";
@@ -741,8 +741,8 @@ int DumpHandler::newFileAvailableWithMetaData(uint64_t length,
 
     try
     {
-        auto service =
-            pldm::utils::DBusHandler().getService(notifyObjPath, dumpInterface);
+        auto service = pldm::utils::DBusHandler().getService(notifyObjPath,
+                                                             dumpInterface);
         using namespace sdbusplus::xyz::openbmc_project::Dump::server;
         auto method = bus.new_method_call(
             service.c_str(), notifyObjPath, dumpInterface,

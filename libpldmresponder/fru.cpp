@@ -379,8 +379,8 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
         pldm_entity_association_pdr_remove_contained_entity(
             pdrRepo, removeEntity, &hostEventDataOps, true);
 
-    auto deleteRecordHdl =
-        pldm_pdr_remove_fru_record_set_by_rsi(pdrRepo, rsi, false);
+    auto deleteRecordHdl = pldm_pdr_remove_fru_record_set_by_rsi(pdrRepo, rsi,
+                                                                 false);
 
     // sm00
     /* std::cout << "\nprinting the entityTree before deleting node\n";
@@ -855,11 +855,10 @@ void FruImpl::subscribeFruPresence(
                     bus, propertiesChanged(fruObjPath, itemInterface),
                     [this, fruObjPath,
                      fruInterface](sdbusplus::message::message& msg) {
-                        DbusChangedProps props;
-                        std::string iface;
-                        msg.read(iface, props);
-                        processFruPresenceChange(props, fruObjPath,
-                                                 fruInterface);
+                DbusChangedProps props;
+                std::string iface;
+                msg.read(iface, props);
+                processFruPresenceChange(props, fruObjPath, fruInterface);
                     }));
         }
     }
@@ -987,9 +986,8 @@ void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
                   << std::endl;
         return;
     }
-    auto platformEventMessageResponseHandler = [](mctp_eid_t /*eid*/,
-                                                  const pldm_msg* response,
-                                                  size_t respMsgLen) {
+    auto platformEventMessageResponseHandler =
+        [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             std::cerr << "Failed to receive response for the PDR repository "
@@ -1312,8 +1310,8 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
 
             pldm::responder::pdr_utils::DbusMappings dbusMappings{};
             pldm::responder::pdr_utils::DbusValMaps dbusValMaps{};
-            uint8_t* start =
-                entry.data() + sizeof(pldm_state_sensor_pdr) - sizeof(uint8_t);
+            uint8_t* start = entry.data() + sizeof(pldm_state_sensor_pdr) -
+                             sizeof(uint8_t);
             for (const auto& sensor : sensors)
             {
                 auto set = sensor.value("set", empty);

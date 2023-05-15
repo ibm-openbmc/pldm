@@ -190,8 +190,8 @@ void Handler::setFirmwareUAK(std::vector<uint8_t> data)
     auto& bus = pldm::utils::DBusHandler::getBus();
     try
     {
-        auto service =
-            pldm::utils::DBusHandler().getService(uakObjPath, uakInterface);
+        auto service = pldm::utils::DBusHandler().getService(uakObjPath,
+                                                             uakInterface);
         auto method = bus.new_method_call(service.c_str(), uakObjPath,
                                           uakInterface, "WriteKeyword");
         method.append(static_cast<sdbusplus::message::object_path>(fruPath),

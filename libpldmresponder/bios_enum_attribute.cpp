@@ -220,13 +220,13 @@ void BIOSEnumAttribute::constructEntry(
             {
                 currValueIndices[0] = getValueIndex(currValue, possibleValues);
             }
-            catch (std::invalid_argument const& ex)
+            catch (const std::invalid_argument& ex)
             {
                 std::cerr << "Enum Value " << currValue
                           << " is not one of the possible values. Error: "
                           << ex.what() << " for Attribute " << name << '\n';
-                currValueIndices[0] =
-                    getValueIndex(defaultValue, possibleValues);
+                currValueIndices[0] = getValueIndex(defaultValue,
+                                                    possibleValues);
             }
         }
         else

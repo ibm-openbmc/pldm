@@ -166,8 +166,7 @@ namespace oem_fru
 class Handler : public CmdHandler
 {
   public:
-    Handler(const pldm::utils::DBusHandler* dBusIntf) : dBusIntf(dBusIntf)
-    {}
+    Handler(const pldm::utils::DBusHandler* dBusIntf) : dBusIntf(dBusIntf) {}
 
     /** @brief Process OEM FRU record
      *

@@ -85,9 +85,8 @@ int sendBiosAttributeUpdateEvent(
         std::cout << tempStream.str() << std::endl;
     }
 
-    auto platformEventMessageResponseHandler = [](mctp_eid_t /*eid*/,
-                                                  const pldm_msg* response,
-                                                  size_t respMsgLen) {
+    auto platformEventMessageResponseHandler =
+        [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             std::cerr

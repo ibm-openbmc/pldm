@@ -128,9 +128,8 @@ void HostLampTest::setHostStateEffecter(uint16_t effecterID, uint8_t& rc)
         return;
     }
 
-    auto setStateEffecterStatesResponseHandler = [&rc](mctp_eid_t /*eid*/,
-                                                       const pldm_msg* response,
-                                                       size_t respMsgLen) {
+    auto setStateEffecterStatesResponseHandler =
+        [&rc](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             std::cerr << "Failed to receive response for the Set State "

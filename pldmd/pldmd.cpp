@@ -258,8 +258,8 @@ int main(int argc, char** argv)
         &dbusHandler, codeUpdate.get(), slotHandler.get(), sockfd, hostEID,
         dbusImplReq, event, pdrRepo.get(), &reqHandler, bmcEntityTree.get(),
         hostEffecterParser.get());
-    oemFruHandler =
-        std::make_unique<oem_ibm_fru::Handler>(&dbusHandler, pdrRepo.get());
+    oemFruHandler = std::make_unique<oem_ibm_fru::Handler>(&dbusHandler,
+                                                           pdrRepo.get());
     codeUpdate->setOemPlatformHandler(oemPlatformHandler.get());
     slotHandler->setOemPlatformHandler(oemPlatformHandler.get());
     invoker.registerHandler(PLDM_OEM, std::make_unique<oem_ibm::Handler>(
