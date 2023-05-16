@@ -120,14 +120,13 @@ int setupUnixSocket(const std::string& socketInterface)
     return fd;
 }
 
-void writeToUnixSocket(const int sock, const char* buf,
-                       const uint64_t blockSize)
+int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
 {
     const std::lock_guard<std::mutex> lock(lockMutex);
     if (socketWriteStatus == Error)
     {
         munmap((void*)buf, blockSize);
-        return;
+        return -1;
     }
     socketWriteStatus = InProgress;
     uint64_t i;
@@ -152,7 +151,7 @@ void writeToUnixSocket(const int sock, const char* buf,
             close(sock);
             socketWriteStatus = Error;
             munmap((void*)buf, blockSize);
-            return;
+            return -1;
         }
         if (retval == 0)
         {
@@ -162,7 +161,8 @@ void writeToUnixSocket(const int sock, const char* buf,
         if ((retval > 0) && (FD_ISSET(sock, &wfd)))
         {
             nwrite = write(sock, buf + i, blockSize - i);
-
+            std::cout << "KK writing dump to HMC blockSize:" << blockSize
+                      << " I:" << i << " rc:" << nwrite << "\n";
             if (nwrite < 0)
             {
                 if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
@@ -178,7 +178,7 @@ void writeToUnixSocket(const int sock, const char* buf,
                 close(sock);
                 socketWriteStatus = Error;
                 munmap((void*)buf, blockSize);
-                return;
+                return -1;
             }
         }
         else
@@ -189,7 +189,7 @@ void writeToUnixSocket(const int sock, const char* buf,
 
     munmap((void*)buf, blockSize);
     socketWriteStatus = Completed;
-    return;
+    return 0;
 }
 
 void clearDumpSocketWriteStatus()

@@ -33,24 +33,14 @@ auto updateDirPath = fs::path(LID_STAGING_DIR) / "update";
 /** @brief The file name of the code update tarball */
 constexpr auto tarImageName = "image.tar";
 
-/** @brief The file name of the hostfw image */
-constexpr auto hostfwImageName = "image-hostfw";
+/** @brief The path to the code update tarball file */
+auto tarImagePath = fs::path(imageDirPath) / tarImageName;
 
 /** @brief The filename of the file where bootside data will be saved */
 constexpr auto bootSideFileName = "bootSide";
 
 constexpr auto bootSideAttrName = "fw_boot_side_current";
 constexpr auto bootNextSideAttrName = "fw_boot_side";
-
-/** @brief The path to the code update tarball file */
-auto tarImagePath = fs::path(imageDirPath) / tarImageName;
-
-/** @brief The path to the hostfw image */
-auto hostfwImagePath = fs::path(imageDirPath) / hostfwImageName;
-
-/** @brief The path to the tarball file expected by the phosphor software
- *         manager */
-auto updateImagePath = fs::path("/tmp/images") / tarImageName;
 
 /** @brief The filepath of file where bootside data will be saved */
 auto bootSideDirPath = fs::path("/var/lib/pldm/") / bootSideFileName;
@@ -328,6 +318,47 @@ void CodeUpdate::setVersions()
                         "xyz.openbmc_project.Software.Activation";
                     auto imageObjPath = path.str.c_str();
 
+                    // If the version interface is added with the Activation
+                    // value as Invalid, it is considered as assemble code
+                    // update image failure.
+                    // Failure is occured while assembling
+                    // lid files or while creating a tar ball.
+
+                    try
+                    {
+                        auto propVal =
+                            pldm::utils::DBusHandler().getDbusPropertyVariant(
+                                imageObjPath, "Activation", imageInterface);
+                        const auto& activation = std::get<std::string>(propVal);
+
+                        if (activation ==
+                            "xyz.openbmc_project.Software.Activation.Activations.Invalid")
+                        {
+                            if (isCodeUpdateInProgress())
+                            {
+                                std::cerr
+                                    << "InbandCodeUpdate Failed: Received Invalid Signal, Sending "
+                                    << "Error on End update sensor event "
+                                    << "to PHYP\n";
+                                setCodeUpdateProgress(false);
+                                auto sensorId = getFirmwareUpdateSensor();
+                                sendStateSensorEvent(
+                                    sensorId, PLDM_STATE_SENSOR_STATE, 0,
+                                    uint8_t(CodeUpdateState::FAIL),
+                                    uint8_t(CodeUpdateState::START));
+                                break;
+                            }
+                        }
+                    }
+                    catch (const std::exception& e)
+                    {
+                        std::cerr
+                            << "Code Update: Error getting Activation property, PATH="
+                            << imageObjPath << "INTERFACE=" << imageInterface
+                            << "PROPERTY="
+                            << "Activation"
+                            << "ERROR=" << e.what() << "\n";
+                    }
                     try
                     {
                         nonRunningVersion = path.str;
@@ -758,148 +789,33 @@ int processCodeUpdateLid(const std::string& filePath)
 
 int CodeUpdate::assembleCodeUpdateImage()
 {
-    pid_t pid = fork();
+    static constexpr auto UPDATER_SERVICE =
+        "xyz.openbmc_project.Software.BMC.Updater";
+    static constexpr auto SOFTWARE_PATH = "/xyz/openbmc_project/software";
+    static constexpr auto LID_INTERFACE = "xyz.openbmc_project.Software.LID";
 
-    if (pid == 0)
+    auto& bus = dBusIntf->getBus();
+
+    try
     {
-        pid_t nextPid = fork();
-        if (nextPid == 0)
-        {
-            auto rc = 0;
-            // Create the hostfw squashfs image from the LID files without
-            // header
-            try
-            {
-                rc = executeCmd("/usr/sbin/mksquashfs", lidDirPath.c_str(),
-                                hostfwImagePath.c_str(), "-all-root",
-                                "-no-recovery", "-no-xattrs", "-noI",
-                                "-mkfs-time", "0", "-all-time", "0");
-                if (rc < 0)
-                {
-                    std::cerr << "Error occurred during the mksqusquashfs call"
-                              << std::endl;
-                    setCodeUpdateProgress(false);
-                    auto sensorId = getFirmwareUpdateSensor();
-                    sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
-                                         uint8_t(CodeUpdateState::FAIL),
-                                         uint8_t(CodeUpdateState::START));
-                    exit(EXIT_FAILURE);
-                }
-            }
-            catch (const std::exception& e)
-            {
-                std::cerr << "Failed during the mksqusquashfs call, "
-                             "ERROR="
-                          << e.what() << "\n";
-                return PLDM_ERROR;
-            }
-
-            fs::create_directories(updateDirPath);
-
-            // Extract the BMC tarball content
-            try
-            {
-                rc = executeCmd("/bin/tar", "-xf", tarImagePath.c_str(), "-C",
-                                updateDirPath);
-                if (rc < 0)
-                {
-                    setCodeUpdateProgress(false);
-                    auto sensorId = getFirmwareUpdateSensor();
-                    sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
-                                         uint8_t(CodeUpdateState::FAIL),
-                                         uint8_t(CodeUpdateState::START));
-                    exit(EXIT_FAILURE);
-                }
-            }
-            catch (const std::exception& e)
-            {
-                std::cerr << "Failed to Extract the BMC tarball content, "
-                             "ERROR="
-                          << e.what() << "\n";
-                return PLDM_ERROR;
-            }
-
-            // Add the hostfw image to the directory where the contents were
-            // extracted
-            fs::copy_file(hostfwImagePath,
-                          fs::path(updateDirPath) / hostfwImageName,
-                          fs::copy_options::overwrite_existing);
-
-            // Remove the tarball file, then re-generate it with so that the
-            // hostfw image becomes part of the tarball
-            fs::remove(tarImagePath);
-            try
-            {
-                rc = executeCmd("/bin/tar", "-cf", tarImagePath, ".", "-C",
-                                updateDirPath);
-                if (rc < 0)
-                {
-                    std::cerr
-                        << "Error occurred during the generation of the tarball"
-                        << std::endl;
-                    setCodeUpdateProgress(false);
-                    auto sensorId = getFirmwareUpdateSensor();
-                    sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
-                                         uint8_t(CodeUpdateState::FAIL),
-                                         uint8_t(CodeUpdateState::START));
-                    exit(EXIT_FAILURE);
-                }
-            }
-            catch (const std::exception& e)
-            {
-                std::cerr
-                    << "Failed to Remove the tarball file, then re-generate it, "
-                       "ERROR="
-                    << e.what() << "\n";
-                return PLDM_ERROR;
-            }
-
-            // Copy the tarball to the update directory to trigger the
-            // phosphor software manager to create a version interface
-            fs::copy_file(tarImagePath, updateImagePath,
-                          fs::copy_options::overwrite_existing);
-
-            // Cleanup
-            fs::remove_all(updateDirPath);
-            fs::remove_all(lidDirPath);
-            fs::remove_all(imageDirPath);
-
-            exit(EXIT_SUCCESS);
-        }
-        else if (nextPid < 0)
-        {
-            std::cerr << "Error occurred during fork. ERROR=" << errno
-                      << std::endl;
-            exit(EXIT_FAILURE);
-        }
-
-        // Do nothing as parent. When parent exits, child will be reparented
-        // under init and be reaped properly.
-        exit(0);
+        std::cout << "InbandCodeUpdate: AssembleCodeUpdateImage \n";
+        auto method =
+            bus.new_method_call(UPDATER_SERVICE, SOFTWARE_PATH, LID_INTERFACE,
+                                "AssembleCodeUpdateImage");
+        bus.call_noreply(method);
     }
-    else if (pid > 0)
+    catch (const std::exception& e)
     {
-        int status;
-        if (waitpid(pid, &status, 0) < 0)
-        {
-            std::cerr << "Error occurred during waitpid. ERROR=" << errno
-                      << std::endl;
-            return PLDM_ERROR;
-        }
-        else if (WEXITSTATUS(status) != 0)
-        {
-            std::cerr
-                << "Failed to execute the assembling of the image. STATUS="
-                << status << std::endl;
-            return PLDM_ERROR;
-        }
+        std::cerr
+            << "InbandCodeUpdate: Failed to Assemble code update image ERROR="
+            << e.what() << "\n";
+        setCodeUpdateProgress(false);
+        auto sensorId = getFirmwareUpdateSensor();
+        sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
+                             uint8_t(CodeUpdateState::FAIL),
+                             uint8_t(CodeUpdateState::START));
+        return -1;
     }
-    else
-    {
-        std::cerr << "Error occurred during fork. ERROR=" << errno << std::endl;
-        return PLDM_ERROR;
-    }
-
     return PLDM_SUCCESS;
 }
 

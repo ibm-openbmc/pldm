@@ -308,42 +308,43 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
         }
 
         DumpHandler::fd = sock;
-        grc = transferFileDataToSocket(DumpHandler::fd, length, address,
-                                       responseHdr, event);
-        return grc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
+        // grc = transferFileDataToSocket(DumpHandler::fd, length, address,
+        //    responseHdr, event);
+        // return grc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
     }
 
-    if (socketWriteStatus == Error)
-    {
-        std::cerr
-            << "DumpHandler::writeFromMemory: Error while writing to Unix socket"
-            << std::endl;
-        if (DumpHandler::fd >= 0)
-        {
-            close(DumpHandler::fd);
-            DumpHandler::fd = -1;
-        }
-        auto socketInterface = getOffloadUri(fileHandle);
-        std::remove(socketInterface.c_str());
-        resetOffloadUri();
-        Response response(sizeof(pldm_msg_hdr) + responseHdr.command, 0);
-        auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
-        encode_rw_file_by_type_memory_resp(responseHdr.instance_id,
-                                           responseHdr.command, PLDM_ERROR, 0,
-                                           responsePtr);
-        responseHdr.respInterface->sendPLDMRespMsg(response, responseHdr.key);
-        return PLDM_ERROR;
-    }
-    else if (socketWriteStatus == InProgress || socketWriteStatus == NotReady)
-    {
-        Response response(sizeof(pldm_msg_hdr) + responseHdr.command, 0);
-        auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
-        encode_rw_file_by_type_memory_resp(
-            responseHdr.instance_id, responseHdr.command, PLDM_ERROR_NOT_READY,
-            0, responsePtr);
-        responseHdr.respInterface->sendPLDMRespMsg(response, responseHdr.key);
-        return PLDM_ERROR_NOT_READY;
-    }
+    /* if (socketWriteStatus == Error)
+     {
+         std::cerr
+             << "DumpHandler::writeFromMemory: Error while writing to Unix
+     socket"
+             << std::endl;
+         if (DumpHandler::fd >= 0)
+         {
+             close(DumpHandler::fd);
+             DumpHandler::fd = -1;
+         }
+         auto socketInterface = getOffloadUri(fileHandle);
+         std::remove(socketInterface.c_str());
+         resetOffloadUri();
+         Response response(sizeof(pldm_msg_hdr) + responseHdr.command, 0);
+         auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+         encode_rw_file_by_type_memory_resp(responseHdr.instance_id,
+                                            responseHdr.command, PLDM_ERROR, 0,
+                                            responsePtr);
+         responseHdr.respInterface->sendPLDMRespMsg(response, responseHdr.key);
+         return PLDM_ERROR;
+     }
+     else if (socketWriteStatus == InProgress || socketWriteStatus == NotReady)
+     {
+         Response response(sizeof(pldm_msg_hdr) + responseHdr.command, 0);
+         auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+         encode_rw_file_by_type_memory_resp(
+             responseHdr.instance_id, responseHdr.command, PLDM_ERROR_NOT_READY,
+             length, responsePtr);
+         responseHdr.respInterface->sendPLDMRespMsg(response, responseHdr.key);
+         return PLDM_ERROR_NOT_READY;
+     }*/
 
     grc = transferFileDataToSocket(DumpHandler::fd, length, address,
                                    responseHdr, event);

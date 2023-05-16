@@ -78,7 +78,7 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
     rc = write(xdmaFd, &xdmaOp, sizeof(xdmaOp));
     if (rc < 0)
     {
-        rc = -errno;
+        rc = errno;
         std::cerr
             << "transferHostDataToSocket : Failed to execute the DMA operation, RC="
             << rc << " ADDRESS=" << address << " LENGTH=" << length << "\n";
@@ -99,10 +99,16 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
         }
         return rc;
     }
+
+    rc = writeToUnixSocket(fd, static_cast<const char*>(vgaMemDump), length);
+    if (rc < 0)
+    {
+        std::cerr
+            << "transferHostDataToSocket writing To Unix Socket failed. \n";
+        return -1;
+    }
     rc = length;
-    std::thread dumpOffloadThread(writeToUnixSocket, fd,
-                                  static_cast<const char*>(vgaMemDump), length);
-    dumpOffloadThread.detach();
+
     return rc;
 }
 
@@ -187,10 +193,28 @@ int32_t DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
     xdmaOp.upstream = upstream ? 1 : 0;
     xdmaOp.hostAddr = address;
     xdmaOp.len = length;
+
+    // int retry = 0;
+
+    // do
+    // {
     rc = write(xdmaFd, &xdmaOp, sizeof(xdmaOp));
+    //  std::cout << "KK total length of write0 from DMA:" << length
+    //            << " read out of total length rc:" << rc << " offset:" <<
+    //            offset
+    //            << " address:" << address << "\n";
+    //      if (rc > 0)
+    //      {
+    //          break;
+    //      }
+    //      retry++;
+    //      std::cout << "KK write0 retry:" << retry << " errno:" << errno <<
+    //      "\n"; usleep(1000000);
+    //  } while (retry < 3);
+
     if (rc < 0)
     {
-        rc = -errno;
+        rc = errno;
         std::cerr
             << "transferDataHost : Failed to execute the DMA operation, RC="
             << rc << " UPSTREAM=" << upstream << " ADDRESS=" << address
