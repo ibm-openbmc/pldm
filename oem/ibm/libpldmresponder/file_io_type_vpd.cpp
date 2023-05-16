@@ -7,7 +7,11 @@
 
 #include <stdint.h>
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <iostream>
+
+PHOSPHOR_LOG2_USING;
 
 typedef uint8_t byte;
 
@@ -39,8 +43,9 @@ int keywordHandler::read(uint32_t offset, uint32_t& length, Response& response,
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Get keyword error from dbus interface : "
-                  << keywrdInterface << " ERROR= " << e.what() << std::endl;
+        error(
+            "Get keyword error from dbus interface : {INTF} ERROR= {ERR_EXCEP}",
+            "INTF", keywrdInterface, "ERR_EXCEP", e.what());
     }
 
     auto keywrdSize = std::get<std::vector<byte>>(keywrd).size();
@@ -67,8 +72,8 @@ int keywordHandler::read(uint32_t offset, uint32_t& length, Response& response,
     keywrdFile.open(keywrdFilePath, std::ios::out | std::ofstream::binary);
     if (!keywrdFile)
     {
-        std::cerr << "VPD keyword file open error: " << keywrdFilePath
-                  << " errno: " << errno << std::endl;
+        error("VPD keyword file open error: {KEYWRD_PATH} errno: {ERR}",
+              "KEYWRD_PATH", keywrdFilePath, "ERR", errno);
         pldm::utils::reportError(
             "xyz.openbmc_project.PLDM.Error.readKeywordHandler.keywordFileOpenError",
             pldm::PelSeverity::ERROR);
@@ -78,8 +83,8 @@ int keywordHandler::read(uint32_t offset, uint32_t& length, Response& response,
                      keywrdSize);
     if (keywrdFile.bad())
     {
-        std::cerr << "Error while writing to file: " << keywrdFilePath
-                  << std::endl;
+        error("Error while writing to file: {KEYWRD_PATH}", "KEYWRD_PATH",
+              keywrdFilePath);
     }
     keywrdFile.close();
 
@@ -90,8 +95,8 @@ int keywordHandler::read(uint32_t offset, uint32_t& length, Response& response,
     fs::remove(keywrdFilePath);
     if (rc)
     {
-        std::cerr << "Read error for keyword file with size: " << keywrdSize
-                  << std::endl;
+        error("Read error for keyword file with size: {KEYWRD_SIZE}",
+              "KEYWRD_SIZE", keywrdSize);
         pldm::utils::reportError(
             "xyz.openbmc_project.PLDM.Error.readKeywordHandler.keywordFileReadError",
             pldm::PelSeverity::ERROR);

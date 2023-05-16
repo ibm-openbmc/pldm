@@ -7,7 +7,11 @@
 
 #include <stdint.h>
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <iostream>
+
+PHOSPHOR_LOG2_USING;
 
 namespace pldm
 {
@@ -19,7 +23,6 @@ const std::vector<Json> emptyJsonList{};
 
 namespace responder
 {
-
 static constexpr auto codFilePath = "/var/lib/ibm/cod/";
 static constexpr auto licFilePath = "/var/lib/pldm/license/";
 constexpr auto newLicenseFile = "new_license.bin";
@@ -34,8 +37,8 @@ int LicenseHandler::updateBinFileAndLicObjs(const fs::path& newLicJsonFilePath)
     auto dataNew = Json::parse(jsonFileNew, nullptr, false);
     if (dataNew.is_discarded())
     {
-        std::cerr << "Parsing the new license json file failed, FILE="
-                  << newLicJsonFilePath << "\n";
+        error("Parsing the new license json file failed, FILE={NEW_LIC_JSON}",
+              "NEW_LIC_JSON", newLicJsonFilePath.c_str());
         throw InternalFailure();
     }
 
@@ -46,8 +49,7 @@ int LicenseHandler::updateBinFileAndLicObjs(const fs::path& newLicJsonFilePath)
     rc = createOrUpdateLicenseObjs();
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "createOrUpdateLicenseObjs failed with rc= " << rc
-                  << " \n";
+        error("createOrUpdateLicenseObjs failed with rc= {RC}", "RC", rc);
         return rc;
     }
     return PLDM_SUCCESS;
@@ -69,8 +71,8 @@ int LicenseHandler::writeFromMemory(
                               std::ios::out | std::ios::binary);
     if (!licJsonFile)
     {
-        std::cerr << "license json file create error: " << newLicJsonFilePath
-                  << std::endl;
+        error("license json file create error: {NEW_LIC_JSON}", "NEW_LIC_JSON",
+              newLicJsonFilePath.c_str());
         return -1;
     }
 
@@ -78,7 +80,7 @@ int LicenseHandler::writeFromMemory(
         transferFileData(newLicJsonFilePath, false, offset, length, address);
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "transferFileData failed with rc= " << rc << " \n";
+        error("transferFileData failed with rc= {RC}", "RC", rc);
         return rc;
     }
 
@@ -87,8 +89,7 @@ int LicenseHandler::writeFromMemory(
         rc = updateBinFileAndLicObjs(newLicJsonFilePath);
         if (rc != PLDM_SUCCESS)
         {
-            std::cerr << "updateBinFileAndLicObjs failed with rc= " << rc
-                      << " \n";
+            error("updateBinFileAndLicObjs failed with rc= {RC}", "RC", rc);
             return rc;
         }
     }
@@ -107,8 +108,8 @@ int LicenseHandler::write(const char* buffer, uint32_t /*offset*/,
                               std::ios::out | std::ios::binary | std::ios::app);
     if (!licJsonFile)
     {
-        std::cerr << "license json file create error: " << newLicJsonFilePath
-                  << std::endl;
+        error("license json file create error: {NEW_LIC_JSON}", "NEW_LIC_JSON",
+              newLicJsonFilePath.c_str());
         return -1;
     }
 
@@ -121,7 +122,7 @@ int LicenseHandler::write(const char* buffer, uint32_t /*offset*/,
     updateBinFileAndLicObjs(newLicJsonFilePath);
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr << "updateBinFileAndLicObjs failed with rc= " << rc << " \n";
+        error("updateBinFileAndLicObjs failed with rc= {RC}", "RC", rc);
         return rc;
     }
 
@@ -178,9 +179,9 @@ int LicenseHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "failed to set status property of license manager, "
-                         "ERROR="
-                      << e.what() << "\n";
+            error(
+                "failed to set status property of license manager, ERROR={ERR_EXCEP}",
+                "ERR_EXCEP", e.what());
             return PLDM_ERROR;
         }
     }
@@ -195,9 +196,9 @@ int LicenseHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "failed to set status property of license manager, "
-                         "ERROR="
-                      << e.what() << "\n";
+            error(
+                "failed to set status property of license manager, ERROR={ERR_EXCEP}",
+                "ERR_EXCEP", e.what());
             return PLDM_ERROR;
         }
     }
@@ -212,9 +213,9 @@ int LicenseHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "failed to set status property of license manager, "
-                         "ERROR="
-                      << e.what() << "\n";
+            error(
+                "failed to set status property of license manager, ERROR={ERR_EXCEP}",
+                "ERR_EXCEP", e.what());
             return PLDM_ERROR;
         }
     }
@@ -229,9 +230,9 @@ int LicenseHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "failed to set status property of license manager, "
-                         "ERROR="
-                      << e.what() << "\n";
+            error(
+                "failed to set status property of license manager, ERROR={ERR_EXCEP}",
+                "ERR_EXCEP", e.what());
             return PLDM_ERROR;
         }
     }
@@ -246,9 +247,9 @@ int LicenseHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "failed to set status property of license manager, "
-                         "ERROR="
-                      << e.what() << "\n";
+            error(
+                "failed to set status property of license manager, ERROR={ERR_EXCEP}",
+                "ERR_EXCEP", e.what());
             return PLDM_ERROR;
         }
     }
@@ -263,9 +264,9 @@ int LicenseHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "failed to set status property of license manager, "
-                         "ERROR="
-                      << e.what() << "\n";
+            error(
+                "failed to set status property of license manager, ERROR={ERR_EXCEP}",
+                "ERR_EXCEP", e.what());
             return PLDM_ERROR;
         }
     }
@@ -280,9 +281,9 @@ int LicenseHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "failed to set status property of license manager, "
-                         "ERROR="
-                      << e.what() << "\n";
+            error(
+                "failed to set status property of license manager, ERROR={ERR_EXCEP}",
+                "ERR_EXCEP", e.what());
             return PLDM_ERROR;
         }
     }

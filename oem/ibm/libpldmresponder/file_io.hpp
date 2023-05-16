@@ -18,9 +18,13 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <filesystem>
 #include <iostream>
 #include <vector>
+
+PHOSPHOR_LOG2_USING;
 
 namespace pldm
 {
@@ -28,7 +32,6 @@ namespace responder
 {
 namespace dma
 {
-
 // The minimum data size of dma transfer in bytes
 constexpr uint32_t minSize = 16;
 
@@ -117,7 +120,8 @@ Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
     int file = open(path.string().c_str(), flags);
     if (file == -1)
     {
-        std::cerr << "File does not exist, path = " << path.string() << "\n";
+        error("File does not exist, path = {FILE_PATH}", "FILE_PATH",
+              path.string());
         encode_rw_file_memory_resp(instanceId, command, PLDM_ERROR, 0,
                                    responsePtr);
         return response;
@@ -490,14 +494,14 @@ class Handler : public CmdHandler
     std::unique_ptr<pldm::requester::oem_ibm::DbusToFileHandler>
         dbusToFileHandler; //!< pointer to send request to Host
     std::unique_ptr<sdbusplus::bus::match::match>
-        resDumpMatcher; //!< Pointer to capture the interface added signal
-                        //!< for new resource dump
+        resDumpMatcher;    //!< Pointer to capture the interface added signal
+                           //!< for new resource dump
     std::unique_ptr<sdbusplus::bus::match::match>
-        vmiCertMatcher; //!< Pointer to capture the interface added signal
-                        //!< for new csr string
+        vmiCertMatcher;    //!< Pointer to capture the interface added signal
+                           //!< for new csr string
     std::unique_ptr<sdbusplus::bus::match::match>
-        codLicensesubs; //!< Pointer to capture the property changed signal
-                        //!< for new license string
+        codLicensesubs;    //!< Pointer to capture the property changed signal
+                           //!< for new license string
     /** @brief PLDM request handler */
     pldm::requester::Handler<pldm::requester::Request>* handler;
     std::vector<std::unique_ptr<pldm::requester::oem_ibm::DbusToFileHandler>>

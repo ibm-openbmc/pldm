@@ -7,16 +7,16 @@
 #ifdef OEM_IBM
 #include "libpldm/pdr_oem_ibm.h"
 #endif
+#include <phosphor-logging/lg2.hpp>
+
+PHOSPHOR_LOG2_USING;
 
 namespace pldm
 {
-
 namespace responder
 {
-
 namespace pdr_state_sensor
 {
-
 using Json = nlohmann::json;
 
 static const Json empty{};
@@ -45,10 +45,9 @@ void generateStateSensorPDR(const DBusInterface& dBusIntf, const Json& json,
             auto statesSize = set.value("size", 0);
             if (!statesSize)
             {
-                std::cerr << "Malformed PDR JSON return "
-                             "pdrEntry;- no state set "
-                             "info, TYPE="
-                          << PLDM_STATE_SENSOR_PDR << "\n";
+                error(
+                    "Malformed PDR JSON return pdrEntry;- no state set info, TYPE={PDR_TYP}",
+                    "PDR_TYP", static_cast<unsigned>(PLDM_STATE_SENSOR_PDR));
                 throw InternalFailure();
             }
             pdrSize += sizeof(state_sensor_possible_states) -
@@ -63,7 +62,7 @@ void generateStateSensorPDR(const DBusInterface& dBusIntf, const Json& json,
             reinterpret_cast<pldm_state_sensor_pdr*>(entry.data());
         if (!pdr)
         {
-            std::cerr << "Failed to get state sensor PDR.\n";
+            error("Failed to get state sensor PDR.");
             continue;
         }
         pdr->hdr.record_handle = 0;
@@ -127,10 +126,10 @@ void generateStateSensorPDR(const DBusInterface& dBusIntf, const Json& json,
                     {
                         // parent node not found in the entity association tree,
                         // this should not be possible
-                        std::cerr
-                            << "Parent Entity of type "
-                            << parent_entity.entity_type
-                            << " not found in the BMC Entity Association tree\n";
+                        error(
+                            "Parent Entity of type {P_ENTITY_TYP} not found in the BMC Entity Association tree",
+                            "P_ENTITY_TYP",
+                            static_cast<unsigned>(parent_entity.entity_type));
                         return;
                     }
                     pldm_entity_association_tree_add(
@@ -218,9 +217,11 @@ void generateStateSensorPDR(const DBusInterface& dBusIntf, const Json& json,
             }
             catch (const std::exception& e)
             {
-                std::cerr << "D-Bus object path " << objectPath
-                          << " does not exist, sensor ID: " << pdr->sensor_id
-                          << " error : " << e.what() << "\n";
+                error(
+                    "D-Bus object path {OBJ_PATH} does not exist, sensor ID: {SENSOR_ID} error : {ERR_EXCEP}",
+                    "OBJ_PATH", objectPath.c_str(), "SENSOR_ID",
+                    static_cast<unsigned>(pdr->sensor_id), "ERR_EXCEP",
+                    e.what());
             }
 
             dbusMappings.emplace_back(std::move(dbusMapping));

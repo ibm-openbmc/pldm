@@ -5,7 +5,11 @@
 #include "common/utils.hpp"
 #include "utils.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <iostream>
+
+PHOSPHOR_LOG2_USING;
 
 namespace fs = std::filesystem;
 namespace pldm
@@ -14,7 +18,6 @@ namespace hostbmc
 {
 namespace utils
 {
-
 Entities getParentEntites(const EntityAssociations& entityAssoc)
 {
     Entities parents{};
@@ -195,11 +198,11 @@ void updateEntityAssociation(
             }
             catch (const std::exception& e)
             {
-                std::cerr
-                    << "Parent entity not found in the entityMaps, type = "
-                    << parent.entity_type
-                    << ", num = " << parent.entity_instance_num
-                    << ", e = " << e.what() << std::endl;
+                error(
+                    "Parent entity not found in the entityMaps, type = {ENTITY_TYP}, num = {ENTITY_NUM}, e = {ERR_EXCEP}",
+                    "ENTITY_TYP", static_cast<int>(parent.entity_type),
+                    "ENTITY_NUM", static_cast<int>(parent.entity_instance_num),
+                    "ERR_EXCEP", e.what());
                 found = false;
                 break;
             }
@@ -272,8 +275,9 @@ void setCoreCount(const EntityAssociations& Associations)
                     }
                     catch (const std::exception& e)
                     {
-                        std::cerr << "failed to set the core count property "
-                                  << " ERROR=" << e.what() << "\n";
+                        error(
+                            "failed to set the core count property ERROR={ERR_EXCEP}",
+                            "ERR_EXCEP", e.what());
                     }
                 }
             }

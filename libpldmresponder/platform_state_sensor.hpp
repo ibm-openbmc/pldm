@@ -10,8 +10,12 @@
 #include "pdr_utils.hpp"
 #include "pldmd/handler.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <cstdint>
 #include <map>
+
+PHOSPHOR_LOG2_USING;
 
 namespace pldm
 {
@@ -66,9 +70,9 @@ uint8_t getStateSensorEventState(
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Get StateSensor EventState from dbus Error, interface : "
-                  << dbusMapping.objectPath.c_str()
-                  << " ,exception : " << e.what() << '\n';
+        error(
+            "Get StateSensor EventState from dbus Error, interface : {INTF} ,exception : {ERR_EXCEP}",
+            "INTF", dbusMapping.objectPath.c_str(), "ERR_EXCEP", e.what());
     }
 
     return PLDM_SENSOR_UNKNOWN;
@@ -108,7 +112,7 @@ int getStateSensorReadingsHandler(
     getRepoByType(handler.getRepo(), stateSensorPDRs, PLDM_STATE_SENSOR_PDR);
     if (stateSensorPDRs.empty())
     {
-        std::cerr << "Failed to get record by PDR type\n";
+        error("Failed to get record by PDR type");
         return PLDM_PLATFORM_INVALID_SENSOR_ID;
     }
 
@@ -128,9 +132,9 @@ int getStateSensorReadingsHandler(
         compSensorCnt = pdr->composite_sensor_count;
         if (sensorRearmCnt > compSensorCnt)
         {
-            std::cerr << "The requester sent wrong sensorRearm"
-                      << " count for the sensor, SENSOR_ID=" << sensorId
-                      << "SENSOR_REARM_COUNT=" << sensorRearmCnt << "\n";
+            error(
+                "The requester sent wrong sensorRearm count for the sensor, SENSOR_ID={SENSOR_ID} SENSOR_REARM_COUNT={SENSOR_REARM_CNT}",
+                "SENSOR_ID", sensorId, "SENSOR_REARM_CNT", sensorRearmCnt);
             return PLDM_PLATFORM_REARM_UNAVAILABLE_IN_PRESENT_STATE;
         }
 
@@ -198,8 +202,9 @@ int getStateSensorReadingsHandler(
     }
     catch (const std::out_of_range& e)
     {
-        std::cerr << "the sensorId does not exist. sensor id: " << sensorId
-                  << e.what() << '\n';
+        error(
+            "the sensorId does not exist. sensor id: {SENSOR_ID}, {ERR_EXCEP}",
+            "SENSOR_ID", sensorId, "ERR_EXCEP", e.what());
         rc = PLDM_ERROR;
     }
 

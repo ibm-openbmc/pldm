@@ -3,20 +3,26 @@
 #include "oem_ibm_handler.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
+PHOSPHOR_LOG2_USING;
+
 namespace pldm
 {
-
 namespace responder
 {
 using namespace oem_ibm_platform;
 void SlotHandler::timeOutHandler()
 {
-    std::cerr
-        << "Timer expired waiting for Event from Inventory on following pldm_entity: [ "
-        << current_on_going_slot_entity.entity_type << ","
-        << current_on_going_slot_entity.entity_instance_num << ","
-        << current_on_going_slot_entity.entity_container_id << "]" << std::endl;
-
+    error(
+        "Timer expired waiting for Event from Inventory on following pldm_entity: [ {ENTITY_TYP}, {ENTITY_NUM}, {ENTITY_ID} ]",
+        "ENTITY_TYP",
+        static_cast<unsigned>(current_on_going_slot_entity.entity_type),
+        "ENTITY_NUM",
+        static_cast<unsigned>(current_on_going_slot_entity.entity_instance_num),
+        "ENTITY_ID",
+        static_cast<unsigned>(
+            current_on_going_slot_entity.entity_container_id));
     // Disable the timer
     timer.setEnabled(false);
 
@@ -37,7 +43,8 @@ void SlotHandler::enableSlot(uint16_t effecterId,
                              uint8_t stateFileValue)
 
 {
-    std::cerr << "CM: slot enable effecter id: " << effecterId << std::endl;
+    error("CM: slot enable effecter id: {EFFECTER_ID}", "EFFECTER_ID",
+          effecterId);
     const pldm_entity entity = getEntityIDfromEffecterID(effecterId);
 
     for (const auto& [key, value] : fruAssociationMap)
@@ -60,8 +67,8 @@ void SlotHandler::processSlotOperations(const std::string& slotObjectPath,
                                         const pldm_entity& entity,
                                         uint8_t stateFiledValue)
 {
-    std::cerr << "CM: processing the slot operations, SlotObject: "
-              << slotObjectPath << std::endl;
+    error("CM: processing the slot operations, SlotObject: {SLOT_OBJ}",
+          "SLOT_OBJ", slotObjectPath);
 
     std::string adapterObjPath;
     try
@@ -74,8 +81,9 @@ void SlotHandler::processSlotOperations(const std::string& slotObjectPath,
         return;
     }
 
-    std::cerr << "CM: Found an adapter under the slot, adapter object:"
-              << adapterObjPath << std::endl;
+    error(
+        "CM: Found an adapter under the slot, adapter object:{ADAPTER_OBJ_PATH}",
+        "ADAPTER_OBJ_PATH", adapterObjPath);
     // create a presence match for the adpter present property
     createPresenceMatch(adapterObjPath, entity, stateFiledValue);
 
@@ -116,9 +124,10 @@ void SlotHandler::callVPDManager(const std::string& adapterObjPath,
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to make a d-bus call to VPD Manager , Operation ="
-                  << (unsigned)stateFiledValue << ", ERROR=" << e.what()
-                  << "\n";
+        error(
+            "failed to make a d-bus call to VPD Manager , Operation = {STATE_FILED_VAL}, ERROR={ERR_EXCEP}",
+            "STATE_FILED_VAL", (unsigned)stateFiledValue, "ERR_EXCEP",
+            e.what());
     }
 }
 
@@ -201,9 +210,9 @@ void SlotHandler::processPropertyChangeFromVPD(
             sensorOpState = uint8_t(SLOT_STATE_DISABLED);
         }
     }
-    std::cerr
-        << "CM: processing the property change from VPD Present value and sensor opState:"
-        << presentValue << "and" << (unsigned)sensorOpState << std::endl;
+    error(
+        "CM: processing the property change from VPD Present value and sensor opState: {CURR_VAL} and {SENSOR_OP_STATE}",
+        "CURR_VAL", presentValue, "SENSOR_OP_STATE", (unsigned)sensorOpState);
     // set the sensor state based on the stateFieldValue
     this->sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
                                sensorOpState, uint8_t(SLOT_STATE_UNKOWN));
@@ -261,9 +270,9 @@ uint8_t SlotHandler::fetchSlotSensorState(const std::string& slotObjectPath)
     }
     catch (const std::bad_optional_access& e)
     {
-        std::cerr
-            << "Failed to get the adapterObjectPath from slotObjectPath : "
-            << slotObjectPath << e.what() << '\n';
+        error(
+            "Failed to get the adapterObjectPath from slotObjectPath : {SLOT_OBJ_PATH}, {ERR_EXCEP}",
+            "SLOT_OBJ_PATH", slotObjectPath, "ERR_EXCEP", e.what());
         return uint8_t(SLOT_STATE_UNKOWN);
     }
 
@@ -314,8 +323,9 @@ bool SlotHandler::fetchSensorStateFromDbus(const std::string& adapterObjectPath)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to make a d-bus call to Inventory manager, ERROR="
-                  << e.what() << "\n";
+        error(
+            "failed to make a d-bus call to Inventory manager, ERROR={ERR_EXCEP}",
+            "ERR_EXCEP", e.what());
     }
 
     return false;
