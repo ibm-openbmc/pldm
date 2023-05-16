@@ -694,11 +694,13 @@ std::filesystem::path pldm::responder::oem_ibm_platform::Handler::getConfigDir()
     {
         try
         {
+            std::chrono::microseconds timeout =
+                std::chrono::microseconds(DBUS_TIMEOUT);
             auto method = bus.new_method_call(
                 serviceMap[0].first.c_str(), objectPath.c_str(),
                 orgFreeDesktopInterface, getMethod);
             method.append(ibmCompatible[0].c_str(), namesProperty);
-            auto reply = bus.call(method);
+            auto reply = bus.call(method, timeout.count());
             reply.read(value);
             return fs::path{std::get<std::vector<std::string>>(value)[0]};
         }
@@ -1009,6 +1011,8 @@ int pldm::responder::oem_ibm_platform::Handler::setNumericEffecter(
 
     try
     {
+        std::chrono::microseconds timeout =
+            std::chrono::microseconds(DBUS_TIMEOUT);
         auto service =
             pldm::utils::DBusHandler().getService(objectPath, interface);
         auto method = bus.new_method_call(service.c_str(), objectPath,
@@ -1023,7 +1027,7 @@ int pldm::responder::oem_ibm_platform::Handler::setNumericEffecter(
             (uint64_t)entityInstance;
         method.append(createParams);
 
-        auto response = bus.call(method);
+        auto response = bus.call(method, timeout.count());
 
         sdbusplus::message::object_path reply;
         response.read(reply);

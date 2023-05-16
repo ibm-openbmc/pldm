@@ -234,12 +234,14 @@ std::string FruImpl::populatefwVersion()
     std::string currentBmcVersion;
     try
     {
+        std::chrono::microseconds timeout =
+            std::chrono::microseconds(DBUS_TIMEOUT);
         auto method =
             bus.new_method_call(pldm::utils::mapperService, fwFunctionalObjPath,
                                 pldm::utils::dbusProperties, "Get");
         method.append("xyz.openbmc_project.Association", "endpoints");
         std::variant<std::vector<std::string>> paths;
-        auto reply = bus.call(method);
+        auto reply = bus.call(method, timeout.count());
         reply.read(paths);
         auto fwRunningVersion = std::get<std::vector<std::string>>(paths)[0];
         constexpr auto versionIntf = "xyz.openbmc_project.Software.Version";
@@ -838,13 +840,15 @@ void FruImpl::subscribeFruPresence(
     auto& bus = pldm::utils::DBusHandler::getBus();
     try
     {
+        std::chrono::microseconds timeout =
+            std::chrono::microseconds(DBUS_TIMEOUT);
         std::vector<std::string> fruObjPaths;
         auto method = bus.new_method_call(MAPPER_BUSNAME, MAPPER_PATH,
                                           MAPPER_INTERFACE, "GetSubTreePaths");
         method.append(inventoryObjPath);
         method.append(0);
         method.append(std::vector<std::string>({fruInterface}));
-        auto reply = bus.call(method);
+        auto reply = bus.call(method, timeout.count());
         reply.read(fruObjPaths);
 
         for (const auto& fruObjPath : fruObjPaths)

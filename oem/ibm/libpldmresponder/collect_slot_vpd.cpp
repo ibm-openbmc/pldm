@@ -5,7 +5,6 @@
 
 namespace pldm
 {
-
 namespace responder
 {
 using namespace oem_ibm_platform;
@@ -302,13 +301,15 @@ bool SlotHandler::fetchSensorStateFromDbus(const std::string& adapterObjectPath)
 
     try
     {
+        std::chrono::microseconds timeout =
+            std::chrono::microseconds(DBUS_TIMEOUT);
         auto service = pldm::utils::DBusHandler().getService(
             adapterObjectPath.c_str(), ItemInterface);
         auto method =
             bus.new_method_call(service.c_str(), adapterObjectPath.c_str(),
                                 FreedesktopInterface, GetMethod);
         method.append(ItemInterface, PresentProperty);
-        auto reply = bus.call(method);
+        auto reply = bus.call(method, timeout.count());
         reply.read(presentProperty);
         return std::get<bool>(presentProperty);
     }

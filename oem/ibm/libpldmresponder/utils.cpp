@@ -23,7 +23,6 @@ namespace pldm
 using namespace pldm::dbus;
 namespace responder
 {
-
 std::atomic<SocketWriteStatus> socketWriteStatus = Free;
 std::mutex lockMutex;
 
@@ -448,12 +447,14 @@ void findPortObjects(const std::string& cardObjPath,
     auto& bus = pldm::utils::DBusHandler::getBus();
     try
     {
+        std::chrono::microseconds timeout =
+            std::chrono::microseconds(DBUS_TIMEOUT);
         auto method = bus.new_method_call(MAPPER_BUSNAME, MAPPER_PATH,
                                           MAPPER_INTERFACE, "GetSubTreePaths");
         method.append(cardObjPath);
         method.append(0);
         method.append(std::vector<std::string>({portInterface}));
-        auto reply = bus.call(method);
+        auto reply = bus.call(method, timeout.count());
         reply.read(portObjects);
     }
     catch (const std::exception& e)
@@ -578,12 +579,14 @@ void findSlotObjects(const std::string& boardObjPath,
     auto& bus = pldm::utils::DBusHandler::getBus();
     try
     {
+        std::chrono::microseconds timeout =
+            std::chrono::microseconds(DBUS_TIMEOUT);
         auto method = bus.new_method_call(MAPPER_BUSNAME, MAPPER_PATH,
                                           MAPPER_INTERFACE, "GetSubTreePaths");
         method.append(boardObjPath);
         method.append(0);
         method.append(std::vector<std::string>({slotInterface}));
-        auto reply = bus.call(method);
+        auto reply = bus.call(method, timeout.count());
         reply.read(slotObjects);
     }
     catch (const std::exception& e)

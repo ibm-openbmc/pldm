@@ -27,6 +27,8 @@ int keywordHandler::read(uint32_t offset, uint32_t& length, Response& response,
 
     try
     {
+        std::chrono::microseconds timeout =
+            std::chrono::microseconds(DBUS_TIMEOUT);
         auto& bus = DBusHandler::getBus();
         auto service = pldm::utils::DBusHandler().getService(keywrdObjPath,
                                                              keywrdInterface);
@@ -34,7 +36,7 @@ int keywordHandler::read(uint32_t offset, uint32_t& length, Response& response,
             bus.new_method_call(service.c_str(), keywrdObjPath,
                                 "org.freedesktop.DBus.Properties", "Get");
         method.append(keywrdInterface, keywrdPropName);
-        auto reply = bus.call(method);
+        auto reply = bus.call(method, timeout.count());
         reply.read(keywrd);
     }
     catch (const std::exception& e)
