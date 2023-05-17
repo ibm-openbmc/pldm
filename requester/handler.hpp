@@ -139,8 +139,8 @@ class Handler
                           << " INSTANCE_ID = " << (unsigned)key.instanceId
                           << " TYPE = " << (unsigned)key.type
                           << " COMMAND = " << (unsigned)key.command << "\n";
-                auto& [request, responseHandler, timerInstance] =
-                    this->handlers[key];
+                auto& [request, responseHandler,
+                       timerInstance] = this->handlers[key];
                 request->stop();
                 auto rc = timerInstance->stop();
                 if (rc)
@@ -246,10 +246,10 @@ class Handler
     int currentSendbuffSize;              //!< current Send Buffer size
     bool verbose;                         //!< verbose tracing flag
     std::chrono::seconds
-        instanceIdExpiryInterval; //!< Instance ID expiration interval
-    uint8_t numRetries;           //!< number of request retries
+        instanceIdExpiryInterval;         //!< Instance ID expiration interval
+    uint8_t numRetries;                   //!< number of request retries
     std::chrono::milliseconds
-        responseTimeOut; //!< time to wait between each retry
+        responseTimeOut;                  //!< time to wait between each retry
 
     /** @brief Container for storing the details of the PLDM request
      *         message, handler for the corresponding PLDM response and the

@@ -198,9 +198,8 @@ void Handler::processSetEventReceiver(
         return;
     }
 
-    auto processSetEventReceiverResponse = [](mctp_eid_t /*eid*/,
-                                              const pldm_msg* response,
-                                              size_t respMsgLen) {
+    auto processSetEventReceiverResponse =
+        [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             std::cerr << "Failed to receive response for "

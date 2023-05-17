@@ -204,9 +204,9 @@ TEST(ReadWriteFileIntoMemory, testGoodEncodeRequest)
 
     pldm_msg* request = reinterpret_cast<pldm_msg*>(requestMsg.data());
 
-    auto rc =
-        encode_rw_file_memory_req(0, PLDM_READ_FILE_INTO_MEMORY, fileHandle,
-                                  offset, length, address, request);
+    auto rc = encode_rw_file_memory_req(0, PLDM_READ_FILE_INTO_MEMORY,
+                                        fileHandle, offset, length, address,
+                                        request);
 
     ASSERT_EQ(rc, PLDM_SUCCESS);
     ASSERT_EQ(request->hdr.request, PLDM_REQUEST);
@@ -233,9 +233,9 @@ TEST(ReadWriteFileIntoMemory, testBadEncodeRequest)
     uint32_t length = 0;
     uint64_t address = 0;
 
-    auto rc =
-        encode_rw_file_memory_req(0, PLDM_READ_FILE_INTO_MEMORY, fileHandle,
-                                  offset, length, address, NULL);
+    auto rc = encode_rw_file_memory_req(0, PLDM_READ_FILE_INTO_MEMORY,
+                                        fileHandle, offset, length, address,
+                                        NULL);
 
     ASSERT_EQ(rc, PLDM_ERROR_INVALID_DATA);
 }
@@ -508,8 +508,8 @@ TEST(WriteFile, testGoodDecodeRequest)
     size_t payload_length = requestMsg.size() - sizeof(pldm_msg_hdr);
     auto request = reinterpret_cast<pldm_write_file_req*>(requestPtr->payload);
 
-    size_t fileDataOffset =
-        sizeof(fileHandle) + sizeof(offset) + sizeof(length);
+    size_t fileDataOffset = sizeof(fileHandle) + sizeof(offset) +
+                            sizeof(length);
 
     request->file_handle = htole32(fileHandle);
     request->offset = htole32(offset);
@@ -554,9 +554,9 @@ TEST(ReadFile, testGoodDecodeResponse)
     size_t retFileDataOffset = 0;
 
     // Invoke decode the read file response
-    auto rc =
-        decode_read_file_resp(responsePtr, payload_length, &retCompletionCode,
-                              &retLength, &retFileDataOffset);
+    auto rc = decode_read_file_resp(responsePtr, payload_length,
+                                    &retCompletionCode, &retLength,
+                                    &retFileDataOffset);
 
     ASSERT_EQ(rc, PLDM_SUCCESS);
     ASSERT_EQ(completionCode, retCompletionCode);
@@ -926,8 +926,8 @@ TEST(ReadWriteFileByTypeMemory, testBadDecodeResponse)
     uint8_t completionCode = 0;
 
     // Request payload message is missing
-    auto rc =
-        decode_rw_file_by_type_memory_resp(NULL, 0, &completionCode, &length);
+    auto rc = decode_rw_file_by_type_memory_resp(NULL, 0, &completionCode,
+                                                 &length);
     ASSERT_EQ(rc, PLDM_ERROR_INVALID_DATA);
 
     std::array<uint8_t,
@@ -1111,8 +1111,8 @@ TEST(NewFile, testGoodDecodeResponse)
     uint8_t retCompletionCode = PLDM_SUCCESS;
 
     // Invoke decode the read/write file response
-    auto rc =
-        decode_new_file_resp(responsePtr, payload_length, &retCompletionCode);
+    auto rc = decode_new_file_resp(responsePtr, payload_length,
+                                   &retCompletionCode);
 
     ASSERT_EQ(rc, PLDM_SUCCESS);
     ASSERT_EQ(completionCode, retCompletionCode);
@@ -1266,9 +1266,9 @@ TEST(ReadWriteFileByType, testGoodDecodeRequest)
     uint32_t retLength = 0;
 
     // Invoke decode the read file request
-    auto rc =
-        decode_rw_file_by_type_req(requestPtr, payload_length, &retFileType,
-                                   &retFileHandle, &retOffset, &retLength);
+    auto rc = decode_rw_file_by_type_req(requestPtr, payload_length,
+                                         &retFileType, &retFileHandle,
+                                         &retOffset, &retLength);
 
     ASSERT_EQ(rc, PLDM_SUCCESS);
     ASSERT_EQ(fileType, retFileType);
@@ -1503,8 +1503,8 @@ TEST(FileAck, testGoodDecodeResponse)
     uint8_t retCompletionCode = PLDM_SUCCESS;
 
     // Invoke decode the read/write file response
-    auto rc =
-        decode_file_ack_resp(responsePtr, payload_length, &retCompletionCode);
+    auto rc = decode_file_ack_resp(responsePtr, payload_length,
+                                   &retCompletionCode);
 
     ASSERT_EQ(rc, PLDM_SUCCESS);
     ASSERT_EQ(completionCode, retCompletionCode);
@@ -1527,8 +1527,8 @@ TEST(FileAck, testBadDecodeRequest)
     auto requestPtr = reinterpret_cast<pldm_msg*>(requestMsg.data());
 
     // Payload length is invalid
-    rc =
-        decode_file_ack_req(requestPtr, 0, &fileType, &fileHandle, &fileStatus);
+    rc = decode_file_ack_req(requestPtr, 0, &fileType, &fileHandle,
+                             &fileStatus);
     ASSERT_EQ(rc, PLDM_ERROR_INVALID_LENGTH);
 }
 

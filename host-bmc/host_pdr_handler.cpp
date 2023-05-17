@@ -149,70 +149,70 @@ HostPDRHandler::HostPDRHandler(
                           "xyz.openbmc_project.State.Host"),
         [this, repo, entityTree, bmcEntityTree,
          oemPlatformHandler](sdbusplus::message::message& msg) {
-            DbusChangedProps props{};
-            std::string intf;
-            msg.read(intf, props);
-            const auto itr = props.find("CurrentHostState");
-            if (itr != props.end())
+        DbusChangedProps props{};
+        std::string intf;
+        msg.read(intf, props);
+        const auto itr = props.find("CurrentHostState");
+        if (itr != props.end())
+        {
+            utils::PropertyValue value = itr->second;
+            auto propVal = std::get<std::string>(value);
+            if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
             {
-                utils::PropertyValue value = itr->second;
-                auto propVal = std::get<std::string>(value);
-                if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
+                if (oemPlatformHandler != nullptr)
                 {
-                    if (oemPlatformHandler != nullptr)
-                    {
-                        oemPlatformHandler->startStopTimer(false);
-                    }
-
-                    for (auto it = this->tlPDRInfo.cbegin();
-                         it != this->tlPDRInfo.cend();)
-                    {
-                        if (it->first != TERMINUS_HANDLE)
-                        {
-                            this->tlPDRInfo.erase(it++);
-                        }
-                        else
-                        {
-                            ++it;
-                        }
-                    }
-
-                    // when the host is powered off, set the availability
-                    // state of all the dbus objects to false
-                    this->setPresenceFrus();
-                    pldm_pdr_remove_remote_pdrs(repo);
-                    pldm_entity_association_tree_destroy_root(entityTree);
-                    pldm_entity_association_tree_copy_root(bmcEntityTree,
-                                                           entityTree);
-                    this->sensorMap.clear();
-                    this->stateSensorPDRs.clear();
-                    this->responseReceived = false;
-                    this->mergedHostParents = false;
-                    this->objMapIndex = objPathMap.begin();
-                    this->sensorIndex = stateSensorPDRs.begin();
-                    this->isHostPdrModified = false;
-                    this->modifiedCounter = 0;
-                    fruRecordSetPDRs.clear();
-
-                    // After a power off , the remote notes will be deleted
-                    // from the entity association tree, making the nodes point
-                    // to junk values, so set them to nullptr
-                    for (const auto& element : this->objPathMap)
-                    {
-                        this->objPathMap[element.first] = nullptr;
-                    }
-                    isHostOff = true;
+                    oemPlatformHandler->startStopTimer(false);
                 }
-                else if (propVal ==
-                         "xyz.openbmc_project.State.Host.HostState.Running")
+
+                for (auto it = this->tlPDRInfo.cbegin();
+                     it != this->tlPDRInfo.cend();)
                 {
-                    isHostOff = false;
-                    if (oemPlatformHandler != nullptr)
+                    if (it->first != TERMINUS_HANDLE)
                     {
-                        oemPlatformHandler->handleBootTypesAtPowerOn();
+                        this->tlPDRInfo.erase(it++);
                     }
+                    else
+                    {
+                        ++it;
+                    }
+                }
+
+                // when the host is powered off, set the availability
+                // state of all the dbus objects to false
+                this->setPresenceFrus();
+                pldm_pdr_remove_remote_pdrs(repo);
+                pldm_entity_association_tree_destroy_root(entityTree);
+                pldm_entity_association_tree_copy_root(bmcEntityTree,
+                                                       entityTree);
+                this->sensorMap.clear();
+                this->stateSensorPDRs.clear();
+                this->responseReceived = false;
+                this->mergedHostParents = false;
+                this->objMapIndex = objPathMap.begin();
+                this->sensorIndex = stateSensorPDRs.begin();
+                this->isHostPdrModified = false;
+                this->modifiedCounter = 0;
+                fruRecordSetPDRs.clear();
+
+                // After a power off , the remote notes will be deleted
+                // from the entity association tree, making the nodes point
+                // to junk values, so set them to nullptr
+                for (const auto& element : this->objPathMap)
+                {
+                    this->objPathMap[element.first] = nullptr;
+                }
+                isHostOff = true;
+            }
+            else if (propVal ==
+                     "xyz.openbmc_project.State.Host.HostState.Running")
+            {
+                isHostOff = false;
+                if (oemPlatformHandler != nullptr)
+                {
+                    oemPlatformHandler->handleBootTypesAtPowerOn();
                 }
             }
+        }
         });
 
     chassisOffMatch = std::make_unique<sdbusplus::bus::match::match>(
@@ -220,52 +220,51 @@ HostPDRHandler::HostPDRHandler(
         propertiesChanged("/xyz/openbmc_project/state/chassis0",
                           "xyz.openbmc_project.State.Chassis"),
         [this, oemPlatformHandler](sdbusplus::message::message& msg) {
-            DbusChangedProps props{};
-            std::string intf;
-            msg.read(intf, props);
-            const auto itr = props.find("CurrentPowerState");
-            if (itr != props.end())
+        DbusChangedProps props{};
+        std::string intf;
+        msg.read(intf, props);
+        const auto itr = props.find("CurrentPowerState");
+        if (itr != props.end())
+        {
+            utils::PropertyValue value = itr->second;
+            auto propVal = std::get<std::string>(value);
+            if (propVal == "xyz.openbmc_project.State.Chassis.PowerState.Off")
             {
-                utils::PropertyValue value = itr->second;
-                auto propVal = std::get<std::string>(value);
-                if (propVal ==
-                    "xyz.openbmc_project.State.Chassis.PowerState.Off")
+                if (oemPlatformHandler)
                 {
-                    if (oemPlatformHandler)
+                    oemPlatformHandler->startStopTimer(false);
+                    oemPlatformHandler->handleBootTypesAtChassisOff();
+                }
+                static constexpr auto searchpath =
+                    "/xyz/openbmc_project/inventory/system/chassis/motherboard";
+                int depth = 0;
+                std::vector<std::string> powerInterface = {
+                    "xyz.openbmc_project.State.Decorator.PowerState"};
+                pldm::utils::GetSubTreeResponse response =
+                    pldm::utils::DBusHandler().getSubtree(searchpath, depth,
+                                                          powerInterface);
+                for (const auto& [objPath, serviceMap] : response)
+                {
+                    pldm::utils::DBusMapping dbusMapping{
+                        objPath,
+                        "xyz.openbmc_project.State.Decorator.PowerState",
+                        "PowerState", "string"};
+                    value =
+                        "xyz.openbmc_project.State.Decorator.PowerState.State.Off";
+                    try
                     {
-                        oemPlatformHandler->startStopTimer(false);
-                        oemPlatformHandler->handleBootTypesAtChassisOff();
+                        pldm::utils::DBusHandler().setDbusProperty(dbusMapping,
+                                                                   value);
                     }
-                    static constexpr auto searchpath =
-                        "/xyz/openbmc_project/inventory/system/chassis/motherboard";
-                    int depth = 0;
-                    std::vector<std::string> powerInterface = {
-                        "xyz.openbmc_project.State.Decorator.PowerState"};
-                    pldm::utils::GetSubTreeResponse response =
-                        pldm::utils::DBusHandler().getSubtree(searchpath, depth,
-                                                              powerInterface);
-                    for (const auto& [objPath, serviceMap] : response)
+                    catch (const std::exception& e)
                     {
-                        pldm::utils::DBusMapping dbusMapping{
-                            objPath,
-                            "xyz.openbmc_project.State.Decorator.PowerState",
-                            "PowerState", "string"};
-                        value =
-                            "xyz.openbmc_project.State.Decorator.PowerState.State.Off";
-                        try
-                        {
-                            pldm::utils::DBusHandler().setDbusProperty(
-                                dbusMapping, value);
-                        }
-                        catch (const std::exception& e)
-                        {
-                            std::cerr
-                                << "Unable to set the slot power state to Off "
-                                << "ERROR=" << e.what() << "\n";
-                        }
+                        std::cerr
+                            << "Unable to set the slot power state to Off "
+                            << "ERROR=" << e.what() << "\n";
                     }
                 }
             }
+        }
         });
 }
 void HostPDRHandler::setPresenceFrus()
@@ -353,9 +352,9 @@ void HostPDRHandler::getHostPDR(uint32_t nextRecordHandle)
     }
     auto instanceId = requester.getInstanceId(mctp_eid);
 
-    auto rc =
-        encode_get_pdr_req(instanceId, recordHandle, 0, PLDM_GET_FIRSTPART,
-                           UINT16_MAX, 0, request, PLDM_GET_PDR_REQ_BYTES);
+    auto rc = encode_get_pdr_req(instanceId, recordHandle, 0,
+                                 PLDM_GET_FIRSTPART, UINT16_MAX, 0, request,
+                                 PLDM_GET_PDR_REQ_BYTES);
     if (rc != PLDM_SUCCESS)
     {
         requester.markFree(mctp_eid, instanceId);
@@ -660,9 +659,8 @@ void HostPDRHandler::sendPDRRepositoryChgEvent(std::vector<uint8_t>&& pdrTypes,
         return;
     }
 
-    auto platformEventMessageResponseHandler = [](mctp_eid_t /*eid*/,
-                                                  const pldm_msg* response,
-                                                  size_t respMsgLen) {
+    auto platformEventMessageResponseHandler =
+        [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             std::cerr << "Failed to receive response for the PDR repository "
@@ -1150,11 +1148,9 @@ void HostPDRHandler::_setHostSensorState()
                     return;
                 }
 
-                auto getStateSensorReadingRespHandler = [=, this](
-                                                            mctp_eid_t /*eid*/,
-                                                            const pldm_msg*
-                                                                response,
-                                                            size_t respMsgLen) {
+                auto getStateSensorReadingRespHandler =
+                    [=, this](mctp_eid_t /*eid*/, const pldm_msg* response,
+                              size_t respMsgLen) {
                     if (response == nullptr || !respMsgLen)
                     {
                         std::cerr
@@ -1261,8 +1257,8 @@ void HostPDRHandler::_setHostSensorState()
                                 << " SensorId=" << sensorId << std::endl;
                             return;
                         }
-                        const auto& [containerId, entityType, entityInstance] =
-                            entityInfo;
+                        const auto& [containerId, entityType,
+                                     entityInstance] = entityInfo;
                         auto stateSetId = stateSetIds[sensorOffset];
                         pldm::responder::events::StateSensorEntry
                             stateSensorEntry{containerId,    entityType,
@@ -1313,10 +1309,9 @@ void HostPDRHandler::getFRURecordTableMetadataByHost()
         return;
     }
 
-    auto getFruRecordTableMetadataResponseHandler = [this](mctp_eid_t /*eid*/,
-                                                           const pldm_msg*
-                                                               response,
-                                                           size_t respMsgLen) {
+    auto getFruRecordTableMetadataResponseHandler =
+        [this](mctp_eid_t /*eid*/, const pldm_msg* response,
+               size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             std::cerr << "Failed to receive response for the Get FRU Record "
@@ -1387,10 +1382,9 @@ void HostPDRHandler::getFRURecordTableByHost(uint16_t& total_table_records)
         return;
     }
 
-    auto getFruRecordTableResponseHandler = [total_table_records,
-                                             this](mctp_eid_t /*eid*/,
-                                                   const pldm_msg* response,
-                                                   size_t respMsgLen) {
+    auto getFruRecordTableResponseHandler =
+        [total_table_records, this](
+            mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             std::cerr << "Failed to receive response for the Get FRU Record "
@@ -1476,12 +1470,10 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
         return;
     }
 
-    auto getStateSensorReadingsResponseHandler = [this, path, type, instance,
-                                                  containerId, stateSetId,
-                                                  mctpEid, sensorId](
-                                                     mctp_eid_t /*eid*/,
-                                                     const pldm_msg* response,
-                                                     size_t respMsgLen) {
+    auto getStateSensorReadingsResponseHandler =
+        [this, path, type, instance, containerId, stateSetId, mctpEid,
+         sensorId](mctp_eid_t /*eid*/, const pldm_msg* response,
+                   size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             std::cerr
@@ -1682,8 +1674,8 @@ void HostPDRHandler::setOperationStatus()
             pldm::pdr::EntityInfo entityInfo{};
             pldm::pdr::CompositeSensorStates compositeSensorStates{};
             std::vector<pldm::pdr::StateSetId> stateSetIds{};
-            std::tie(entityInfo, compositeSensorStates, stateSetIds) =
-                sensorMapIndex->second;
+            std::tie(entityInfo, compositeSensorStates,
+                     stateSetIds) = sensorMapIndex->second;
             const auto& [containerId, entityType, entityInstance] = entityInfo;
 
             if (node.entity_type == entityType &&
@@ -1947,8 +1939,8 @@ void HostPDRHandler::setFRUDynamicAssociations()
 
 void HostPDRHandler::setRecordPresent(uint32_t recordHandle)
 {
-    pldm_entity recordEntity =
-        pldm_get_entity_from_record_handle(repo, recordHandle);
+    pldm_entity recordEntity = pldm_get_entity_from_record_handle(repo,
+                                                                  recordHandle);
     for (const auto& [path, entity_node] : objPathMap)
     {
         pldm_entity dbusEntity = pldm_entity_extract(entity_node);

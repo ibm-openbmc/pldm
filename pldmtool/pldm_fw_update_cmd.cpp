@@ -391,8 +391,8 @@ class GetFwParams : public CommandInterface
 
 void registerCommand(CLI::App& app)
 {
-    auto fwUpdate =
-        app.add_subcommand("fw_update", "firmware update type commands");
+    auto fwUpdate = app.add_subcommand("fw_update",
+                                       "firmware update type commands");
     fwUpdate->require_subcommand(1);
 
     auto getStatus = fwUpdate->add_subcommand("GetStatus", "Status of the FD");

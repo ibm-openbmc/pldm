@@ -47,11 +47,11 @@ void HostAssociationsParser::parseHostAssociations(const std::string& jsonPath)
     auto entries = data.value("associations", emptyList);
     for (const auto& entry : entries)
     {
-        pldm::pdr::EntityType from_entity_type =
-            entry.value("from_entity_type", 0);
+        pldm::pdr::EntityType from_entity_type = entry.value("from_entity_type",
+                                                             0);
         pldm::pdr::EntityType to_entity_type = entry.value("to_entity_type", 0);
-        std::string forward_association =
-            entry.value("forward_association", "");
+        std::string forward_association = entry.value("forward_association",
+                                                      "");
         std::string reverse_assocation = entry.value("reverse_association", "");
         associationsInfoMap[std::make_pair(from_entity_type, to_entity_type)] =
             std::make_pair(forward_association, reverse_assocation);

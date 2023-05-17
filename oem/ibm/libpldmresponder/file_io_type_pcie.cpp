@@ -781,8 +781,8 @@ void PCIeInfoHandler::parseTopologyData()
     };
 
     // memory map the topology file into pldm memory
-    void* file_in_memory =
-        mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, topologyFd(), 0);
+    void* file_in_memory = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE,
+                                topologyFd(), 0);
     if (MAP_FAILED == file_in_memory)
     {
         int rc = -errno;
@@ -952,8 +952,8 @@ void PCIeInfoHandler::parseTopologyData()
 
                 slot_suffix_location_code = slot_suff_location_code;
             }
-            std::string slot_full_location_code =
-                slot_location_code + slot_suffix_location_code;
+            std::string slot_full_location_code = slot_location_code +
+                                                  slot_suffix_location_code;
             slot_final_location_code.push_back(slot_full_location_code);
 
             // move the pointer to next slot
@@ -1003,8 +1003,8 @@ void PCIeInfoHandler::parseCableInfo()
         munmap(file_in_memory, sb.st_size);
     };
 
-    void* file_in_memory =
-        mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, cableInfoFd(), 0);
+    void* file_in_memory = mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE,
+                                cableInfoFd(), 0);
 
     if (MAP_FAILED == file_in_memory)
     {

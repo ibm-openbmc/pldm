@@ -196,11 +196,10 @@ class BIOSConfig
                         propertiesChanged(dBusMap->objectPath,
                                           dBusMap->interface),
                         [this, biosAttrIndex](sdbusplus::message_t& msg) {
-                            DbusChObjProperties props;
-                            std::string iface;
-                            msg.read(iface, props);
-                            processBiosAttrChangeNotification(props,
-                                                              biosAttrIndex);
+                    DbusChObjProperties props;
+                    std::string iface;
+                    msg.read(iface, props);
+                    processBiosAttrChangeNotification(props, biosAttrIndex);
                         }));
 
                 biosAttrMatch.push_back(
@@ -209,16 +208,16 @@ class BIOSConfig
                         interfacesAdded() + argNpath(0, dBusMap->objectPath),
                         [this, biosAttrIndex, interface = dBusMap->interface](
                             sdbusplus::message::message& msg) {
-                            sdbusplus::message::object_path path;
-                            DbusIfacesAdded interfaces;
+                    sdbusplus::message::object_path path;
+                    DbusIfacesAdded interfaces;
 
-                            msg.read(path, interfaces);
-                            auto ifaceIt = interfaces.find(interface);
-                            if (ifaceIt != interfaces.end())
-                            {
-                                processBiosAttrChangeNotification(
-                                    ifaceIt->second, biosAttrIndex);
-                            }
+                    msg.read(path, interfaces);
+                    auto ifaceIt = interfaces.find(interface);
+                    if (ifaceIt != interfaces.end())
+                    {
+                        processBiosAttrChangeNotification(ifaceIt->second,
+                                                          biosAttrIndex);
+                    }
                         }));
             }
         }

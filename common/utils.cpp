@@ -298,8 +298,8 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
 {
     auto setDbusValue = [&dBusMap, this](const auto& variant) {
         auto& bus = getBus();
-        auto service =
-            getService(dBusMap.objectPath.c_str(), dBusMap.interface.c_str());
+        auto service = getService(dBusMap.objectPath.c_str(),
+                                  dBusMap.interface.c_str());
         if (service == "xyz.openbmc_project.Inventory.Manager")
         {
             ObjectValueTree objectValueTree;
@@ -322,9 +322,9 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
         }
         else
         {
-            auto method =
-                bus.new_method_call(service.c_str(), dBusMap.objectPath.c_str(),
-                                    dbusProperties, "Set");
+            auto method = bus.new_method_call(service.c_str(),
+                                              dBusMap.objectPath.c_str(),
+                                              dbusProperties, "Set");
             if (dBusMap.objectPath ==
                     "/xyz/openbmc_project/network/hypervisor/eth0/ipv4/addr0" ||
                 dBusMap.objectPath ==
@@ -421,8 +421,8 @@ PropertyValue DBusHandler::getDbusPropertyVariant(
 {
     auto& bus = DBusHandler::getBus();
     auto service = getService(objPath, dbusInterface);
-    auto method =
-        bus.new_method_call(service.c_str(), objPath, dbusProperties, "Get");
+    auto method = bus.new_method_call(service.c_str(), objPath, dbusProperties,
+                                      "Get");
     method.append(dbusInterface, dbusProp);
     PropertyValue value{};
     auto reply = bus.call(method);
@@ -584,8 +584,8 @@ uint16_t findStateSensorId(const pldm_pdr* pdrRepo, uint8_t tid,
             {
                 return sensorPdr->sensor_id;
             }
-            possible_states_start +=
-                possibleStateSize + sizeof(setId) + sizeof(possibleStateSize);
+            possible_states_start += possibleStateSize + sizeof(setId) +
+                                     sizeof(possibleStateSize);
         }
     }
     return PLDM_INVALID_EFFECTER_ID;
@@ -707,9 +707,9 @@ void setBiosAttr(const BiosAttributeList& biosAttrList)
         {
             auto service = pldm::utils::DBusHandler().getService(
                 biosConfigPath, biosConfigIntf);
-            auto method =
-                bus.new_method_call(service.c_str(), biosConfigPath,
-                                    SYSTEMD_PROPERTY_INTERFACE, "Set");
+            auto method = bus.new_method_call(service.c_str(), biosConfigPath,
+                                              SYSTEMD_PROPERTY_INTERFACE,
+                                              "Set");
             method.append(
                 biosConfigIntf, "PendingAttributes",
                 std::variant<PendingAttributesType>(pendingAttributes));

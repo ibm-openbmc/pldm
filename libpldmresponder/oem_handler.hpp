@@ -20,8 +20,7 @@ using ObjectPathMaps = std::map<ObjectPath, pldm_entity_node*>;
 class Handler : public CmdHandler
 {
   public:
-    Handler(const pldm::utils::DBusHandler* dBusIntf) : dBusIntf(dBusIntf)
-    {}
+    Handler(const pldm::utils::DBusHandler* dBusIntf) : dBusIntf(dBusIntf) {}
 
     /** @brief Interface to set the numeric effecter requested by pldm
      *  requester for OEM types. Each individual oem type should implement
@@ -167,8 +166,7 @@ namespace oem_fru
 class Handler : public CmdHandler
 {
   public:
-    Handler(const pldm::utils::DBusHandler* dBusIntf) : dBusIntf(dBusIntf)
-    {}
+    Handler(const pldm::utils::DBusHandler* dBusIntf) : dBusIntf(dBusIntf) {}
 
     /** @brief Process OEM FRU record
      *

@@ -234,9 +234,9 @@ std::string FruImpl::populatefwVersion()
     std::string currentBmcVersion;
     try
     {
-        auto method =
-            bus.new_method_call(pldm::utils::mapperService, fwFunctionalObjPath,
-                                pldm::utils::dbusProperties, "Get");
+        auto method = bus.new_method_call(pldm::utils::mapperService,
+                                          fwFunctionalObjPath,
+                                          pldm::utils::dbusProperties, "Get");
         method.append("xyz.openbmc_project.Association", "endpoints");
         std::variant<std::vector<std::string>> paths;
         auto reply = bus.call(method);
@@ -268,11 +268,11 @@ uint32_t FruImpl::populateRecords(
     static uint32_t bmc_record_handle = 0;
     uint32_t newRcord{};
 
-    for (auto const& [recType, encType, fieldInfos] : recordInfos)
+    for (const auto& [recType, encType, fieldInfos] : recordInfos)
     {
         std::vector<uint8_t> tlvs;
         uint8_t numFRUFields = 0;
-        for (auto const& [intf, prop, propType, fieldTypeNum] : fieldInfos)
+        for (const auto& [intf, prop, propType, fieldTypeNum] : fieldInfos)
         {
             try
             {
@@ -379,8 +379,8 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
         pldm_entity_association_pdr_remove_contained_entity(
             pdrRepo, removeEntity, &hostEventDataOps, true);
 
-    auto deleteRecordHdl =
-        pldm_pdr_remove_fru_record_set_by_rsi(pdrRepo, rsi, false);
+    auto deleteRecordHdl = pldm_pdr_remove_fru_record_set_by_rsi(pdrRepo, rsi,
+                                                                 false);
 
     // sm00
     /* std::cout << "\nprinting the entityTree before deleting node\n";
@@ -855,11 +855,10 @@ void FruImpl::subscribeFruPresence(
                     bus, propertiesChanged(fruObjPath, itemInterface),
                     [this, fruObjPath,
                      fruInterface](sdbusplus::message::message& msg) {
-                        DbusChangedProps props;
-                        std::string iface;
-                        msg.read(iface, props);
-                        processFruPresenceChange(props, fruObjPath,
-                                                 fruInterface);
+                DbusChangedProps props;
+                std::string iface;
+                msg.read(iface, props);
+                processFruPresenceChange(props, fruObjPath, fruInterface);
                     }));
         }
     }
@@ -987,9 +986,8 @@ void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
                   << std::endl;
         return;
     }
-    auto platformEventMessageResponseHandler = [](mctp_eid_t /*eid*/,
-                                                  const pldm_msg* response,
-                                                  size_t respMsgLen) {
+    auto platformEventMessageResponseHandler =
+        [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             std::cerr << "Failed to receive response for the PDR repository "
@@ -1312,8 +1310,8 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
 
             pldm::responder::pdr_utils::DbusMappings dbusMappings{};
             pldm::responder::pdr_utils::DbusValMaps dbusValMaps{};
-            uint8_t* start =
-                entry.data() + sizeof(pldm_state_sensor_pdr) - sizeof(uint8_t);
+            uint8_t* start = entry.data() + sizeof(pldm_state_sensor_pdr) -
+                             sizeof(uint8_t);
             for (const auto& sensor : sensors)
             {
                 auto set = sensor.value("set", empty);
@@ -1455,9 +1453,9 @@ Response Handler::getFRURecordTable(const pldm_msg* request,
         sizeof(pldm_msg_hdr) + PLDM_GET_FRU_RECORD_TABLE_MIN_RESP_BYTES, 0);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
 
-    auto rc =
-        encode_get_fru_record_table_resp(request->hdr.instance_id, PLDM_SUCCESS,
-                                         0, PLDM_START_AND_END, responsePtr);
+    auto rc = encode_get_fru_record_table_resp(request->hdr.instance_id,
+                                               PLDM_SUCCESS, 0,
+                                               PLDM_START_AND_END, responsePtr);
     if (rc != PLDM_SUCCESS)
     {
         return ccOnlyResponse(request, rc);
@@ -1502,8 +1500,8 @@ Response Handler::getFRURecordByOption(const pldm_msg* request,
         return ccOnlyResponse(request, rc);
     }
 
-    auto respPayloadLength =
-        PLDM_GET_FRU_RECORD_BY_OPTION_MIN_RESP_BYTES + fruData.size();
+    auto respPayloadLength = PLDM_GET_FRU_RECORD_BY_OPTION_MIN_RESP_BYTES +
+                             fruData.size();
     Response response(sizeof(pldm_msg_hdr) + respPayloadLength, 0);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
 

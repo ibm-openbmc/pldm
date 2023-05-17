@@ -53,8 +53,7 @@ using ObjectPath = std::string;
 class CustomDBus
 {
   private:
-    CustomDBus()
-    {}
+    CustomDBus() {}
 
   public:
     CustomDBus(const CustomDBus&) = delete;

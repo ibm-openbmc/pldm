@@ -80,30 +80,31 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
     // generate the PDR structures. This function iterates through the map to
     // invoke all lambdas, so that all PDR types can be created.
 
-    const std::map<Type, generatePDR> generateHandlers = {
-        {PLDM_STATE_EFFECTER_PDR,
-         [this](const DBusHandler& dBusIntf, const auto& json,
-                RepoInterface& repo,
-                pldm_entity_association_tree* bmcEntityTree) {
-             pdr_state_effecter::generateStateEffecterPDR<
-                 pldm::utils::DBusHandler, Handler>(dBusIntf, json, *this, repo,
-                                                    bmcEntityTree);
-         }},
-        {PLDM_NUMERIC_EFFECTER_PDR,
-         [this](const DBusHandler& dBusIntf, const auto& json,
-                RepoInterface& repo,
-                pldm_entity_association_tree* bmcEntityTree) {
-             pdr_numeric_effecter::generateNumericEffecterPDR<
-                 pldm::utils::DBusHandler, Handler>(dBusIntf, json, *this, repo,
-                                                    bmcEntityTree);
-         }},
+    const std::map<Type, generatePDR>
+        generateHandlers =
+            {{PLDM_STATE_EFFECTER_PDR,
+              [this](const DBusHandler& dBusIntf, const auto& json,
+                     RepoInterface& repo,
+                     pldm_entity_association_tree* bmcEntityTree) {
+        pdr_state_effecter::generateStateEffecterPDR<pldm::utils::DBusHandler,
+                                                     Handler>(
+            dBusIntf, json, *this, repo, bmcEntityTree);
+              }},
+             {PLDM_NUMERIC_EFFECTER_PDR,
+              [this](const DBusHandler& dBusIntf, const auto& json,
+                     RepoInterface& repo,
+                     pldm_entity_association_tree* bmcEntityTree) {
+        pdr_numeric_effecter::generateNumericEffecterPDR<
+            pldm::utils::DBusHandler, Handler>(dBusIntf, json, *this, repo,
+                                               bmcEntityTree);
+              }},
         {PLDM_STATE_SENSOR_PDR,
          [this](const DBusHandler& dBusIntf, const auto& json,
                 RepoInterface& repo,
                 pldm_entity_association_tree* bmcEntityTree) {
-             pdr_state_sensor::generateStateSensorPDR<pldm::utils::DBusHandler,
-                                                      Handler>(
-                 dBusIntf, json, *this, repo, bmcEntityTree);
+        pdr_state_sensor::generateStateSensorPDR<pldm::utils::DBusHandler,
+                                                 Handler>(dBusIntf, json, *this,
+                                                          repo, bmcEntityTree);
          }}};
 
     Type pdrType{};
@@ -423,8 +424,8 @@ Response Handler::platformEventMessage(const pldm_msg* request,
             const auto& handlers = eventHandlers.at(eventClass);
             for (const auto& handler : handlers)
             {
-                auto rc =
-                    handler(request, payloadLength, formatVersion, tid, offset);
+                auto rc = handler(request, payloadLength, formatVersion, tid,
+                                  offset);
                 if (rc != PLDM_SUCCESS)
                 {
                     return CmdHandler::ccOnlyResponse(request, rc);
@@ -457,8 +458,8 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
     uint16_t sensorId{};
     uint8_t eventClass{};
     size_t eventClassDataOffset{};
-    auto eventData =
-        reinterpret_cast<const uint8_t*>(request->payload) + eventDataOffset;
+    auto eventData = reinterpret_cast<const uint8_t*>(request->payload) +
+                     eventDataOffset;
     auto eventDataSize = payloadLength - eventDataOffset;
 
     auto rc = decode_sensor_event_data(eventData, eventDataSize, &sensorId,
@@ -470,8 +471,8 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
 
     auto eventClassData = reinterpret_cast<const uint8_t*>(request->payload) +
                           eventDataOffset + eventClassDataOffset;
-    auto eventClassDataSize =
-        payloadLength - eventDataOffset - eventClassDataOffset;
+    auto eventClassDataSize = payloadLength - eventDataOffset -
+                              eventClassDataOffset;
 
     if (eventClass == PLDM_STATE_SENSOR_STATE)
     {
@@ -565,8 +566,8 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
     uint8_t numberOfChangeRecords{};
     size_t dataOffset{};
 
-    auto eventData =
-        reinterpret_cast<const uint8_t*>(request->payload) + eventDataOffset;
+    auto eventData = reinterpret_cast<const uint8_t*>(request->payload) +
+                     eventDataOffset;
     auto eventDataSize = payloadLength - eventDataOffset;
 
     auto rc = decode_pldm_pdr_repository_chg_event_data(
@@ -636,8 +637,8 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                 }
                 hostPDRHandler->modifiedCounter += pdrRecordHandles.size();
             }
-            changeRecordData +=
-                dataOffset + (numberOfChangeEntries * sizeof(ChangeEntry));
+            changeRecordData += dataOffset +
+                                (numberOfChangeEntries * sizeof(ChangeEntry));
             changeRecordDataSize -=
                 dataOffset + (numberOfChangeEntries * sizeof(ChangeEntry));
         }

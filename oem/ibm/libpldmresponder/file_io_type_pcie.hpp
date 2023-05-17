@@ -262,8 +262,7 @@ class PCIeInfoHandler : public FileHandler
 
     /** @brief PCIeInfoHandler destructor
      */
-    ~PCIeInfoHandler()
-    {}
+    ~PCIeInfoHandler() {}
 
   private:
     uint16_t infoType; //!< type of the information

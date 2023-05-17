@@ -74,8 +74,8 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
 
     pldm::utils::CustomFD xdmaFd(dmaFd);
     void* vgaMemDump = NULL;
-    vgaMemDump =
-        mmap(nullptr, pageAlignedLength, PROT_READ, MAP_SHARED, xdmaFd(), 0);
+    vgaMemDump = mmap(nullptr, pageAlignedLength, PROT_READ, MAP_SHARED,
+                      xdmaFd(), 0);
     if (MAP_FAILED == vgaMemDump)
     {
         rc = -errno;
@@ -603,8 +603,8 @@ Response Handler::writeFile(const pldm_msg* request, size_t payloadLength)
         return response;
     }
 
-    auto fileDataPos =
-        reinterpret_cast<const char*>(request->payload) + fileDataOffset;
+    auto fileDataPos = reinterpret_cast<const char*>(request->payload) +
+                       fileDataOffset;
 
     std::ofstream stream(value.fsPath,
                          std::ios::in | std::ios::out | std::ios::binary);

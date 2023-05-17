@@ -74,8 +74,8 @@ int LicenseHandler::writeFromMemory(
         return -1;
     }
 
-    auto rc =
-        transferFileData(newLicJsonFilePath, false, offset, length, address);
+    auto rc = transferFileData(newLicJsonFilePath, false, offset, length,
+                               address);
     if (rc != PLDM_SUCCESS)
     {
         std::cerr << "transferFileData failed with rc= " << rc << " \n";
