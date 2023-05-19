@@ -14,10 +14,13 @@
 #include <config.h>
 #include <systemd/sd-journal.h>
 
+#include <phosphor-logging/lg2.hpp>
 #include <sdbusplus/bus.hpp>
 
 #include <iostream>
 #include <set>
+
+PHOSPHOR_LOG2_USING;
 
 namespace pldm
 {
@@ -163,8 +166,8 @@ void FruImpl::buildFRUTable()
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Look up of inventory objects failed and PLDM FRU table "
-                     "creation failed\n";
+        error(
+            "Look up of inventory objects failed and PLDM FRU table creation failed");
         return;
     }
 
@@ -210,9 +213,9 @@ void FruImpl::buildFRUTable()
                 }
                 catch (const std::exception& e)
                 {
-                    std::cout << "Config JSONs missing for the item "
-                                 "interface type, interface = "
-                              << interface.first << "\n";
+                    info(
+                        "Config JSONs missing for the item interface type, interface = {INTF}",
+                        "INTF", interface.first);
                     break;
                 }
             }
@@ -249,9 +252,8 @@ std::string FruImpl::populatefwVersion()
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed to make a d-bus call "
-                     "Asociation, ERROR= "
-                  << e.what() << "\n";
+        error("failed to make a d-bus call Asociation, ERROR= {ERR_EXCEP}",
+              "ERR_EXCEP", e.what());
         return {};
     }
     return currentBmcVersion;
@@ -401,11 +403,12 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
 
     objectPathToRSIMap.erase(fruObjPath);
     objToEntityNode.erase(fruObjPath); // sm00
-    std::cerr << "Removing Individual FRU "
-              << "[ " << fruObjPath << " ] "
-              << "with entityid [ " << removeEntity.entity_type << ","
-              << removeEntity.entity_instance_num << ","
-              << removeEntity.entity_container_id << " ]\n";
+    error(
+        "Removing Individual FRU [ {FRU_OBJ_PATH} ] with entityid [ {ENTITY_TYP}, {ENTITY_NUM}, {ENTITY_ID} ]",
+        "FRU_OBJ_PATH", fruObjPath, "ENTITY_TYP",
+        static_cast<unsigned>(removeEntity.entity_type), "ENTITY_NUM",
+        static_cast<unsigned>(removeEntity.entity_instance_num), "ENTITY_ID",
+        static_cast<unsigned>(removeEntity.entity_container_id));
     associatedEntityMap.erase(fruObjPath); // sm00
 
     deleteFruRecord(rsi);
@@ -556,14 +559,15 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
             PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true, last_container_id);
         pldm_entity node_entity = pldm_entity_extract(node);
         objToEntityNode[fruObjectPath] = node_entity;
-        std::cerr << " Building Individual FRU "
-                  << "[ " << fruObjectPath << " ] "
-                  << "with entityid [ " << node_entity.entity_type << ","
-                  << node_entity.entity_instance_num << ","
-                  << node_entity.entity_container_id << " ] "
-                  << "Parent :[ " << parent.entity_type << ","
-                  << parent.entity_instance_num << ","
-                  << parent.entity_container_id << " ]\n";
+        error(
+            "Building Individual FRU [FRU_OBJ_PATH] with entityid [ {ENTITY_TYP}, {ENTITY_NUM}, {ENTITY_ID} ] Parent :[ {P_ENTITY_TYP}, {P_ENTITY_NUM}, {P_ENTITY_ID} ]",
+            "FRU_OBJ_PATH", fruObjectPath, "ENTITY_TYP",
+            static_cast<unsigned>(node_entity.entity_type), "ENTITY_NUM",
+            static_cast<unsigned>(node_entity.entity_instance_num), "ENTITY_ID",
+            static_cast<unsigned>(node_entity.entity_container_id),
+            "P_ENTITY_TYP", static_cast<unsigned>(parent.entity_type),
+            "P_ENTITY_NUM", static_cast<unsigned>(parent.entity_instance_num),
+            "P_ENTITY_ID", static_cast<unsigned>(parent.entity_container_id));
         auto recordInfos = parser.getRecordInfo(fruInterface);
 
         // sm00
@@ -597,9 +601,9 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
     }
     catch (const std::exception& e)
     {
-        std::cout << "Config JSONs missing for the item "
-                  << " in concurrent add path "
-                  << "interface type, interface = " << fruInterface << "\n";
+        info(
+            "Config JSONs missing for the item in concurrent add path interface type, interface = {FRU_INTF}",
+            "FRU_INTF", fruInterface);
     }
 #ifdef OEM_IBM
     auto lastLocalRecord = pldm_pdr_find_last_local_record(pdrRepo);
@@ -712,22 +716,24 @@ void FruImpl::reGenerateStatePDR(const std::string& fruObjectPath,
             }
             catch (const InternalFailure& e)
             {
-                std::cerr
-                    << "PDR config directory does not exist or empty, TYPE= "
-                    << (unsigned)pdrType << "PATH= " << dirEntry
-                    << " ERROR=" << e.what() << "\n";
+                error(
+                    "PDR config directory does not exist or empty, TYPE= {PDR_TYP} PATH= {DIR_PATH} ERROR={ERR_EXCEP}",
+                    "PDR_TYP", (unsigned)pdrType, "DIR_PATH",
+                    dirEntry.path().string(), "ERR_EXCEP", e.what());
                 // log an error here
             }
             catch (const Json::exception& e)
             {
-                std::cerr << "Failed parsing PDR JSON file, TYPE= "
-                          << (unsigned)pdrType << " ERROR=" << e.what() << "\n";
+                error(
+                    "Failed parsing PDR JSON file, TYPE= {PDR_TYP} ERROR={ERR_EXCEP}",
+                    "PDR_TYP", (unsigned)pdrType, "ERR_EXCEP", e.what());
                 // log error
             }
             catch (const std::exception& e)
             {
-                std::cerr << "Failed parsing PDR JSON file, TYPE= "
-                          << (unsigned)pdrType << " ERROR=" << e.what() << "\n";
+                error(
+                    "Failed parsing PDR JSON file, TYPE= {PDR_TYP} ERROR={ERR_EXCEP}",
+                    "PDR_TYP", (unsigned)pdrType, "ERR_EXCEP", e.what());
                 // log appropriate error
             }
         }
@@ -864,8 +870,9 @@ void FruImpl::subscribeFruPresence(
     }
     catch (const std::exception& e)
     {
-        std::cerr << "could not subscribe for concurrent maintenance of fru: "
-                  << fruInterface << " error " << e.what() << "\n";
+        error(
+            "could not subscribe for concurrent maintenance of fru: {FRU_INTF} error {ERR_EXCEP}",
+            "FRU_INTF", fruInterface, "ERR_EXCEP", e.what());
         pldm::utils::reportError(
             "xyz.openbmc_project.PLDM.Error.CMsubscribeFailure",
             pldm::PelSeverity::ERROR);
@@ -965,9 +972,8 @@ void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
 
     if (rc != PLDM_SUCCESS)
     {
-        std::cerr
-            << "Failed to encode_pldm_pdr_repository_chg_event_data, rc = "
-            << rc << std::endl;
+        error("Failed to encode_pldm_pdr_repository_chg_event_data, rc = {RC}",
+              "RC", static_cast<int>(rc));
         return;
     }
     auto instanceId = requester.getInstanceId(mctp_eid);
@@ -982,17 +988,16 @@ void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
     if (rc != PLDM_SUCCESS)
     {
         requester.markFree(mctp_eid, instanceId);
-        std::cerr << "Failed to encode_platform_event_message_req, rc = " << rc
-                  << std::endl;
+        error("Failed to encode_platform_event_message_req, rc = {RC}", "RC",
+              static_cast<unsigned>(rc));
         return;
     }
     auto platformEventMessageResponseHandler =
         [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
-            std::cerr << "Failed to receive response for the PDR repository "
-                         "changed event"
-                      << "\n";
+            error(
+                "Failed to receive response for the PDR repository changed event");
             return;
         }
         uint8_t completionCode{};
@@ -1002,10 +1007,10 @@ void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
                                                      &completionCode, &status);
         if (rc || completionCode)
         {
-            std::cerr << "Failed to decode_platform_event_message_resp: "
-                      << "rc=" << rc
-                      << ", cc=" << static_cast<unsigned>(completionCode)
-                      << std::endl;
+            error(
+                "Failed to decode_platform_event_message_resp: rc={RC}, cc={CC}",
+                "RC", static_cast<int>(rc), "CC",
+                static_cast<unsigned>(completionCode));
         }
     };
     rc = handler->registerRequest(
@@ -1013,9 +1018,8 @@ void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
         std::move(requestMsg), std::move(platformEventMessageResponseHandler));
     if (rc)
     {
-        std::cerr << "Failed to send the PDR repository changed event request "
-                     "after CM"
-                  << "\n";
+        error(
+            "Failed to send the PDR repository changed event request after CM");
     }
 }
 
@@ -1054,10 +1058,10 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
                 auto statesSize = set.value("size", 0);
                 if (!statesSize)
                 {
-                    std::cerr << "Malformed PDR JSON return "
-                                 "pdrEntry;- no state set "
-                                 "info, TYPE="
-                              << PLDM_STATE_EFFECTER_PDR << "\n";
+                    error(
+                        "Malformed PDR JSON return pdrEntry;- no state set info, TYPE={INFO_TYP}",
+                        "INFO_TYP",
+                        static_cast<unsigned>(PLDM_STATE_EFFECTER_PDR));
                     throw InternalFailure();
                 }
                 pdrSize += sizeof(state_effecter_possible_states) -
@@ -1073,7 +1077,7 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
                 reinterpret_cast<pldm_state_effecter_pdr*>(entry.data());
             if (!pdr)
             {
-                std::cerr << "Failed to get state effecter PDR.\n";
+                error("Failed to get state effecter PDR.");
                 continue;
             }
             pdr->hdr.record_handle = 0;
@@ -1181,9 +1185,9 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
                 }
                 catch (const std::exception& e)
                 {
-                    std::cerr
-                        << "D-Bus object path does not exist, effecter ID: "
-                        << pdr->effecter_id << "\n";
+                    error(
+                        "D-Bus object path does not exist, effecter ID: {EFFECTER_ID}",
+                        "EFFECTER_ID", static_cast<uint16_t>(pdr->effecter_id));
                 }
                 dbusMappings.emplace_back(std::move(dbusMapping));
                 dbusValMaps.emplace_back(std::move(dbusIdToValMap));
@@ -1221,10 +1225,10 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
                 auto statesSize = set.value("size", 0);
                 if (!statesSize)
                 {
-                    std::cerr << "Malformed PDR JSON return "
-                                 "pdrEntry;- no state set "
-                                 "info, TYPE="
-                              << PLDM_STATE_SENSOR_PDR << "\n";
+                    error(
+                        "Malformed PDR JSON return pdrEntry;- no state set info, TYPE={INFO_TYP}",
+                        "INFO_TYP",
+                        static_cast<unsigned>(PLDM_STATE_SENSOR_PDR));
                     throw InternalFailure();
                 }
                 pdrSize += sizeof(state_sensor_possible_states) -
@@ -1240,7 +1244,7 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
                 reinterpret_cast<pldm_state_sensor_pdr*>(entry.data());
             if (!pdr)
             {
-                std::cerr << "Failed to get state sensor PDR.\n";
+                error("Failed to get state sensor PDR.");
                 continue;
             }
             pdr->hdr.record_handle = 0;
@@ -1360,8 +1364,9 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
                 }
                 catch (const std::exception& e)
                 {
-                    std::cerr << "D-Bus object path does not exist, sensor ID: "
-                              << pdr->sensor_id << "\n";
+                    error(
+                        "D-Bus object path does not exist, sensor ID: {SENSOR_ID}",
+                        "SENSOR_ID", static_cast<uint16_t>(pdr->sensor_id));
                 }
                 dbusMappings.emplace_back(std::move(dbusMapping));
                 dbusValMaps.emplace_back(std::move(dbusIdToValMap));

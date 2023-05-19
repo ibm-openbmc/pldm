@@ -19,9 +19,13 @@
 
 #include <config.h>
 
+#include <phosphor-logging/lg2.hpp>
+
 using namespace pldm::utils;
 using namespace pldm::responder::pdr;
 using namespace pldm::responder::pdr_utils;
+
+PHOSPHOR_LOG2_USING;
 
 namespace pldm
 {
@@ -68,7 +72,7 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
 {
     for (const auto& directory : dir)
     {
-        std::cerr << "checking if : " << directory << "exists" << std::endl;
+        error("checking if : {DIR} exists", "DIR", directory.c_str());
         if (!fs::exists(directory))
         {
             return;
@@ -139,23 +143,25 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
             }
             catch (const InternalFailure& e)
             {
-                std::cerr
-                    << "PDR config directory does not exist or empty, TYPE= "
-                    << pdrType << "PATH= " << dirEntry << " ERROR=" << e.what()
-                    << "\n";
+                error(
+                    "PDR config directory does not exist or empty, TYPE= {PDR_TYP} PATH= {DIR_PATH} ERROR={ERR_EXCEP}",
+                    "PDR_TYP", pdrType, "DIR_PATH", dirEntry.path().string(),
+                    "ERR_EXCEP", e.what());
             }
             catch (const Json::exception& e)
             {
-                std::cerr << "Failed parsing PDR JSON file, TYPE= " << pdrType
-                          << " ERROR=" << e.what() << "\n";
+                error(
+                    "Failed parsing PDR JSON file, TYPE= {PDR_TYP} ERROR={ERR_EXCEP}",
+                    "PDR_TYP", pdrType, "ERR_EXCEP", e.what());
                 pldm::utils::reportError(
                     "xyz.openbmc_project.PLDM.Error.Generate.PDRJsonFileParseFail",
                     pldm::PelSeverity::ERROR);
             }
             catch (const std::exception& e)
             {
-                std::cerr << "Failed parsing PDR JSON file, TYPE= " << pdrType
-                          << " ERROR=" << e.what() << "\n";
+                error(
+                    "Failed parsing PDR JSON file, TYPE= {PDR_TYP} ERROR={ERR_EXCEP}",
+                    "PDR_TYP", pdrType, "ERR_EXCEP", e.what());
                 pldm::utils::reportError(
                     "xyz.openbmc_project.PLDM.Error.Generate.PDRJsonFileParseFail",
                     pldm::PelSeverity::ERROR);
@@ -316,8 +322,8 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Error accessing PDR, HANDLE=" << recordHandle
-                  << " ERROR=" << e.what() << "\n";
+        error("Error accessing PDR, HANDLE={REC_HNDL} ERROR={ERR_EXCEP}",
+              "REC_HNDL", recordHandle, "ERR_EXCEP", e.what());
         return CmdHandler::ccOnlyResponse(request, PLDM_ERROR);
     }
     return response;
@@ -559,8 +565,7 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                                        uint8_t /*formatVersion*/, uint8_t tid,
                                        size_t eventDataOffset)
 {
-    std::cerr << "Got a repo change event from TID: " << (unsigned)tid
-              << std::endl;
+    error("Got a repo change event from TID: {TID}", "TID", (unsigned)tid);
     uint8_t eventDataFormat{};
     uint8_t eventDataOperation{};
     uint8_t numberOfChangeRecords{};
@@ -603,8 +608,8 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                 return rc;
             }
 
-            std::cout << "pldmPDRRepositoryChgEvent eventDataOperation : "
-                      << (unsigned)eventDataOperation << std::endl;
+            info("pldmPDRRepositoryChgEvent eventDataOperation : {EVENT_OP}",
+                 "EVENT_OP", (unsigned)eventDataOperation);
 
             if (eventDataOperation == PLDM_RECORDS_ADDED ||
                 eventDataOperation == PLDM_RECORDS_DELETED)
@@ -691,7 +696,8 @@ int Handler::getPDRRecordHandles(const ChangeEntry* changeEntryData,
     }
     for (const auto& i : pdrRecordHandles)
     {
-        std::cerr << "Record handles sent down to BMC: " << i << std::endl;
+        error("Record handles sent down to BMC: {PDR_REC_HNDL}", "PDR_REC_HNDL",
+              static_cast<unsigned>(i));
     }
     return PLDM_SUCCESS;
 }
@@ -870,7 +876,7 @@ bool isOemNumericEffecter(Handler& handler, uint16_t effecterId,
 
     if (numericEffecterPDRs.empty())
     {
-        std::cerr << "Failed to get record by PDR type\n";
+        error("Failed to get record by PDR type");
         return false;
     }
 
@@ -928,7 +934,7 @@ bool isOemStateSensor(Handler& handler, uint16_t sensorId,
     getRepoByType(handler.getRepo(), stateSensorPDRs, PLDM_STATE_SENSOR_PDR);
     if (stateSensorPDRs.empty())
     {
-        std::cerr << "Failed to get record by PDR type\n";
+        error("Failed to get record by PDR type");
         return false;
     }
 
@@ -955,10 +961,10 @@ bool isOemStateSensor(Handler& handler, uint16_t sensorId,
 
         if (sensorRearmCount > tmpCompSensorCnt)
         {
-            std::cerr << "The requester sent wrong sensorRearm"
-                      << " count for the sensor, SENSOR_ID=" << sensorId
-                      << "SENSOR_REARM_COUNT=" << (uint16_t)sensorRearmCount
-                      << "\n";
+            error(
+                "The requester sent wrong sensorRearm count for the sensor, SENSOR_ID={SENSOR_ID} SENSOR_REARM_COUNT={SENSOR_REARM_COUNT}",
+                "SENSOR_ID", sensorId, "SENSOR_REARM_COUNT",
+                (uint16_t)sensorRearmCount);
             break;
         }
 
@@ -995,7 +1001,7 @@ bool isOemStateEffecter(Handler& handler, uint16_t effecterId,
                   PLDM_STATE_EFFECTER_PDR);
     if (stateEffecterPDRs.empty())
     {
-        std::cerr << "Failed to get record by PDR type\n";
+        error("Failed to get record by PDR type");
         return false;
     }
 
@@ -1021,9 +1027,10 @@ bool isOemStateEffecter(Handler& handler, uint16_t effecterId,
 
         if (compEffecterCnt > pdr->composite_effecter_count)
         {
-            std::cerr << "The requester sent wrong composite effecter"
-                      << " count for the effecter, EFFECTER_ID=" << effecterId
-                      << "COMP_EFF_CNT=" << (uint16_t)compEffecterCnt << "\n";
+            error(
+                "The requester sent wrong composite effecter count for the effecter, EFFECTER_ID={EFFECTER_ID} COMP_EFF_CNT={COMP_EFF_CNT}",
+                "EFFECTER_ID", effecterId, "COMP_EFF_CNT",
+                (uint16_t)compEffecterCnt);
             return false;
         }
 

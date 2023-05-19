@@ -1,5 +1,6 @@
 #include "event_parser.hpp"
 
+#include <phosphor-logging/lg2.hpp>
 #include <xyz/openbmc_project/Common/error.hpp>
 
 #include <filesystem>
@@ -7,9 +8,10 @@
 #include <iostream>
 #include <set>
 
+PHOSPHOR_LOG2_USING;
+
 namespace pldm::responder::events
 {
-
 namespace fs = std::filesystem;
 using InternalFailure =
     sdbusplus::xyz::openbmc_project::Common::Error::InternalFailure;
@@ -27,8 +29,8 @@ StateSensorHandler::StateSensorHandler(const std::string& dirPath)
     fs::path dir(dirPath);
     if (!fs::exists(dir) || fs::is_empty(dir))
     {
-        std::cerr << "Event config directory does not exist or empty, DIR="
-                  << dirPath << "\n";
+        error("Event config directory does not exist or empty, DIR={DIR_PATH}",
+              "DIR_PATH", dirPath.c_str());
         return;
     }
 
@@ -39,8 +41,8 @@ StateSensorHandler::StateSensorHandler(const std::string& dirPath)
         auto data = Json::parse(jsonFile, nullptr, false);
         if (data.is_discarded())
         {
-            std::cerr << "Parsing Event state sensor JSON file failed, FILE="
-                      << file.path();
+            error("Parsing Event state sensor JSON file failed, FILE={FILE}",
+                  "FILE", file.path().c_str());
             continue;
         }
 
@@ -75,11 +77,11 @@ StateSensorHandler::StateSensorHandler(const std::string& dirPath)
                 (supportedDbusPropertyTypes.find(dbusInfo.propertyType) ==
                  supportedDbusPropertyTypes.end()))
             {
-                std::cerr << "Invalid dbus config,"
-                          << " OBJPATH=" << dbusInfo.objectPath << " INTERFACE="
-                          << dbusInfo.interface << " PROPERTY_NAME="
-                          << dbusInfo.propertyName
-                          << " PROPERTY_TYPE=" << dbusInfo.propertyType << "\n";
+                error(
+                    "Invalid dbus config, OBJPATH= {OBJ_PATH} INTERFACE={INTF} PROPERTY_NAME={PROP_NAME} PROPERTY_TYPE={PROP_TYP}",
+                    "OBJ_PATH", dbusInfo.objectPath.c_str(), "INTF",
+                    dbusInfo.interface, "PROP_NAME", dbusInfo.propertyName,
+                    "PROP_TYP", dbusInfo.propertyType);
                 continue;
             }
 
@@ -88,10 +90,10 @@ StateSensorHandler::StateSensorHandler(const std::string& dirPath)
             if ((eventStates.size() == 0) || (propertyValues.size() == 0) ||
                 (eventStates.size() != propertyValues.size()))
             {
-                std::cerr << "Invalid event state JSON config,"
-                          << " EVENT_STATE_SIZE=" << eventStates.size()
-                          << " PROPERTY_VALUE_SIZE=" << propertyValues.size()
-                          << "\n";
+                error(
+                    "Invalid event state JSON config, EVENT_STATE_SIZE={EVENT_STATE_SIZE} PROPERTY_VALUE_SIZE={PROP_VAL_SIZE}",
+                    "EVENT_STATE_SIZE", eventStates.size(), "PROP_VAL_SIZE",
+                    propertyValues.size());
                 continue;
             }
 
@@ -145,8 +147,8 @@ int StateSensorHandler::eventAction(StateSensorEntry entry,
         }
         catch (const std::out_of_range& e)
         {
-            std::cerr << "Invalid event state" << static_cast<unsigned>(state)
-                      << '\n';
+            error("Invalid event state {EVENT_STATE}", "EVENT_STATE",
+                  static_cast<unsigned>(state));
             return PLDM_ERROR_INVALID_DATA;
         }
 
@@ -156,10 +158,11 @@ int StateSensorHandler::eventAction(StateSensorEntry entry,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "Error setting property, ERROR=" << e.what()
-                      << " PROPERTY=" << dbusMapping.propertyName
-                      << " INTERFACE=" << dbusMapping.interface << " PATH="
-                      << dbusMapping.objectPath << "\n";
+            error(
+                "Error setting property, ERROR={ERR_EXCEP} PROPERTY={DBUS_PROP} INTERFACE={INTF} PATH = {OBJ_PATH}",
+                "ERR_EXCEP", e.what(), "DBUS_PROP", dbusMapping.propertyName,
+                "INTF", dbusMapping.interface, "OBJ_PATH",
+                dbusMapping.objectPath.c_str());
             return PLDM_ERROR;
         }
     }

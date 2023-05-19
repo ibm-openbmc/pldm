@@ -22,6 +22,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 
+#include <phosphor-logging/lg2.hpp>
 #include <sdeventplus/event.hpp>
 #include <sdeventplus/source/io.hpp>
 #include <sdeventplus/source/signal.hpp>
@@ -73,11 +74,12 @@ using namespace pldm::responder;
 using namespace pldm::utils;
 using sdeventplus::source::Signal;
 using namespace pldm::flightrecorder;
+PHOSPHOR_LOG2_USING;
 
 void interruptFlightRecorderCallBack(Signal& /*signal*/,
                                      const struct signalfd_siginfo*)
 {
-    std::cerr << "\nReceived SIGUR1(10) Signal interrupt\n";
+    error("Received SIGUR1(10) Signal interrupt");
 
     // obtain the flight recorder instance and dump the recorder
     FlightRecorder::GetInstance().playRecorder();
@@ -96,7 +98,7 @@ static std::optional<Response>
         requestMsg.data() + sizeof(eid) + sizeof(type));
     if (PLDM_SUCCESS != unpack_pldm_header(hdr, &hdrFields))
     {
-        std::cerr << "Empty PLDM request header \n";
+        error("Empty PLDM request header");
         return std::nullopt;
     }
 
@@ -132,7 +134,7 @@ static std::optional<Response>
             header.command = hdrFields.command;
             if (PLDM_SUCCESS != pack_pldm_header(&header, responseHdr))
             {
-                std::cerr << "Failed adding response header \n";
+                error("Failed adding response header");
                 return std::nullopt;
             }
             response.insert(response.end(), completion_code);
@@ -152,9 +154,9 @@ static std::optional<Response>
 
 void optionUsage(void)
 {
-    std::cerr << "Usage: pldmd [options]\n";
-    std::cerr << "Options:\n";
-    std::cerr << "  [--verbose] - would enable verbosity\n";
+    error("Usage: pldmd [options]");
+    error("Options:");
+    error(" [--verbose] - would enable verbosity");
 }
 
 int main(int argc, char** argv)
@@ -181,7 +183,7 @@ int main(int argc, char** argv)
     if (-1 == sockfd)
     {
         returnCode = -errno;
-        std::cerr << "Failed to create the socket, RC= " << returnCode << "\n";
+        error("Failed to create the socket, RC={RC}", "RC", returnCode);
         exit(EXIT_FAILURE);
     }
     socklen_t optlen;
@@ -194,8 +196,8 @@ int main(int argc, char** argv)
                          &optlen);
     if (res == -1)
     {
-        std::cerr << "Error calling setsockopt. RC = " << res
-                  << ", errno = " << errno << std::endl;
+        error("Error calling setsockopt. RC = {RC}, errno = {ERR}", "RC", res,
+              "ERR", errno);
     }
     auto event = Event::get_default();
     auto& bus = pldm::utils::DBusHandler::getBus();
@@ -338,8 +340,7 @@ int main(int argc, char** argv)
     if (-1 == result)
     {
         returnCode = -errno;
-        std::cerr << "Failed to connect to the socket, RC= " << returnCode
-                  << "\n";
+        error("Failed to connect to the socket, RC= {RC}", "RC", returnCode);
         exit(EXIT_FAILURE);
     }
 
@@ -347,8 +348,9 @@ int main(int argc, char** argv)
     if (-1 == result)
     {
         returnCode = -errno;
-        std::cerr << "Failed to send message type as pldm to mctp, RC= "
-                  << returnCode << "\n";
+        error("Failed to send message type as pldm to mctp, RC= {RC}", "RC",
+              returnCode);
+
         exit(EXIT_FAILURE);
     }
 
@@ -386,7 +388,7 @@ int main(int argc, char** argv)
         else if (peekedLength <= -1)
         {
             returnCode = -errno;
-            std::cerr << "recv system call failed, RC= " << returnCode << "\n";
+            error("recv system call failed, RC= {RC}", "RC", returnCode);
         }
         else
         {
@@ -404,8 +406,7 @@ int main(int argc, char** argv)
                 if (MCTP_MSG_TYPE_PLDM != requestMsg[1])
                 {
                     // Skip this message and continue.
-                    std::cerr << "Encountered Non-PLDM type message"
-                              << "\n";
+                    error("Encountered Non-PLDM type message");
                 }
                 else
                 {
@@ -439,13 +440,11 @@ int main(int argc, char** argv)
                                                  sizeof(currentSendbuffSize));
                             if (res == -1)
                             {
-                                std::cerr
-                                    << "Responder : Failed to set the new send buffer size [bytes] : "
-                                    << currentSendbuffSize
-                                    << " from current size [bytes] : "
-                                    << oldBuffSize
-                                    << ", Error : " << strerror(errno)
-                                    << std::endl;
+                                error(
+                                    "Responder : Failed to set the new send buffer size [bytes] : {CUR_BUFF_SIZE} from current size [bytes] : {OLD_BUFF_SIZE}, Error : {ERR}",
+                                    "CUR_BUFF_SIZE", currentSendbuffSize,
+                                    "OLD_BUFF_SIZE", oldBuffSize, "ERR",
+                                    strerror(errno));
                                 return;
                             }
                         }
@@ -454,18 +453,17 @@ int main(int argc, char** argv)
                         if (-1 == result)
                         {
                             returnCode = -errno;
-                            std::cerr << "sendto system call failed, RC= "
-                                      << returnCode << "\n";
+                            error("sendto system call failed, RC= {RC}", "RC",
+                                  returnCode);
                         }
                     }
                 }
             }
             else
             {
-                std::cerr
-                    << "Failure to read peeked length packet. peekedLength= "
-                    << peekedLength << " recvDataLength=" << recvDataLength
-                    << "\n";
+                error(
+                    "Failure to read peeked length packet. peekedLength = {PEEK_LEN}, recvDataLength= {RECV_DATA}",
+                    "PEEK_LEN", peekedLength, "RECV_DATA", recvDataLength);
             }
         }
     };
@@ -486,7 +484,7 @@ int main(int argc, char** argv)
 
     if (shutdown(sockfd, SHUT_RDWR))
     {
-        std::perror("Failed to shutdown the socket");
+        error("Failed to shutdown the socket");
     }
     if (returnCode)
     {
