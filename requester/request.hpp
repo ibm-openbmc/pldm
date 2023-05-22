@@ -183,9 +183,9 @@ class Request final : public RequestRetryTimer
         {
             size_t oldSendbuffSize = currentSendbuffSize;
             currentSendbuffSize = requestMsg.size();
-            int res =
-                setsockopt(fd, SOL_SOCKET, SO_SNDBUF, &currentSendbuffSize,
-                           sizeof(currentSendbuffSize));
+            int res = setsockopt(fd, SOL_SOCKET, SO_SNDBUF,
+                                 &currentSendbuffSize,
+                                 sizeof(currentSendbuffSize));
             if (res == -1)
             {
                 std::cerr

@@ -656,8 +656,8 @@ Response Handler::writeFile(const pldm_msg* request, size_t payloadLength)
         return response;
     }
 
-    auto fileDataPos =
-        reinterpret_cast<const char*>(request->payload) + fileDataOffset;
+    auto fileDataPos = reinterpret_cast<const char*>(request->payload) +
+                       fileDataOffset;
 
     std::ofstream stream(value.fsPath,
                          std::ios::in | std::ios::out | std::ios::binary);

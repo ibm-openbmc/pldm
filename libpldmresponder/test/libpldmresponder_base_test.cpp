@@ -86,8 +86,8 @@ TEST_F(TestBaseCommands, testGetPLDMVersionGoodRequest)
     uint8_t retFlag = PLDM_START_AND_END;
     ver32_t version = {0xF1, 0xF0, 0xF0, 0x00};
 
-    auto rc =
-        encode_get_version_req(0, transferHandle, flag, pldmType, request);
+    auto rc = encode_get_version_req(0, transferHandle, flag, pldmType,
+                                     request);
 
     ASSERT_EQ(0, rc);
 
@@ -117,8 +117,8 @@ TEST_F(TestBaseCommands, testGetPLDMVersionBadRequest)
     uint32_t transferHandle = 0x0;
     uint8_t flag = PLDM_GET_FIRSTPART;
 
-    auto rc =
-        encode_get_version_req(0, transferHandle, flag, pldmType, request);
+    auto rc = encode_get_version_req(0, transferHandle, flag, pldmType,
+                                     request);
 
     ASSERT_EQ(0, rc);
 

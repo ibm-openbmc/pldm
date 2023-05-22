@@ -75,7 +75,7 @@ struct CustomFD
 
   private:
     int fd = -1;
-    bool closeOnOutScope = true;
+    bool closeOnOutScope;
 };
 
 /** @brief Calculate the pad for PLDM data
@@ -276,8 +276,8 @@ class DBusHandler : public DBusHandlerInterface
     auto getDbusProperty(const char* objPath, const char* dbusProp,
                          const char* dbusInterface)
     {
-        auto VariantValue =
-            getDbusPropertyVariant(objPath, dbusProp, dbusInterface);
+        auto VariantValue = getDbusPropertyVariant(objPath, dbusProp,
+                                                   dbusInterface);
         return std::get<Property>(VariantValue);
     }
 
@@ -310,8 +310,8 @@ class DBusHandler : public DBusHandlerInterface
      */
     static auto& getInventoryObjects()
     {
-        static ObjectValueTree object =
-            getManagedObj(inventoryService, inventoryPath);
+        static ObjectValueTree object = getManagedObj(inventoryService,
+                                                      inventoryPath);
         return object;
     }
 };

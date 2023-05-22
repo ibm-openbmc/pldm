@@ -65,8 +65,8 @@ int pldm::responder::oem_ibm_platform::Handler::
         {
             if (key == effecterId)
             {
-                entityInstance =
-                    (value.dcmId * 2) + value.procId; // failingUintId
+                entityInstance = (value.dcmId * 2) +
+                                 value.procId; // failingUintId
             }
         }
         rc = setNumericEffecter(entityInstance, value);
@@ -337,8 +337,8 @@ void buildAllSlotEnabeEffecterPDR(oem_ibm_platform::Handler* platformHandler,
         pdr->hdr.version = 1;
         pdr->hdr.type = PLDM_STATE_EFFECTER_PDR;
         pdr->hdr.record_change_num = 0;
-        pdr->hdr.length =
-            sizeof(pldm_state_effecter_pdr) - sizeof(pldm_pdr_hdr);
+        pdr->hdr.length = sizeof(pldm_state_effecter_pdr) -
+                          sizeof(pldm_pdr_hdr);
         pdr->terminus_handle = TERMINUS_HANDLE;
         pdr->effecter_id = platformHandler->getNextEffecterId();
 
@@ -383,8 +383,8 @@ void buildAllCodeUpdateSensorPDR(oem_ibm_platform::Handler* platformHandler,
                                  uint16_t stateSetID, pdr_utils::Repo& repo)
 {
     size_t pdrSize = 0;
-    pdrSize =
-        sizeof(pldm_state_sensor_pdr) + sizeof(state_sensor_possible_states);
+    pdrSize = sizeof(pldm_state_sensor_pdr) +
+              sizeof(state_sensor_possible_states);
     std::vector<uint8_t> entry{};
     entry.resize(pdrSize);
     pldm_state_sensor_pdr* pdr =
@@ -432,8 +432,8 @@ void buildAllSlotEnableSensorPDR(oem_ibm_platform::Handler* platformHandler,
                                  const std::vector<std::string>& slotobjpaths)
 {
     size_t pdrSize = 0;
-    pdrSize =
-        sizeof(pldm_state_sensor_pdr) + sizeof(state_sensor_possible_states);
+    pdrSize = sizeof(pldm_state_sensor_pdr) +
+              sizeof(state_sensor_possible_states);
     std::vector<uint8_t> entry{};
     entry.resize(pdrSize);
     pldm_state_sensor_pdr* pdr =
@@ -516,8 +516,8 @@ void buildAllNumericEffecterPDR(oem_ibm_platform::Handler* platformHandler,
         pdr->hdr.version = 1;
         pdr->hdr.type = PLDM_NUMERIC_EFFECTER_PDR;
         pdr->hdr.record_change_num = 0;
-        pdr->hdr.length =
-            sizeof(pldm_numeric_effecter_value_pdr) - sizeof(pldm_pdr_hdr);
+        pdr->hdr.length = sizeof(pldm_numeric_effecter_value_pdr) -
+                          sizeof(pldm_pdr_hdr);
         pdr->terminus_handle = TERMINUS_HANDLE;
         pdr->effecter_id = platformHandler->getNextEffecterId();
 
@@ -838,18 +838,18 @@ int pldm::responder::oem_ibm_platform::Handler::sendEventToHost(
     }
     auto oemPlatformEventMessageResponseHandler =
         [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
-            uint8_t completionCode{};
-            uint8_t status{};
-            auto rc = decode_platform_event_message_resp(
-                response, respMsgLen, &completionCode, &status);
-            if (rc || completionCode)
-            {
-                std::cerr << "Failed to decode_platform_event_message_resp: "
-                          << " for code update event rc=" << rc
-                          << ", cc=" << static_cast<unsigned>(completionCode)
-                          << std::endl;
-            }
-        };
+        uint8_t completionCode{};
+        uint8_t status{};
+        auto rc = decode_platform_event_message_resp(response, respMsgLen,
+                                                     &completionCode, &status);
+        if (rc || completionCode)
+        {
+            std::cerr << "Failed to decode_platform_event_message_resp: "
+                      << " for code update event rc=" << rc
+                      << ", cc=" << static_cast<unsigned>(completionCode)
+                      << std::endl;
+        }
+    };
     auto rc = handler->registerRequest(
         mctp_eid, instanceId, PLDM_PLATFORM, PLDM_PLATFORM_EVENT_MESSAGE,
         std::move(requestMsg),
@@ -868,7 +868,7 @@ int encodeEventMsg(uint8_t eventType, const std::vector<uint8_t>& eventDataVec,
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
 
     auto rc = encode_platform_event_message_req(
-        instanceId, 1 /*formatVersion*/, 0 /*tId*/, eventType,
+        instanceId, 1 /*formatVersion*/, TERMINUS_ID, eventType,
         eventDataVec.data(), eventDataVec.size(), request,
         eventDataVec.size() + PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES);
 
@@ -924,35 +924,33 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
         auto setStateEffecterStatesRespHandler =
             [=, this](mctp_eid_t /*eid*/, const pldm_msg* response,
                       size_t respMsgLen) {
-                if (response == nullptr || !respMsgLen)
-                {
-                    std::cerr << "Failed to receive response for "
-                              << "setstateEffecterSates command\n";
-                    return;
-                }
-                uint8_t completionCode{};
-                auto rc = decode_set_state_effecter_states_resp(
-                    response, respMsgLen, &completionCode);
-                if (rc)
-                {
-                    std::cerr
-                        << "Failed to decode setStateEffecterStates response,"
-                        << " rc " << rc << "\n";
-                    pldm::utils::reportError(
-                        "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
-                        pldm::PelSeverity::ERROR);
-                }
-                if (completionCode)
-                {
-                    std::cerr
-                        << "Failed to set a Host effecter "
-                        << ", cc=" << static_cast<unsigned>(completionCode)
-                        << "\n";
-                    pldm::utils::reportError(
-                        "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
-                        pldm::PelSeverity::ERROR);
-                }
-            };
+            if (response == nullptr || !respMsgLen)
+            {
+                std::cerr << "Failed to receive response for "
+                          << "setstateEffecterSates command\n";
+                return;
+            }
+            uint8_t completionCode{};
+            auto rc = decode_set_state_effecter_states_resp(
+                response, respMsgLen, &completionCode);
+            if (rc)
+            {
+                std::cerr << "Failed to decode setStateEffecterStates response,"
+                          << " rc " << rc << "\n";
+                pldm::utils::reportError(
+                    "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
+                    pldm::PelSeverity::ERROR);
+            }
+            if (completionCode)
+            {
+                std::cerr << "Failed to set a Host effecter "
+                          << ", cc=" << static_cast<unsigned>(completionCode)
+                          << "\n";
+                pldm::utils::reportError(
+                    "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
+                    pldm::PelSeverity::ERROR);
+            }
+        };
         rc = handler->registerRequest(
             mctp_eid, instanceId, PLDM_PLATFORM, PLDM_SET_STATE_EFFECTER_STATES,
             std::move(requestMsg),
@@ -972,29 +970,29 @@ void pldm::responder::oem_ibm_platform::Handler::monitorDump(
         sdbusplus::bus::match::rules::propertiesChanged(obj_path.c_str(),
                                                         matchInterface.c_str()),
         [&](sdbusplus::message::message& msg) {
-            DbusChangedProps props{};
-            std::string intf;
-            msg.read(intf, props);
-            const auto itr = props.find("Status");
-            if (itr != props.end())
+        DbusChangedProps props{};
+        std::string intf;
+        msg.read(intf, props);
+        const auto itr = props.find("Status");
+        if (itr != props.end())
+        {
+            PropertyValue value = itr->second;
+            auto propVal = std::get<std::string>(value);
+            if (propVal ==
+                "xyz.openbmc_project.Common.Progress.OperationStatus.Completed")
             {
-                PropertyValue value = itr->second;
-                auto propVal = std::get<std::string>(value);
-                if (propVal ==
-                    "xyz.openbmc_project.Common.Progress.OperationStatus.Completed")
-                {
-                    setHostEffecterState(true);
-                }
-                else if (
-                    propVal ==
-                        "xyz.openbmc_project.Common.Progress.OperationStatus.Failed" ||
-                    propVal ==
-                        "xyz.openbmc_project.Common.Progress.OperationStatus.Aborted")
-                {
-                    setHostEffecterState(false);
-                }
+                setHostEffecterState(true);
             }
-            sbeDumpMatch = nullptr;
+            else if (
+                propVal ==
+                    "xyz.openbmc_project.Common.Progress.OperationStatus.Failed" ||
+                propVal ==
+                    "xyz.openbmc_project.Common.Progress.OperationStatus.Aborted")
+            {
+                setHostEffecterState(false);
+            }
+        }
+        sbeDumpMatch = nullptr;
         });
 }
 
@@ -1009,8 +1007,8 @@ int pldm::responder::oem_ibm_platform::Handler::setNumericEffecter(
 
     try
     {
-        auto service =
-            pldm::utils::DBusHandler().getService(objectPath, interface);
+        auto service = pldm::utils::DBusHandler().getService(objectPath,
+                                                             interface);
         auto method = bus.new_method_call(service.c_str(), objectPath,
                                           interface, "CreateDump");
 
@@ -1182,55 +1180,54 @@ void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
         propertiesChanged("/xyz/openbmc_project/state/chassis0",
                           "xyz.openbmc_project.State.Chassis"),
         [this](sdbusplus::message::message& msg) {
-            DbusChangedProps props{};
-            std::string intf;
-            msg.read(intf, props);
-            const auto itr = props.find("CurrentPowerState");
-            if (itr != props.end())
+        DbusChangedProps props{};
+        std::string intf;
+        msg.read(intf, props);
+        const auto itr = props.find("CurrentPowerState");
+        if (itr != props.end())
+        {
+            PropertyValue value = itr->second;
+            auto propVal = std::get<std::string>(value);
+            if (propVal == "xyz.openbmc_project.State.Chassis.PowerState.Off")
             {
-                PropertyValue value = itr->second;
-                auto propVal = std::get<std::string>(value);
-                if (propVal ==
-                    "xyz.openbmc_project.State.Chassis.PowerState.Off")
+                pldm::utils::DBusMapping dbusMapping{
+                    "/xyz/openbmc_project/control/host0/"
+                    "power_restore_policy/one_time",
+                    "xyz.openbmc_project.Control.Power.RestorePolicy",
+                    "PowerRestorePolicy", "string"};
+                value = "xyz.openbmc_project.Control.Power.RestorePolicy."
+                        "Policy.AlwaysOn";
+                try
                 {
-                    pldm::utils::DBusMapping dbusMapping{
-                        "/xyz/openbmc_project/control/host0/"
-                        "power_restore_policy/one_time",
-                        "xyz.openbmc_project.Control.Power.RestorePolicy",
-                        "PowerRestorePolicy", "string"};
-                    value = "xyz.openbmc_project.Control.Power.RestorePolicy."
-                            "Policy.AlwaysOn";
-                    try
-                    {
-                        std::cout
-                            << "InbandCodeUpdate: Setting the one time APR policy\n";
-                        dBusIntf->setDbusProperty(dbusMapping, value);
-                    }
-                    catch (const std::exception& e)
-                    {
-                        std::cerr << "Setting one-time restore policy failed,"
-                                  << "unable to set property PowerRestorePolicy"
-                                  << "ERROR=" << e.what() << "\n";
-                    }
-                    dbusMapping = pldm::utils::DBusMapping{
-                        "/xyz/openbmc_project/state/bmc0",
-                        "xyz.openbmc_project.State.BMC",
-                        "RequestedBMCTransition", "string"};
-                    value = "xyz.openbmc_project.State.BMC.Transition.Reboot";
-                    try
-                    {
-                        std::cout << "InbandCodeUpdate: Rebooting the BMC\n";
-                        dBusIntf->setDbusProperty(dbusMapping, value);
-                    }
-                    catch (const std::exception& e)
-                    {
-                        std::cerr << "BMC state transition to reboot failed,"
-                                  << "unable to set property "
-                                     "RequestedBMCTransition"
-                                  << "ERROR=" << e.what() << "\n";
-                    }
+                    std::cout
+                        << "InbandCodeUpdate: Setting the one time APR policy\n";
+                    dBusIntf->setDbusProperty(dbusMapping, value);
+                }
+                catch (const std::exception& e)
+                {
+                    std::cerr << "Setting one-time restore policy failed,"
+                              << "unable to set property PowerRestorePolicy"
+                              << "ERROR=" << e.what() << "\n";
+                }
+                dbusMapping = pldm::utils::DBusMapping{
+                    "/xyz/openbmc_project/state/bmc0",
+                    "xyz.openbmc_project.State.BMC", "RequestedBMCTransition",
+                    "string"};
+                value = "xyz.openbmc_project.State.BMC.Transition.Reboot";
+                try
+                {
+                    std::cout << "InbandCodeUpdate: Rebooting the BMC\n";
+                    dBusIntf->setDbusProperty(dbusMapping, value);
+                }
+                catch (const std::exception& e)
+                {
+                    std::cerr << "BMC state transition to reboot failed,"
+                              << "unable to set property "
+                                 "RequestedBMCTransition"
+                              << "ERROR=" << e.what() << "\n";
                 }
             }
+        }
         });
 }
 
@@ -1349,8 +1346,8 @@ void pldm::responder::oem_ibm_platform::Handler::setBitmapMethodCall(
     try
     {
         auto& bus = pldm::utils::DBusHandler::getBus();
-        auto method =
-            bus.new_method_call(service, objPath, dbusInterface, dbusMethod);
+        auto method = bus.new_method_call(service, objPath, dbusInterface,
+                                          dbusMethod);
         auto val = std::get_if<std::vector<uint8_t>>(&value);
         method.append(*val);
         bus.call_noreply(method);
@@ -1663,10 +1660,10 @@ void pldm::responder::oem_ibm_platform::Handler::createMatches()
             pldm::utils::DBusHandler::getBus(),
             propertiesChanged(slot, "com.ibm.Control.Host.PCIeLink"),
             [this, slot](sdbusplus::message::message& msg) {
-                DbusChangedProps props;
-                std::string iface;
-                msg.read(iface, props);
-                propertyChanged(props, slot);
+            DbusChangedProps props;
+            std::string iface;
+            msg.read(iface, props);
+            propertyChanged(props, slot);
             }));
     }
 }

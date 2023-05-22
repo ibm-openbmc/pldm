@@ -73,11 +73,9 @@ int LicenseHandler::writeFromMemory(
                   << std::endl;
         return -1;
     }
-    // auto rc =
     m_length = length;
     transferFileData(newLicJsonFilePath, false, offset, length, address,
                      responseHdr, event);
-
     return -1;
 }
 

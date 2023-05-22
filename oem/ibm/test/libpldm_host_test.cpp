@@ -97,9 +97,9 @@ TEST(GetAlertStatus, testGoodEncodeResponse)
                                      PLDM_GET_ALERT_STATUS_RESP_BYTES);
     auto response = reinterpret_cast<pldm_msg*>(responseMsg.data());
 
-    auto rc =
-        encode_get_alert_status_resp(0, PLDM_SUCCESS, rack_entry, pri_cec_node,
-                                     response, responseMsg.size() - hdrSize);
+    auto rc = encode_get_alert_status_resp(0, PLDM_SUCCESS, rack_entry,
+                                           pri_cec_node, response,
+                                           responseMsg.size() - hdrSize);
 
     EXPECT_EQ(rc, PLDM_SUCCESS);
     struct pldm_get_alert_status_resp* resp =

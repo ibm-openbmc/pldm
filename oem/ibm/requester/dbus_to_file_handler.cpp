@@ -51,9 +51,9 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
     uint32_t fileHandle =
         atoi(fs::path((std::string)resDumpCurrentObjPath).filename().c_str());
 
-    auto rc =
-        encode_new_file_req(instanceId, PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS,
-                            fileHandle, fileSize, request);
+    auto rc = encode_new_file_req(instanceId,
+                                  PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS,
+                                  fileHandle, fileSize, request);
     if (rc != PLDM_SUCCESS)
     {
         requester->markFree(mctp_eid, instanceId);
@@ -94,8 +94,8 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
 
 void DbusToFileHandler::reportResourceDumpFailure(std::string str)
 {
-    std::string s =
-        "xyz.openbmc_project.PLDM.Error.ReportResourceDumpFail." + str;
+    std::string s = "xyz.openbmc_project.PLDM.Error.ReportResourceDumpFail." +
+                    str;
 
     pldm::utils::reportError(s.c_str(), pldm::PelSeverity::WARNING);
 
@@ -295,8 +295,8 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
                                     PLDM_NEW_FILE_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
 
-    auto rc =
-        encode_new_file_req(instanceId, type, fileHandle, fileSize, request);
+    auto rc = encode_new_file_req(instanceId, type, fileHandle, fileSize,
+                                  request);
     if (rc != PLDM_SUCCESS)
     {
         requester->markFree(mctp_eid, instanceId);
@@ -308,10 +308,9 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
     std::cout
         << "newFileAvailableSendToHost:Sending Sign CSR request to Host for fileHandle: "
         << fileHandle << std::endl;
-    auto newFileAvailableRespHandler = [fileHandle,
-                                        type](mctp_eid_t /*eid*/,
-                                              const pldm_msg* response,
-                                              size_t respMsgLen) {
+    auto newFileAvailableRespHandler =
+        [fileHandle, type](mctp_eid_t /*eid*/, const pldm_msg* response,
+                           size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             std::cerr << "Failed to receive response for NewFileAvailable "

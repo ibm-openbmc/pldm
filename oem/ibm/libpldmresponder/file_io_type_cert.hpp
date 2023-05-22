@@ -68,8 +68,7 @@ class CertHandler : public FileHandler
 
     /** @brief CertHandler destructor
      */
-    ~CertHandler()
-    {}
+    ~CertHandler() {}
 
   private:
     uint16_t certType;      //!< type of the certificate

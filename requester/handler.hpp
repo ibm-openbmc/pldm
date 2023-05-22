@@ -139,8 +139,8 @@ class Handler
                           << " INSTANCE_ID = " << (unsigned)key.instanceId
                           << " TYPE = " << (unsigned)key.type
                           << " COMMAND = " << (unsigned)key.command << "\n";
-                auto& [request, responseHandler, timerInstance] =
-                    this->handlers[key];
+                auto& [request, responseHandler,
+                       timerInstance] = this->handlers[key];
                 request->stop();
                 auto rc = timerInstance->stop();
                 if (rc)

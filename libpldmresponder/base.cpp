@@ -198,9 +198,8 @@ void Handler::processSetEventReceiver(
         return;
     }
 
-    auto processSetEventReceiverResponse = [](mctp_eid_t /*eid*/,
-                                              const pldm_msg* response,
-                                              size_t respMsgLen) {
+    auto processSetEventReceiverResponse =
+        [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             std::cerr << "Failed to receive response for "
@@ -237,13 +236,10 @@ void Handler::processSetEventReceiver(
 
 Response Handler::getTID(const pldm_msg* request, size_t /*payloadLength*/)
 {
-    // assigned 1 to the bmc as the PLDM terminus
-    uint8_t tid = 1;
-
     Response response(sizeof(pldm_msg_hdr) + PLDM_GET_TID_RESP_BYTES, 0);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
-    auto rc = encode_get_tid_resp(request->hdr.instance_id, PLDM_SUCCESS, tid,
-                                  responsePtr);
+    auto rc = encode_get_tid_resp(request->hdr.instance_id, PLDM_SUCCESS,
+                                  TERMINUS_ID, responsePtr);
     if (rc != PLDM_SUCCESS)
     {
         return ccOnlyResponse(request, rc);

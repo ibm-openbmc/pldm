@@ -115,9 +115,9 @@ static std::optional<Response>
         {
             if (hdrFields.pldm_type != PLDM_FWUP)
             {
-                response =
-                    invoker.handle(hdrFields.pldm_type, hdrFields.command,
-                                   request, requestLen);
+                response = invoker.handle(hdrFields.pldm_type,
+                                          hdrFields.command, request,
+                                          requestLen);
             }
             else
             {
@@ -266,8 +266,8 @@ int main(int argc, char** argv)
         &dbusHandler, codeUpdate.get(), slotHandler.get(), sockfd, hostEID,
         dbusImplReq, event, pdrRepo.get(), &reqHandler, bmcEntityTree.get(),
         hostEffecterParser.get());
-    oemFruHandler =
-        std::make_unique<oem_ibm_fru::Handler>(&dbusHandler, pdrRepo.get());
+    oemFruHandler = std::make_unique<oem_ibm_fru::Handler>(&dbusHandler,
+                                                           pdrRepo.get());
     codeUpdate->setOemPlatformHandler(oemPlatformHandler.get());
     slotHandler->setOemPlatformHandler(oemPlatformHandler.get());
     invoker.registerHandler(PLDM_OEM, std::make_unique<oem_ibm::Handler>(
@@ -438,8 +438,8 @@ int main(int argc, char** argv)
                         }
 
                         iov[0].iov_base = &requestMsg[0];
-                        iov[0].iov_len =
-                            sizeof(requestMsg[0]) + sizeof(requestMsg[1]);
+                        iov[0].iov_len = sizeof(requestMsg[0]) +
+                                         sizeof(requestMsg[1]);
                         iov[1].iov_base = (*response).data();
                         iov[1].iov_len = (*response).size();
 

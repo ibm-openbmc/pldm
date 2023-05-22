@@ -81,6 +81,7 @@ int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
             encode_rw_file_by_type_memory_resp(instance_id, command, PLDM_ERROR,
                                                0, responsePtr);
             responseHdr.respInterface->sendPLDMRespMsg(response, key);
+            xdmaInterface->deleteIOInstance();
             (static_cast<std::shared_ptr<dma::DMA>>(xdmaInterface)).reset();
             (static_cast<std::shared_ptr<FileHandler>>(functionPtr)).reset();
         }
@@ -110,7 +111,10 @@ int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
                 encode_rw_file_by_type_memory_resp(instance_id, command,
                                                    PLDM_ERROR, 0, responsePtr);
                 responseHdr.respInterface->sendPLDMRespMsg(response, key);
-
+                wInterface->deleteIOInstance();
+                (static_cast<std::shared_ptr<dma::DMA>>(wInterface)).reset();
+                (static_cast<std::shared_ptr<FileHandler>>(wfunctionPtr))
+                    .reset();
                 return;
             }
         }
@@ -121,7 +125,9 @@ int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
             encode_rw_file_by_type_memory_resp(instance_id, command, PLDM_ERROR,
                                                0, responsePtr);
             responseHdr.respInterface->sendPLDMRespMsg(response, key);
-
+            wInterface->deleteIOInstance();
+            (static_cast<std::shared_ptr<dma::DMA>>(wInterface)).reset();
+            (static_cast<std::shared_ptr<FileHandler>>(wfunctionPtr)).reset();
             return;
         }
         if (static_cast<int>(part.length) == rc)
@@ -137,7 +143,8 @@ int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
                     command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
             }
             wInterface->deleteIOInstance();
-            static_cast<std::shared_ptr<FileHandler>>(wfunctionPtr).reset();
+            (static_cast<std::shared_ptr<dma::DMA>>(wInterface)).reset();
+            (static_cast<std::shared_ptr<FileHandler>>(wfunctionPtr)).reset();
             return;
         }
     };
@@ -195,6 +202,7 @@ int FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
             responseHdr.respInterface->sendPLDMRespMsg(response, key);
             std::cout
                 << "EventLoop Timeout...Terminating socket data tranfer operation\n";
+            xdmaInterface->deleteIOInstance();
             (static_cast<std::shared_ptr<dma::DMA>>(xdmaInterface)).reset();
             (static_cast<std::shared_ptr<FileHandler>>(functionPtr)).reset();
         }
@@ -221,16 +229,23 @@ int FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
                 encode_rw_file_by_type_memory_resp(instance_id, command,
                                                    PLDM_ERROR, 0, responsePtr);
                 responseHdr.respInterface->sendPLDMRespMsg(response, key);
+                wInterface->deleteIOInstance();
+                (static_cast<std::shared_ptr<dma::DMA>>(wInterface)).reset();
+                (static_cast<std::shared_ptr<FileHandler>>(wfunctionPtr))
+                    .reset();
                 return;
             }
         }
-        rc =
-            wInterface->transferHostDataToSocket(fd, part.length, part.address);
+        rc = wInterface->transferHostDataToSocket(fd, part.length,
+                                                  part.address);
         if (rc < 0)
         {
             encode_rw_file_by_type_memory_resp(instance_id, command, PLDM_ERROR,
                                                0, responsePtr);
             responseHdr.respInterface->sendPLDMRespMsg(response, key);
+            wInterface->deleteIOInstance();
+            (static_cast<std::shared_ptr<dma::DMA>>(wInterface)).reset();
+            (static_cast<std::shared_ptr<FileHandler>>(wfunctionPtr)).reset();
             return;
         }
         if (static_cast<int>(part.length) == rc)
@@ -245,7 +260,8 @@ int FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
                     command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
             }
             wInterface->deleteIOInstance();
-            static_cast<std::shared_ptr<FileHandler>>(wfunctionPtr).reset();
+            (static_cast<std::shared_ptr<dma::DMA>>(wInterface)).reset();
+            (static_cast<std::shared_ptr<FileHandler>>(wfunctionPtr)).reset();
             return;
         }
     };
@@ -265,6 +281,9 @@ int FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
         encode_rw_file_by_type_memory_resp(instance_id, command, PLDM_ERROR, 0,
                                            responsePtr);
         responseHdr.respInterface->sendPLDMRespMsg(response, key);
+        xdmaInterface->deleteIOInstance();
+        (static_cast<std::shared_ptr<dma::DMA>>(xdmaInterface)).reset();
+        (static_cast<std::shared_ptr<FileHandler>>(functionPtr)).reset();
         return PLDM_ERROR;
     }
     return PLDM_SUCCESS;

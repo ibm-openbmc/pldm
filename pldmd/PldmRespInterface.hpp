@@ -16,8 +16,7 @@ using Response = std::vector<uint8_t>;
 class Transport
 {
   public:
-    Transport(int socketFd) : sockFd(socketFd)
-    {}
+    Transport(int socketFd) : sockFd(socketFd) {}
     int sendPLDMRespMsg(Response& response, uint32_t indx)
     {
         struct iovec iov[2]{};
@@ -25,8 +24,8 @@ class Transport
         {};
 
         iov[0].iov_base = &requestMap[indx][0];
-        iov[0].iov_len =
-            sizeof(requestMap[indx][0]) + sizeof(requestMap[indx][1]);
+        iov[0].iov_len = sizeof(requestMap[indx][0]) +
+                         sizeof(requestMap[indx][1]);
         iov[1].iov_base = response.data();
         iov[1].iov_len = response.size();
         msg.msg_iov = iov;

@@ -70,8 +70,7 @@ class LicenseHandler : public FileHandler
 
     /** @brief LicenseHandler destructor
      */
-    ~LicenseHandler()
-    {}
+    ~LicenseHandler() {}
 
   private:
     uint16_t licType;   //!< type of the license

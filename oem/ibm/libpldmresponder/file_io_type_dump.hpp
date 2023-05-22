@@ -61,8 +61,7 @@ class DumpHandler : public FileHandler
     void resetOffloadUri();
     /** @brief DumpHandler destructor
      */
-    ~DumpHandler()
-    {}
+    ~DumpHandler() {}
 
   private:
     static int fd;             //!< fd to manage the dump offload to bmc

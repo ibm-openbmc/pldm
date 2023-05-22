@@ -172,8 +172,8 @@ void updateEntityAssociation(
         fs::path path{"/xyz/openbmc_project/inventory"};
         std::deque<std::string> paths{};
         pldm_entity node_entity = pldm_entity_extract(entity);
-        auto node =
-            pldm_entity_association_tree_find(entityTree, &node_entity, false);
+        auto node = pldm_entity_association_tree_find(entityTree, &node_entity,
+                                                      false);
         if (!node)
         {
             continue;
@@ -204,8 +204,8 @@ void updateEntityAssociation(
                 break;
             }
 
-            node =
-                pldm_entity_association_tree_find(entityTree, &parent, false);
+            node = pldm_entity_association_tree_find(entityTree, &parent,
+                                                     false);
         }
 
         if (!found)

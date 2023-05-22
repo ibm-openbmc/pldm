@@ -75,8 +75,7 @@ class keywordHandler : public FileHandler
 
     /** @brief keywordHandler destructor
      */
-    ~keywordHandler()
-    {}
+    ~keywordHandler() {}
 
   private:
     uint16_t vpdFileType; //!< type of the VPD file
