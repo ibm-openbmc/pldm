@@ -8,8 +8,8 @@ Conflicts=obmc-host-startmin@0.target
 [Service]
 RemainAfterExit=yes
 Type=oneshot
-ExecStart=/usr/bin/killall -SIGSTOP pldmd 
-ExecStart=/usr/bin/killall -SIGCONT pldmd 
+ExecStart=/usr/bin/killall -SIGSTOP pldmd
+ExecStart=/usr/bin/killall -SIGCONT pldmd
 
 [Install]
-WantedBy=obmc-host-stop@0.target
+#WantedBy=obmc-host-stop@0.target
