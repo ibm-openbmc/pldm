@@ -1,6 +1,7 @@
 #pragma once
 
-// #include "file_io.hpp"
+#include "libpldm/file_io.h"
+
 #include "oem_ibm_handler.hpp"
 #include "pldmd/PldmRespInterface.hpp"
 
@@ -40,7 +41,7 @@ struct ResponseHdr
 {
     uint8_t instance_id;
     uint8_t command;
-    pldm::Response_api::Transport* respInterface;
+    pldm::response_api::Transport* respInterface;
     std::shared_ptr<FileHandler> functionPtr = nullptr;
     int key;
 };
@@ -53,6 +54,34 @@ namespace fs = std::filesystem;
  */
 class FileHandler
 {
+  protected:
+    /** @brief method to send response to host after completion of DMA operation
+     * @param[in] responseHdr - contain response related data
+     * @param[in] rStatus - operation status either success/fail/not suppoted.
+     * @param[in] length - length to be read/write mentioned by Host
+     */
+    virtual void dmaResponseToHost(const ResponseHdr& responseHdr,
+                                   const pldm_completion_codes rStatus,
+                                   uint32_t length);
+
+    /** @brief method to send response to host after completion of DMA operation
+     * @param[in] responseHdr - contain response related data
+     * @param[in] rStatus - operation status either success/fail/not suppoted.
+     * @param[in] length - length to be read/write mentioned by Host
+     */
+    virtual void dmaResponseToHost(const ResponseHdr& responseHdr,
+                                   const pldm_fileio_completion_codes rStatus,
+                                   uint32_t length);
+
+    /** @brief method to delete all shared pointer object
+     * @param[in] responseHdr - contain response related data
+     * @param[in] xdmaInterface - interface to transfer data between BMc and
+     * Host
+     */
+    virtual void
+        deleteAIOobjects(const std::shared_ptr<dma::DMA>& xdmaInterface,
+                         const ResponseHdr& responseHdr);
+
   public:
     /** @brief Method to write an oem file type from host memory. Individual
      *  file types need to override this method to do the file specific
@@ -190,6 +219,11 @@ class FileHandler
                                          ResponseHdr& responseHdr,
                                          sdeventplus::Event& event);
 
+    /** @brief Method to call post operation after completion of DMA transfer
+     * type
+     *
+     *  @param[in] IsWriteToMemOp - type of command read/write
+     */
     virtual int postDataTransferCallBack(bool IsWriteToMemOp) = 0;
 
     /** @brief Constructor to create a FileHandler object
@@ -212,6 +246,12 @@ class FileHandler
 
 std::unique_ptr<FileHandler> getHandlerByType(uint16_t fileType,
                                               uint32_t fileHandle);
+
+/** @brief Method to create shared file handler objects based on file type
+ *
+ *  @param[in] fileType - type of file
+ *  @param[in] fileHandle - file handle
+ */
 std::shared_ptr<FileHandler> getSharedHandlerByType(uint16_t fileType,
                                                     uint32_t fileHandle);
 } // namespace responder

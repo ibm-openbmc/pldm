@@ -2,8 +2,9 @@
 
 #include "config.h"
 
-// #include "file_io_by_type.hpp"
 #include "file_io.hpp"
+
+#include <xyz/openbmc_project/Software/Version/error.hpp>
 
 #include <filesystem>
 #include <sstream>
@@ -13,10 +14,15 @@ namespace pldm
 {
 namespace responder
 {
-
 namespace fs = std::filesystem;
 
 using MarkerLIDremainingSize = uint64_t;
+
+constexpr auto markerLidName = "80a00001.lid";
+constexpr auto accessKeyExpired =
+    "sdbusplus::xyz::openbmc_project::Software::Version::Error::ExpiredAccessKey";
+constexpr auto incompatibleErr =
+    "sdbusplus::xyz::openbmc_project::Software::Version::Error::Incompatible";
 
 /** @class LidHandler
  *
@@ -114,6 +120,60 @@ class LidHandler : public FileHandler
         return true;
     }
 
+    int validateMarkerLid(oem_platform::Handler* oemPlatformHandler,
+                          const std::string& lidPath)
+    {
+        int rc = PLDM_SUCCESS;
+        if (oemPlatformHandler != nullptr)
+        {
+            pldm::responder::oem_ibm_platform::Handler* oemIbmPlatformHandler =
+                dynamic_cast<pldm::responder::oem_ibm_platform::Handler*>(
+                    oemPlatformHandler);
+            auto sensorId =
+                oemIbmPlatformHandler->codeUpdate->getMarkerLidSensor();
+            using namespace pldm::responder::oem_ibm_platform;
+            auto markerLidDirPath = fs::path(LID_STAGING_DIR) / "lid" /
+                                    markerLidName;
+            try
+            {
+                auto& bus = pldm::utils::DBusHandler::getBus();
+                rc = processCodeUpdateLid(lidPath);
+                if (rc != PLDM_SUCCESS)
+                {
+                    return rc;
+                }
+                auto method = bus.new_method_call(
+                    "xyz.openbmc_project.Software.BMC.Updater",
+                    "/xyz/openbmc_project/software",
+                    "xyz.openbmc_project.Software.LID", "Validate");
+                method.append(markerLidDirPath.c_str());
+                bus.call(method);
+            }
+            catch (const sdbusplus::exception::exception& e)
+            {
+                uint8_t validateStatus = 0;
+                if (strcmp(e.name(), accessKeyExpired) != 0)
+                {
+                    validateStatus = ENTITLEMENT_FAIL;
+                }
+                else if (strcmp(e.name(), incompatibleErr) != 0)
+                {
+                    validateStatus = MIN_MIF_FAIL;
+                }
+                std::cerr << "Marker lid validate error, "
+                          << "ERROR=" << e.what() << std::endl;
+                oemIbmPlatformHandler->sendStateSensorEvent(
+                    sensorId, PLDM_STATE_SENSOR_STATE, 0, validateStatus,
+                    VALID);
+                return PLDM_ERROR;
+            }
+            oemIbmPlatformHandler->sendStateSensorEvent(
+                sensorId, PLDM_STATE_SENSOR_STATE, 0, VALID, VALID);
+            rc = PLDM_SUCCESS;
+        }
+        return rc;
+    }
+
     virtual int writeFromMemory(uint32_t offset, uint32_t length,
                                 uint64_t address,
                                 oem_platform::Handler* oemPlatformHandler,
@@ -154,6 +214,8 @@ class LidHandler : public FileHandler
         {
             std::cerr << "Could not open file for writing  " << lidPath.c_str()
                       << "\n";
+            FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+            FileHandler::deleteAIOobjects(nullptr, responseHdr);
             return PLDM_ERROR;
         }
         close(fd);
@@ -167,9 +229,9 @@ class LidHandler : public FileHandler
 
     virtual int postDataTransferCallBack(bool IsWriteToMemOp)
     {
+        int rc = -1;
         if (IsWriteToMemOp)
         {
-            int rc = -1;
             if (lidType == PLDM_FILE_TYPE_LID_MARKER)
             {
                 markerLIDremainingSize -= m_length;
@@ -192,12 +254,12 @@ class LidHandler : public FileHandler
             {
                 rc = processCodeUpdateLid(lidPath);
             }
-            return rc;
         }
         else
         {
             return -1;
         }
+        return rc;
     }
 
     virtual int readIntoMemory(uint32_t offset, uint32_t& length,
@@ -210,7 +272,11 @@ class LidHandler : public FileHandler
         {
             transferFileData(lidPath, true, offset, length, address,
                              responseHdr, event);
-            return -1;
+        }
+        else
+        {
+            FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+            FileHandler::deleteAIOobjects(nullptr, responseHdr);
         }
         return -1;
     }
@@ -293,17 +359,7 @@ class LidHandler : public FileHandler
             markerLIDremainingSize -= length;
             if (markerLIDremainingSize == 0)
             {
-                pldm::responder::oem_ibm_platform::Handler*
-                    oemIbmPlatformHandler = dynamic_cast<
-                        pldm::responder::oem_ibm_platform::Handler*>(
-                        oemPlatformHandler);
-                auto sensorId =
-                    oemIbmPlatformHandler->codeUpdate->getMarkerLidSensor();
-                using namespace pldm::responder::oem_ibm_platform;
-                oemIbmPlatformHandler->sendStateSensorEvent(
-                    sensorId, PLDM_STATE_SENSOR_STATE, 0, VALID, VALID);
-                // validate api
-                rc = PLDM_SUCCESS;
+                rc = validateMarkerLid(oemPlatformHandler, lidPath);
             }
         }
         else if (codeUpdateInProgress)
@@ -370,7 +426,7 @@ class LidHandler : public FileHandler
     static inline MarkerLIDremainingSize markerLIDremainingSize;
     uint8_t lidType;
     uint32_t m_length;
-    bool mcodeUpdateInProgress;
+    bool mcodeUpdateInProgress = false;
     oem_platform::Handler* moemPlatformHandler;
 };
 

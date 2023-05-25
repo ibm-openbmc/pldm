@@ -1,8 +1,6 @@
 #include "config.h"
 
-// #include "file_io_by_type.hpp"
 #include "libpldm/base.h"
-#include "libpldm/file_io.h"
 
 #include "common/utils.hpp"
 #include "file_io.hpp"
@@ -20,19 +18,6 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-// #include <function2/function2.hpp>
-//  #include <sdbusplus/bus.hpp>
-//  #include <sdbusplus/server.hpp>
-//  #include <sdbusplus/server/object.hpp>
-//  #include <sdbusplus/timer.hpp>
-//  #include <sdeventplus/clock.hpp>
-//  #include <sdeventplus/event.hpp>
-//  #include <sdeventplus/exception.hpp>
-//  #include <sdeventplus/source/io.hpp>
-//  #include <sdeventplus/source/signal.hpp>
-//  #include <sdeventplus/source/time.hpp>
-//  #include <xyz/openbmc_project/Logging/Entry/server.hpp>
-
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -47,8 +32,53 @@ namespace responder
 using namespace sdbusplus::xyz::openbmc_project::Common::Error;
 using namespace sdeventplus;
 using namespace sdeventplus::source;
-// constexpr auto clockId = sdeventplus::ClockId::RealTime;
-// using Clock = Clock<clockId>;
+
+void FileHandler::dmaResponseToHost(const ResponseHdr& responseHdr,
+                                    const pldm_completion_codes rStatus,
+                                    uint32_t length)
+{
+    Response response(sizeof(pldm_msg_hdr) + responseHdr.command, 0);
+    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    encode_rw_file_by_type_memory_resp(responseHdr.instance_id,
+                                       responseHdr.command, rStatus, length,
+                                       responsePtr);
+    if (nullptr != responseHdr.respInterface)
+    {
+        responseHdr.respInterface->sendPLDMRespMsg(response, responseHdr.key);
+    }
+}
+
+void FileHandler::dmaResponseToHost(const ResponseHdr& responseHdr,
+                                    const pldm_fileio_completion_codes rStatus,
+                                    uint32_t length)
+{
+    Response response(sizeof(pldm_msg_hdr) + responseHdr.command, 0);
+    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    encode_rw_file_by_type_memory_resp(responseHdr.instance_id,
+                                       responseHdr.command, rStatus, length,
+                                       responsePtr);
+    if (nullptr != responseHdr.respInterface)
+    {
+        responseHdr.respInterface->sendPLDMRespMsg(response, responseHdr.key);
+    }
+}
+
+void FileHandler::deleteAIOobjects(
+    const std::shared_ptr<dma::DMA>& xdmaInterface,
+    const ResponseHdr& responseHdr)
+{
+    if (nullptr != xdmaInterface)
+    {
+        xdmaInterface->deleteIOInstance();
+        (static_cast<std::shared_ptr<dma::DMA>>(xdmaInterface)).reset();
+    }
+
+    if (nullptr != responseHdr.functionPtr)
+    {
+        (static_cast<std::shared_ptr<FileHandler>>(responseHdr.functionPtr))
+            .reset();
+    }
+}
 
 int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
                                   uint32_t& length, uint64_t address,
@@ -57,47 +87,42 @@ int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
 {
     std::shared_ptr<dma::DMA> xdmaInterface =
         std::make_shared<dma::DMA>(length);
+    if (nullptr == xdmaInterface)
+    {
+        std::cout
+            << "transferFileData : xdma interface initialization failed.\n";
+        dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+        deleteAIOobjects(nullptr, responseHdr);
+        close(fd);
+        return {};
+    }
     xdmaInterface->setDMASourceFd(fd);
     uint32_t origLength = length;
     static auto& bus = pldm::utils::DBusHandler::getBus();
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
-    uint key = responseHdr.key;
-    uint8_t instance_id = responseHdr.instance_id;
-    uint8_t command = responseHdr.command;
-    auto functionPtr = std::move(responseHdr.functionPtr);
     static dma::IOPart part;
     part.length = length;
     part.offset = offset;
     part.address = address;
     std::weak_ptr<dma::DMA> wxInterface = xdmaInterface;
-    std::weak_ptr<FileHandler> wxfunctionPtr = functionPtr;
     auto timerCb = [=, this](Timer& /*source*/, Timer::TimePoint /*time*/) {
-        if (!xdmaInterface->responseReceived)
+        if (!xdmaInterface->getResponseReceived())
         {
             std::cout
                 << " EventLoop Timeout..!! Terminating FileHandler data tranfer operation.\n";
-            Response response(sizeof(pldm_msg_hdr) + command, 0);
-            auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
-            encode_rw_file_by_type_memory_resp(instance_id, command, PLDM_ERROR,
-                                               0, responsePtr);
-            responseHdr.respInterface->sendPLDMRespMsg(response, key);
-            xdmaInterface->deleteIOInstance();
-            (static_cast<std::shared_ptr<dma::DMA>>(xdmaInterface)).reset();
-            (static_cast<std::shared_ptr<FileHandler>>(functionPtr)).reset();
+            dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+            deleteAIOobjects(xdmaInterface, responseHdr);
         }
         return;
     };
 
-    auto callback = [=, this](IO&, int, uint32_t revents) {
+    auto callback = [=, &responseHdr, this](IO&, int, uint32_t revents) {
         if (!(revents & (EPOLLIN | EPOLLOUT)))
         {
             return;
         }
         auto wInterface = wxInterface.lock();
-        auto wfunctionPtr = wxfunctionPtr.lock();
         int rc = 0;
-        Response response(sizeof(pldm_msg_hdr) + command, 0);
-        auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
 
         while (part.length > dma::maxSize)
         {
@@ -108,13 +133,10 @@ int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
             part.address += dma::maxSize;
             if (rc < 0)
             {
-                encode_rw_file_by_type_memory_resp(instance_id, command,
-                                                   PLDM_ERROR, 0, responsePtr);
-                responseHdr.respInterface->sendPLDMRespMsg(response, key);
-                wInterface->deleteIOInstance();
-                (static_cast<std::shared_ptr<dma::DMA>>(wInterface)).reset();
-                (static_cast<std::shared_ptr<FileHandler>>(wfunctionPtr))
-                    .reset();
+                std::cout
+                    << "transferFileData : Failed to transfer muliple chunks of data to host.\n";
+                dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+                deleteAIOobjects(wInterface, responseHdr);
                 return;
             }
         }
@@ -122,55 +144,48 @@ int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
                                           part.address, upstream);
         if (rc < 0)
         {
-            encode_rw_file_by_type_memory_resp(instance_id, command, PLDM_ERROR,
-                                               0, responsePtr);
-            responseHdr.respInterface->sendPLDMRespMsg(response, key);
-            wInterface->deleteIOInstance();
-            (static_cast<std::shared_ptr<dma::DMA>>(wInterface)).reset();
-            (static_cast<std::shared_ptr<FileHandler>>(wfunctionPtr)).reset();
+            std::cout
+                << "transferFileData : Failed to transfer single chunks of data to host.\n";
+            dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+            deleteAIOobjects(wInterface, responseHdr);
             return;
         }
         if (static_cast<int>(part.length) == rc)
         {
-            wInterface->responseReceived = true;
-            encode_rw_file_by_type_memory_resp(
-                instance_id, command, PLDM_SUCCESS, origLength, responsePtr);
-            responseHdr.respInterface->sendPLDMRespMsg(response, key);
-
-            if (wfunctionPtr != nullptr)
+            wInterface->setResponseReceived(true);
+            dmaResponseToHost(responseHdr, PLDM_SUCCESS, origLength);
+            if (responseHdr.functionPtr != nullptr)
             {
-                wfunctionPtr->postDataTransferCallBack(
-                    command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
+                responseHdr.functionPtr->postDataTransferCallBack(
+                    responseHdr.command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
             }
-            wInterface->deleteIOInstance();
-            (static_cast<std::shared_ptr<dma::DMA>>(wInterface)).reset();
-            (static_cast<std::shared_ptr<FileHandler>>(wfunctionPtr)).reset();
+            deleteAIOobjects(wInterface, responseHdr);
             return;
         }
     };
     try
     {
         int xdmaFd = xdmaInterface->getDMAFd(true, true);
-        xdmaInterface->initTimer(event, std::move(timerCb));
+        if (xdmaInterface->initTimer(event, std::move(timerCb)) == false)
+        {
+            std::cerr
+                << "transferFileData : Failed to start the event timer.\n";
+            dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+            deleteAIOobjects(xdmaInterface, responseHdr);
+            return {};
+        }
+
         xdmaInterface->insertIOInstance(std::move(std::make_unique<IO>(
             event, xdmaFd, EPOLLIN | EPOLLOUT, std::move(callback))));
     }
     catch (const std::runtime_error& e)
     {
-        Response response(sizeof(pldm_msg_hdr) + command, 0);
-        auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
-        std::cerr << "Failed to start the event loop. RC = " << e.what()
-                  << "\n";
-        encode_rw_file_by_type_memory_resp(instance_id, command, PLDM_ERROR, 0,
-                                           responsePtr);
-        responseHdr.respInterface->sendPLDMRespMsg(response, key);
-        xdmaInterface->deleteIOInstance();
-        (static_cast<std::shared_ptr<dma::DMA>>(xdmaInterface)).reset();
-        (static_cast<std::shared_ptr<FileHandler>>(functionPtr)).reset();
-
-        return PLDM_ERROR;
+        std::cerr << "transferFileData : Failed to start the event loop. RC = "
+                  << e.what() << "\n";
+        dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+        deleteAIOobjects(xdmaInterface, responseHdr);
     }
-    return PLDM_SUCCESS;
+    return {};
 }
 
 int FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
@@ -180,44 +195,50 @@ int FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
 {
     std::shared_ptr<dma::DMA> xdmaInterface =
         std::make_shared<dma::DMA>(length);
+    if (nullptr == xdmaInterface)
+    {
+        std::cout
+            << "transferFileDataToSocket : xdma interface initialization failed.\n";
+        dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+        if (responseHdr.functionPtr != nullptr)
+        {
+            responseHdr.functionPtr->postDataTransferCallBack(
+                responseHdr.command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
+        }
+        deleteAIOobjects(nullptr, responseHdr);
+        return -1;
+    }
     uint32_t origLength = length;
     static auto& bus = pldm::utils::DBusHandler::getBus();
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
-    uint key = responseHdr.key;
-    uint8_t instance_id = responseHdr.instance_id;
-    uint8_t command = responseHdr.command;
-    auto functionPtr = std::move(responseHdr.functionPtr);
     static dma::IOPart part;
     part.length = length;
     part.address = address;
     std::weak_ptr<dma::DMA> wxInterface = xdmaInterface;
-    std::weak_ptr<FileHandler> wxfunctionPtr = functionPtr;
+    std::weak_ptr<FileHandler> wxfunctionPtr = responseHdr.functionPtr;
     auto timerCb = [=, this](Timer& /*source*/, Timer::TimePoint /*time*/) {
-        if (!xdmaInterface->responseReceived)
+        if (!xdmaInterface->getResponseReceived())
         {
-            Response response(sizeof(pldm_msg_hdr) + command, 0);
-            auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
-            encode_rw_file_by_type_memory_resp(instance_id, command, PLDM_ERROR,
-                                               0, responsePtr);
-            responseHdr.respInterface->sendPLDMRespMsg(response, key);
             std::cout
                 << "EventLoop Timeout...Terminating socket data tranfer operation\n";
-            xdmaInterface->deleteIOInstance();
-            (static_cast<std::shared_ptr<dma::DMA>>(xdmaInterface)).reset();
-            (static_cast<std::shared_ptr<FileHandler>>(functionPtr)).reset();
+            dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+            if (responseHdr.functionPtr != nullptr)
+            {
+                responseHdr.functionPtr->postDataTransferCallBack(
+                    responseHdr.command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
+            }
+            deleteAIOobjects(xdmaInterface, responseHdr);
         }
         return;
     };
-    auto callback = [=, this](IO&, int, uint32_t revents) {
+    auto callback = [=, &responseHdr, this](IO&, int, uint32_t revents) {
         if (!(revents & (EPOLLIN | EPOLLOUT)))
         {
             return;
         }
         auto wInterface = wxInterface.lock();
-        auto wfunctionPtr = wxfunctionPtr.lock();
+
         int rc = 0;
-        Response response(sizeof(pldm_msg_hdr) + command, 0);
-        auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
         while (part.length > dma::maxSize)
         {
             rc = wInterface->transferHostDataToSocket(fd, dma::maxSize,
@@ -226,13 +247,16 @@ int FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
             part.address += dma::maxSize;
             if (rc < 0)
             {
-                encode_rw_file_by_type_memory_resp(instance_id, command,
-                                                   PLDM_ERROR, 0, responsePtr);
-                responseHdr.respInterface->sendPLDMRespMsg(response, key);
-                wInterface->deleteIOInstance();
-                (static_cast<std::shared_ptr<dma::DMA>>(wInterface)).reset();
-                (static_cast<std::shared_ptr<FileHandler>>(wfunctionPtr))
-                    .reset();
+                std::cout
+                    << "transferFileDataToSocket : Failed to transfer muliple chunks of data to host.\n";
+                dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+                if (responseHdr.functionPtr != nullptr)
+                {
+                    responseHdr.functionPtr->postDataTransferCallBack(
+                        responseHdr.command ==
+                        PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
+                }
+                deleteAIOobjects(wInterface, responseHdr);
                 return;
             }
         }
@@ -240,53 +264,52 @@ int FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
                                                   part.address);
         if (rc < 0)
         {
-            encode_rw_file_by_type_memory_resp(instance_id, command, PLDM_ERROR,
-                                               0, responsePtr);
-            responseHdr.respInterface->sendPLDMRespMsg(response, key);
-            wInterface->deleteIOInstance();
-            (static_cast<std::shared_ptr<dma::DMA>>(wInterface)).reset();
-            (static_cast<std::shared_ptr<FileHandler>>(wfunctionPtr)).reset();
+            std::cout
+                << "transferFileDataToSocket : Failed to transfer single chunks of data to host.\n";
+            dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+            if (responseHdr.functionPtr != nullptr)
+            {
+                responseHdr.functionPtr->postDataTransferCallBack(
+                    responseHdr.command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
+            }
+            deleteAIOobjects(wInterface, responseHdr);
             return;
         }
         if (static_cast<int>(part.length) == rc)
         {
-            wInterface->responseReceived = true;
-            encode_rw_file_by_type_memory_resp(
-                instance_id, command, PLDM_SUCCESS, origLength, responsePtr);
-            responseHdr.respInterface->sendPLDMRespMsg(response, key);
-            if (wfunctionPtr != nullptr)
-            {
-                wfunctionPtr->postDataTransferCallBack(
-                    command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
-            }
-            wInterface->deleteIOInstance();
-            (static_cast<std::shared_ptr<dma::DMA>>(wInterface)).reset();
-            (static_cast<std::shared_ptr<FileHandler>>(wfunctionPtr)).reset();
+            wInterface->setResponseReceived(true);
+            dmaResponseToHost(responseHdr, PLDM_SUCCESS, origLength);
+            deleteAIOobjects(wInterface, responseHdr);
             return;
         }
     };
     try
     {
         int xdmaFd = xdmaInterface->getDMAFd(true, true);
-        xdmaInterface->initTimer(event, std::move(timerCb));
+        if (xdmaInterface->initTimer(event, std::move(timerCb)) == false)
+        {
+            std::cerr
+                << "transferFileData : Failed to start the event timer.\n";
+            dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+            deleteAIOobjects(xdmaInterface, responseHdr);
+            return {};
+        }
         xdmaInterface->insertIOInstance(std::move(std::make_unique<IO>(
             event, xdmaFd, EPOLLIN | EPOLLOUT, std::move(callback))));
     }
     catch (const std::runtime_error& e)
     {
-        Response response(sizeof(pldm_msg_hdr) + command, 0);
-        auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
         std::cerr << "Failed to start socket the event loop. RC = " << e.what()
                   << "\n";
-        encode_rw_file_by_type_memory_resp(instance_id, command, PLDM_ERROR, 0,
-                                           responsePtr);
-        responseHdr.respInterface->sendPLDMRespMsg(response, key);
-        xdmaInterface->deleteIOInstance();
-        (static_cast<std::shared_ptr<dma::DMA>>(xdmaInterface)).reset();
-        (static_cast<std::shared_ptr<FileHandler>>(functionPtr)).reset();
-        return PLDM_ERROR;
+        dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+        if (responseHdr.functionPtr != nullptr)
+        {
+            responseHdr.functionPtr->postDataTransferCallBack(
+                responseHdr.command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
+        }
+        deleteAIOobjects(xdmaInterface, responseHdr);
     }
-    return PLDM_SUCCESS;
+    return {};
 }
 
 int FileHandler::transferFileData(const fs::path& path, bool upstream,
@@ -301,6 +324,8 @@ int FileHandler::transferFileData(const fs::path& path, bool upstream,
         if (!fileExists)
         {
             std::cerr << "File does not exist. PATH=" << path.c_str() << "\n";
+            dmaResponseToHost(responseHdr, PLDM_INVALID_FILE_HANDLE, length);
+            deleteAIOobjects(nullptr, responseHdr);
             return PLDM_INVALID_FILE_HANDLE;
         }
 
@@ -309,6 +334,8 @@ int FileHandler::transferFileData(const fs::path& path, bool upstream,
         {
             std::cerr << "Offset exceeds file size, OFFSET=" << offset
                       << " FILE_SIZE=" << fileSize << "\n";
+            dmaResponseToHost(responseHdr, PLDM_DATA_OUT_OF_RANGE, length);
+            deleteAIOobjects(nullptr, responseHdr);
             return PLDM_DATA_OUT_OF_RANGE;
         }
         if (offset + length > fileSize)
@@ -334,6 +361,8 @@ int FileHandler::transferFileData(const fs::path& path, bool upstream,
     if (file == -1)
     {
         std::cerr << "File does not exist, PATH = " << path.string() << "\n";
+        dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+        deleteAIOobjects(nullptr, responseHdr);
         return PLDM_ERROR;
     }
     pldm::utils::CustomFD fd(file, false);
@@ -480,6 +509,7 @@ std::shared_ptr<FileHandler> getSharedHandlerByType(uint16_t fileType,
     }
     return nullptr;
 }
+
 int FileHandler::readFile(const std::string& filePath, uint32_t offset,
                           uint32_t& length, Response& response)
 {

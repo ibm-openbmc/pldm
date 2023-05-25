@@ -27,7 +27,7 @@ using namespace pldm::responder::utils;
 using namespace sdbusplus::xyz::openbmc_project::Common::Error;
 namespace responder
 {
-extern SocketWriteStatus socketWriteStatus;
+// extern SocketWriteStatus socketWriteStatus;
 namespace fs = std::filesystem;
 
 namespace dma
@@ -49,7 +49,6 @@ struct AspeedXdmaOp
 
 int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
 {
-    socketWriteStatus = NotReady;
     uint32_t pageAlLength = getpageAlignedLength();
     int rc = 0;
     int xdmaFd = -1;
@@ -62,6 +61,7 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
             << rc << "\n";
         return rc;
     }
+
     void* vgaMemDump = getXDMAsharedlocation();
     if (MAP_FAILED == vgaMemDump)
     {
@@ -71,25 +71,16 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
             << rc << "\n";
         return rc;
     }
-    AspeedXdmaOp xdmaOp;
-    xdmaOp.upstream = 0;
-    xdmaOp.hostAddr = address;
-    xdmaOp.len = length;
-    rc = write(xdmaFd, &xdmaOp, sizeof(xdmaOp));
-    if (rc < 0)
-    {
-        rc = errno;
-        std::cerr
-            << "transferHostDataToSocket : Failed to execute the DMA operation, RC="
-            << rc << " ADDRESS=" << address << " LENGTH=" << length << "\n";
+    auto mmapCleanup = [pageAlLength, &rc, xdmaFd, this](void* vgaMem) {
         if (rc != -EINTR)
         {
-            munmap(vgaMemDump, pageAlLength);
             if (xdmaFd > 0)
             {
                 close(xdmaFd);
                 setXDMASourceFd(-1);
             }
+            munmap(vgaMem, pageAlLength);
+            memAddr = nullptr;
         }
         else
         {
@@ -97,15 +88,34 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
                 << "transferHostDataToSocket : Received interrupt during dump DMA transfer. Skipping Unmap"
                 << std::endl;
         }
+    };
+    std::unique_ptr<void, decltype(mmapCleanup)> vgaMemPtr(vgaMemDump,
+                                                           mmapCleanup);
+
+    AspeedXdmaOp xdmaOp;
+    xdmaOp.upstream = 0;
+    xdmaOp.hostAddr = address;
+    xdmaOp.len = length;
+    rc = write(xdmaFd, &xdmaOp, sizeof(xdmaOp));
+    if (rc < 0)
+    {
+        rc = -errno;
+        std::cerr
+            << "transferHostDataToSocket : Failed to execute the DMA operation, RC="
+            << rc << " ADDRESS=" << address << " LENGTH=" << length << "\n";
         return rc;
     }
 
     rc = writeToUnixSocket(fd, static_cast<const char*>(vgaMemDump), length);
     if (rc < 0)
     {
+        rc = -errno;
+        close(fd);
         std::cerr
-            << "transferHostDataToSocket writing To Unix Socket failed. \n";
-        return -1;
+            << "transferHostDataToSocket: Closing socket as writeToUnixSocket failed with RC:"
+            << rc << "\n";
+
+        return rc;
     }
     rc = length;
 
@@ -121,7 +131,9 @@ int32_t DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
     int xdmaFd = getDMAFd(true, false);
     if (xdmaFd < 0)
     {
-        std::cerr << " transferDataHost : Failed to open the XDMA device \n";
+        rc = -errno;
+        std::cerr << " transferDataHost : Failed to open the XDMA device rc:"
+                  << rc << "\n";
         return -1;
     }
 
@@ -157,6 +169,7 @@ int32_t DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
         rc = lseek(fd, offset, SEEK_SET);
         if (rc == -1)
         {
+            rc = -errno;
             std::cerr << "transferDataHost upstream : lseek failed, ERROR="
                       << errno << ", UPSTREAM=" << upstream
                       << ", OFFSET=" << offset << "\n";
@@ -171,6 +184,7 @@ int32_t DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
         rc = read(fd, buffer.data(), length);
         if (rc == -1)
         {
+            rc = -errno;
             std::cerr << "transferDataHost upstream : file read failed, ERROR="
                       << errno << ", UPSTREAM=" << upstream
                       << ", LENGTH=" << length << ", OFFSET=" << offset << "\n";
@@ -194,27 +208,10 @@ int32_t DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
     xdmaOp.hostAddr = address;
     xdmaOp.len = length;
 
-    // int retry = 0;
-
-    // do
-    // {
     rc = write(xdmaFd, &xdmaOp, sizeof(xdmaOp));
-    //  std::cout << "KK total length of write0 from DMA:" << length
-    //            << " read out of total length rc:" << rc << " offset:" <<
-    //            offset
-    //            << " address:" << address << "\n";
-    //      if (rc > 0)
-    //      {
-    //          break;
-    //      }
-    //      retry++;
-    //      std::cout << "KK write0 retry:" << retry << " errno:" << errno <<
-    //      "\n"; usleep(1000000);
-    //  } while (retry < 3);
-
     if (rc < 0)
     {
-        rc = errno;
+        rc = -errno;
         std::cerr
             << "transferDataHost : Failed to execute the DMA operation, RC="
             << rc << " UPSTREAM=" << upstream << " ADDRESS=" << address
@@ -227,6 +224,7 @@ int32_t DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
         rc = lseek(fd, offset, SEEK_SET);
         if (rc == -1)
         {
+            rc = -errno;
             std::cerr << "transferDataHost downstream : lseek failed, ERROR="
                       << errno << ", UPSTREAM=" << upstream
                       << ", OFFSET=" << offset << " fd:" << fd << " rc:" << rc
@@ -237,6 +235,7 @@ int32_t DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
         rc = write(fd, static_cast<const char*>(vgaMemPtr.get()), length);
         if (rc == -1)
         {
+            rc = -errno;
             std::cerr
                 << "transferDataHost downstream : file write failed, ERROR="
                 << errno << ", UPSTREAM=" << upstream << ", LENGTH=" << length
@@ -730,11 +729,16 @@ Response rwFileByTypeIntoMemory(uint8_t cmd, const pldm_msg* request,
     responseHdr.instance_id = request->hdr.instance_id;
     responseHdr.command = cmd;
     responseHdr.key = responseHdr.respInterface->getRequestHeaderIndex();
-    rc = cmd == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY
-             ? handler->writeFromMemory(offset, length, address,
-                                        oemPlatformHandler, responseHdr, event)
-             : handler->readIntoMemory(offset, length, address,
-                                       oemPlatformHandler, responseHdr, event);
+    if (cmd == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY)
+    {
+        handler->writeFromMemory(offset, length, address, oemPlatformHandler,
+                                 responseHdr, event);
+    }
+    else
+    {
+        handler->readIntoMemory(offset, length, address, oemPlatformHandler,
+                                responseHdr, event);
+    }
 
     return {};
 }

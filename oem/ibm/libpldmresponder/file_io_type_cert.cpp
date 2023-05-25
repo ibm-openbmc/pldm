@@ -33,9 +33,11 @@ int CertHandler::writeFromMemory(uint32_t offset, uint32_t length,
     {
         std::cerr << "CertHandler::writeFromMemory:file for type " << certType
                   << " doesn't exist\n";
+        FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+        FileHandler::deleteAIOobjects(nullptr, responseHdr);
         return PLDM_ERROR;
     }
-
+    m_length = length;
     auto fd = std::get<0>(it->second);
     transferFileData(fd, false, offset, length, address, responseHdr, event);
 
@@ -78,16 +80,15 @@ int CertHandler::readIntoMemory(uint32_t offset, uint32_t& length,
     filePath += "CSR_" + std::to_string(fileHandle);
     if (certType != PLDM_FILE_TYPE_CERT_SIGNING_REQUEST)
     {
+        FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR_INVALID_DATA,
+                                       length);
+        FileHandler::deleteAIOobjects(nullptr, responseHdr);
         return PLDM_ERROR_INVALID_DATA;
     }
 
-    auto rc = transferFileData(filePath.c_str(), true, offset, length, address,
-                               responseHdr, event);
+    transferFileData(filePath.c_str(), true, offset, length, address,
+                     responseHdr, event);
 
-    if (rc)
-    {
-        return PLDM_ERROR;
-    }
     return -1;
 }
 

@@ -65,7 +65,6 @@ class DumpHandler : public FileHandler
 
   private:
     static int fd;             //!< fd to manage the dump offload to bmc
-    int grc = -1;
     uint16_t dumpType;         //!< type of the dump
     std::string
         resDumpRequestDirPath; //!< directory where the resource

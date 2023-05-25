@@ -76,9 +76,6 @@ using namespace pldm::utils;
 using sdeventplus::source::Signal;
 using namespace pldm::flightrecorder;
 
-#ifdef OEM_IBM
-// using namespace pldm::Response_api;
-#endif
 void interruptFlightRecorderCallBack(Signal& /*signal*/,
                                      const struct signalfd_siginfo*)
 {
@@ -217,7 +214,7 @@ int main(int argc, char** argv)
     Invoker invoker{};
     requester::Handler<requester::Request> reqHandler(
         sockfd, event, dbusImplReq, currentSendbuffSize, verbose);
-    pldm::Response_api::Interfaces respInterface;
+    pldm::response_api::Interfaces respInterface;
 #ifdef LIBPLDMRESPONDER
     using namespace pldm::state_sensor;
     dbus_api::Host dbusImplHost(bus, "/xyz/openbmc_project/pldm");
@@ -256,7 +253,7 @@ int main(int argc, char** argv)
 #ifdef OEM_IBM
 
     respInterface.transport =
-        std::make_unique<pldm::Response_api::Transport>(sockfd);
+        std::make_unique<pldm::response_api::Transport>(sockfd, verbose);
     std::unique_ptr<pldm::responder::CodeUpdate> codeUpdate =
         std::make_unique<pldm::responder::CodeUpdate>(&dbusHandler);
     std::unique_ptr<pldm::responder::SlotHandler> slotHandler =
@@ -274,7 +271,6 @@ int main(int argc, char** argv)
                                           oemPlatformHandler.get(), sockfd,
                                           hostEID, &dbusImplReq, &reqHandler,
                                           respInterface.transport.get()));
-
     // host lamp test
     std::unique_ptr<pldm::led::HostLampTest> hostLampTest =
         std::make_unique<pldm::led::HostLampTest>(

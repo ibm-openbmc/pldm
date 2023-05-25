@@ -72,16 +72,13 @@ int PCIeInfoHandler::writeFromMemory(
     if (!pcieData)
     {
         std::cerr << "PCIe Info file creation error " << std::endl;
-        return PLDM_ERROR;
-    }
-
-    auto rc = transferFileData(infoFile, false, offset, length, address,
-                               responseHdr, event);
-    if (rc != PLDM_SUCCESS)
-    {
-        std::cerr << "transferFileData failed with rc= " << rc << " \n";
+        FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+        FileHandler::deleteAIOobjects(nullptr, responseHdr);
         return -1;
     }
+
+    transferFileData(infoFile, false, offset, length, address, responseHdr,
+                     event);
 
     return -1;
 }
@@ -1074,11 +1071,14 @@ int PCIeInfoHandler::newFileAvailable(uint64_t)
 }
 
 int PCIeInfoHandler::readIntoMemory(
-    uint32_t, uint32_t&, uint64_t,
-    oem_platform::Handler* /*oemPlatformHandler*/, ResponseHdr& /*responseHdr*/,
+    uint32_t, uint32_t& length, uint64_t,
+    oem_platform::Handler* /*oemPlatformHandler*/, ResponseHdr& responseHdr,
     sdeventplus::Event& /*event*/)
 {
-    return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+    FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR_UNSUPPORTED_PLDM_CMD,
+                                   length);
+    FileHandler::deleteAIOobjects(nullptr, responseHdr);
+    return -1;
 }
 
 int PCIeInfoHandler::read(uint32_t, uint32_t&, Response&,

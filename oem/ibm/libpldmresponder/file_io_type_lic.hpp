@@ -1,6 +1,6 @@
 #pragma once
 
-#include "file_io_by_type.hpp"
+#include "file_io.hpp"
 
 namespace pldm
 {
@@ -29,13 +29,16 @@ class LicenseHandler : public FileHandler
                                 ResponseHdr& responseHdr,
                                 sdeventplus::Event& event);
 
-    virtual int readIntoMemory(uint32_t /*offset*/, uint32_t& /*length*/,
+    virtual int readIntoMemory(uint32_t /*offset*/, uint32_t& length,
                                uint64_t /*address*/,
                                oem_platform::Handler* /*oemPlatformHandler*/,
-                               ResponseHdr& /*responseHdr*/,
+                               ResponseHdr& responseHdr,
                                sdeventplus::Event& /*event*/)
     {
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+        FileHandler::dmaResponseToHost(responseHdr,
+                                       PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
+        FileHandler::deleteAIOobjects(nullptr, responseHdr);
+        return -1;
     }
 
     virtual int read(uint32_t offset, uint32_t& length, Response& response,

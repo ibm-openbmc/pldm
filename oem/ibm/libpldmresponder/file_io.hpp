@@ -22,19 +22,7 @@
 #include <unistd.h>
 
 #include <function2/function2.hpp>
-// #include <sdbusplus/bus.hpp>
-// #include <sdbusplus/server.hpp>
-// #include <sdbusplus/server/object.hpp>
-// #include <sdbusplus/timer.hpp>
-// #include <sdeventplus/clock.hpp>
-// #include <sdeventplus/event.hpp>
-// #include <sdeventplus/exception.hpp>
-// #include <sdeventplus/source/io.hpp>
-// #include <sdeventplus/source/signal.hpp>
-// #include <sdeventplus/source/time.hpp>
-// #include <stdplus/signal.hpp>
 
-#include <condition_variable>
 #include <filesystem>
 #include <functional>
 #include <iostream>
@@ -61,25 +49,37 @@ constexpr uint32_t minSize = 16;
 constexpr size_t maxSize = DMA_MAXSIZE;
 
 namespace fs = std::filesystem;
+
 /**
  * @class DMA
  *
- * Expose API to initiate transfer of data by DMA
+ * Expose API to initiate data transfer by DMA asynchronously
  *
  * This class only exposes the public API transferDataHost to transfer data
- * between BMC and host using DMA. This allows for mocking the transferDataHost
- * for unit testing purposes.
+ * between BMC and host using DMA using non blocking socket.
+ *
  */
 class DMA
 {
+    /** @brief DMA constructor is private to avoid object creation
+     * without lengh.
+     */
+    DMA() {}
+
   public:
-    DMA()
-    {
-        responseReceived = false;
-    }
+    /** @brief DMA constructor
+     * @param length - using length allocating shared memory to transfer data.
+     */
     DMA(uint32_t length)
     {
         responseReceived = false;
+        memAddr = nullptr;
+        xdmaFd = -1;
+        SourceFd = -1;
+        rc = 0;
+        iotPtr = nullptr;
+        iotPtrbc = nullptr;
+        timer = nullptr;
         m_length = length;
         static const size_t pageSize = getpagesize();
         uint32_t numPages = m_length / pageSize;
@@ -89,6 +89,9 @@ class DMA
             pageAlignedLength += pageSize;
         }
     }
+
+    /** @brief DMA destructor
+     */
     ~DMA()
     {
         if (iotPtr != nullptr)
@@ -119,7 +122,13 @@ class DMA
             SourceFd = -1;
         }
     }
-
+    /** @brief Method to fetch the shared memory file descriptor for data
+     * transfer
+     * @param[in] nonBlokingMode - flag to open socket as non blocking mode
+     * @param[in] Reopensocket - flag to reopen socket socket
+     * @return returns shared memory file descriptor
+     *
+     */
     int getDMAFd(bool nonBlokingMode, bool Reopensocket)
     {
         if (Reopensocket && xdmaFd > 0)
@@ -146,24 +155,31 @@ class DMA
         return xdmaFd;
     }
 
-    /// @brief function will keep one copy of fd for exception so it can
+    /// @brief function will keep one copy of fd for exception case so it can
     /// close it.
-    /// @param fd source path file descriptor
+    /// @param[in] fd- source path file descriptor
     void setDMASourceFd(int32_t fd)
     {
         SourceFd = fd;
     }
+
+    /// @brief function will keep one copy of shared memory fd for exception
+    /// case so it can close it.
+    /// @param[in] fd - xdma shared memory path file descriptor
     void setXDMASourceFd(int fd)
     {
         xdmaFd = fd;
     }
+
+    /// @brief function will return pagealignedlength to allocate memory for
+    /// data transfer.
     int32_t getpageAlignedLength()
     {
         return pageAlignedLength;
     }
 
     ///
-    /// @brief function will return mapped memory address
+    /// @brief function will return shared memory address
     /// from XDMA drive path
     void* getXDMAsharedlocation()
     {
@@ -177,11 +193,21 @@ class DMA
 
         return memAddr;
     }
+
+    /** @brief Method to initialize IO instance for event loop
+     * @param[in] ioptr -  pointer to manage eventloop
+     *
+     */
     void insertIOInstance(std::unique_ptr<IO>&& ioptr)
     {
         iotPtr = std::move(ioptr);
     }
 
+    /** @brief Method to initialize timer for each tranfer
+     *
+     * @return returns true if timer creation success else false
+     *
+     */
     bool initTimer(
         sdeventplus::Event& event,
         fu2::unique_function<void(Timer&, Timer::TimePoint)>&& callback)
@@ -201,6 +227,11 @@ class DMA
         return true;
     }
 
+    /** @brief Method to delete cyclic dependecy while deleting object
+     *  DMA interface and IO event loop has cyclic dependecy
+     *
+     * @return void
+     */
     void deleteIOInstance()
     {
         if (timer != nullptr)
@@ -213,6 +244,30 @@ class DMA
             iotPtrbc = iotPtr.release();
         }
     }
+
+    /** @brief Method to set value for response received
+     *
+     *
+     * @return returns void
+     *
+     */
+    void setResponseReceived(bool bresponse)
+    {
+        responseReceived = bresponse;
+    }
+
+    /** @brief Method to get value of responseReceived to know tranfer
+     * success/fail.
+     *
+     *
+     * @return returns true if transfer success else false.
+     *
+     */
+    bool getResponseReceived()
+    {
+        return responseReceived;
+    }
+
     /** @brief API to transfer data between BMC and host using DMA
      *
      * @param[in] path     - pathname of the file to transfer data from or
@@ -239,19 +294,17 @@ class DMA
      */
     int transferHostDataToSocket(int fd, uint32_t length, uint64_t address);
 
-  public:
-    bool responseReceived = false;
-
   private:
-    int xdmaFd = -1;
-    void* memAddr = nullptr;
+    bool responseReceived;
+    void* memAddr;
+    int xdmaFd;
+    int32_t SourceFd;
+    uint32_t pageAlignedLength;
+    int rc;
     std::unique_ptr<IO> iotPtr;
     IO* iotPtrbc;
     std::unique_ptr<Timer> timer;
-    int rc = 0;
-    uint32_t pageAlignedLength = 0;
     uint32_t m_length;
-    int32_t SourceFd = -1;
 };
 
 /** @brief Transfer the data between BMC and host using DMA.
@@ -270,6 +323,7 @@ class DMA
  * @param[in] upstream - indicates direction of the transfer; true indicates
  *                       transfer to the host
  * @param[in] instanceId - Message's instance id
+ * @param[in] responseHdr- contain response interface related data
  * @return PLDM response message
  */
 
@@ -279,14 +333,26 @@ Response transferAll(std::shared_ptr<DMAInterface> intf, int32_t file,
                      bool upstream, ResponseHdr& responseHdr,
                      sdeventplus::Event& event)
 {
+    uint key = responseHdr.key;
+    uint8_t instance_id = responseHdr.instance_id;
+    uint8_t command = responseHdr.command;
+    if (nullptr == intf)
+    {
+        Response response(sizeof(pldm_msg_hdr) + command, 0);
+        auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+        encode_rw_file_memory_resp(instance_id, command, PLDM_ERROR, 0,
+                                   responsePtr);
+        if (responseHdr.respInterface != nullptr)
+        {
+            responseHdr.respInterface->sendPLDMRespMsg(response, key);
+        }
+        close(file);
+        return {};
+    }
     intf->setDMASourceFd(file);
     uint32_t origLength = length;
     static auto& bus = pldm::utils::DBusHandler::getBus();
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
-    uint key = responseHdr.key;
-    uint8_t instance_id = responseHdr.instance_id;
-    uint8_t command = responseHdr.command;
-
     std::weak_ptr<dma::DMA> wInterface = intf;
 
     static IOPart part;
@@ -295,7 +361,7 @@ Response transferAll(std::shared_ptr<DMAInterface> intf, int32_t file,
     part.address = address;
 
     auto timerCb = [=](Timer& /*source*/, Timer::TimePoint /*time*/) {
-        if (!intf->responseReceived)
+        if (!intf->getResponseReceived())
         {
             std::cout
                 << " EventLoop Timeout..!! Terminating data tranfer operation.\n";
@@ -303,7 +369,10 @@ Response transferAll(std::shared_ptr<DMAInterface> intf, int32_t file,
             auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
             encode_rw_file_memory_resp(instance_id, command, PLDM_ERROR, 0,
                                        responsePtr);
-            responseHdr.respInterface->sendPLDMRespMsg(response, key);
+            if (responseHdr.respInterface != nullptr)
+            {
+                responseHdr.respInterface->sendPLDMRespMsg(response, key);
+            }
             intf->deleteIOInstance();
             (static_cast<std::shared_ptr<dma::DMA>>(intf)).reset();
         }
@@ -333,7 +402,10 @@ Response transferAll(std::shared_ptr<DMAInterface> intf, int32_t file,
             {
                 encode_rw_file_memory_resp(instance_id, command, PLDM_ERROR, 0,
                                            responsePtr);
-                responseHdr.respInterface->sendPLDMRespMsg(response, key);
+                if (responseHdr.respInterface != nullptr)
+                {
+                    responseHdr.respInterface->sendPLDMRespMsg(response, key);
+                }
                 weakPtr->deleteIOInstance();
                 (static_cast<std::shared_ptr<dma::DMA>>(wInterface)).reset();
                 return;
@@ -345,18 +417,23 @@ Response transferAll(std::shared_ptr<DMAInterface> intf, int32_t file,
         {
             encode_rw_file_memory_resp(instance_id, command, PLDM_ERROR, 0,
                                        responsePtr);
-            responseHdr.respInterface->sendPLDMRespMsg(response, key);
+            if (responseHdr.respInterface != nullptr)
+            {
+                responseHdr.respInterface->sendPLDMRespMsg(response, key);
+            }
             weakPtr->deleteIOInstance();
             (static_cast<std::shared_ptr<dma::DMA>>(wInterface)).reset();
             return;
         }
         if (static_cast<int>(part.length) == rc)
         {
-            weakPtr->responseReceived = true;
+            weakPtr->setResponseReceived(true);
             encode_rw_file_memory_resp(instance_id, command, PLDM_SUCCESS,
                                        origLength, responsePtr);
-
-            responseHdr.respInterface->sendPLDMRespMsg(response, key);
+            if (responseHdr.respInterface != nullptr)
+            {
+                responseHdr.respInterface->sendPLDMRespMsg(response, key);
+            }
             weakPtr->deleteIOInstance();
             (static_cast<std::shared_ptr<dma::DMA>>(wInterface)).reset();
             return;
@@ -365,22 +442,38 @@ Response transferAll(std::shared_ptr<DMAInterface> intf, int32_t file,
 
     try
     {
-        intf->initTimer(event, std::move(timerCb));
+        if (intf->initTimer(event, std::move(timerCb)) == false)
+        {
+            Response response(sizeof(pldm_msg_hdr) + command, 0);
+            auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+            std::cerr << "Failed to start the event timer.\n";
+            encode_rw_file_memory_resp(instance_id, command, PLDM_ERROR, 0,
+                                       responsePtr);
+            if (responseHdr.respInterface != nullptr)
+            {
+                responseHdr.respInterface->sendPLDMRespMsg(response, key);
+            }
+            intf->deleteIOInstance();
+            (static_cast<std::shared_ptr<dma::DMA>>(intf)).reset();
+            return {};
+        }
         intf->insertIOInstance(std::move(std::make_unique<IO>(
             event, xdmaFd, EPOLLIN | EPOLLOUT, std::move(callback))));
     }
     catch (const std::runtime_error& e)
     {
-        Response response(sizeof(pldm_msg_hdr) + responseHdr.command, 0);
+        Response response(sizeof(pldm_msg_hdr) + command, 0);
         auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
         std::cerr << "Failed to start the event loop. RC = " << e.what()
                   << "\n";
-        encode_rw_file_memory_resp(responseHdr.instance_id, responseHdr.command,
-                                   PLDM_ERROR, 0, responsePtr);
-        responseHdr.respInterface->sendPLDMRespMsg(response, key);
+        encode_rw_file_memory_resp(instance_id, command, PLDM_ERROR, 0,
+                                   responsePtr);
+        if (responseHdr.respInterface != nullptr)
+        {
+            responseHdr.respInterface->sendPLDMRespMsg(response, key);
+        }
         intf->deleteIOInstance();
         (static_cast<std::shared_ptr<dma::DMA>>(intf)).reset();
-        return {};
     }
     return {};
 }
@@ -406,7 +499,7 @@ class Handler : public CmdHandler
     Handler(oem_platform::Handler* oemPlatformHandler, int hostSockFd,
             uint8_t hostEid, dbus_api::Requester* dbusImplReqester,
             pldm::requester::Handler<pldm::requester::Request>* handler,
-            pldm::Response_api::Transport* respInterface) :
+            pldm::response_api::Transport* respInterface) :
         oemPlatformHandler(oemPlatformHandler),
         hostSockFd(hostSockFd), hostEid(hostEid),
         dbusImplReqester(dbusImplReqester), handler(handler),

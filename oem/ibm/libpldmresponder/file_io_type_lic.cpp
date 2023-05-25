@@ -71,6 +71,8 @@ int LicenseHandler::writeFromMemory(
     {
         std::cerr << "license json file create error: " << newLicJsonFilePath
                   << std::endl;
+        FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+        FileHandler::deleteAIOobjects(nullptr, responseHdr);
         return -1;
     }
     m_length = length;

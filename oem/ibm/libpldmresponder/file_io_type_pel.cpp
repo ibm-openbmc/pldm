@@ -115,17 +115,19 @@ int PelHandler::readIntoMemory(uint32_t offset, uint32_t& length,
         fd = dup(unixfd);
         if (fd == -1)
         {
-            std::cerr << "Error: Cloning pel file descriptor failed...\n";
+            std::cerr << "Error: Cloning pel file descriptor failed...Error:"
+                      << errno << "\n";
+            FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+            FileHandler::deleteAIOobjects(nullptr, responseHdr);
         }
         transferFileData(fd, true, offset, length, address, responseHdr, event);
-
-        return -1;
     }
     catch (const std::exception& e)
     {
         std::cerr << "GetPEL D-Bus call failed, PEL id = 0x" << std::hex
                   << fileHandle << ", error = " << e.what() << "\n";
-        return -1;
+        FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+        FileHandler::deleteAIOobjects(nullptr, responseHdr);
     }
     return -1;
 }
@@ -209,7 +211,9 @@ int PelHandler::writeFromMemory(uint32_t offset, uint32_t length,
     {
         std::cerr << "failed to create a temporary pel, ERROR=" << errno
                   << "\n";
-        return PLDM_ERROR;
+        FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+        FileHandler::deleteAIOobjects(nullptr, responseHdr);
+        return -1;
     }
     close(fd);
     fs::path path(tmpFile);
@@ -223,13 +227,20 @@ int PelHandler::postDataTransferCallBack(bool IsWriteToMemOp)
 {
     if (IsWriteToMemOp)
     {
-        return storePel(Pelpath.string());
+        int rc = storePel(Pelpath.string());
+        if (rc != PLDM_SUCCESS)
+        {
+            std::cout << "failed to storing a pel's Post DMA operation,Pelpath:"
+                      << Pelpath.string() << " ERROR: " << errno << "\n";
+        }
     }
     else
     {
         return -1;
     }
+    return PLDM_SUCCESS;
 }
+
 int PelHandler::fileAck(uint8_t /*fileStatus*/)
 {
     static constexpr auto logObjPath = "/xyz/openbmc_project/logging";
