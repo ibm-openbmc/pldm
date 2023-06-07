@@ -24,6 +24,21 @@ constexpr auto itemPCIeSlot = "xyz.openbmc_project.Inventory.Item.PCIeSlot";
 constexpr auto itemPCIeDevice = "xyz.openbmc_project.Inventory.Item.PCIeDevice";
 constexpr auto itemConnector = "xyz.openbmc_project.Inventory.Item.Connector";
 
+// Slot location code structure contains multiple slot location code
+// suffix structures.
+// Each slot location code suffix structure is as follows
+// {Slot location code suffix size(uint8_t),
+//  Slot location code suffix(variable size)}
+constexpr auto sizeOfSuffixSizeDataMember = 1;
+
+// Each slot location structure contains
+// {
+//   Number of slot location codes (1byte),
+//   Slot location code Common part size (1byte)
+//   Slot location common part (Var)
+// }
+constexpr auto slotLocationDataMemberSize = 2;
+
 namespace fs = std::filesystem;
 std::unordered_map<uint16_t, bool> PCIeInfoHandler::receivedFiles;
 std::unordered_map<linkId_t,
@@ -600,6 +615,20 @@ void PCIeInfoHandler::parseSecondaryLink(
         std::filesystem::path mexConnecter(mexConnecterPath);
         auto mexSlotandAdapter = getMexSlotandAdapter(mexConnecter);
 
+        std::cout << "Creating associations under "
+                  << std::get<1>(mexSlotandAdapter) << std::endl;
+        std::vector<std::tuple<std::string, std::string, std::string>>
+            associations;
+        for (auto slot : ioSlotLocationCode)
+        {
+            associations.emplace_back(
+                "containing", "contained_by",
+                getMexObjectFromLocationCode(slot, PLDM_ENTITY_SLOT));
+        }
+
+        pldm::dbus::CustomDBus::getCustomDBus().setAssociations(
+            std::get<1>(mexSlotandAdapter), associations);
+
         // set topology info on both the slot and adapter object
         setTopologyOnSlotAndAdapter(linkType, mexSlotandAdapter, linkId,
                                     linkStatus, linkSpeed, linkWidth, true);
@@ -908,7 +937,6 @@ void PCIeInfoHandler::parseTopologyData()
             (struct SlotLocCode_t*)(((uint8_t*)single_entry_data) +
                                     htobe16(single_entry_data
                                                 ->slot_loc_codes_offset));
-
         if (slot_data == nullptr)
         {
             std::cerr
@@ -924,10 +952,10 @@ void PCIeInfoHandler::parseTopologyData()
         std::string slot_location_code(slot_location.begin(),
                                        slot_location.end());
 
-        struct SlotLocCodeSuf_t* slot_loc_suf_data =
-            (struct SlotLocCodeSuf_t*)(((uint8_t*)slot_data) + 2 +
-                                       slot_data->slotLocCodesCmnPrtSize);
-        if (slot_loc_suf_data == nullptr)
+        uint8_t* suffix_data = (uint8_t*)slot_data +
+                               slotLocationDataMemberSize +
+                               slot_data->slotLocCodesCmnPrtSize;
+        if (suffix_data == nullptr)
         {
             std::cerr << "slot location suffix data is nullptr \n";
             return;
@@ -940,6 +968,14 @@ void PCIeInfoHandler::parseTopologyData()
         for ([[maybe_unused]] const auto& slot :
              std::views::iota(0) | std::views::take(no_of_slots))
         {
+            struct SlotLocCodeSuf_t* slot_loc_suf_data =
+                (struct SlotLocCodeSuf_t*)suffix_data;
+            if (slot_loc_suf_data == nullptr)
+            {
+                std::cerr << "slot location suffix data is nullptr \n";
+                break;
+            }
+
             size_t slot_loccode_suffix_size = slot_loc_suf_data->slotLocCodeSz;
             if (slot_loccode_suffix_size > 0)
             {
@@ -957,7 +993,8 @@ void PCIeInfoHandler::parseTopologyData()
             slot_final_location_code.push_back(slot_full_location_code);
 
             // move the pointer to next slot
-            slot_loc_suf_data += 2;
+            suffix_data += sizeOfSuffixSizeDataMember +
+                           slot_loccode_suffix_size;
         }
 
         // store the information into a map
