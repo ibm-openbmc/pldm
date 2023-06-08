@@ -147,7 +147,9 @@ class LidHandler : public FileHandler
                     "/xyz/openbmc_project/software",
                     "xyz.openbmc_project.Software.LID", "Validate");
                 method.append(markerLidDirPath.c_str());
-                bus.call(method);
+                bus.call(method,
+                         std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
+                             .count());
             }
             catch (const sdbusplus::exception::exception& e)
             {

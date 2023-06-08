@@ -308,7 +308,9 @@ bool SlotHandler::fetchSensorStateFromDbus(const std::string& adapterObjectPath)
                                           adapterObjectPath.c_str(),
                                           FreedesktopInterface, GetMethod);
         method.append(ItemInterface, PresentProperty);
-        auto reply = bus.call(method);
+        auto reply = bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
         reply.read(presentProperty);
         return std::get<bool>(presentProperty);
     }
