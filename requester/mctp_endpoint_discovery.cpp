@@ -30,7 +30,9 @@ MctpDiscovery::MctpDiscovery(sdbusplus::bus_t& bus,
         auto method = bus.new_method_call(
             "xyz.openbmc_project.MCTP.Control", "/xyz/openbmc_project/mctp",
             "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-        auto reply = bus.call(method);
+        auto reply = bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
         reply.read(objects);
     }
     catch (const std::exception& e)
