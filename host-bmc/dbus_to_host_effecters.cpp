@@ -165,8 +165,6 @@ void HostEffecterParser::processHostEffecterChangeNotification(
             (currHostState != "xyz.openbmc_project.State.Boot.Progress."
                               "ProgressStages.OSRunning") &&
             (currHostState != "xyz.openbmc_project.State.Boot.Progress."
-                              "ProgressStages.OSStart") &&
-            (currHostState != "xyz.openbmc_project.State.Boot.Progress."
                               "ProgressStages.SystemSetup"))
         {
             std::cout << "Host is not up. Current host state: "
