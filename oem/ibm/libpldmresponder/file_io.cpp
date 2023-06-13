@@ -1,5 +1,3 @@
-#include "config.h"
-
 #include "file_io.hpp"
 
 #include "libpldm/base.h"

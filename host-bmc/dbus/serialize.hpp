@@ -1,11 +1,9 @@
 #pragma once
 
-#include "config.h"
-
-#include "libpldm/pdr.h"
-
 #include "license_entry.hpp"
 #include "type.hpp"
+
+#include <libpldm/pdr.h>
 
 #include <filesystem>
 #include <fstream>

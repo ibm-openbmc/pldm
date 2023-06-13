@@ -17,7 +17,8 @@
 #include "platform_state_effecter.hpp"
 #include "platform_state_sensor.hpp"
 
-#include <config.h>
+#include <libpldm/entity.h>
+#include <libpldm/state_set.h>
 
 using namespace pldm::utils;
 using namespace pldm::responder::pdr;

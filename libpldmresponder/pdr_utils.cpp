@@ -3,7 +3,7 @@
 
 #include "pdr.hpp"
 
-#include <config.h>
+#include <libpldm/platform.h>
 
 #include <bitset>
 #include <climits>
