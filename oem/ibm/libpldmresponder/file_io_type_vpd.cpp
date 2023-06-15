@@ -34,7 +34,9 @@ int keywordHandler::read(uint32_t offset, uint32_t& length, Response& response,
                                           "org.freedesktop.DBus.Properties",
                                           "Get");
         method.append(keywrdInterface, keywrdPropName);
-        auto reply = bus.call(method);
+        auto reply = bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
         reply.read(keywrd);
     }
     catch (const std::exception& e)

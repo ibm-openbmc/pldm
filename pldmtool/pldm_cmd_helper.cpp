@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include "pldm_cmd_helper.hpp"
 
 #include "libpldm/pldm.h"
@@ -145,7 +147,9 @@ void CommandInterface::exec()
         auto method = bus.new_method_call(service.c_str(), pldmObjPath,
                                           pldmRequester, "GetInstanceId");
         method.append(mctp_eid);
-        auto reply = bus.call(method);
+        auto reply = bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
         reply.read(instanceId);
     }
     catch (const std::exception& e)

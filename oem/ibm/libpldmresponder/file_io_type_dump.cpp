@@ -105,7 +105,9 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
         auto method =
             bus.new_method_call(DUMP_MANAGER_BUSNAME, DUMP_MANAGER_PATH,
                                 OBJECT_MANAGER_INTERFACE, "GetManagedObjects");
-        auto reply = bus.call(method);
+        auto reply = bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
         reply.read(objects);
     }
 
@@ -181,7 +183,9 @@ int DumpHandler::newFileAvailable(uint64_t length)
         auto method = bus.new_method_call(service.c_str(), notifyObjPath,
                                           dumpInterface, "Notify");
         method.append(fileHandle, length);
-        bus.call(method);
+        bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     }
     catch (const sdbusplus::exception_t& e)
     {
@@ -447,7 +451,9 @@ int DumpHandler::fileAck(uint8_t fileStatus)
                 auto method = bus.new_method_call(
                     "xyz.openbmc_project.Dump.Manager", path.c_str(),
                     "xyz.openbmc_project.Object.Delete", "Delete");
-                bus.call(method);
+                bus.call(method,
+                         std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
+                             .count());
             }
             catch (const sdbusplus::exception_t& e)
             {
@@ -750,7 +756,9 @@ int DumpHandler::newFileAvailableWithMetaData(uint64_t length,
                        // once dump manager changes are merged
         method.append(fileHandle, length); // need to append metaDataValue1 once
                                            // dump manager changes are merged
-        bus.call(method);
+        bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     }
     catch (const sdbusplus::exception_t& e)
     {
