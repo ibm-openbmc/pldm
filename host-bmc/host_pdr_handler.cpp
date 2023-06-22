@@ -1506,8 +1506,7 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
         std::array<get_sensor_state_field, 8> stateField{};
         auto responsePtr = reinterpret_cast<const struct pldm_msg*>(response);
         auto rc = decode_get_state_sensor_readings_resp(
-            responsePtr, respMsgLen - sizeof(pldm_msg_hdr), &cc, &sensorCnt,
-            stateField.data());
+            responsePtr, respMsgLen, &cc, &sensorCnt, stateField.data());
         if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
         {
             std::cerr << "Faile to decode get state sensor readings resp, "
