@@ -1,5 +1,3 @@
-#include "config.h"
-
 #include "instance_id.hpp"
 
 #include <stdexcept>

@@ -1,17 +1,16 @@
 #include "fru.hpp"
 
-#include "libpldm/entity.h"
-#include "libpldm/utils.h"
-
 #include "common/utils.hpp"
 #include "pdr.hpp"
-#ifdef OEM_IBM
-#include "libpldm/pdr_oem_ibm.h"
 
+#ifdef OEM_IBM
 #include "oem/ibm/libpldmresponder/utils.hpp"
+
+#include <libpldm/pdr_oem_ibm.h>
 #endif
 
-#include <config.h>
+#include <libpldm/entity.h>
+#include <libpldm/utils.h>
 #include <systemd/sd-journal.h>
 
 #include <sdbusplus/bus.hpp>

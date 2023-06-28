@@ -1,11 +1,5 @@
 #pragma once
 
-#include "config.h"
-
-#include "libpldm/base.h"
-#include "libpldm/file_io.h"
-#include "libpldm/host.h"
-
 #include "common/utils.hpp"
 #include "oem/ibm/requester/dbus_to_file_handler.hpp"
 #include "oem_ibm_handler.hpp"
@@ -13,6 +7,9 @@
 #include "requester/handler.hpp"
 
 #include <fcntl.h>
+#include <libpldm/base.h>
+#include <libpldm/file_io.h>
+#include <libpldm/host.h>
 #include <stdint.h>
 #include <sys/stat.h>
 #include <sys/types.h>

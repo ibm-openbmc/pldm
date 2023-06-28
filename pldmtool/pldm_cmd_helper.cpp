@@ -1,11 +1,8 @@
-#include "config.h"
-
 #include "pldm_cmd_helper.hpp"
-
-#include "libpldm/pldm.h"
 
 #include "xyz/openbmc_project/Common/error.hpp"
 
+#include <libpldm/pldm.h>
 #include <systemd/sd-bus.h>
 
 #include <sdbusplus/server.hpp>

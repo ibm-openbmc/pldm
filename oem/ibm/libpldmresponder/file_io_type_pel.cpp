@@ -1,5 +1,3 @@
-#include "config.h"
-
 #include "file_io_type_pel.hpp"
 
 #include "libpldm/base.h"

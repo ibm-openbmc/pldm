@@ -1,7 +1,5 @@
 #pragma once
 
-#include "config.h"
-
 #include "file_io_by_type.hpp"
 
 #include <xyz/openbmc_project/Software/Version/error.hpp>
