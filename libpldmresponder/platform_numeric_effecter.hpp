@@ -256,6 +256,10 @@ int setNumericEffecterValueHandler(const DBusInterface& dBusIntf,
 
     std::unique_ptr<pldm_pdr, decltype(&pldm_pdr_destroy)>
         numericEffecterPdrRepo(pldm_pdr_init(), pldm_pdr_destroy);
+    if (!numericEffecterPdrRepo)
+    {
+        return PLDM_ERROR;
+    }
     pldm::responder::pdr_utils::Repo numericEffecterPDRs(
         numericEffecterPdrRepo.get());
     pldm::responder::pdr::getRepoByType(handler.getRepo(), numericEffecterPDRs,
