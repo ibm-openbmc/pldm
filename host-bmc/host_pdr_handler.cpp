@@ -477,8 +477,15 @@ void HostPDRHandler::mergeEntityAssociations(
 #ifdef OEM_IBM
     if (oemPlatformHandler && isHBRange(record_handle))
     {
+        uint32_t applied_handle = record_handle;
         // Adding the HostBoot range PDRs to the repo before merging it
-        pldm_pdr_add(repo, pdr.data(), size, record_handle, true, 0xFFFF);
+        int rc = pldm_pdr_add_check(repo, pdr.data(), size, true, 0xFFFF,
+                                    &applied_handle);
+        if (rc)
+        {
+            // pldm_pdr_add() assert()ed on failure to add a PDR.
+            throw std::runtime_error("Failed to add PDR");
+        }
     }
 #endif
 
@@ -933,8 +940,15 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                         }
                         else
                         {
-                            pldm_pdr_add(repo, pdr.data(), respCount, rh, true,
-                                         pdrTerminusHandle);
+                            rc = pldm_pdr_add_check(repo, pdr.data(), respCount,
+                                                    true, pdrTerminusHandle,
+                                                    &rh);
+                            if (rc)
+                            {
+                                // pldm_pdr_add() assert()ed on failure to add a
+                                // PDR.
+                                throw std::runtime_error("Failed to add PDR");
+                            }
                         }
                     }
                 }
