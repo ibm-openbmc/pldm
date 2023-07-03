@@ -560,17 +560,31 @@ void HostPDRHandler::mergeEntityAssociations(
             {
                 // Record Handle is 0xFFFFFFFF(max value uint32_t), for merging
                 // entity association pdr to bmc range
-                pldm_entity_association_pdr_add_from_node(
-                    node, repo, &entities, numEntities, true, TERMINUS_HANDLE,
-                    0xFFFFFFFF);
+                int rc =
+                    pldm_entity_association_pdr_add_from_node_with_record_handle(
+                        node, repo, &entities, numEntities, true,
+                        TERMINUS_HANDLE, 0xFFFFFFFF);
+                if (rc)
+                {
+                    std::cerr
+                        << "Failed to add entity association PDR from node: "
+                        << rc << std::endl;
+                }
             }
             else
             {
                 // Record Handle is 0xFFFFFFFF(max value uint32_t), for merging
                 // entity association pdr to bmc range
-                pldm_entity_association_pdr_add_from_node(
-                    node, repo, &entities, numEntities, true, terminus_handle,
-                    0xFFFFFFFF);
+                int rc =
+                    pldm_entity_association_pdr_add_from_node_with_record_handle(
+                        node, repo, &entities, numEntities, true,
+                        terminus_handle, 0xFFFFFFFF);
+                if (rc)
+                {
+                    std::cerr
+                        << "Failed to add entity association PDR from node: "
+                        << rc << std::endl;
+                }
             }
         }
     }
