@@ -151,8 +151,9 @@ int PelHandler::read(uint32_t offset, uint32_t& length, Response& response,
         }
         if (offset >= fileSize)
         {
-            std::cerr << "Offset exceeds file size, OFFSET=" << offset
-                      << " FILE_SIZE=" << fileSize << std::endl;
+            std::cerr << "PelHandler::read:Offset exceeds file size, OFFSET="
+                      << offset << " FILE_SIZE=" << fileSize
+                      << " FILE_HANDLE=" << fileHandle << std::endl;
             return PLDM_DATA_OUT_OF_RANGE;
         }
         if (offset + length > fileSize)
