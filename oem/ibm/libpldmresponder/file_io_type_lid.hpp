@@ -276,8 +276,10 @@ class LidHandler : public FileHandler
             size_t fileSize = fs::file_size(lidPath);
             if (offset > fileSize)
             {
-                std::cerr << "Offset exceeds file size, OFFSET=" << offset
-                          << " FILE_SIZE=" << fileSize << "\n";
+                std::cerr
+                    << "LidHandler::write:Offset exceeds file size, OFFSET="
+                    << offset << " FILE_SIZE=" << fileSize
+                    << " FILE_HANDLE=" << fileHandle << "\n";
                 return PLDM_DATA_OUT_OF_RANGE;
             }
         }
