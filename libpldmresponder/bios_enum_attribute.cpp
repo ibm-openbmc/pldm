@@ -155,7 +155,7 @@ uint8_t BIOSEnumAttribute::getAttrValueIndex(const PropertyValue& propValue)
     {
         return getValueIndex(std::get<std::string>(propValue), possibleValues);
     }
-    catch (const std::exception& e)
+    catch (const std::exception& /*e*/)
     {
         return getValueIndex(defaultValue, possibleValues);
     }

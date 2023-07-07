@@ -128,7 +128,8 @@ Response Handler::getDateTime(const pldm_msg* request, size_t /*payloadLength*/)
     catch (const sdbusplus::exception::exception& e)
     {
         std::cerr << "Error getting time, PATH=" << bmcTimePath
-                  << " TIME INTERACE=" << timeInterface << "\n";
+                  << " TIME INTERACE=" << timeInterface << " ERROR=" << e.what()
+                  << "\n";
 
         return CmdHandler::ccOnlyResponse(request, PLDM_ERROR);
     }

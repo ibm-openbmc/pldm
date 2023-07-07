@@ -210,7 +210,7 @@ uint64_t BIOSIntegerAttribute::getAttrValue()
     catch (const std::exception& e)
     {
         std::cerr << "Get Integer Attribute Value Error: AttributeName = "
-                  << name << std::endl;
+                  << name << " ERROR=" << e.what() << "\n";
         return integerInfo.defaultValue;
     }
 }

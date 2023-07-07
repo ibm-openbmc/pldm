@@ -514,7 +514,7 @@ class GetPDR : public CommandInterface
         {
             return entityName + entityType.at(entityNumber);
         }
-        catch (const std::out_of_range& e)
+        catch (const std::out_of_range& /*e*/)
         {
             auto OemString =
                 std::to_string(static_cast<unsigned>(entityNumber));
@@ -541,7 +541,7 @@ class GetPDR : public CommandInterface
         {
             return stateSet.at(id) + "(" + typeString + ")";
         }
-        catch (const std::out_of_range& e)
+        catch (const std::out_of_range& /*e*/)
         {
             return typeString;
         }
@@ -596,7 +596,7 @@ class GetPDR : public CommandInterface
         {
             return pdrType.at(type);
         }
-        catch (const std::out_of_range& e)
+        catch (const std::out_of_range& /*e*/)
         {
             return typeString;
         }

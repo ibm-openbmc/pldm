@@ -230,6 +230,8 @@ int PelHandler::fileAck(uint8_t /*fileStatus*/)
     }
     catch (const std::exception& e)
     {
+        std::cerr << "failed to make a d-bus call to PEL daemon, ERROR="
+                  << e.what() << "\n";
         return PLDM_ERROR;
     }
 

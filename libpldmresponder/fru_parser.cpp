@@ -67,7 +67,8 @@ void FruParser::setupDefaultDBusLookup(const fs::path& masterJsonPath)
         }
         catch (const std::exception& e)
         {
-            std::cerr << "FRU DBus lookup map format error\n";
+            std::cerr << "FRU DBus lookup map format ERROR =" << e.what()
+                      << "\n ";
             throw InternalFailure();
         }
     }
@@ -169,7 +170,7 @@ void FruParser::setupFruRecordMap(const std::string& dirPath)
                 recordMap.emplace(dbusIntfName, recordInfos);
             }
         }
-        catch (const std::exception& e)
+        catch (const std::exception& /*e*/)
         {
             continue;
         }

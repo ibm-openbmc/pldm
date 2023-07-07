@@ -112,6 +112,9 @@ int CodeUpdate::setNextBootSide(const std::string& nextSide)
     catch (const std::exception& e)
     {
         // Alternate side may not be present due to a failed code update
+        std::cerr
+            << "Alternate side may not be present due to a failed code update ERROR="
+            << e.what() << "\n";
         return PLDM_PLATFORM_INVALID_STATE_VALUE;
     }
 

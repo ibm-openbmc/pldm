@@ -274,7 +274,7 @@ class FRUTablePrint
         {
             return std::string(typeMap.at(type)) + "(" + typeString + ")";
         }
-        catch (const std::out_of_range& e)
+        catch (const std::out_of_range& /*e*/)
         {
             return typeString;
         }

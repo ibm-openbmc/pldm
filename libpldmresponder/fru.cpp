@@ -167,8 +167,8 @@ void FruImpl::buildFRUTable()
     catch (const std::exception& e)
     {
         std::cerr << "Look up of inventory objects failed and PLDM FRU table "
-                     "creation failed\n";
-        return;
+                     "creation failed ERROR = " << e.what() << "\n ";
+            return;
     }
 
     auto itemIntfsLookup = std::get<2>(dbusInfo);
@@ -215,7 +215,8 @@ void FruImpl::buildFRUTable()
                 {
                     std::cout << "Config JSONs missing for the item "
                                  "interface type, interface = "
-                              << interface.first << "\n";
+                              << interface.first << " ERROR=" << e.what()
+                              << "\n";
                     break;
                 }
             }
@@ -594,7 +595,8 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
     {
         std::cout << "Config JSONs missing for the item "
                   << " in concurrent add path "
-                  << "interface type, interface = " << fruInterface << "\n";
+                  << "interface type, interface = " << fruInterface
+                  << " ERROR=" << e.what() << "\n";
     }
 #ifdef OEM_IBM
     auto lastLocalRecord = pldm_pdr_find_last_local_record(pdrRepo);
@@ -1168,7 +1170,7 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
                 {
                     std::cerr
                         << "D-Bus object path does not exist, effecter ID: "
-                        << pdr->effecter_id << "\n";
+                        << pdr->effecter_id << " ERROR=" << e.what() << "\n";
                 }
                 dbusMappings.emplace_back(std::move(dbusMapping));
                 dbusValMaps.emplace_back(std::move(dbusIdToValMap));
@@ -1346,7 +1348,7 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
                 catch (const std::exception& e)
                 {
                     std::cerr << "D-Bus object path does not exist, sensor ID: "
-                              << pdr->sensor_id << "\n";
+                              << pdr->sensor_id << " ERROR=" << e.what() << "\n";
                 }
                 dbusMappings.emplace_back(std::move(dbusMapping));
                 dbusValMaps.emplace_back(std::move(dbusIdToValMap));

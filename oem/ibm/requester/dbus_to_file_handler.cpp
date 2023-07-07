@@ -133,7 +133,8 @@ void DbusToFileHandler::processNewResourceDump(
     }
     catch (const sdbusplus::exception::exception& e)
     {
-        std::cerr << "Error in getting current resource dump status \n";
+        std::cerr << "Error in getting current resource dump status"
+                  << " ERROR=" << e.what() << std::endl;
         return;
     }
 

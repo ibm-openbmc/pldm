@@ -430,6 +430,7 @@ Response Handler::platformEventMessage(const pldm_msg* request,
         }
         catch (const std::out_of_range& e)
         {
+            std::cerr << "Error handling the event ERROR=" << e.what() << "\n";
             return CmdHandler::ccOnlyResponse(request, PLDM_ERROR_INVALID_DATA);
         }
     }

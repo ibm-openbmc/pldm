@@ -257,7 +257,7 @@ HostPDRHandler::HostPDRHandler(
                         {
                             std::cerr
                                 << "Unable to set the slot power state to Off "
-                                << "ERROR=" << e.what() << "\n";
+                                << " ERROR=" << e.what() << "\n";
                         }
                     }
                 }
@@ -650,7 +650,7 @@ void HostPDRHandler::parseStateSensorPDRs()
         }
         // If there is no mapping for terminusHandle assign the reserved TID
         // value of 0xFF to indicate that.
-        catch (const std::out_of_range& e)
+        catch (const std::out_of_range& /*e*/)
         {
             sensorEntry.terminusID = PLDM_TID_RESERVED;
         }
@@ -1160,7 +1160,7 @@ void HostPDRHandler::_setHostSensorState()
                                      stateSetIds) =
                                 lookupSensorInfo(sensorEntry);
                         }
-                        catch (const std::out_of_range& e)
+                        catch (const std::out_of_range& /*e*/)
                         {
                             try
                             {
@@ -1171,8 +1171,8 @@ void HostPDRHandler::_setHostSensorState()
                             }
                             catch (const std::out_of_range& e)
                             {
-                                std::cerr << "No mapping for the events"
-                                          << std::endl;
+                                std::cerr << "No mapping for the events ERROR="
+                                          << e.what() << "\n";
                                 continue;
                             }
                         }

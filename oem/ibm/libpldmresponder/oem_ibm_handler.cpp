@@ -706,7 +706,8 @@ std::filesystem::path pldm::responder::oem_ibm_platform::Handler::getConfigDir()
         catch (const std::exception& e)
         {
             std::cerr << "Error getting Names property , PATH=" << objectPath
-                      << " Compatible interface =" << ibmCompatible[0] << "\n";
+                      << " Compatible interface =" << ibmCompatible[0]
+                      << " ERROR=" << e.what() << "\n";
         }
     }
     return fs::path();
@@ -1329,7 +1330,8 @@ int pldm::responder::oem_ibm_platform::Handler::checkBMCState()
     }
     catch (const std::exception& e)
     {
-        std::cerr << "Error getting the current BMC state" << std::endl;
+        std::cerr << "Error getting the current BMC state"
+                  << "ERROR=" << e.what() << "\n";
         return PLDM_ERROR;
     }
     return PLDM_SUCCESS;
@@ -1402,7 +1404,11 @@ void pldm::responder::oem_ibm_platform::Handler::handleBootTypesAtPowerOn()
             setBootTypesBiosAttr(restartCause);
         }
         catch (const std::exception& e)
-        {}
+        {
+            std::cerr
+                << "Failed to call the D-Bus Method in handleBootTypesAtPowerOn"
+                << "ERROR=" << e.what() << std::endl;
+        }
     }
 }
 

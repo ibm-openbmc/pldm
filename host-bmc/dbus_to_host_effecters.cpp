@@ -178,7 +178,8 @@ void HostEffecterParser::processHostEffecterChangeNotification(
     catch (const sdbusplus::exception::exception& e)
     {
         std::cerr << "Error in getting current host state. Will still "
-                     "continue to set the host effecter \n";
+                     "continue to set the host effecter ERROR="
+                  << e.what() << "\n";
     }
     uint8_t newState{};
     try
@@ -188,8 +189,7 @@ void HostEffecterParser::processHostEffecterChangeNotification(
     }
     catch (const std::out_of_range& e)
     {
-        std::cerr << "new state not found in json"
-                  << "\n";
+        std::cerr << "new state not found in json ERROR=" << e.what() << "\n";
         return;
     }
 
@@ -213,7 +213,8 @@ void HostEffecterParser::processHostEffecterChangeNotification(
     }
     catch (const std::runtime_error& e)
     {
-        std::cerr << "Could not set host state effecter \n";
+        std::cerr << "Could not set host state effecter ERROR=" << e.what()
+                  << "\n";
         return;
     }
     if (rc != PLDM_SUCCESS)

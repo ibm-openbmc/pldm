@@ -549,7 +549,7 @@ void BIOSConfig::buildAndStoreAttrTables(const Table& stringTable)
         catch (const std::exception& e)
         {
             std::cerr << "Construct Table Entry Error, AttributeName = "
-                      << attr->name << std::endl;
+                      << attr->name << " ERROR=" << e.what() << "\n";
         }
     }
 
@@ -640,7 +640,7 @@ void BIOSConfig::load(const fs::path& filePath, ParseHandler handler)
         catch (const std::exception& e)
         {
             std::cerr << "Failed to parse JSON config file : "
-                      << filePath.c_str() << std::endl;
+                      << filePath.c_str() << "ERROR=" << e.what() << "\n";
         }
     }
 }
@@ -825,7 +825,7 @@ void BIOSConfig::processBiosAttrChangeNotification(
     catch (const std::invalid_argument& e)
     {
         std::cerr << "Could not find handle for BIOS string, ATTRIBUTE="
-                  << attrName.c_str() << "\n";
+                  << attrName.c_str() << "ERROR=" << e.what() << "\n";
         return;
     }
 
