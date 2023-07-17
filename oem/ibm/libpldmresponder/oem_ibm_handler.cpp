@@ -1575,7 +1575,16 @@ void pldm::responder::oem_ibm_platform::Handler::processPowerOffHardGraceful()
         "string"};
     try
     {
-        dBusIntf->setDbusProperty(dbusMapping, value);
+        auto customerPolicy =
+            pldm::utils::DBusHandler().getDbusProperty<std::string>(
+                "/xyz/openbmc_project/control/host0/power_restore_policy",
+                "PowerRestorePolicy",
+                "xyz.openbmc_project.Control.Power.RestorePolicy");
+        if (customerPolicy !=
+            "xyz.openbmc_project.Control.Power.RestorePolicy.Policy.AlwaysOff")
+        {
+            dBusIntf->setDbusProperty(dbusMapping, value);
+        }
     }
     catch (const std::exception& e)
     {
