@@ -3,7 +3,7 @@
 #include "libpldm/pldm.h"
 
 #include "common/types.hpp"
-#include "pldmd/instance_id.hpp"
+#include "pldmd/dbus_impl_requester.hpp"
 #include "requester/handler.hpp"
 
 namespace pldm
@@ -33,7 +33,7 @@ class InventoryManager
     /** @brief Constructor
      *
      *  @param[in] handler - PLDM request handler
-     *  @param[in] instanceIdDb - Managing instance ID for PLDM requests
+     *  @param[in] requester - Managing instance ID for PLDM requests
      *  @param[out] descriptorMap - Populate the firmware identifers for the
      *                              FDs managed by the BMC.
      *  @param[out] componentInfoMap - Populate the component info for the FDs
@@ -41,10 +41,10 @@ class InventoryManager
      */
     explicit InventoryManager(
         pldm::requester::Handler<pldm::requester::Request>& handler,
-        InstanceIdDb& instanceIdDb, DescriptorMap& descriptorMap,
+        pldm::dbus_api::Requester& requester, DescriptorMap& descriptorMap,
         ComponentInfoMap& componentInfoMap) :
         handler(handler),
-        instanceIdDb(instanceIdDb), descriptorMap(descriptorMap),
+        requester(requester), descriptorMap(descriptorMap),
         componentInfoMap(componentInfoMap)
     {}
 
@@ -94,7 +94,7 @@ class InventoryManager
     pldm::requester::Handler<pldm::requester::Request>& handler;
 
     /** @brief D-Bus API for managing instance ID*/
-    InstanceIdDb& instanceIdDb;
+    pldm::dbus_api::Requester& requester;
 
     /** @brief Device identifiers of the managed FDs */
     DescriptorMap& descriptorMap;

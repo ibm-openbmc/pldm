@@ -6,6 +6,7 @@
 
 namespace pldm
 {
+using namespace pldm::dbus_api;
 using namespace pldm::responder;
 using namespace pldm::responder::pdr;
 using namespace pldm::responder::pdr_utils;
@@ -17,16 +18,16 @@ namespace state_sensor
 const std::vector<uint8_t> pdrTypes{PLDM_STATE_SENSOR_PDR};
 
 DbusToPLDMEvent::DbusToPLDMEvent(
-    int mctp_fd, uint8_t mctp_eid, pldm::InstanceIdDb& instanceIdDb,
+    int mctp_fd, uint8_t mctp_eid, Requester& requester,
     pldm::requester::Handler<pldm::requester::Request>* handler) :
     mctp_fd(mctp_fd),
-    mctp_eid(mctp_eid), instanceIdDb(instanceIdDb), handler(handler)
+    mctp_eid(mctp_eid), requester(requester), handler(handler)
 {}
 
 void DbusToPLDMEvent::sendEventMsg(uint8_t eventType,
                                    const std::vector<uint8_t>& eventDataVec)
 {
-    auto instanceId = instanceIdDb.next(mctp_eid);
+    auto instanceId = requester.getInstanceId(mctp_eid);
     std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
                                     PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES +
                                     eventDataVec.size());
@@ -38,7 +39,7 @@ void DbusToPLDMEvent::sendEventMsg(uint8_t eventType,
         eventDataVec.size() + PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES);
     if (rc != PLDM_SUCCESS)
     {
-        instanceIdDb.free(mctp_eid, instanceId);
+        requester.markFree(mctp_eid, instanceId);
         std::cerr << "Failed to encode_platform_event_message_req, rc = " << rc
                   << std::endl;
         return;
