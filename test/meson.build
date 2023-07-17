@@ -1,8 +1,11 @@
 pldmd_inc = include_directories('../')
 test_src = declare_dependency(
+          sources: [
+            '../pldmd/instance_id.cpp'],
           include_directories:pldmd_inc)
 
 tests = [
+  'pldmd_instanceid_test',
   'pldmd_registration_test',
 ]
 

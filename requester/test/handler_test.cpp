@@ -5,7 +5,6 @@
 #include "mock_request.hpp"
 #include "pldmd/dbus_impl_requester.hpp"
 #include "requester/handler.hpp"
-#include "test/test_instance_id.hpp"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -23,15 +22,14 @@ class HandlerTest : public testing::Test
 {
   protected:
     HandlerTest() :
-        event(sdeventplus::Event::get_default()), instanceIdDb(),
+        event(sdeventplus::Event::get_default()),
         dbusImplReq(pldm::utils::DBusHandler::getBus(),
-                    "/xyz/openbmc_project/pldm", instanceIdDb)
+                    "/xyz/openbmc_project/pldm")
     {}
 
     int fd = 0;
     mctp_eid_t eid = 0;
     sdeventplus::Event event;
-    TestInstanceIdDb instanceIdDb;
     pldm::dbus_api::Requester dbusImplReq;
 
     /** @brief This function runs the sd_event_run in a loop till all the events
@@ -80,7 +78,6 @@ TEST_F(HandlerTest, singleRequestResponseScenario)
         fd, event, dbusImplReq, false, 90000, seconds(1), 2, milliseconds(100));
     pldm::Request request{};
     auto instanceId = dbusImplReq.getInstanceId(eid);
-    EXPECT_EQ(instanceId, 0);
     auto rc = reqHandler.registerRequest(
         eid, instanceId, 0, 0, std::move(request),
         std::move(std::bind_front(&HandlerTest::pldmResponseCallBack, this)));
@@ -91,7 +88,10 @@ TEST_F(HandlerTest, singleRequestResponseScenario)
     reqHandler.handleResponse(eid, instanceId, 0, 0, responsePtr,
                               sizeof(response));
 
+    // handleResponse() will free the instance ID after calling the response
+    // handler, so the same instance ID is granted next as well
     EXPECT_EQ(validResponse, true);
+    EXPECT_EQ(instanceId, dbusImplReq.getInstanceId(eid));
 }
 
 TEST_F(HandlerTest, singleRequestInstanceIdTimerExpired)
@@ -100,7 +100,6 @@ TEST_F(HandlerTest, singleRequestInstanceIdTimerExpired)
         fd, event, dbusImplReq, false, 90000, seconds(1), 2, milliseconds(100));
     pldm::Request request{};
     auto instanceId = dbusImplReq.getInstanceId(eid);
-    EXPECT_EQ(instanceId, 0);
     auto rc = reqHandler.registerRequest(
         eid, instanceId, 0, 0, std::move(request),
         std::move(std::bind_front(&HandlerTest::pldmResponseCallBack, this)));
@@ -109,6 +108,9 @@ TEST_F(HandlerTest, singleRequestInstanceIdTimerExpired)
     // Waiting for 500ms so that the instance ID expiry callback is invoked
     waitEventExpiry(milliseconds(500));
 
+    // cleanup() will free the instance ID after calling the response
+    // handler will no response, so the same instance ID is granted next
+    EXPECT_EQ(instanceId, dbusImplReq.getInstanceId(eid));
     EXPECT_EQ(nullResponse, true);
 }
 
@@ -118,7 +120,6 @@ TEST_F(HandlerTest, multipleRequestResponseScenario)
         fd, event, dbusImplReq, false, 90000, seconds(2), 2, milliseconds(100));
     pldm::Request request{};
     auto instanceId = dbusImplReq.getInstanceId(eid);
-    EXPECT_EQ(instanceId, 0);
     auto rc = reqHandler.registerRequest(
         eid, instanceId, 0, 0, std::move(request),
         std::move(std::bind_front(&HandlerTest::pldmResponseCallBack, this)));
@@ -126,7 +127,6 @@ TEST_F(HandlerTest, multipleRequestResponseScenario)
 
     pldm::Request requestNxt{};
     auto instanceIdNxt = dbusImplReq.getInstanceId(eid);
-    EXPECT_EQ(instanceIdNxt, 1);
     rc = reqHandler.registerRequest(
         eid, instanceIdNxt, 0, 0, std::move(requestNxt),
         std::move(std::bind_front(&HandlerTest::pldmResponseCallBack, this)));
@@ -149,4 +149,5 @@ TEST_F(HandlerTest, multipleRequestResponseScenario)
 
     EXPECT_EQ(validResponse, true);
     EXPECT_EQ(callbackCount, 2);
+    EXPECT_EQ(instanceId, dbusImplReq.getInstanceId(eid));
 }

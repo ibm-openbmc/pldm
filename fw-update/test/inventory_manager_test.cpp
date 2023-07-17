@@ -3,7 +3,6 @@
 #include "common/utils.hpp"
 #include "fw-update/inventory_manager.hpp"
 #include "requester/test/mock_request.hpp"
-#include "test/test_instance_id.hpp"
 
 #include <gtest/gtest.h>
 
@@ -15,9 +14,9 @@ class InventoryManagerTest : public testing::Test
 {
   protected:
     InventoryManagerTest() :
-        event(sdeventplus::Event::get_default()), instanceIdDb(),
+        event(sdeventplus::Event::get_default()),
         dbusImplRequester(pldm::utils::DBusHandler::getBus(),
-                          "/xyz/openbmc_project/pldm", instanceIdDb),
+                          "/xyz/openbmc_project/pldm"),
         reqHandler(fd, event, dbusImplRequester, false, 90000, seconds(1), 2,
                    milliseconds(100)),
         inventoryManager(reqHandler, dbusImplRequester, outDescriptorMap,
@@ -26,7 +25,6 @@ class InventoryManagerTest : public testing::Test
 
     int fd = -1;
     sdeventplus::Event event;
-    TestInstanceIdDb instanceIdDb;
     pldm::dbus_api::Requester dbusImplRequester;
     requester::Handler<requester::Request> reqHandler;
     InventoryManager inventoryManager;
