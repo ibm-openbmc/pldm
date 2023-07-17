@@ -76,9 +76,7 @@ class InstanceIdDb
         int rc = pldm_instance_id_free(pldmInstanceIdDb, tid, instanceId);
         if (rc == -EINVAL)
         {
-            throw std::runtime_error(
-                "Instance ID " + std::to_string(instanceId) + " for TID " +
-                std::to_string(tid) + " was not previously allocated");
+            throw std::runtime_error("Invalid instance ID");
         }
         if (rc)
         {
@@ -87,7 +85,7 @@ class InstanceIdDb
     }
 
   private:
-    pldm_instance_db* pldmInstanceIdDb = nullptr;
+    struct pldm_instance_db* pldmInstanceIdDb = nullptr;
 };
 
 } // namespace pldm
