@@ -215,7 +215,7 @@ int main(int argc, char** argv)
 
     Invoker invoker{};
     requester::Handler<requester::Request> reqHandler(
-        sockfd, event, instanceIdDb, currentSendbuffSize, verbose);
+        sockfd, event, dbusImplReq, currentSendbuffSize, verbose);
 
 #ifdef LIBPLDMRESPONDER
     using namespace pldm::state_sensor;
@@ -240,7 +240,7 @@ int main(int argc, char** argv)
     auto hostEID = pldm::utils::readHostEID();
     invoker.registerHandler(
         PLDM_BIOS, std::make_unique<bios::Handler>(sockfd, hostEID,
-                                                   &instanceIdDb, &reqHandler));
+                                                   &dbusImplReq, &reqHandler));
     std::unique_ptr<oem_platform::Handler> oemPlatformHandler{};
     std::unique_ptr<oem_fru::Handler> oemFruHandler{};
 
@@ -248,7 +248,7 @@ int main(int argc, char** argv)
     {
         hostEffecterParser =
             std::make_unique<pldm::host_effecters::HostEffecterParser>(
-                &instanceIdDb, sockfd, pdrRepo.get(), &dbusHandler,
+                &dbusImplReq, sockfd, pdrRepo.get(), &dbusHandler,
                 HOST_JSONS_DIR, &reqHandler);
     }
 
@@ -260,7 +260,7 @@ int main(int argc, char** argv)
     codeUpdate->clearDirPath(LID_STAGING_DIR);
     oemPlatformHandler = std::make_unique<oem_ibm_platform::Handler>(
         &dbusHandler, codeUpdate.get(), slotHandler.get(), sockfd, hostEID,
-        instanceIdDb, event, pdrRepo.get(), &reqHandler, bmcEntityTree.get(),
+        dbusImplReq, event, pdrRepo.get(), &reqHandler, bmcEntityTree.get(),
         hostEffecterParser.get());
     oemFruHandler = std::make_unique<oem_ibm_fru::Handler>(&dbusHandler,
                                                            pdrRepo.get());
@@ -268,13 +268,13 @@ int main(int argc, char** argv)
     slotHandler->setOemPlatformHandler(oemPlatformHandler.get());
     invoker.registerHandler(PLDM_OEM, std::make_unique<oem_ibm::Handler>(
                                           oemPlatformHandler.get(), sockfd,
-                                          hostEID, &instanceIdDb, &reqHandler));
+                                          hostEID, &dbusImplReq, &reqHandler));
 
     // host lamp test
     std::unique_ptr<pldm::led::HostLampTest> hostLampTest =
         std::make_unique<pldm::led::HostLampTest>(
             bus, "/xyz/openbmc_project/led/groups/host_lamp_test", sockfd,
-            hostEID, instanceIdDb, pdrRepo.get(), reqHandler);
+            hostEID, dbusImplReq, pdrRepo.get(), reqHandler);
 #endif
     if (hostEID)
     {
@@ -284,18 +284,18 @@ int main(int argc, char** argv)
         hostPDRHandler = std::make_shared<HostPDRHandler>(
             sockfd, hostEID, event, pdrRepo.get(), EVENTS_JSONS_DIR,
             entityTree.get(), bmcEntityTree.get(), hostEffecterParser.get(),
-            instanceIdDb, &reqHandler, associationsParser.get(),
+            dbusImplReq, &reqHandler, associationsParser.get(),
             oemPlatformHandler.get());
         // HostFirmware interface needs access to hostPDR to know if host
         // is running
         dbusImplHost.setHostPdrObj(hostPDRHandler);
 
         dbusToPLDMEventHandler = std::make_unique<DbusToPLDMEvent>(
-            sockfd, hostEID, instanceIdDb, &reqHandler);
+            sockfd, hostEID, dbusImplReq, &reqHandler);
     }
     auto fruHandler = std::make_unique<fru::Handler>(
         FRU_JSONS_DIR, FRU_MASTER_JSON, pdrRepo.get(), entityTree.get(),
-        bmcEntityTree.get(), oemFruHandler.get(), instanceIdDb, &reqHandler,
+        bmcEntityTree.get(), oemFruHandler.get(), dbusImplReq, &reqHandler,
         hostEID, event, dbusToPLDMEventHandler.get());
     // FRU table is built lazily when a FRU command or Get PDR command is
     // handled. To enable building FRU table, the FRU handler is passed to the
@@ -319,7 +319,7 @@ int main(int argc, char** argv)
     invoker.registerHandler(PLDM_PLATFORM, std::move(platformHandler));
     invoker.registerHandler(
         PLDM_BASE,
-        std::make_unique<base::Handler>(hostEID, instanceIdDb, event,
+        std::make_unique<base::Handler>(hostEID, dbusImplReq, event,
                                         oemPlatformHandler.get(), &reqHandler));
     invoker.registerHandler(PLDM_FRU, std::move(fruHandler));
     dbus_api::Pdr dbusImplPdr(bus, "/xyz/openbmc_project/pldm", pdrRepo.get());
@@ -357,7 +357,7 @@ int main(int argc, char** argv)
     }
 
     std::unique_ptr<fw_update::Manager> fwManager =
-        std::make_unique<fw_update::Manager>(event, reqHandler, instanceIdDb);
+        std::make_unique<fw_update::Manager>(event, reqHandler, dbusImplReq);
     std::unique_ptr<MctpDiscovery> mctpDiscoveryHandler =
         std::make_unique<MctpDiscovery>(bus, fwManager.get());
 

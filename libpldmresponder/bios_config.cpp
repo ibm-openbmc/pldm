@@ -15,6 +15,7 @@
 #include "oem/ibm/libpldmresponder/platform_oem_ibm.hpp"
 #endif
 
+using namespace pldm::dbus_api;
 using namespace pldm::utils;
 
 namespace pldm
@@ -40,11 +41,11 @@ constexpr auto attrValueTableFile = "attributeValueTable";
 
 BIOSConfig::BIOSConfig(
     const char* jsonDir, const char* tableDir, DBusHandler* const dbusHandler,
-    int fd, uint8_t eid, pldm::InstanceIdDb* instanceIdDb,
+    int fd, uint8_t eid, dbus_api::Requester* requester,
     pldm::requester::Handler<pldm::requester::Request>* handler) :
     jsonDir(jsonDir),
     tableDir(tableDir), dbusHandler(dbusHandler), fd(fd), eid(eid),
-    instanceIdDb(instanceIdDb), handler(handler)
+    requester(requester), handler(handler)
 
 {
     fs::create_directories(tableDir);
@@ -1078,7 +1079,7 @@ void BIOSConfig::constructPendingAttribute(
     {
 #ifdef OEM_IBM
         auto rc = pldm::responder::platform::sendBiosAttributeUpdateEvent(
-            eid, instanceIdDb, listOfHandles, handler);
+            eid, requester, listOfHandles, handler);
         if (rc != PLDM_SUCCESS)
         {
             return;

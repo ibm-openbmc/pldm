@@ -3,7 +3,7 @@
 #include "common/types.hpp"
 #include "common/utils.hpp"
 #include "mock_request.hpp"
-#include "pldmd/instance_id.hpp"
+#include "pldmd/dbus_impl_requester.hpp"
 #include "requester/handler.hpp"
 #include "test/test_instance_id.hpp"
 
@@ -22,13 +22,17 @@ using ::testing::Return;
 class HandlerTest : public testing::Test
 {
   protected:
-    HandlerTest() : event(sdeventplus::Event::get_default()), instanceIdDb()
+    HandlerTest() :
+        event(sdeventplus::Event::get_default()), instanceIdDb(),
+        dbusImplReq(pldm::utils::DBusHandler::getBus(),
+                    "/xyz/openbmc_project/pldm", instanceIdDb)
     {}
 
     int fd = 0;
     mctp_eid_t eid = 0;
     sdeventplus::Event event;
     TestInstanceIdDb instanceIdDb;
+    pldm::dbus_api::Requester dbusImplReq;
 
     /** @brief This function runs the sd_event_run in a loop till all the events
      *         in the testcase are dispatched and exits when there are no events
@@ -72,11 +76,10 @@ class HandlerTest : public testing::Test
 
 TEST_F(HandlerTest, singleRequestResponseScenario)
 {
-    Handler<NiceMock<MockRequest>> reqHandler(fd, event, instanceIdDb, false,
-                                              90000, seconds(1), 2,
-                                              milliseconds(100));
+    Handler<NiceMock<MockRequest>> reqHandler(
+        fd, event, dbusImplReq, false, 90000, seconds(1), 2, milliseconds(100));
     pldm::Request request{};
-    auto instanceId = instanceIdDb.next(eid);
+    auto instanceId = dbusImplReq.getInstanceId(eid);
     EXPECT_EQ(instanceId, 0);
     auto rc = reqHandler.registerRequest(
         eid, instanceId, 0, 0, std::move(request),
@@ -93,11 +96,10 @@ TEST_F(HandlerTest, singleRequestResponseScenario)
 
 TEST_F(HandlerTest, singleRequestInstanceIdTimerExpired)
 {
-    Handler<NiceMock<MockRequest>> reqHandler(fd, event, instanceIdDb, false,
-                                              90000, seconds(1), 2,
-                                              milliseconds(100));
+    Handler<NiceMock<MockRequest>> reqHandler(
+        fd, event, dbusImplReq, false, 90000, seconds(1), 2, milliseconds(100));
     pldm::Request request{};
-    auto instanceId = instanceIdDb.next(eid);
+    auto instanceId = dbusImplReq.getInstanceId(eid);
     EXPECT_EQ(instanceId, 0);
     auto rc = reqHandler.registerRequest(
         eid, instanceId, 0, 0, std::move(request),
@@ -112,11 +114,10 @@ TEST_F(HandlerTest, singleRequestInstanceIdTimerExpired)
 
 TEST_F(HandlerTest, multipleRequestResponseScenario)
 {
-    Handler<NiceMock<MockRequest>> reqHandler(fd, event, instanceIdDb, false,
-                                              90000, seconds(2), 2,
-                                              milliseconds(100));
+    Handler<NiceMock<MockRequest>> reqHandler(
+        fd, event, dbusImplReq, false, 90000, seconds(2), 2, milliseconds(100));
     pldm::Request request{};
-    auto instanceId = instanceIdDb.next(eid);
+    auto instanceId = dbusImplReq.getInstanceId(eid);
     EXPECT_EQ(instanceId, 0);
     auto rc = reqHandler.registerRequest(
         eid, instanceId, 0, 0, std::move(request),
@@ -124,7 +125,7 @@ TEST_F(HandlerTest, multipleRequestResponseScenario)
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     pldm::Request requestNxt{};
-    auto instanceIdNxt = instanceIdDb.next(eid);
+    auto instanceIdNxt = dbusImplReq.getInstanceId(eid);
     EXPECT_EQ(instanceIdNxt, 1);
     rc = reqHandler.registerRequest(
         eid, instanceIdNxt, 0, 0, std::move(requestNxt),

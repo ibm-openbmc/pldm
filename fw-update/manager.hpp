@@ -6,7 +6,7 @@
 #include "common/types.hpp"
 #include "device_updater.hpp"
 #include "inventory_manager.hpp"
-#include "pldmd/instance_id.hpp"
+#include "pldmd/dbus_impl_requester.hpp"
 #include "requester/handler.hpp"
 #include "update_manager.hpp"
 
@@ -18,6 +18,8 @@ namespace pldm
 
 namespace fw_update
 {
+
+using namespace pldm::dbus_api;
 
 /** @class Manager
  *
@@ -40,9 +42,9 @@ class Manager
      */
     explicit Manager(Event& event,
                      requester::Handler<requester::Request>& handler,
-                     pldm::InstanceIdDb& instanceIdDb) :
-        inventoryMgr(handler, instanceIdDb, descriptorMap, componentInfoMap),
-        updateManager(event, handler, instanceIdDb, descriptorMap,
+                     Requester& requester) :
+        inventoryMgr(handler, requester, descriptorMap, componentInfoMap),
+        updateManager(event, handler, requester, descriptorMap,
                       componentInfoMap)
     {}
 
