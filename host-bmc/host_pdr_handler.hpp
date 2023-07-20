@@ -11,7 +11,8 @@
 #include "libpldmresponder/event_parser.hpp"
 #include "libpldmresponder/oem_handler.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
-#include "pldmd/instance_id.hpp"
+#include "pldmd/dbus_impl_requester.hpp"
+#include "requester/handler.hpp"
 #include "utils.hpp"
 
 #include <sdeventplus/event.hpp>
@@ -89,7 +90,7 @@ class HostPDRHandler
      *  @param[in] eventsJsonDir - directory path which has the config JSONs
      *  @param[in] entityTree - Pointer to BMC and Host entity association tree
      *  @param[in] bmcEntityTree - pointer to BMC's entity association tree
-     *  @param[in] instanceIdDb - reference to an InstanceIdDb object
+     *  @param[in] requester - reference to Requester object
      *  @param[in] handler - PLDM request handler
      */
     explicit HostPDRHandler(
@@ -98,7 +99,7 @@ class HostPDRHandler
         pldm_entity_association_tree* entityTree,
         pldm_entity_association_tree* bmcEntityTree,
         pldm::host_effecters::HostEffecterParser* hostEffecterParser,
-        pldm::InstanceIdDb& instanceIdDb,
+        pldm::dbus_api::Requester& requester,
         pldm::requester::Handler<pldm::requester::Request>* handler,
         pldm::host_associations::HostAssociationsParser* asscoationsParser,
         pldm::responder::oem_platform::Handler* oemPlatformHandler);
@@ -369,10 +370,10 @@ class HostPDRHandler
     /** @brief Pointer to host effecter parser */
     pldm::host_effecters::HostEffecterParser* hostEffecterParser;
 
-    /** @brief reference to instance Id database object, primarily used to
-     * access API to obtain PLDM instance id.
+    /** @brief reference to Requester object, primarily used to access API
+     * to obtain PLDM instance id.
      */
-    pldm::InstanceIdDb& instanceIdDb;
+    pldm::dbus_api::Requester& requester;
 
     /** @brief PLDM request handler */
     pldm::requester::Handler<pldm::requester::Request>* handler;

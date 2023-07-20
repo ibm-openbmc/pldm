@@ -5,7 +5,8 @@ fw_update_test_src = declare_dependency(
             '../device_updater.cpp',
             '../update_manager.cpp',
             '../../common/utils.cpp',
-          ])
+            '../../pldmd/dbus_impl_requester.cpp',
+            '../../pldmd/instance_id.cpp'])
 
 tests = [
   'inventory_manager_test',
@@ -16,7 +17,6 @@ tests = [
 foreach t : tests
   test(t, executable(t.underscorify(), t + '.cpp',
                      implicit_include_directories: false,
-                     include_directories: '../../pldmd',
                      link_args: dynamic_linker,
                      build_rpath: get_option('oe-sdk').enabled() ? rpath : '',
                      dependencies: [

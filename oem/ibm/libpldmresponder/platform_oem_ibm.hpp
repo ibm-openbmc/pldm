@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pldmd/instance_id.hpp"
+#include "pldmd/dbus_impl_requester.hpp"
 #include "requester/handler.hpp"
 
 #include <vector>
@@ -20,12 +20,12 @@ namespace platform
  *  list of BIOS attribute handles.
  *
  *  @param[in] eid - MCTP EID of host firmware
- *  @param[in] instanceIdDb - pointer to InstanceIdDb object
+ *  @param[in] requester - pointer to Requester object
  *  @param[in] handles - List of BIOS attribute handles
  *  @param[in] handler - PLDM request handler
  */
 int sendBiosAttributeUpdateEvent(
-    uint8_t eid, pldm::InstanceIdDb* instanceIdDb,
+    uint8_t eid, dbus_api::Requester* requester,
     const std::vector<uint16_t>& handles,
     pldm::requester::Handler<pldm::requester::Request>* handler);
 

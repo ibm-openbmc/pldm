@@ -250,7 +250,7 @@ int HostEffecterParser::sendSetStateEffecterStates(
     std::vector<set_effecter_state_field>& stateField,
     std::function<bool(bool)> callBack, bool value)
 {
-    auto instanceId = instanceIdDb->next(mctpEid);
+    auto instanceId = requester->getInstanceId(mctpEid);
 
     std::vector<uint8_t> requestMsg(
         sizeof(pldm_msg_hdr) + sizeof(effecterId) + sizeof(compEffCnt) +
@@ -265,7 +265,7 @@ int HostEffecterParser::sendSetStateEffecterStates(
         std::cerr
             << "Message encode SetStateEffecterStates failure. PLDM error code = "
             << std::hex << std::showbase << rc << "\n";
-        instanceIdDb->free(mctpEid, instanceId);
+        requester->markFree(mctpEid, instanceId);
         return rc;
     }
 

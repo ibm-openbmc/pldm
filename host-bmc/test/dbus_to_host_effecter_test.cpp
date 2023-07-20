@@ -10,6 +10,7 @@
 
 using namespace pldm::host_effecters;
 using namespace pldm::utils;
+using namespace pldm::dbus_api;
 
 class MockHostEffecterParser : public HostEffecterParser
 {
