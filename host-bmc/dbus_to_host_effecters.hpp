@@ -5,16 +5,18 @@
 #include "pldmd/dbus_impl_requester.hpp"
 #include "requester/handler.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <string>
 #include <utility>
 #include <vector>
 
+PHOSPHOR_LOG2_USING;
+
 namespace pldm
 {
-
 namespace host_effecters
 {
-
 using DbusChgHostEffecterProps =
     std::map<dbus::Property, pldm::utils::PropertyValue>;
 
@@ -91,8 +93,9 @@ class HostEffecterParser
         }
         catch (const std::exception& e)
         {
-            std::cerr << "The json file does not exist or malformed, ERROR="
-                      << e.what() << "\n";
+            error(
+                "The json file does not exist or malformed, ERROR={ERR_EXCEP}",
+                "ERR_EXCEP", e.what());
         }
     }
 

@@ -5,15 +5,16 @@
 
 #include <libpldm/platform.h>
 
+#include <phosphor-logging/lg2.hpp>
+
+PHOSPHOR_LOG2_USING;
+
 namespace pldm
 {
-
 namespace responder
 {
-
 namespace pdr_state_effecter
 {
-
 using Json = nlohmann::json;
 
 static const Json empty{};
@@ -42,10 +43,9 @@ void generateStateEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
             auto statesSize = set.value("size", 0);
             if (!statesSize)
             {
-                std::cerr << "Malformed PDR JSON return "
-                             "pdrEntry;- no state set "
-                             "info, TYPE="
-                          << PLDM_STATE_EFFECTER_PDR << "\n";
+                error(
+                    "Malformed PDR JSON return pdrEntry;- no state set info, TYPE={PDR_TYP}",
+                    "PDR_TYP", static_cast<unsigned>(PLDM_STATE_EFFECTER_PDR));
                 throw InternalFailure();
             }
             pdrSize += sizeof(state_effecter_possible_states) -
@@ -60,7 +60,7 @@ void generateStateEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
             reinterpret_cast<pldm_state_effecter_pdr*>(entry.data());
         if (!pdr)
         {
-            std::cerr << "Failed to get state effecter PDR.\n";
+            error("Failed to get state effecter PDR.");
             continue;
         }
         pdr->hdr.record_handle = 0;
@@ -159,10 +159,11 @@ void generateStateEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
             }
             catch (const std::exception& e)
             {
-                std::cerr << "D-Bus object " << objectPath
-                          << " does not exist, state effecter ID: "
-                          << pdr->effecter_id << " error : " << e.what()
-                          << "\n";
+                error(
+                    "D-Bus object path {OBJ_PATH} does not exist, numeric effecter ID: {EFFECTER_ID} error : {ERR_EXCEP}",
+                    "OBJ_PATH", objectPath.c_str(), "EFFECTER_ID",
+                    static_cast<unsigned>(pdr->effecter_id), "ERR_EXCEP",
+                    e.what());
             }
 
             dbusMappings.emplace_back(std::move(dbusMapping));

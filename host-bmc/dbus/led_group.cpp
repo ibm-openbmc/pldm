@@ -2,6 +2,10 @@
 
 #include "libpldm/state_set.h"
 
+#include <phosphor-logging/lg2.hpp>
+
+PHOSPHOR_LOG2_USING;
+
 namespace pldm
 {
 namespace dbus
@@ -41,13 +45,14 @@ bool LEDGroup::asserted(bool value)
                 hostEffecterParser->getPldmPDR(), entity.entity_type,
                 entity.entity_instance_num, entity.entity_container_id,
                 PLDM_STATE_SET_IDENTIFY_STATE, false);
-            std::cerr << "Setting the led on : [ " << objectPath << "] ,[ "
-                      << entity.entity_type << " , "
-                      << entity.entity_instance_num << " , "
-                      << entity.entity_container_id << " ] , effecter ID : [ "
-                      << effecterId << " ] , current value : [ "
-                      << std::boolalpha << asserted() << " ] new value : [ "
-                      << value << " ] " << std::endl;
+            auto curVal = asserted() ? "true" : "false";
+            error(
+                "Setting the led on : [ {OBJ_PATH} ], [{ENTITY_TYP}, {ENTITY_NUM}, {ENTITY_ID}] effecter ID : [ {EFFECTER_ID} ] , current value : [ {CUR_VAL} ], new value : [ {NEW_VAL} ]",
+                "OBJ_PATH", objectPath, "ENTITY_TYP",
+                static_cast<unsigned>(entity.entity_type), "ENTITY_NUM",
+                static_cast<unsigned>(entity.entity_instance_num), "ENTITY_ID",
+                static_cast<unsigned>(entity.entity_container_id),
+                "EFFECTER_ID", effecterId, "CUR_VAL", curVal, "NEW_VAL", value);
             hostEffecterParser->sendSetStateEffecterStates(
                 mctpEid, effecterId, 1, stateField,
                 std::bind(std::mem_fn(&pldm::dbus::LEDGroup::updateAsserted),
