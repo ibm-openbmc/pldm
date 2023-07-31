@@ -595,7 +595,9 @@ void CodeUpdate::deleteImage()
     {
         auto method = bus.new_method_call(UPDATER_SERVICE, SW_OBJ_PATH,
                                           DELETE_INTF, "DeleteAll");
-        bus.call_noreply(method);
+        bus.call_noreply(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     }
     catch (const std::exception& e)
     {
@@ -797,7 +799,9 @@ int CodeUpdate::assembleCodeUpdateImage()
         auto method = bus.new_method_call(UPDATER_SERVICE, SOFTWARE_PATH,
                                           LID_INTERFACE,
                                           "AssembleCodeUpdateImage");
-        bus.call_noreply(method);
+        bus.call_noreply(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     }
     catch (const std::exception& e)
     {
