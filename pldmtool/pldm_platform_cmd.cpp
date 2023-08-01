@@ -4,6 +4,8 @@
 #include "common/types.hpp"
 #include "pldm_cmd_helper.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <cstddef>
 #include <map>
 
@@ -119,10 +121,10 @@ class GetPDR : public CommandInterface
                                                   prevRecordHandle);
                 if (!result.second)
                 {
-                    std::cerr
-                        << "Record handle " << recordHandle
-                        << " has multiple references: " << result.first->second
-                        << ", " << prevRecordHandle << "\n";
+                    lg2::error(
+                        "Record handle {KEY0} has multiple references: {KEY1}, {KEY2}",
+                        "KEY0", recordHandle, "KEY1", result.first->second,
+                        "KEY2", prevRecordHandle);
                     return;
                 }
                 prevRecordHandle = recordHandle;
@@ -172,9 +174,8 @@ class GetPDR : public CommandInterface
 
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
-            std::cerr << "Response Message Error: "
-                      << "rc=" << rc << ",cc=" << (int)completionCode
-                      << std::endl;
+            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
+                       rc, "KEY1", (int)completionCode);
             return;
         }
 
@@ -731,7 +732,7 @@ class GetPDR : public CommandInterface
             reinterpret_cast<pldm_pdr_fru_record_set*>(data);
         if (!pdr)
         {
-            std::cerr << "Failed to get the FRU record set PDR" << std::endl;
+            lg2::error("Failed to get the FRU record set PDR");
             return;
         }
 
@@ -759,8 +760,7 @@ class GetPDR : public CommandInterface
             reinterpret_cast<pldm_pdr_entity_association*>(data);
         if (!pdr)
         {
-            std::cerr << "Failed to get the PDR eneity association"
-                      << std::endl;
+            lg2::error("Failed to get the PDR eneity association");
             return;
         }
 
@@ -772,7 +772,7 @@ class GetPDR : public CommandInterface
         }
         else
         {
-            std::cout << "Get associationType failed.\n";
+            lg2::info("Get associationType failed.");
         }
         output["containerEntityType"] =
             getEntityName(pdr->container.entity_type);
@@ -805,7 +805,7 @@ class GetPDR : public CommandInterface
             (struct pldm_numeric_effecter_value_pdr*)data;
         if (!pdr)
         {
-            std::cerr << "Failed to get numeric effecter PDR" << std::endl;
+            lg2::error("Failed to get numeric effecter PDR");
             return;
         }
 
@@ -1000,7 +1000,7 @@ class GetPDR : public CommandInterface
     {
         if (data == NULL)
         {
-            std::cerr << "Failed to get PDR message" << std::endl;
+            lg2::error("Failed to get PDR message");
             return;
         }
 
@@ -1020,8 +1020,9 @@ class GetPDR : public CommandInterface
             // is not supported
             if (!strToPdrType.contains(pdrRecType))
             {
-                std::cerr << "PDR type '" << pdrRecType
-                          << "' is not supported or invalid\n";
+                lg2::error("PDR type {KEY0} is not supported or invalid",
+                           "KEY0", pdrRecType);
+
                 // PDR type not supported, setting next record handle to 0
                 // to avoid looping through all PDR records
                 nextRecordHndl = 0;
@@ -1113,16 +1114,18 @@ class SetStateEffecter : public CommandInterface
         if (effecterCount > maxEffecterCount ||
             effecterCount < minEffecterCount)
         {
-            std::cerr << "Request Message Error: effecterCount size "
-                      << effecterCount << "is invalid\n";
+            lg2::error(
+                "Request Message Error: effecterCount size {KEY0} is invalid",
+                "KEY0", effecterCount);
             auto rc = PLDM_ERROR_INVALID_DATA;
             return {rc, requestMsg};
         }
 
         if (effecterData.size() > maxEffecterDataSize)
         {
-            std::cerr << "Request Message Error: effecterData size "
-                      << effecterData.size() << "is invalid\n";
+            lg2::error(
+                "Request Message Error: effecterData size {KEY0} is invalid",
+                "KEY0", effecterData.size());
             auto rc = PLDM_ERROR_INVALID_DATA;
             return {rc, requestMsg};
         }
@@ -1130,8 +1133,9 @@ class SetStateEffecter : public CommandInterface
         auto stateField = parseEffecterData(effecterData, effecterCount);
         if (!stateField)
         {
-            std::cerr << "Failed to parse effecter data, effecterCount size "
-                      << effecterCount << "\n";
+            lg2::error(
+                "Failed to parse effecter data, effecterCount size {KEY0}",
+                "KEY0", effecterCount);
             auto rc = PLDM_ERROR_INVALID_DATA;
             return {rc, requestMsg};
         }
@@ -1149,8 +1153,9 @@ class SetStateEffecter : public CommandInterface
 
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
-            std::cerr << "Response Message Error: "
-                      << "rc=" << rc << ",cc=" << (int)completionCode << "\n";
+            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
+                       rc, "KEY1", (int)completionCode);
+
             return;
         }
 
@@ -1230,9 +1235,9 @@ class SetNumericEffecterValue : public CommandInterface
 
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
-            std::cerr << "Response Message Error: "
-                      << "rc=" << rc << ",cc=" << (int)completionCode
-                      << std::endl;
+            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
+                       rc, "KEY1", (int)completionCode);
+
             return;
         }
 
@@ -1297,9 +1302,9 @@ class GetStateSensorReadings : public CommandInterface
 
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
-            std::cerr << "Response Message Error: "
-                      << "rc=" << rc << ",cc=" << (int)completionCode
-                      << std::endl;
+            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
+                       rc, "KEY1", (int)completionCode);
+
             return;
         }
         ordered_json output;

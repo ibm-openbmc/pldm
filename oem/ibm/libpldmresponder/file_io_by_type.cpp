@@ -1,4 +1,4 @@
-#include "file_io_by_type.hpp"
+
 
 #include "libpldm/base.h"
 
@@ -18,6 +18,9 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
+#include <phosphor-logging/lg2.hpp>
+#include <xyz/openbmc_project/Logging/Entry/server.hpp>
+
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -25,6 +28,9 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+
+PHOSPHOR_LOG2_USING;
+
 namespace pldm
 {
 namespace responder
@@ -80,13 +86,14 @@ void FileHandler::deleteAIOobjects(
     }
 }
 
-int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
-                                  uint32_t& length, uint64_t address,
-                                  ResponseHdr& responseHdr,
-                                  sdeventplus::Event& event)
+void FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
+                                   uint32_t& length, uint64_t address,
+                                   ResponseHdr& responseHdr,
+                                   sdeventplus::Event& event)
 {
     std::shared_ptr<dma::DMA> xdmaInterface =
         std::make_shared<dma::DMA>(length);
+    std::cout << "KK transferFileData starting trace1\n";
     if (nullptr == xdmaInterface)
     {
         std::cout
@@ -94,10 +101,11 @@ int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
         dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
         deleteAIOobjects(nullptr, responseHdr);
         close(fd);
-        return {};
+        return;
     }
     xdmaInterface->setDMASourceFd(fd);
     uint32_t origLength = length;
+    uint8_t command = responseHdr.command;
     static auto& bus = pldm::utils::DBusHandler::getBus();
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
     static dma::IOPart part;
@@ -116,14 +124,16 @@ int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
         return;
     };
 
-    auto callback = [=, &responseHdr, this](IO&, int, uint32_t revents) {
+    auto callback = [=, this](IO&, int, uint32_t revents) {
         if (!(revents & (EPOLLIN | EPOLLOUT)))
         {
             return;
         }
         auto wInterface = wxInterface.lock();
         int rc = 0;
-
+        std::cout
+            << "KK transferFileData event loop starting trace wxInterface.use_count:"
+            << wInterface.use_count() << "\n ";
         while (part.length > dma::maxSize)
         {
             rc = wInterface->transferDataHost(fd, part.offset, dma::maxSize,
@@ -150,6 +160,8 @@ int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
             deleteAIOobjects(wInterface, responseHdr);
             return;
         }
+        std::cout << "KK DMA transferred data :" << rc
+                  << " part.length:" << part.length << "\n";
         if (static_cast<int>(part.length) == rc)
         {
             wInterface->setResponseReceived(true);
@@ -157,7 +169,7 @@ int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
             if (responseHdr.functionPtr != nullptr)
             {
                 responseHdr.functionPtr->postDataTransferCallBack(
-                    responseHdr.command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
+                    command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
             }
             deleteAIOobjects(wInterface, responseHdr);
             return;
@@ -165,18 +177,28 @@ int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
     };
     try
     {
-        int xdmaFd = xdmaInterface->getDMAFd(true, true);
+        int xdmaFd = xdmaInterface->getNewXdmaFd();
+        std::cout << "KK transferFileData xdmaFd:" << xdmaFd << "\n";
+        if (xdmaFd < 0)
+        {
+            std::cerr
+                << "transferFileData : Failed to open shared memory location.\n";
+            dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+            deleteAIOobjects(xdmaInterface, responseHdr);
+            return;
+        }
         if (xdmaInterface->initTimer(event, std::move(timerCb)) == false)
         {
             std::cerr
                 << "transferFileData : Failed to start the event timer.\n";
             dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
             deleteAIOobjects(xdmaInterface, responseHdr);
-            return {};
+            return;
         }
-
+        std::cout << "KK transferFileData timer init success\n";
         xdmaInterface->insertIOInstance(std::move(std::make_unique<IO>(
             event, xdmaFd, EPOLLIN | EPOLLOUT, std::move(callback))));
+        std::cout << "KK transferFileData insertIOInstance creation success\n";
     }
     catch (const std::runtime_error& e)
     {
@@ -185,16 +207,16 @@ int FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
         dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
         deleteAIOobjects(xdmaInterface, responseHdr);
     }
-    return {};
 }
 
-int FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
-                                          uint64_t address,
-                                          ResponseHdr& responseHdr,
-                                          sdeventplus::Event& event)
+void FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
+                                           uint64_t address,
+                                           ResponseHdr& responseHdr,
+                                           sdeventplus::Event& event)
 {
     std::shared_ptr<dma::DMA> xdmaInterface =
         std::make_shared<dma::DMA>(length);
+    uint8_t command = responseHdr.command;
     if (nullptr == xdmaInterface)
     {
         std::cout
@@ -203,10 +225,10 @@ int FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
         if (responseHdr.functionPtr != nullptr)
         {
             responseHdr.functionPtr->postDataTransferCallBack(
-                responseHdr.command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
+                command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
         }
         deleteAIOobjects(nullptr, responseHdr);
-        return -1;
+        return;
     }
     uint32_t origLength = length;
     static auto& bus = pldm::utils::DBusHandler::getBus();
@@ -225,7 +247,7 @@ int FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
             if (responseHdr.functionPtr != nullptr)
             {
                 responseHdr.functionPtr->postDataTransferCallBack(
-                    responseHdr.command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
+                    command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
             }
             deleteAIOobjects(xdmaInterface, responseHdr);
         }
@@ -253,7 +275,7 @@ int FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
                 if (responseHdr.functionPtr != nullptr)
                 {
                     responseHdr.functionPtr->postDataTransferCallBack(
-                        responseHdr.command ==
+                        command ==
                         PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
                 }
                 deleteAIOobjects(wInterface, responseHdr);
@@ -270,7 +292,7 @@ int FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
             if (responseHdr.functionPtr != nullptr)
             {
                 responseHdr.functionPtr->postDataTransferCallBack(
-                    responseHdr.command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
+                    command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
             }
             deleteAIOobjects(wInterface, responseHdr);
             return;
@@ -285,14 +307,32 @@ int FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
     };
     try
     {
-        int xdmaFd = xdmaInterface->getDMAFd(true, true);
+        int xdmaFd = xdmaInterface->getNewXdmaFd();
+        if (xdmaFd < 0)
+        {
+            std::cerr
+                << "transferFileDataToSocket : Failed to open shared memory location.\n";
+            dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+            if (responseHdr.functionPtr != nullptr)
+            {
+                responseHdr.functionPtr->postDataTransferCallBack(
+                    command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
+            }
+            deleteAIOobjects(xdmaInterface, responseHdr);
+            return;
+        }
         if (xdmaInterface->initTimer(event, std::move(timerCb)) == false)
         {
             std::cerr
-                << "transferFileData : Failed to start the event timer.\n";
+                << "transferFileDataToSocket : Failed to start the event timer.\n";
             dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+            if (responseHdr.functionPtr != nullptr)
+            {
+                responseHdr.functionPtr->postDataTransferCallBack(
+                    command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
+            }
             deleteAIOobjects(xdmaInterface, responseHdr);
-            return {};
+            return;
         }
         xdmaInterface->insertIOInstance(std::move(std::make_unique<IO>(
             event, xdmaFd, EPOLLIN | EPOLLOUT, std::move(callback))));
@@ -305,17 +345,17 @@ int FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
         if (responseHdr.functionPtr != nullptr)
         {
             responseHdr.functionPtr->postDataTransferCallBack(
-                responseHdr.command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
+                    command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY);
         }
         deleteAIOobjects(xdmaInterface, responseHdr);
     }
-    return {};
+    return;
 }
 
-int FileHandler::transferFileData(const fs::path& path, bool upstream,
-                                  uint32_t offset, uint32_t& length,
-                                  uint64_t address, ResponseHdr& responseHdr,
-                                  sdeventplus::Event& event)
+void FileHandler::transferFileData(const fs::path& path, bool upstream,
+                                   uint32_t offset, uint32_t& length,
+                                   uint64_t address, ResponseHdr& responseHdr,
+                                   sdeventplus::Event& event)
 {
     bool fileExists = false;
     if (upstream)
@@ -323,20 +363,22 @@ int FileHandler::transferFileData(const fs::path& path, bool upstream,
         fileExists = fs::exists(path);
         if (!fileExists)
         {
-            std::cerr << "File does not exist. PATH=" << path.c_str() << "\n";
+            error("File does not exist. PATH={PATH}", "PATH", path.c_str());
             dmaResponseToHost(responseHdr, PLDM_INVALID_FILE_HANDLE, length);
             deleteAIOobjects(nullptr, responseHdr);
-            return PLDM_INVALID_FILE_HANDLE;
+            return;
         }
 
         size_t fileSize = fs::file_size(path);
         if (offset >= fileSize)
         {
-            std::cerr << "Offset exceeds file size, OFFSET=" << offset
-                      << " FILE_SIZE=" << fileSize << "\n";
+            error(
+                "FileHandler::transferFileData: Offset exceeds file size, OFFSET={OFFSET} FILE_SIZE={FILE_SIZE} FILE_HANDLE={FILE_HANDLE}",
+                "OFFSET", offset, "FILE_SIZE", fileSize, "FILE_HANDLE",
+                fileHandle);
             dmaResponseToHost(responseHdr, PLDM_DATA_OUT_OF_RANGE, length);
             deleteAIOobjects(nullptr, responseHdr);
-            return PLDM_DATA_OUT_OF_RANGE;
+            return;
         }
         if (offset + length > fileSize)
         {
@@ -360,14 +402,14 @@ int FileHandler::transferFileData(const fs::path& path, bool upstream,
     int file = open(path.string().c_str(), flags | O_NONBLOCK);
     if (file == -1)
     {
-        std::cerr << "File does not exist, PATH = " << path.string() << "\n";
+        error("File does not exist, PATH = {PATH}", "PATH", path.string());
         dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
         deleteAIOobjects(nullptr, responseHdr);
-        return PLDM_ERROR;
+        return;
     }
     pldm::utils::CustomFD fd(file, false);
-    return transferFileData(fd(), upstream, offset, length, address,
-                            responseHdr, event);
+    transferFileData(fd(), upstream, offset, length, address, responseHdr,
+                     event);
 }
 
 std::unique_ptr<FileHandler> getHandlerByType(uint16_t fileType,
@@ -515,17 +557,17 @@ int FileHandler::readFile(const std::string& filePath, uint32_t offset,
 {
     if (!fs::exists(filePath))
     {
-        std::cerr << "File does not exist, HANDLE=" << fileHandle
-                  << " PATH=" << filePath.c_str() << "\n";
+        error("File does not exist, HANDLE={FILE_HNDLE} PATH={PATH}",
+              "FILE_HNDLE", fileHandle, "PATH", filePath.c_str());
         return PLDM_INVALID_FILE_HANDLE;
     }
 
     size_t fileSize = fs::file_size(filePath);
     if (offset >= fileSize)
     {
-        std::cerr << "FileHandler::readFile:Offset exceeds file size, OFFSET="
-                  << offset << " FILE_SIZE=" << fileSize << " FILE_HANDLE"
-                  << fileHandle << "\n";
+        error(
+            "FileHandler::readFileData: Offset exceeds file size, OFFSET={OFFSET} FILE_SIZE={FILE_SIZE} FILE_HANDLE={FILE_HANDLE}",
+            "OFFSET", offset, "FILE_SIZE", fileSize, "FILE_HANDLE", fileHandle);
         return PLDM_DATA_OUT_OF_RANGE;
     }
 
@@ -545,7 +587,8 @@ int FileHandler::readFile(const std::string& filePath, uint32_t offset,
         stream.read(filePos, length);
         return PLDM_SUCCESS;
     }
-    std::cerr << "Unable to read file, FILE=" << filePath.c_str() << "\n";
+    error("Unable to read file, FILE={FILE_PATH}", "FILE_PATH",
+          filePath.c_str());
     return PLDM_ERROR;
 }
 

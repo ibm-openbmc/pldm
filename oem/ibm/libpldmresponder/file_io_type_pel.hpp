@@ -19,17 +19,17 @@ class PelHandler : public FileHandler
      */
     PelHandler(uint32_t fileHandle) : FileHandler(fileHandle) {}
 
-    virtual int writeFromMemory(uint32_t offset, uint32_t length,
+    virtual void writeFromMemory(uint32_t offset, uint32_t length,
+                                 uint64_t address,
+                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                 ResponseHdr& responseHdr,
+                                 sdeventplus::Event& event);
+
+    virtual void readIntoMemory(uint32_t offset, uint32_t& length,
                                 uint64_t address,
                                 oem_platform::Handler* /*oemPlatformHandler*/,
                                 ResponseHdr& responseHdr,
                                 sdeventplus::Event& event);
-
-    virtual int readIntoMemory(uint32_t offset, uint32_t& length,
-                               uint64_t address,
-                               oem_platform::Handler* /*oemPlatformHandler*/,
-                               ResponseHdr& responseHdr,
-                               sdeventplus::Event& event);
 
     virtual int read(uint32_t offset, uint32_t& length, Response& response,
                      oem_platform::Handler* /*oemPlatformHandler*/);
@@ -46,7 +46,7 @@ class PelHandler : public FileHandler
      *  @param[in] pelFileName - the pel file path
      */
     virtual int storePel(std::string&& pelFileName);
-    virtual int postDataTransferCallBack(bool IsWriteToMemOp);
+    virtual void postDataTransferCallBack(bool IsWriteToMemOp);
 
     virtual int newFileAvailable(uint64_t /*length*/)
     {

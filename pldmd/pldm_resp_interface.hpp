@@ -1,63 +1,80 @@
 #pragma once
 
+#include "common/flight_recorder.hpp"
 #include "common/utils.hpp"
 
 #include <sys/socket.h>
-#include <sys/types.h>
-#include <sys/un.h>
+
+#include <phosphor-logging/lg2.hpp>
 
 #include <iostream>
 #include <map>
 #include <memory>
 #include <vector>
+using namespace pldm;
 using namespace pldm::utils;
+using namespace pldm::flightrecorder;
+
+PHOSPHOR_LOG2_USING;
 
 namespace pldm
 {
 namespace response_api
 {
-using Response = std::vector<uint8_t>;
+
+/** @class Transport
+ *
+ *  @brief This class performs the necessary operation in pldm for
+ *         responding remote pldm. This class is mostly designed in special case
+ *         when pldm need to send reply to host after FILE IO operation 
+ *         completed. 
+ */
 class Transport
 {
   public:
+  
     /** @brief Transport constructor
      */
+
+    Transport() = delete;
+    Transport(const Transport&) = delete;
     Transport(int socketFd, bool verbose = false) :
         sockFd(socketFd), verbose(verbose)
     {}
 
-    /** @brief method to send response to host using transport interface
+    /** @brief method to send response to remote pldm using transport interface
      * @param response - response of each request
-     * @param indx - index to delete header from maintained map
+     * @param index - index to delete header from maintained map
      * @returns returns 0 if success else -1
      */
-    int sendPLDMRespMsg(Response& response, uint32_t indx)
+    int sendPLDMRespMsg(Response& response, int index)
     {
         struct iovec iov[2]{};
         struct msghdr msg
         {};
-
+        std::cout<<"KK sending reply to host index:"<<index<<"\n";
+        FlightRecorder::GetInstance().saveRecord(response, true);
+        
         if (verbose)
         {
             printBuffer(Tx, response);
         }
 
-        iov[0].iov_base = &requestMap[indx][0];
-        iov[0].iov_len = sizeof(requestMap[indx][0]) +
-                         sizeof(requestMap[indx][1]);
+        iov[0].iov_base = &requestMap[index][0];
+        iov[0].iov_len = sizeof(requestMap[index][0]) +
+                         sizeof(requestMap[index][1]);
         iov[1].iov_base = response.data();
         iov[1].iov_len = response.size();
         msg.msg_iov = iov;
         msg.msg_iovlen = sizeof(iov) / sizeof(iov[0]);
 
         int rc = sendmsg(sockFd, &msg, 0);
+        removeHeader(index);
         if (rc < 0)
         {
             rc = errno;
-            std::cerr << "sendto system call failed, errno= " << errno << "\n";
+            error("sendto system call failed, errno= {ERRNO}", "ERRNO", rc);
         }
-
-        removeHeader(indx);
         return rc;
     }
 
@@ -75,29 +92,30 @@ class Transport
      */
     int getRequestHeaderIndex()
     {
-        int indx = getUniqueKey();
-        requestMap[indx] = mRequestMsg;
-        return indx;
+        int index = getUniqueKey();
+        std::cout << "KK generating unique key index:" << index << "\n";
+        requestMap[index] = mRequestMsg;
+        return index;
     }
 
   private:
     /** @brief method to remove request header after sending response to host
      */
-    void removeHeader(uint32_t indx)
+    void removeHeader(int index)
     {
-        requestMap.erase(indx);
+        requestMap.erase(index);
     }
     /** @brief method to generate unique key to store request header into map
      * @returns available nearest key value as integer
      */
-    uint32_t getUniqueKey()
+    int getUniqueKey()
     {
-        uint32_t key = 0;
-        for (size_t indx = 0; indx <= requestMap.size(); indx++)
+        int key = 0;
+        for (size_t index = 0; index <= requestMap.size(); index++)
         {
-            if (requestMap.find(indx) == requestMap.end())
+            if (requestMap.find(index) == requestMap.end())
             {
-                key = indx;
+                key = index;
                 break;
             }
         }
@@ -113,7 +131,7 @@ class Transport
 
 struct Interfaces
 {
-    std::unique_ptr<Transport> transport{};
+    std::unique_ptr<Transport> transport = nullptr;
 };
 
 } // namespace response_api

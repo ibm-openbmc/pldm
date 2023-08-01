@@ -8,8 +8,12 @@
 #include <libpldm/platform.h>
 #include <libpldm/states.h>
 
+#include <phosphor-logging/lg2.hpp>
+
 #include <cstdint>
 #include <map>
+
+PHOSPHOR_LOG2_USING;
 
 namespace pldm
 {
@@ -51,7 +55,7 @@ int setStateEffecterStatesHandler(
                   PLDM_STATE_EFFECTER_PDR);
     if (stateEffecterPDRs.empty())
     {
-        std::cerr << "Failed to get record by PDR type\n";
+        error("Failed to get record by PDR type");
         return PLDM_PLATFORM_INVALID_EFFECTER_ID;
     }
 
@@ -71,9 +75,9 @@ int setStateEffecterStatesHandler(
             pdr->possible_states);
         if (compEffecterCnt > pdr->composite_effecter_count)
         {
-            std::cerr << "The requester sent wrong composite effecter"
-                      << " count for the effecter, EFFECTER_ID=" << effecterId
-                      << "COMP_EFF_CNT=" << compEffecterCnt << "\n";
+            error(
+                "The requester sent wrong composite effecter count for the effecter, EFFECTER_ID={EFFECTER_ID} COMP_EFF_CNT={COMP_EFF_CNT}",
+                "EFFECTER_ID", effecterId, "COMP_EFF_CNT", compEffecterCnt);
             return PLDM_ERROR_INVALID_DATA;
         }
         break;
@@ -99,12 +103,11 @@ int setStateEffecterStatesHandler(
             if (states->possible_states_size < bitfieldIndex ||
                 !(states->states[bitfieldIndex].byte & (1 << bit)))
             {
-                std::cerr << "Invalid state set value, EFFECTER_ID="
-                          << effecterId
-                          << " VALUE=" << stateField[currState].effecter_state
-                          << " COMPOSITE_EFFECTER_ID=" << currState
-                          << " DBUS_PATH=" << dbusMappings[currState].objectPath
-                          << "\n";
+                error(
+                    "Invalid state set value, EFFECTER_ID={EFFECTER_ID} VALUE={VALUE} COMPOSITE_EFFECTER_ID={COMP_EFFECTER_ID} DBUS_PATH={DBUS_PATH}",
+                    "EFFECTER_ID", effecterId, "VALUE",
+                    stateField[currState].effecter_state, "COMP_EFFECTER_ID",
+                    currState, "DBUS_PATH", dbusMappings[currState].objectPath);
                 rc = PLDM_PLATFORM_SET_EFFECTER_UNSUPPORTED_SENSORSTATE;
                 break;
             }
@@ -122,11 +125,12 @@ int setStateEffecterStatesHandler(
                 }
                 catch (const std::exception& e)
                 {
-                    std::cerr
-                        << "Error setting property, ERROR=" << e.what()
-                        << " PROPERTY=" << dbusMapping.propertyName
-                        << " INTERFACE=" << dbusMapping.interface << " PATH="
-                        << dbusMapping.objectPath << "\n";
+                    error(
+                        "Error setting property, ERROR={ERR_EXCEP} PROPERTY={DBUS_PROP} INTERFACE={INTF} PATH={DBUS_OBJ_PATH}",
+                        "ERR_EXCEP", e.what(), "DBUS_PROP",
+                        dbusMapping.propertyName, "DBUS_INTF",
+                        dbusMapping.interface, "DBUS_OBJ_PATH",
+                        dbusMapping.objectPath);
                     return PLDM_ERROR;
                 }
             }
@@ -141,7 +145,8 @@ int setStateEffecterStatesHandler(
     }
     catch (const std::out_of_range& e)
     {
-        std::cerr << "Unknown effecter ID : " << effecterId << e.what() << '\n';
+        error("Unknown effecter ID : {EFFECTER_ID}, {ERR_EXCEP}", "EFFECTER_ID",
+              effecterId, "ERR_EXCEP", e.what());
         return PLDM_ERROR;
     }
 

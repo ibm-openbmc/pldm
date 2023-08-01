@@ -4,15 +4,16 @@
 
 #include "libpldmresponder/pdr_utils.hpp"
 
+#include <phosphor-logging/lg2.hpp>
+
+PHOSPHOR_LOG2_USING;
+
 namespace pldm
 {
-
 namespace responder
 {
-
 namespace pdr_numeric_effecter
 {
-
 using Json = nlohmann::json;
 
 static const Json empty{};
@@ -41,7 +42,7 @@ void generateNumericEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
             reinterpret_cast<pldm_numeric_effecter_value_pdr*>(entry.data());
         if (!pdr)
         {
-            std::cerr << "Failed to get numeric effecter PDR.\n";
+            error("Failed to get numeric effecter PDR.");
             continue;
         }
         pdr->hdr.record_handle = 0;
@@ -218,9 +219,10 @@ void generateNumericEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
         }
         catch (const std::exception& e)
         {
-            std::cerr << "D-Bus object path " << objectPath
-                      << " does not exist, numeric effecter ID: "
-                      << pdr->effecter_id << " error : " << e.what() << "\n";
+            error(
+                "D-Bus object path {OBJ_PATH} does not exist, numeric effecter ID: {EFFECTER_ID} error : {ERR_EXCEP}",
+                "OBJ_PATH", objectPath.c_str(), "EFFECTER_ID",
+                static_cast<unsigned>(pdr->effecter_id), "ERR_EXCEP", e.what());
         }
         dbusMappings.emplace_back(std::move(dbusMapping));
 

@@ -23,22 +23,22 @@ class LicenseHandler : public FileHandler
         FileHandler(fileHandle), licType(fileType)
     {}
 
-    virtual int writeFromMemory(uint32_t offset, uint32_t length,
-                                uint64_t address,
+    virtual void writeFromMemory(uint32_t offset, uint32_t length,
+                                 uint64_t address,
+                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                 ResponseHdr& responseHdr,
+                                 sdeventplus::Event& event);
+
+    virtual void readIntoMemory(uint32_t /*offset*/, uint32_t& length,
+                                uint64_t /*address*/,
                                 oem_platform::Handler* /*oemPlatformHandler*/,
                                 ResponseHdr& responseHdr,
-                                sdeventplus::Event& event);
-
-    virtual int readIntoMemory(uint32_t /*offset*/, uint32_t& length,
-                               uint64_t /*address*/,
-                               oem_platform::Handler* /*oemPlatformHandler*/,
-                               ResponseHdr& responseHdr,
-                               sdeventplus::Event& /*event*/)
+                                sdeventplus::Event& /*event*/)
     {
         FileHandler::dmaResponseToHost(responseHdr,
                                        PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
         FileHandler::deleteAIOobjects(nullptr, responseHdr);
-        return -1;
+        return ;
     }
 
     virtual int read(uint32_t offset, uint32_t& length, Response& response,
@@ -53,7 +53,7 @@ class LicenseHandler : public FileHandler
     }
 
     virtual int newFileAvailable(uint64_t length);
-    virtual int postDataTransferCallBack(bool IsWriteToMemOp);
+    virtual void postDataTransferCallBack(bool IsWriteToMemOp);
 
     virtual int fileAckWithMetaData(uint8_t /*fileStatus*/,
                                     uint32_t metaDataValue1,

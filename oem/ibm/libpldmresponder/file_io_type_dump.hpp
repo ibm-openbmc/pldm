@@ -21,17 +21,17 @@ class DumpHandler : public FileHandler
         FileHandler(fileHandle), dumpType(fileType)
     {}
 
-    virtual int writeFromMemory(uint32_t offset, uint32_t length,
+    virtual void writeFromMemory(uint32_t offset, uint32_t length,
+                                 uint64_t address,
+                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                 ResponseHdr& responseHdr,
+                                 sdeventplus::Event& event);
+
+    virtual void readIntoMemory(uint32_t offset, uint32_t& length,
                                 uint64_t address,
-                                oem_platform::Handler* /*oemPlatformHandler*/,
+                                oem_platform::Handler* oemPlatformHandler,
                                 ResponseHdr& responseHdr,
                                 sdeventplus::Event& event);
-
-    virtual int readIntoMemory(uint32_t offset, uint32_t& length,
-                               uint64_t address,
-                               oem_platform::Handler* oemPlatformHandler,
-                               ResponseHdr& responseHdr,
-                               sdeventplus::Event& event);
 
     virtual int read(uint32_t offset, uint32_t& length, Response& response,
                      oem_platform::Handler* /*oemPlatformHandler*/);
@@ -57,7 +57,7 @@ class DumpHandler : public FileHandler
 
     std::string findDumpObjPath(uint32_t fileHandle);
     std::string getOffloadUri(uint32_t fileHandle);
-    virtual int postDataTransferCallBack(bool IsWriteToMemOp);
+    virtual void postDataTransferCallBack(bool IsWriteToMemOp);
     void resetOffloadUri();
     /** @brief DumpHandler destructor
      */

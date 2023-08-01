@@ -30,16 +30,16 @@ class CertHandler : public FileHandler
         FileHandler(fileHandle), certType(fileType)
     {}
 
-    virtual int writeFromMemory(uint32_t offset, uint32_t length,
+    virtual void writeFromMemory(uint32_t offset, uint32_t length,
+                                 uint64_t address,
+                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                 ResponseHdr& responseHdr,
+                                 sdeventplus::Event& event);
+    virtual void readIntoMemory(uint32_t offset, uint32_t& length,
                                 uint64_t address,
                                 oem_platform::Handler* /*oemPlatformHandler*/,
                                 ResponseHdr& responseHdr,
                                 sdeventplus::Event& event);
-    virtual int readIntoMemory(uint32_t offset, uint32_t& length,
-                               uint64_t address,
-                               oem_platform::Handler* /*oemPlatformHandler*/,
-                               ResponseHdr& responseHdr,
-                               sdeventplus::Event& event);
     virtual int read(uint32_t offset, uint32_t& length, Response& response,
                      oem_platform::Handler* /*oemPlatformHandler*/);
 
@@ -64,7 +64,7 @@ class CertHandler : public FileHandler
                                              uint32_t /*metaDataValue2*/,
                                              uint32_t /*metaDataValue3*/,
                                              uint32_t /*metaDataValue4*/);
-    virtual int postDataTransferCallBack(bool IsWriteToMemOp);
+    virtual void postDataTransferCallBack(bool IsWriteToMemOp);
 
     /** @brief CertHandler destructor
      */

@@ -1,11 +1,13 @@
 #pragma once
-#include "file_io_by_type.hpp"
+#include "file_io.hpp"
 
+#include <phosphor-logging/lg2.hpp>
 #include <xyz/openbmc_project/Software/Version/error.hpp>
 
 #include <filesystem>
 #include <sstream>
 #include <string>
+PHOSPHOR_LOG2_USING;
 
 namespace pldm
 {
@@ -117,10 +119,8 @@ class LidHandler : public FileHandler
         return true;
     }
 
-    int validateMarkerLid(oem_platform::Handler* oemPlatformHandler,
-                          const std::string& lidPath)
+    void validateMarkerLid(oem_platform::Handler* oemPlatformHandler)
     {
-        int rc = PLDM_SUCCESS;
         if (oemPlatformHandler != nullptr)
         {
             pldm::responder::oem_ibm_platform::Handler* oemIbmPlatformHandler =
@@ -131,14 +131,10 @@ class LidHandler : public FileHandler
             using namespace pldm::responder::oem_ibm_platform;
             auto markerLidDirPath = fs::path(LID_STAGING_DIR) / "lid" /
                                     markerLidName;
+            uint8_t validateStatus = VALID;
             try
             {
                 auto& bus = pldm::utils::DBusHandler::getBus();
-                rc = processCodeUpdateLid(lidPath);
-                if (rc != PLDM_SUCCESS)
-                {
-                    return rc;
-                }
                 auto method = bus.new_method_call(
                     "xyz.openbmc_project.Software.BMC.Updater",
                     "/xyz/openbmc_project/software",
@@ -150,7 +146,6 @@ class LidHandler : public FileHandler
             }
             catch (const sdbusplus::exception::exception& e)
             {
-                uint8_t validateStatus = 0;
                 if (strcmp(e.name(), accessKeyExpired) != 0)
                 {
                     validateStatus = ENTITLEMENT_FAIL;
@@ -161,27 +156,20 @@ class LidHandler : public FileHandler
                 }
                 std::cerr << "Marker lid validate error, "
                           << "ERROR=" << e.what() << std::endl;
-                oemIbmPlatformHandler->sendStateSensorEvent(
-                    sensorId, PLDM_STATE_SENSOR_STATE, 0, validateStatus,
-                    VALID);
-                return PLDM_ERROR;
             }
             oemIbmPlatformHandler->sendStateSensorEvent(
-                sensorId, PLDM_STATE_SENSOR_STATE, 0, VALID, VALID);
-            rc = PLDM_SUCCESS;
+                sensorId, PLDM_STATE_SENSOR_STATE, 0, validateStatus, VALID);
         }
-        return rc;
     }
 
-    virtual int writeFromMemory(uint32_t offset, uint32_t length,
-                                uint64_t address,
-                                oem_platform::Handler* oemPlatformHandler,
-                                ResponseHdr& responseHdr,
-                                sdeventplus::Event& event)
+    virtual void writeFromMemory(uint32_t offset, uint32_t length,
+                                 uint64_t address,
+                                 oem_platform::Handler* oemPlatformHandler,
+                                 ResponseHdr& responseHdr,
+                                 sdeventplus::Event& event)
     {
         moemPlatformHandler = oemPlatformHandler;
-        // int rc = PLDM_SUCCESS;
-        //  bool codeUpdateInProgress = false;
+
         if (oemPlatformHandler != nullptr)
         {
             pldm::responder::oem_ibm_platform::Handler* oemIbmPlatformHandler =
@@ -211,22 +199,20 @@ class LidHandler : public FileHandler
         auto fd = open(lidPath.c_str(), flags, S_IRUSR);
         if (fd == -1)
         {
-            std::cerr << "Could not open file for writing  " << lidPath.c_str()
-                      << "\n";
+            error("Could not open file for writing {LID_PATH}", "LID_PATH",
+                  lidPath.c_str());
             FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
             FileHandler::deleteAIOobjects(nullptr, responseHdr);
-            return PLDM_ERROR;
+            return ;
         }
         close(fd);
 
         transferFileData(lidPath, false, offset, length, address, responseHdr,
                          event);
         m_length = length;
-
-        return -1;
     }
 
-    virtual int postDataTransferCallBack(bool IsWriteToMemOp)
+    virtual void postDataTransferCallBack(bool IsWriteToMemOp)
     {
         int rc = -1;
         if (IsWriteToMemOp)
@@ -236,32 +222,27 @@ class LidHandler : public FileHandler
                 markerLIDremainingSize -= m_length;
                 if (markerLIDremainingSize == 0)
                 {
-                    pldm::responder::oem_ibm_platform::Handler*
-                        oemIbmPlatformHandler = dynamic_cast<
-                            pldm::responder::oem_ibm_platform::Handler*>(
-                            moemPlatformHandler);
-                    auto sensorId =
-                        oemIbmPlatformHandler->codeUpdate->getMarkerLidSensor();
-                    using namespace pldm::responder::oem_ibm_platform;
-                    oemIbmPlatformHandler->sendStateSensorEvent(
-                        sensorId, PLDM_STATE_SENSOR_STATE, 0, VALID, VALID);
-                    // rc = validate api;
-                    rc = PLDM_SUCCESS;
+                    rc = processCodeUpdateLid(lidPath);
+                    if (rc == PLDM_SUCCESS)
+                    {
+                        validateMarkerLid(moemPlatformHandler);
+                    }
                 }
             }
             else if (mcodeUpdateInProgress)
             {
                 rc = processCodeUpdateLid(lidPath);
             }
+            if (rc < 0)
+            {
+                error("Post DataTransfer CallBack Failed while lid transfer {LID_PATH}", "LID_PATH",
+                      lidPath.c_str());
+            }
+            
         }
-        else
-        {
-            return -1;
-        }
-        return rc;
     }
 
-    virtual int readIntoMemory(uint32_t offset, uint32_t& length,
+    virtual void readIntoMemory(uint32_t offset, uint32_t& length,
                                uint64_t address,
                                oem_platform::Handler* oemPlatformHandler,
                                ResponseHdr& responseHdr,
@@ -277,7 +258,6 @@ class LidHandler : public FileHandler
             FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
             FileHandler::deleteAIOobjects(nullptr, responseHdr);
         }
-        return -1;
     }
 
     virtual int write(const char* buffer, uint32_t offset, uint32_t& length,
@@ -309,10 +289,10 @@ class LidHandler : public FileHandler
             size_t fileSize = fs::file_size(lidPath);
             if (offset > fileSize)
             {
-                std::cerr
-                    << "LidHandler::write:Offset exceeds file size, OFFSET="
-                    << offset << " FILE_SIZE=" << fileSize
-                    << " FILE_HANDLE=" << fileHandle << "\n";
+                error(
+                    "LidHandler::write: Offset exceeds file size, OFFSET={OFFSET} FILE_SIZE={FILE_SIZE} FILE_HANDLE={FILE_HANDLE}",
+                    "OFFSET", offset, "FILE_SIZE", fileSize, "FILE_HANDLE",
+                    fileHandle);
                 return PLDM_DATA_OUT_OF_RANGE;
             }
         }
@@ -321,28 +301,30 @@ class LidHandler : public FileHandler
             flags = O_WRONLY | O_CREAT | O_TRUNC | O_SYNC;
             if (offset > 0)
             {
-                std::cerr << "Offset is non zero in a new file \n";
+                error("Offset is non zero in a new file");
                 return PLDM_DATA_OUT_OF_RANGE;
             }
         }
         auto fd = open(lidPath.c_str(), flags, S_IRUSR);
         if (fd == -1)
         {
-            std::cerr << "could not open file " << lidPath.c_str() << "\n";
+            error("could not open file {LID_PATH}", "LID_PATH",
+                  lidPath.c_str());
             return PLDM_ERROR;
         }
         rc = lseek(fd, offset, SEEK_SET);
         if (rc == -1)
         {
-            std::cerr << "lseek failed, ERROR=" << errno
-                      << ", OFFSET=" << offset << "\n";
+            error("lseek failed, ERROR={ERR}, OFFSET={OFFSET}", "ERR", errno,
+                  "OFFSET", offset);
             return PLDM_ERROR;
         }
         rc = ::write(fd, buffer, length);
         if (rc == -1)
         {
-            std::cerr << "file write failed, ERROR=" << errno
-                      << ", LENGTH=" << length << ", OFFSET=" << offset << "\n";
+            error(
+                "file write failed, ERROR={ERR}, LENGTH={LEN}, OFFSET={OFFSET}",
+                "ERR", errno, "LEN", length, "OFFSET", offset);
             return PLDM_ERROR;
         }
         else if (rc == static_cast<int>(length))
@@ -360,7 +342,11 @@ class LidHandler : public FileHandler
             markerLIDremainingSize -= length;
             if (markerLIDremainingSize == 0)
             {
-                rc = validateMarkerLid(oemPlatformHandler, lidPath);
+                rc = processCodeUpdateLid(lidPath);
+                if (rc == PLDM_SUCCESS)
+                {
+                    validateMarkerLid(oemPlatformHandler);
+                }
             }
         }
         else if (codeUpdateInProgress)

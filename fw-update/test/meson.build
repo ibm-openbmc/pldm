@@ -23,6 +23,7 @@ foreach t : tests
                          fw_update_test_src,
                          gmock,
                          gtest,
+			 phosphor_logging_dep,
                          libpldm_dep,
                          libpldmutils,
                          nlohmann_json,

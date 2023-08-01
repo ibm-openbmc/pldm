@@ -3,7 +3,9 @@
 #include "libpldm/file_io.h"
 
 #include "oem_ibm_handler.hpp"
-#include "pldmd/PldmRespInterface.hpp"
+#include "pldmd/pldm_resp_interface.hpp"
+
+#include <fcntl.h>
 
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server.hpp>
@@ -93,7 +95,7 @@ class FileHandler
      *                                  tasks
      *  @return PLDM status code
      */
-    virtual int writeFromMemory(uint32_t offset, uint32_t length,
+    virtual void writeFromMemory(uint32_t offset, uint32_t length,
                                 uint64_t address,
                                 oem_platform::Handler* oemPlatformHandler,
                                 ResponseHdr& responseHdr,
@@ -109,7 +111,7 @@ class FileHandler
      *                                  tasks
      *  @return PLDM status code
      */
-    virtual int readIntoMemory(uint32_t offset, uint32_t& length,
+    virtual void readIntoMemory(uint32_t offset, uint32_t& length,
                                uint64_t address,
                                oem_platform::Handler* oemPlatformHandler,
                                ResponseHdr& responseHdr,
@@ -204,27 +206,28 @@ class FileHandler
      *
      *  @return PLDM status code
      */
-    virtual int transferFileData(const fs::path& path, bool upstream,
+    virtual void transferFileData(const fs::path& path, bool upstream,
                                  uint32_t offset, uint32_t& length,
                                  uint64_t address, ResponseHdr& responseHdr,
                                  sdeventplus::Event& event);
 
-    virtual int transferFileData(int fd, bool upstream, uint32_t offset,
+    virtual void transferFileData(int fd, bool upstream, uint32_t offset,
                                  uint32_t& length, uint64_t address,
                                  ResponseHdr& responseHdr,
                                  sdeventplus::Event& event);
 
-    virtual int transferFileDataToSocket(int fd, uint32_t& length,
+    virtual void transferFileDataToSocket(int fd, uint32_t& length,
                                          uint64_t address,
                                          ResponseHdr& responseHdr,
                                          sdeventplus::Event& event);
-
-    /** @brief Method to call post operation after completion of DMA transfer
-     * type
-     *
-     *  @param[in] IsWriteToMemOp - type of command read/write
-     */
-    virtual int postDataTransferCallBack(bool IsWriteToMemOp) = 0;
+                                         
+    /** @brief method to do necessary operation according different  
+      *  file type and being call when data transfer completed.
+      *  
+      *  @param[in] IsWriteToMemOp - type of operation to decide what operation needs to be done
+      *  after data transfer.
+      */
+    virtual void postDataTransferCallBack(bool IsWriteToMemOp) = 0;
 
     /** @brief Constructor to create a FileHandler object
      */

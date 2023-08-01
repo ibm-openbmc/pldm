@@ -1,6 +1,6 @@
 #pragma once
 
-#include "file_io_by_type.hpp"
+#include "file_io.hpp"
 
 namespace pldm
 {
@@ -20,7 +20,18 @@ class keywordHandler : public FileHandler
     keywordHandler(uint32_t fileHandle, uint16_t fileType) :
         FileHandler(fileHandle), vpdFileType(fileType)
     {}
-    virtual int writeFromMemory(uint32_t /*offset*/, uint32_t length,
+    virtual void writeFromMemory(uint32_t /*offset*/, uint32_t length,
+                                 uint64_t /*address*/,
+                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                 ResponseHdr& responseHdr,
+                                 sdeventplus::Event& /*event*/)
+    {
+        FileHandler::dmaResponseToHost(responseHdr,
+                                       PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
+        FileHandler::deleteAIOobjects(nullptr, responseHdr);
+        return ;
+    }
+    virtual void readIntoMemory(uint32_t /*offset*/, uint32_t& length,
                                 uint64_t /*address*/,
                                 oem_platform::Handler* /*oemPlatformHandler*/,
                                 ResponseHdr& responseHdr,
@@ -29,18 +40,7 @@ class keywordHandler : public FileHandler
         FileHandler::dmaResponseToHost(responseHdr,
                                        PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
         FileHandler::deleteAIOobjects(nullptr, responseHdr);
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
-    }
-    virtual int readIntoMemory(uint32_t /*offset*/, uint32_t& length,
-                               uint64_t /*address*/,
-                               oem_platform::Handler* /*oemPlatformHandler*/,
-                               ResponseHdr& responseHdr,
-                               sdeventplus::Event& /*event*/)
-    {
-        FileHandler::dmaResponseToHost(responseHdr,
-                                       PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
-        FileHandler::deleteAIOobjects(nullptr, responseHdr);
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+        return ;
     }
     virtual int read(uint32_t offset, uint32_t& length, Response& response,
                      oem_platform::Handler* /*oemPlatformHandler*/);
@@ -74,10 +74,7 @@ class keywordHandler : public FileHandler
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
-    virtual int postDataTransferCallBack(bool /*IsWriteToMemOp*/)
-    {
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
-    }
+    virtual void postDataTransferCallBack(bool /*IsWriteToMemOp*/){}
 
     /** @brief keywordHandler destructor
      */
