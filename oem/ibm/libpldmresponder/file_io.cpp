@@ -1,5 +1,3 @@
-#include "config.h"
-
 #include "file_io.hpp"
 
 #include "libpldm/base.h"
@@ -312,8 +310,10 @@ Response Handler::readFileIntoMemory(const pldm_msg* request,
     auto fileSize = fs::file_size(value.fsPath);
     if (offset >= fileSize)
     {
-        std::cerr << "Offset exceeds file size, OFFSET=" << offset
-                  << " FILE_SIZE=" << fileSize << "\n";
+        std::cerr
+            << "fileIO:Handler::readFileIntoMemory:Offset exceeds file size, OFFSET="
+            << offset << " FILE_SIZE=" << fileSize << " FILE_HANDLE"
+            << fileHandle << "\n";
         encode_rw_file_memory_resp(request->hdr.instance_id,
                                    PLDM_READ_FILE_INTO_MEMORY,
                                    PLDM_DATA_OUT_OF_RANGE, 0, responsePtr);
@@ -418,8 +418,10 @@ Response Handler::writeFileFromMemory(const pldm_msg* request,
     auto fileSize = fs::file_size(value.fsPath);
     if (offset >= fileSize)
     {
-        std::cerr << "Offset exceeds file size, OFFSET=" << offset
-                  << " FILE_SIZE=" << fileSize << "\n";
+        std::cerr
+            << "FileIO:Handler::writeFileFromMemory:Offset exceeds file size, OFFSET="
+            << offset << " FILE_SIZE=" << fileSize
+            << " FILE_HANDLE=" << fileHandle << "\n";
         encode_rw_file_memory_resp(request->hdr.instance_id,
                                    PLDM_WRITE_FILE_FROM_MEMORY,
                                    PLDM_DATA_OUT_OF_RANGE, 0, responsePtr);

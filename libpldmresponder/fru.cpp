@@ -1,17 +1,16 @@
 #include "fru.hpp"
 
-#include "libpldm/entity.h"
-#include "libpldm/utils.h"
-
 #include "common/utils.hpp"
 #include "pdr.hpp"
-#ifdef OEM_IBM
-#include "libpldm/pdr_oem_ibm.h"
 
+#ifdef OEM_IBM
 #include "oem/ibm/libpldmresponder/utils.hpp"
+
+#include <libpldm/pdr_oem_ibm.h>
 #endif
 
-#include <config.h>
+#include <libpldm/entity.h>
+#include <libpldm/utils.h>
 #include <systemd/sd-journal.h>
 
 #include <sdbusplus/bus.hpp>
@@ -239,7 +238,9 @@ std::string FruImpl::populatefwVersion()
                                           pldm::utils::dbusProperties, "Get");
         method.append("xyz.openbmc_project.Association", "endpoints");
         std::variant<std::vector<std::string>> paths;
-        auto reply = bus.call(method);
+        auto reply = bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
         reply.read(paths);
         auto fwRunningVersion = std::get<std::vector<std::string>>(paths)[0];
         constexpr auto versionIntf = "xyz.openbmc_project.Software.Version";
@@ -844,7 +845,9 @@ void FruImpl::subscribeFruPresence(
         method.append(inventoryObjPath);
         method.append(0);
         method.append(std::vector<std::string>({fruInterface}));
-        auto reply = bus.call(method);
+        auto reply = bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
         reply.read(fruObjPaths);
 
         for (const auto& fruObjPath : fruObjPaths)

@@ -1,10 +1,5 @@
 #pragma once
 
-#include "config.h"
-
-#include "libpldm/fru.h"
-#include "libpldm/pdr.h"
-
 #include "common/utils.hpp"
 #include "fru_parser.hpp"
 #include "host-bmc/dbus_to_event_handler.hpp"
@@ -13,6 +8,9 @@
 #include "pldmd/dbus_impl_requester.hpp"
 #include "pldmd/handler.hpp"
 #include "requester/handler.hpp"
+
+#include <libpldm/fru.h>
+#include <libpldm/pdr.h>
 
 #include <sdbusplus/message.hpp>
 

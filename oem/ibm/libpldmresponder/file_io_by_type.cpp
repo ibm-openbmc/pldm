@@ -1,4 +1,4 @@
-#include "config.h"
+#include "file_io_by_type.hpp"
 
 #include "libpldm/base.h"
 
@@ -523,8 +523,9 @@ int FileHandler::readFile(const std::string& filePath, uint32_t offset,
     size_t fileSize = fs::file_size(filePath);
     if (offset >= fileSize)
     {
-        std::cerr << "Offset exceeds file size, OFFSET=" << offset
-                  << " FILE_SIZE=" << fileSize << "\n";
+        std::cerr << "FileHandler::readFile:Offset exceeds file size, OFFSET="
+                  << offset << " FILE_SIZE=" << fileSize << " FILE_HANDLE"
+                  << fileHandle << "\n";
         return PLDM_DATA_OUT_OF_RANGE;
     }
 

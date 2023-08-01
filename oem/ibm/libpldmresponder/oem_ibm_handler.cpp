@@ -698,7 +698,9 @@ std::filesystem::path pldm::responder::oem_ibm_platform::Handler::getConfigDir()
                 serviceMap[0].first.c_str(), objectPath.c_str(),
                 orgFreeDesktopInterface, getMethod);
             method.append(ibmCompatible[0].c_str(), namesProperty);
-            auto reply = bus.call(method);
+            auto reply = bus.call(
+                method, std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
+                            .count());
             reply.read(value);
             return fs::path{std::get<std::vector<std::string>>(value)[0]};
         }
@@ -1021,7 +1023,9 @@ int pldm::responder::oem_ibm_platform::Handler::setNumericEffecter(
             (uint64_t)entityInstance;
         method.append(createParams);
 
-        auto response = bus.call(method);
+        auto response = bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
 
         sdbusplus::message::object_path reply;
         response.read(reply);
@@ -1571,7 +1575,16 @@ void pldm::responder::oem_ibm_platform::Handler::processPowerOffHardGraceful()
         "string"};
     try
     {
-        dBusIntf->setDbusProperty(dbusMapping, value);
+        auto customerPolicy =
+            pldm::utils::DBusHandler().getDbusProperty<std::string>(
+                "/xyz/openbmc_project/control/host0/power_restore_policy",
+                "PowerRestorePolicy",
+                "xyz.openbmc_project.Control.Power.RestorePolicy");
+        if (customerPolicy !=
+            "xyz.openbmc_project.Control.Power.RestorePolicy.Policy.AlwaysOff")
+        {
+            dBusIntf->setDbusProperty(dbusMapping, value);
+        }
     }
     catch (const std::exception& e)
     {

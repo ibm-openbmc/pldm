@@ -1,14 +1,11 @@
 #pragma once
 
-#include "config.h"
-
-#include "libpldm/base.h"
-#include "libpldm/pldm.h"
-
 #include "common/types.hpp"
 #include "pldmd/dbus_impl_requester.hpp"
 #include "request.hpp"
 
+#include <libpldm/base.h>
+#include <libpldm/pldm.h>
 #include <sys/socket.h>
 
 #include <function2/function2.hpp>

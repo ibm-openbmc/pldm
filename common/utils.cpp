@@ -1,5 +1,3 @@
-#include "config.h"
-
 #include "utils.hpp"
 
 #include "libpldm/pdr.h"
@@ -235,7 +233,9 @@ std::string DBusHandler::getService(const char* path,
         mapper.append(path, DbusInterfaceList({}));
     }
 
-    auto mapperResponseMsg = bus.call(mapper);
+    auto mapperResponseMsg = bus.call(
+        mapper,
+        std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     mapperResponseMsg.read(mapperResponse);
     return mapperResponse.begin()->first;
 }
@@ -251,7 +251,9 @@ GetSubTreeResponse
         auto method = bus.new_method_call(mapperBusName, mapperPath,
                                           mapperInterface, "GetSubTree");
         method.append(searchPath, depth, ifaceList);
-        auto reply = bus.call(method);
+        auto reply = bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
         reply.read(response);
     }
     catch (const std::exception& e)
@@ -425,7 +427,9 @@ PropertyValue DBusHandler::getDbusPropertyVariant(
                                       "Get");
     method.append(dbusInterface, dbusProp);
     PropertyValue value{};
-    auto reply = bus.call(method);
+    auto reply = bus.call(
+        method,
+        std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     reply.read(value);
     return value;
 }
@@ -438,7 +442,9 @@ ObjectValueTree DBusHandler::getManagedObj(const char* service,
     auto method = bus.new_method_call(service, rootPath,
                                       "org.freedesktop.DBus.ObjectManager",
                                       "GetManagedObjects");
-    auto reply = bus.call(method);
+    auto reply = bus.call(
+        method,
+        std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     reply.read(objects);
     return objects;
 }
@@ -671,7 +677,9 @@ std::string getBiosAttrValue(const std::string& dbusAttrName)
             service.c_str(), biosConfigPath,
             "xyz.openbmc_project.BIOSConfig.Manager", "GetAttribute");
         method.append(dbusAttrName);
-        auto reply = bus.call(method);
+        auto reply = bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
         reply.read(var1, var2, var3);
     }
     catch (const sdbusplus::exception::SdBusError& e)
