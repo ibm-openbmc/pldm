@@ -83,12 +83,11 @@ namespace table
 
 void appendPadAndChecksum(Table& table)
 {
-    auto sizeWithoutPad = table.size();
-    auto padAndChecksumSize = pldm_bios_table_pad_checksum_size(sizeWithoutPad);
-    table.resize(table.size() + padAndChecksumSize);
-
-    pldm_bios_table_append_pad_checksum(table.data(), table.size(),
-                                        sizeWithoutPad);
+    size_t payloadSize = table.size();
+    table.resize(payloadSize + pldm_bios_table_pad_checksum_size(payloadSize));
+    // No validation of return value as preconditions are satisfied
+    pldm_bios_table_append_pad_checksum_check(table.data(), table.size(),
+                                              &payloadSize);
 }
 
 namespace string
@@ -163,7 +162,6 @@ const pldm_bios_attr_table_entry*
     {
         throw std::runtime_error("Failed to encode BIOS table string entry");
     }
-
     return reinterpret_cast<pldm_bios_attr_table_entry*>(table.data() +
                                                          tableSize);
 }
@@ -175,8 +173,13 @@ const pldm_bios_attr_table_entry*
     auto entryLength = pldm_bios_table_attr_entry_integer_encode_length();
     auto tableSize = table.size();
     table.resize(tableSize + entryLength, 0);
-    pldm_bios_table_attr_entry_integer_encode(table.data() + tableSize,
-                                              entryLength, info);
+    int rc = pldm_bios_table_attr_entry_integer_encode_check(
+        table.data() + tableSize, entryLength, info);
+    if (rc != PLDM_SUCCESS)
+    {
+        throw std::runtime_error(
+            "Failed to encode BIOS attribute table integer entry");
+    }
     return reinterpret_cast<pldm_bios_attr_table_entry*>(table.data() +
                                                          tableSize);
 }
@@ -296,9 +299,14 @@ const pldm_bios_attr_val_table_entry*
         pldm_bios_table_attr_value_entry_encode_string_length(strLen);
     auto tableSize = table.size();
     table.resize(tableSize + entryLength);
-    pldm_bios_table_attr_value_entry_encode_string(
+    int rc = pldm_bios_table_attr_value_entry_encode_string_check(
         table.data() + tableSize, entryLength, attrHandle, attrType, strLen,
         str.c_str());
+    if (rc != PLDM_SUCCESS)
+    {
+        throw std::runtime_error(
+            "Failed to encode BIOS attribute table string entry");
+    }
     return reinterpret_cast<pldm_bios_attr_val_table_entry*>(table.data() +
                                                              tableSize);
 }
@@ -312,8 +320,13 @@ const pldm_bios_attr_val_table_entry* constructIntegerEntry(Table& table,
 
     auto tableSize = table.size();
     table.resize(tableSize + entryLength);
-    pldm_bios_table_attr_value_entry_encode_integer(
+    int rc = pldm_bios_table_attr_value_entry_encode_integer_check(
         table.data() + tableSize, entryLength, attrHandle, attrType, value);
+    if (rc != PLDM_SUCCESS)
+    {
+        throw std::runtime_error(
+            "Failed to encode BIOS attribute table integery entry");
+    }
     return reinterpret_cast<pldm_bios_attr_val_table_entry*>(table.data() +
                                                              tableSize);
 }
@@ -326,9 +339,14 @@ const pldm_bios_attr_val_table_entry*
         handleIndices.size());
     auto tableSize = table.size();
     table.resize(tableSize + entryLength);
-    pldm_bios_table_attr_value_entry_encode_enum(
+    int rc = pldm_bios_table_attr_value_entry_encode_enum_check(
         table.data() + tableSize, entryLength, attrHandle, attrType,
         handleIndices.size(), handleIndices.data());
+    if (rc != PLDM_SUCCESS)
+    {
+        throw std::runtime_error(
+            "Failed to encode BIOS attribute table enum entry");
+    }
     return reinterpret_cast<pldm_bios_attr_val_table_entry*>(table.data() +
                                                              tableSize);
 }

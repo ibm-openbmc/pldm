@@ -340,11 +340,18 @@ uint32_t FruImpl::populateRecords(
                 {
                     bmc_record_handle = nextRecordHandle();
                 }
-                newRcord = pldm_pdr_add_fru_record_set(
+                int rc = pldm_pdr_add_fru_record_set_check(
                     pdrRepo, TERMINUS_HANDLE, recordSetIdentifier,
                     entity.entity_type, entity.entity_instance_num,
-                    entity.entity_container_id, bmc_record_handle,
+                    entity.entity_container_id, &bmc_record_handle,
                     concurrentAdd);
+                if (rc)
+                {
+                    // pldm_pdr_add_fru_record_set() assert()ed on failure
+                    throw std::runtime_error(
+                        "Failed to add PDR FRU record set");
+                }
+                newRcord = bmc_record_handle;
                 objectPathToRSIMap[objectPath] = recordSetIdentifier;
             }
             auto curSize = table.size();
@@ -794,11 +801,11 @@ int FruImpl::getFRURecordByOption(std::vector<uint8_t>& fruData,
     size_t recordTableSize = table.size() - padBytes + 7;
     fruData.resize(recordTableSize, 0);
 
-    get_fru_record_by_option(table.data(), table.size(), fruData.data(),
-                             &recordTableSize, recordSetIdentifer, recordType,
-                             fieldType);
+    int rc = get_fru_record_by_option_check(
+        table.data(), table.size(), fruData.data(), &recordTableSize,
+        recordSetIdentifer, recordType, fieldType);
 
-    if (recordTableSize == 0)
+    if (rc != PLDM_SUCCESS || recordTableSize == 0)
     {
         return PLDM_FRU_DATA_STRUCTURE_TABLE_UNAVAILABLE;
     }

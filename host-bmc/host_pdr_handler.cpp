@@ -477,8 +477,15 @@ void HostPDRHandler::mergeEntityAssociations(
 #ifdef OEM_IBM
     if (oemPlatformHandler && isHBRange(record_handle))
     {
+        uint32_t applied_handle = record_handle;
         // Adding the HostBoot range PDRs to the repo before merging it
-        pldm_pdr_add(repo, pdr.data(), size, record_handle, true, 0xFFFF);
+        int rc = pldm_pdr_add_check(repo, pdr.data(), size, true, 0xFFFF,
+                                    &applied_handle);
+        if (rc)
+        {
+            // pldm_pdr_add() assert()ed on failure to add a PDR.
+            throw std::runtime_error("Failed to add PDR");
+        }
     }
 #endif
 
@@ -553,17 +560,31 @@ void HostPDRHandler::mergeEntityAssociations(
             {
                 // Record Handle is 0xFFFFFFFF(max value uint32_t), for merging
                 // entity association pdr to bmc range
-                pldm_entity_association_pdr_add_from_node(
-                    node, repo, &entities, numEntities, true, TERMINUS_HANDLE,
-                    0xFFFFFFFF);
+                int rc =
+                    pldm_entity_association_pdr_add_from_node_with_record_handle(
+                        node, repo, &entities, numEntities, true,
+                        TERMINUS_HANDLE, 0xFFFFFFFF);
+                if (rc)
+                {
+                    std::cerr
+                        << "Failed to add entity association PDR from node: "
+                        << rc << std::endl;
+                }
             }
             else
             {
                 // Record Handle is 0xFFFFFFFF(max value uint32_t), for merging
                 // entity association pdr to bmc range
-                pldm_entity_association_pdr_add_from_node(
-                    node, repo, &entities, numEntities, true, terminus_handle,
-                    0xFFFFFFFF);
+                int rc =
+                    pldm_entity_association_pdr_add_from_node_with_record_handle(
+                        node, repo, &entities, numEntities, true,
+                        terminus_handle, 0xFFFFFFFF);
+                if (rc)
+                {
+                    std::cerr
+                        << "Failed to add entity association PDR from node: "
+                        << rc << std::endl;
+                }
             }
         }
     }
@@ -933,8 +954,15 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                         }
                         else
                         {
-                            pldm_pdr_add(repo, pdr.data(), respCount, rh, true,
-                                         pdrTerminusHandle);
+                            rc = pldm_pdr_add_check(repo, pdr.data(), respCount,
+                                                    true, pdrTerminusHandle,
+                                                    &rh);
+                            if (rc)
+                            {
+                                // pldm_pdr_add() assert()ed on failure to add a
+                                // PDR.
+                                throw std::runtime_error("Failed to add PDR");
+                            }
                         }
                     }
                 }

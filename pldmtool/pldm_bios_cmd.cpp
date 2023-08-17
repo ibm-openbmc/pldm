@@ -869,9 +869,16 @@ class SetBIOSAttributeCurrentValue : public GetBIOSTableHandler
 
                 attrValueEntry.resize(entryLength);
                 std::vector<uint8_t> handles = {i};
-                pldm_bios_table_attr_value_entry_encode_enum(
+                int rc = pldm_bios_table_attr_value_entry_encode_enum_check(
                     attrValueEntry.data(), attrValueEntry.size(),
                     attrEntry->attr_handle, attrType, 1, handles.data());
+                if (rc != PLDM_SUCCESS)
+                {
+                    std::cout
+                        << "Failed to encode BIOS table attribute enum: " << rc
+                        << std::endl;
+                    return;
+                }
                 break;
             }
             case PLDM_BIOS_STRING:
@@ -883,9 +890,16 @@ class SetBIOSAttributeCurrentValue : public GetBIOSTableHandler
 
                 attrValueEntry.resize(entryLength);
 
-                pldm_bios_table_attr_value_entry_encode_string(
+                int rc = pldm_bios_table_attr_value_entry_encode_string_check(
                     attrValueEntry.data(), entryLength, attrEntry->attr_handle,
                     attrType, attrValue.size(), attrValue.c_str());
+                if (rc != PLDM_SUCCESS)
+                {
+                    std::cout
+                        << "Failed to encode BIOS table attribute string: "
+                        << rc << std::endl;
+                    return;
+                }
                 break;
             }
             case PLDM_BIOS_INTEGER:
@@ -895,9 +909,16 @@ class SetBIOSAttributeCurrentValue : public GetBIOSTableHandler
                 entryLength =
                     pldm_bios_table_attr_value_entry_encode_integer_length();
                 attrValueEntry.resize(entryLength);
-                pldm_bios_table_attr_value_entry_encode_integer(
+                int rc = pldm_bios_table_attr_value_entry_encode_integer_check(
                     attrValueEntry.data(), entryLength, attrEntry->attr_handle,
                     attrType, value);
+                if (rc != PLDM_SUCCESS)
+                {
+                    std::cout
+                        << "Failed to encode BIOS table attribute integer: "
+                        << rc << std::endl;
+                    return;
+                }
                 break;
             }
         }
