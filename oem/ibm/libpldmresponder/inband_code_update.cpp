@@ -335,15 +335,15 @@ void CodeUpdate::setVersions()
 
                 try
                 {
-                    auto propVal =
-                        pldm::utils::DBusHandler().getDbusPropertyVariant(
-                            imageObjPath, "Activation", imageInterface);
-                    const auto& activation = std::get<std::string>(propVal);
-
-                    if (activation ==
-                        "xyz.openbmc_project.Software.Activation.Activations.Invalid")
+                    if (isCodeUpdateInProgress())
                     {
-                        if (isCodeUpdateInProgress())
+                        auto propVal =
+                            pldm::utils::DBusHandler().getDbusPropertyVariant(
+                                imageObjPath, "Activation", imageInterface);
+                        const auto& activation = std::get<std::string>(propVal);
+
+                        if (activation ==
+                            "xyz.openbmc_project.Software.Activation.Activations.Invalid")
                         {
                             error(
                                 "InbandCodeUpdate Failed: Received Invalid Signal, Sending Error on End update sensor event to PHYP");
