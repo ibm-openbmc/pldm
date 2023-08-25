@@ -109,7 +109,7 @@ class LidHandler : public FileHandler
 
     void validateMarkerLid(oem_platform::Handler* oemPlatformHandler)
     {
-        if (oemPlatformHandler != nullptr)
+        if (oemPlatformHandler)
         {
             pldm::responder::oem_ibm_platform::Handler* oemIbmPlatformHandler =
                 dynamic_cast<pldm::responder::oem_ibm_platform::Handler*>(
@@ -128,22 +128,22 @@ class LidHandler : public FileHandler
                     "/xyz/openbmc_project/software",
                     "xyz.openbmc_project.Software.LID", "Validate");
                 method.append(markerLidDirPath.c_str());
-                bus.call(method);
+                bus.call(method, dbusTimeout);
             }
             catch (const sdbusplus::exception::exception& e)
             {
-                if (strcmp(e.name(), accessKeyExpired) == 0)
+                if (std::string(e.name()) == accessKeyExpired)
                 {
                     phosphor::logging::commit<AccessKeyExpired>();
                     validateStatus = ENTITLEMENT_FAIL;
                 }
-                else if (strcmp(e.name(), incompatibleErr) == 0)
+                else if (std::string(e.name()) == incompatibleErr)
                 {
                     phosphor::logging::commit<IncompatibleErr>();
                     validateStatus = MIN_MIF_FAIL;
                 }
-                std::cerr << "Marker lid validate error, "
-                          << "ERROR=" << e.what() << std::endl;
+                error("Marker lid validate error, ERROR={ERR_EXCEP}",
+                      "ERR_EXCEP", e.what());
             }
             oemIbmPlatformHandler->sendStateSensorEvent(
                 sensorId, PLDM_STATE_SENSOR_STATE, 0, validateStatus, VALID);
@@ -278,7 +278,7 @@ class LidHandler : public FileHandler
     {
         int rc = PLDM_SUCCESS;
         bool codeUpdateInProgress = false;
-        if (oemPlatformHandler != nullptr)
+        if (oemPlatformHandler)
         {
             pldm::responder::oem_ibm_platform::Handler* oemIbmPlatformHandler =
                 dynamic_cast<pldm::responder::oem_ibm_platform::Handler*>(
@@ -354,7 +354,7 @@ class LidHandler : public FileHandler
         if (lidType == PLDM_FILE_TYPE_LID_MARKER)
         {
             markerLIDremainingSize -= length;
-            if (markerLIDremainingSize == 0)
+            if (!markerLIDremainingSize)
             {
                 rc = processCodeUpdateLid(lidPath);
                 if (rc == PLDM_SUCCESS)
