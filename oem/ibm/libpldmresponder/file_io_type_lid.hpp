@@ -1,6 +1,8 @@
 #pragma once
 #include "file_io.hpp"
 
+#include <phosphor-logging/elog-errors.hpp>
+#include <phosphor-logging/elog.hpp>
 #include <phosphor-logging/lg2.hpp>
 #include <xyz/openbmc_project/Software/Version/error.hpp>
 
@@ -19,9 +21,13 @@ using MarkerLIDremainingSize = uint64_t;
 
 constexpr auto markerLidName = "80a00001.lid";
 constexpr auto accessKeyExpired =
-    "sdbusplus::xyz::openbmc_project::Software::Version::Error::ExpiredAccessKey";
+    "xyz.openbmc_project.Software.Version.Error.ExpiredAccessKey";
+using AccessKeyExpired =
+    sdbusplus::xyz::openbmc_project::Software::Version::Error::ExpiredAccessKey;
 constexpr auto incompatibleErr =
-    "sdbusplus::xyz::openbmc_project::Software::Version::Error::Incompatible";
+    "xyz.openbmc_project.Software.Version.Error.Incompatible";
+using IncompatibleErr =
+    sdbusplus::xyz::openbmc_project::Software::Version::Error::Incompatible;
 
 /** @class LidHandler
  *
@@ -146,12 +152,14 @@ class LidHandler : public FileHandler
             }
             catch (const sdbusplus::exception::exception& e)
             {
-                if (strcmp(e.name(), accessKeyExpired) != 0)
+                if (strcmp(e.name(), accessKeyExpired) == 0)
                 {
+                    phosphor::logging::commit<AccessKeyExpired>();
                     validateStatus = ENTITLEMENT_FAIL;
                 }
-                else if (strcmp(e.name(), incompatibleErr) != 0)
+                else if (strcmp(e.name(), incompatibleErr) == 0)
                 {
+                    phosphor::logging::commit<IncompatibleErr>();
                     validateStatus = MIN_MIF_FAIL;
                 }
                 std::cerr << "Marker lid validate error, "
@@ -169,7 +177,6 @@ class LidHandler : public FileHandler
                                  sdeventplus::Event& event)
     {
         moemPlatformHandler = oemPlatformHandler;
-
         if (oemPlatformHandler != nullptr)
         {
             pldm::responder::oem_ibm_platform::Handler* oemIbmPlatformHandler =

@@ -29,7 +29,7 @@ class DumpHandler : public FileHandler
 
     virtual void readIntoMemory(uint32_t offset, uint32_t& length,
                                 uint64_t address,
-                                oem_platform::Handler* oemPlatformHandler,
+                                oem_platform::Handler* /*oemPlatformHandler*/,
                                 ResponseHdr& responseHdr,
                                 sdeventplus::Event& event);
 

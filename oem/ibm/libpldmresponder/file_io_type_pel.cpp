@@ -6,9 +6,7 @@
 #include "common/utils.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
 
-#include <fcntl.h>
 #include <stdint.h>
-#include <sys/ioctl.h>
 #include <systemd/sd-bus.h>
 #include <unistd.h>
 
@@ -101,7 +99,9 @@ void PelHandler::readIntoMemory(uint32_t offset, uint32_t& length,
 {
     static constexpr auto logObjPath = "/xyz/openbmc_project/logging";
     static constexpr auto logInterface = "org.open_power.Logging.PEL";
+    
     auto& bus = pldm::utils::DBusHandler::getBus();
+
     try
     {
         auto service = pldm::utils::DBusHandler().getService(logObjPath,
@@ -117,8 +117,8 @@ void PelHandler::readIntoMemory(uint32_t offset, uint32_t& length,
         fd = dup(unixfd);
         if (fd == -1)
         {
-            std::cerr << "Error: Cloning pel file descriptor failed...Error:"
-                      << errno << "\n";
+            error("Error: Cloning pel file descriptor failed...ERROR ={ERR}",
+                  "ERR", errno);
             FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
             FileHandler::deleteAIOobjects(nullptr, responseHdr);
             return;
@@ -228,13 +228,13 @@ void PelHandler::writeFromMemory(uint32_t offset, uint32_t length,
     Pelpath = path;
 
     transferFileData(path, false, offset, length, address, responseHdr, event);
-
 }
+
 void PelHandler::postDataTransferCallBack(bool IsWriteToMemOp)
 {
     if (IsWriteToMemOp)
     {
-        int rc = storePel(Pelpath.string());
+        auto rc = storePel(Pelpath.string());
         if (rc != PLDM_SUCCESS)
         {
             error(
@@ -339,7 +339,7 @@ int PelHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
     {
         error(
             "file write failed, ERROR={ERR_EXCEP}, LENGTH={LEN}, OFFSET={OFFSET}",
-            "ERR_EXCEP", errno, "LEN", length, "ERR_EXCEP", offset);
+            "ERR_EXCEP", errno, "LEN", length, "OFFSET", offset);
         fs::remove(tmpFile);
         return PLDM_ERROR;
     }
@@ -350,7 +350,7 @@ int PelHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
         rc = storePel(path.string());
         if (rc != PLDM_SUCCESS)
         {
-            error("save PEL failed, ERROR = {RC} tmpFile = {TMP_FILE}", "KEY0",
+            error("save PEL failed, ERROR = {RC} tmpFile = {TMP_FILE}", "RC",
                   rc, "TMP_FILE", tmpFile);
         }
     }

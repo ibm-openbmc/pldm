@@ -5,7 +5,7 @@
 #include "oem_ibm_handler.hpp"
 #include "pldmd/pldm_resp_interface.hpp"
 
-#include <fcntl.h>
+
 
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server.hpp>
@@ -26,7 +26,6 @@ namespace pldm
 
 namespace responder
 {
-
 using namespace sdeventplus;
 using namespace sdeventplus::source;
 constexpr auto clockId = sdeventplus::ClockId::RealTime;
@@ -49,6 +48,7 @@ struct ResponseHdr
 };
 
 namespace fs = std::filesystem;
+
 /**
  *  @class FileHandler
  *

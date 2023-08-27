@@ -96,8 +96,7 @@ void FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
     std::cout << "KK transferFileData starting trace1\n";
     if (nullptr == xdmaInterface)
     {
-        std::cout
-            << "transferFileData : xdma interface initialization failed.\n";
+        error("transferFileData : xdma interface initialization failed.\n");
         dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
         deleteAIOobjects(nullptr, responseHdr);
         close(fd);
@@ -116,8 +115,8 @@ void FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
     auto timerCb = [=, this](Timer& /*source*/, Timer::TimePoint /*time*/) {
         if (!xdmaInterface->getResponseReceived())
         {
-            std::cout
-                << " EventLoop Timeout..!! Terminating FileHandler data tranfer operation.\n";
+            error(
+                " EventLoop Timeout..!! Terminating FileHandler data tranfer operation.\n");
             dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
             deleteAIOobjects(xdmaInterface, responseHdr);
         }
@@ -143,8 +142,8 @@ void FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
             part.address += dma::maxSize;
             if (rc < 0)
             {
-                std::cout
-                    << "transferFileData : Failed to transfer muliple chunks of data to host.\n";
+                error(
+                    "transferFileData : Failed to transfer muliple chunks of data to host.\n");
                 dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
                 deleteAIOobjects(wInterface, responseHdr);
                 return;
@@ -154,8 +153,8 @@ void FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
                                           part.address, upstream);
         if (rc < 0)
         {
-            std::cout
-                << "transferFileData : Failed to transfer single chunks of data to host.\n";
+            error(
+                "transferFileData : Failed to transfer single chunks of data to host.\n");            
             dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
             deleteAIOobjects(wInterface, responseHdr);
             return;
@@ -181,16 +180,14 @@ void FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
         std::cout << "KK transferFileData xdmaFd:" << xdmaFd << "\n";
         if (xdmaFd < 0)
         {
-            std::cerr
-                << "transferFileData : Failed to open shared memory location.\n";
+            error("transferFileData : Failed to open shared memory location.");
             dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
             deleteAIOobjects(xdmaInterface, responseHdr);
             return;
         }
         if (xdmaInterface->initTimer(event, std::move(timerCb)) == false)
         {
-            std::cerr
-                << "transferFileData : Failed to start the event timer.\n";
+            error("transferFileData : Failed to start the event timer.\n");
             dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
             deleteAIOobjects(xdmaInterface, responseHdr);
             return;
@@ -202,8 +199,8 @@ void FileHandler::transferFileData(int32_t fd, bool upstream, uint32_t offset,
     }
     catch (const std::runtime_error& e)
     {
-        std::cerr << "transferFileData : Failed to start the event loop. RC = "
-                  << e.what() << "\n";
+        error("Failed to start the event loop. error ={ERR_EXCEP} ",
+              "ERR_EXCEP", e.what());
         dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
         deleteAIOobjects(xdmaInterface, responseHdr);
     }
@@ -219,8 +216,8 @@ void FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
     uint8_t command = responseHdr.command;
     if (nullptr == xdmaInterface)
     {
-        std::cout
-            << "transferFileDataToSocket : xdma interface initialization failed.\n";
+        error(
+            "transferFileDataToSocket : xdma interface initialization failed.\n");
         dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
         if (responseHdr.functionPtr != nullptr)
         {
@@ -241,8 +238,8 @@ void FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
     auto timerCb = [=, this](Timer& /*source*/, Timer::TimePoint /*time*/) {
         if (!xdmaInterface->getResponseReceived())
         {
-            std::cout
-                << "EventLoop Timeout...Terminating socket data tranfer operation\n";
+            error(
+                "EventLoop Timeout...Terminating socket data tranfer operation\n");
             dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
             if (responseHdr.functionPtr != nullptr)
             {
@@ -253,13 +250,12 @@ void FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
         }
         return;
     };
-    auto callback = [=, &responseHdr, this](IO&, int, uint32_t revents) {
+    auto callback = [=, this](IO&, int, uint32_t revents) {
         if (!(revents & (EPOLLIN | EPOLLOUT)))
         {
             return;
         }
         auto wInterface = wxInterface.lock();
-
         int rc = 0;
         while (part.length > dma::maxSize)
         {
@@ -269,8 +265,8 @@ void FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
             part.address += dma::maxSize;
             if (rc < 0)
             {
-                std::cout
-                    << "transferFileDataToSocket : Failed to transfer muliple chunks of data to host.\n";
+                error(
+                    "transferFileDataToSocket : Failed to transfer muliple chunks of data to host.\n");
                 dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
                 if (responseHdr.functionPtr != nullptr)
                 {
@@ -286,8 +282,8 @@ void FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
                                                   part.address);
         if (rc < 0)
         {
-            std::cout
-                << "transferFileDataToSocket : Failed to transfer single chunks of data to host.\n";
+            error(
+                "transferFileDataToSocket : Failed to transfer single chunks of data to host.\n");
             dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
             if (responseHdr.functionPtr != nullptr)
             {
@@ -323,8 +319,7 @@ void FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
         }
         if (xdmaInterface->initTimer(event, std::move(timerCb)) == false)
         {
-            std::cerr
-                << "transferFileDataToSocket : Failed to start the event timer.\n";
+            error("transferFileData : Failed to start the event timer.\n");
             dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
             if (responseHdr.functionPtr != nullptr)
             {
@@ -339,8 +334,8 @@ void FileHandler::transferFileDataToSocket(int32_t fd, uint32_t& length,
     }
     catch (const std::runtime_error& e)
     {
-        std::cerr << "Failed to start socket the event loop. RC = " << e.what()
-                  << "\n";
+        error("Failed to start the event loop. error ={ERR_EXCEP} ",
+              "ERR_EXCEP", e.what());
         dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
         if (responseHdr.functionPtr != nullptr)
         {

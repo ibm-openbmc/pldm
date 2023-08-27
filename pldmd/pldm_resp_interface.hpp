@@ -35,7 +35,6 @@ class Transport
   
     /** @brief Transport constructor
      */
-
     Transport() = delete;
     Transport(const Transport&) = delete;
     Transport(int socketFd, bool verbose = false) :
@@ -54,7 +53,6 @@ class Transport
         {};
         std::cout<<"KK sending reply to host index:"<<index<<"\n";
         FlightRecorder::GetInstance().saveRecord(response, true);
-        
         if (verbose)
         {
             printBuffer(Tx, response);
@@ -105,6 +103,7 @@ class Transport
     {
         requestMap.erase(index);
     }
+    
     /** @brief method to generate unique key to store request header into map
      * @returns available nearest key value as integer
      */

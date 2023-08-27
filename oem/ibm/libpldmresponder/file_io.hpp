@@ -16,7 +16,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-
+#include <fcntl.h>
 #include <phosphor-logging/lg2.hpp>
 
 #include <filesystem>
@@ -30,7 +30,6 @@ namespace pldm
 {
 namespace responder
 {
-
 namespace dma
 {
 constexpr auto xdmaDev = "/dev/aspeed-xdma";
@@ -78,6 +77,7 @@ class DMA
         SourceFd = -1;
         rc = 0;
         iotPtr = nullptr;
+        iotPtrbc = nullptr;
         timer = nullptr;
         m_length = length;
         static const size_t pageSize = getpagesize();
@@ -164,7 +164,7 @@ class DMA
      * case so it can close it.
      * @param[in] fd - xdma shared memory path file descriptor
      */
-    void setXDMASourceFd(int32_t fd)
+    void setXDMASourceFd(int fd)
     {
         xdmaFd = fd;
     }
@@ -193,6 +193,7 @@ class DMA
                        MAP_SHARED, xdmaFd, 0);
         if (MAP_FAILED == memAddr)
         {
+            rc = -errno;
             return MAP_FAILED;
         }
 
@@ -201,7 +202,6 @@ class DMA
 
     /** @brief Method to initialize IO instance for event loop
      * @param[in] ioptr -  pointer to manage eventloop
-     *
      */
     void insertIOInstance(std::unique_ptr<IO>&& ioptr)
     {
@@ -222,7 +222,7 @@ class DMA
         try
         {
             timer = std::make_unique<Timer>(event,
-                              (Clock(event).now() + std::chrono::seconds{20}),
+                            (Clock(event).now() + std::chrono::seconds{20}),
                               std::chrono::seconds{1}, std::move(callback));
         }
         catch (const std::runtime_error& e)
@@ -236,6 +236,8 @@ class DMA
 
     /** @brief Method to delete cyclic dependecy while deleting object
      *  DMA interface and IO event loop has cyclic dependecy
+     *
+     * @return void
      */
     void deleteIOInstance()
     {
@@ -300,7 +302,7 @@ class DMA
   private:
     bool responseReceived;
     void* memAddr;
-    int32_t xdmaFd;
+    int xdmaFd;
     int32_t SourceFd;
     uint32_t pageAlignedLength;
     int rc;
@@ -368,8 +370,8 @@ Response transferAll(std::shared_ptr<DMAInterface> intf, int32_t file,
     auto timerCb = [=](Timer& /*source*/, Timer::TimePoint /*time*/) {
         if (!intf->getResponseReceived())
         {
-            std::cout
-                << " EventLoop Timeout..!! Terminating data tranfer operation.\n";
+            error(
+                "EventLoop Timeout..!! Terminating data tranfer operation.\n");
             Response response(sizeof(pldm_msg_hdr) + command, 0);
             auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
             encode_rw_file_memory_resp(instance_id, command, PLDM_ERROR, 0,
@@ -455,7 +457,7 @@ Response transferAll(std::shared_ptr<DMAInterface> intf, int32_t file,
         {
             Response response(sizeof(pldm_msg_hdr) + command, 0);
             auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
-            std::cerr << "Failed to start the event timer.\n";
+            error("Failed to get the XDMA file descriptor.\n");
             encode_rw_file_memory_resp(instance_id, command, PLDM_ERROR, 0,
                                        responsePtr);
             if (responseHdr.respInterface != nullptr)
@@ -470,7 +472,7 @@ Response transferAll(std::shared_ptr<DMAInterface> intf, int32_t file,
         {
             Response response(sizeof(pldm_msg_hdr) + command, 0);
             auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
-            std::cerr << "Failed to start the event timer.\n";
+            error("Failed to start the event timer.");
             encode_rw_file_memory_resp(instance_id, command, PLDM_ERROR, 0,
                                        responsePtr);
             if (responseHdr.respInterface != nullptr)
@@ -491,8 +493,8 @@ Response transferAll(std::shared_ptr<DMAInterface> intf, int32_t file,
     {
         Response response(sizeof(pldm_msg_hdr) + command, 0);
         auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
-        std::cerr << "Failed to start the event loop. RC = " << e.what()
-                  << "\n";
+         error("Failed to start the event loop. error ={ERR_EXCEP} ",
+       "ERR_EXCEP", e.what());
         encode_rw_file_memory_resp(instance_id, command, PLDM_ERROR, 0,
                                    responsePtr);
         if (responseHdr.respInterface != nullptr)
@@ -510,7 +512,6 @@ Response transferAll(std::shared_ptr<DMAInterface> intf, int32_t file,
 
 namespace oem_ibm
 {
-
 static constexpr auto dumpObjPath = "/xyz/openbmc_project/dump/resource/entry/";
 static constexpr auto resDumpEntry = "com.ibm.Dump.Entry.Resource";
 

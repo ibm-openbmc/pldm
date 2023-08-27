@@ -29,7 +29,6 @@ using namespace pldm::responder::utils;
 using namespace sdbusplus::xyz::openbmc_project::Common::Error;
 namespace responder
 {
-// extern SocketWriteStatus socketWriteStatus;
 namespace fs = std::filesystem;
 
 namespace dma
@@ -57,7 +56,7 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
     {
         rc = -errno;
         error(
-            "transferHostDataToSocket : Failed to open the XDMA device, RC={RC}",
+            "transferHostDataToSocket: Failed to open the XDMA device, RC={RC}",
             "RC", rc);
         return rc;
     }
@@ -79,9 +78,8 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
         }
         else
         {
-            std::cerr
-                << "transferHostDataToSocket : Received interrupt during dump DMA transfer. Skipping Unmap"
-                << std::endl;
+            error(
+                "transferHostDataToSocket : Received interrupt during dump DMA transfer. Skipping Unmap");
         }
     };
     std::unique_ptr<void, decltype(mmapCleanup)> vgaMemPtr(vgaMemDump,
@@ -95,9 +93,9 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
     if (rc < 0)
     {
         rc = -errno;
-        std::cerr
-            << "transferHostDataToSocket : Failed to execute the DMA operation, RC="
-            << rc << " ADDRESS=" << address << " LENGTH=" << length << "\n";
+        error(
+            "transferHostDataToSocket: Failed to execute the DMA operation, RC={RC} ADDRESS={ADDR} LENGTH={LEN}",
+            "RC", rc, "ADDR", address, "LEN", length);
         return rc;
     }
 
@@ -106,10 +104,9 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
     {
         rc = -errno;
         close(fd);
-        std::cerr
-            << "transferHostDataToSocket: Closing socket as writeToUnixSocket failed with RC:"
-            << rc << "\n";
-
+        error(
+            "transferHostDataToSocket: Closing socket as writeToUnixSocket faile with RC={RC}",
+            "RC", rc);
         return rc;
     }
     rc = length;
@@ -135,8 +132,10 @@ int32_t DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
     void* vgaMem = getXDMAsharedlocation();
     if (vgaMem == MAP_FAILED)
     {
-        std::cerr
-            << " transferDataHost : Failed to map the XDMA device address\n";
+        rc = -errno;
+        error(
+            "transferDataHost : Failed to mmap the XDMA device address, RC={RC}",
+            "RC", rc);
         return -1;
     }
     auto mmapCleanup = [pageAlLength, &rc, this](void* vgaMem) {
@@ -147,7 +146,8 @@ int32_t DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
         }
         else
         {
-            error("Received interrupt during DMA transfer. Skipping Unmap");
+            error(
+                "transferDataHost: Received interrupt during DMA transfer. Skipping Unmap.");
         }
     };
 
@@ -157,6 +157,7 @@ int32_t DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
         rc = lseek(fd, offset, SEEK_SET);
         if (rc == -1)
         {
+            rc = -errno;
             error(
                 "transferDataHost upstream : lseek failed, ERROR={ERR}, UPSTREAM={UP_STRM}, OFFSET={KEY2}",
                 "ERR", errno, "UP_STRM", upstream, "OFFSET", offset);
@@ -171,6 +172,7 @@ int32_t DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
         rc = read(fd, buffer.data(), length);
         if (rc == -1)
         {
+            rc = -errno;
             error(
                 "transferDataHost upstream : file read failed, ERROR={ERR}, UPSTREAM={UP_STRM}, LENGTH={LEN}, OFFSET={OFFSET}",
                 "ERR", errno, "UP_STRM", upstream, "LEN", length, "OFFSET",
@@ -209,6 +211,7 @@ int32_t DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
         rc = lseek(fd, offset, SEEK_SET);
         if (rc == -1)
         {
+            rc = -errno;
             error(
                 "transferDataHost downstream : lseek failed, ERROR={ERR}, UPSTREAM={UP_STRM}, OFFSET={OFFSET}",
                 "ERR", errno, "UP_STRM", upstream, "OFFSET", offset);
@@ -218,6 +221,7 @@ int32_t DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
         rc = write(fd, static_cast<const char*>(vgaMemPtr.get()), length);
         if (rc == -1)
         {
+            rc = -errno;
             error(
                 "transferDataHost downstream : file write failed, ERROR={ERR}, UPSTREAM={UP_STRM}, LENGTH={LEN}, OFFSET={OFFSET}",
                 "ERR", errno, "UP_STRM", upstream, "LEN", length, "OFFSET",
@@ -229,10 +233,9 @@ int32_t DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
 
     if (responseByte != static_cast<int>(length))
     {
-        std::cerr
-            << " transferDataHost Response : mismatch between number of characters to transfer and "
-            << "the length transferred, LENGTH=" << length << " RC=" << rc
-            << "\n";
+        error(
+        "transferDataHost Response : mismatch between number of characters to transfer and the length transferred, LENGTH={LEN} COUNT={RC}",
+        "LEN", length, "RC", rc);
         return -1;
     }
     return responseByte;
@@ -264,6 +267,7 @@ Response Handler::readFileIntoMemory(const pldm_msg* request,
 
     decode_rw_file_memory_req(request, payloadLength, &fileHandle, &offset,
                               &length, &address);
+
     using namespace pldm::filetable;
     auto& table = buildFileTable(FILE_TABLE_JSON);
     FileEntry value{};
@@ -714,7 +718,7 @@ Response rwFileByTypeIntoMemory(uint8_t cmd, const pldm_msg* request,
     }
     catch (const InternalFailure& e)
     {
-        error("unknown file type, TYPE={LEN}", "LEN", fileType);
+        error("unknown file type, TYPE={FILE_TYPE}", "FILE_TYPE", fileType);
         encode_rw_file_by_type_memory_resp(request->hdr.instance_id, cmd,
                                            PLDM_INVALID_FILE_TYPE, 0,
                                            responsePtr);
@@ -791,7 +795,7 @@ Response Handler::writeFileByType(const pldm_msg* request, size_t payloadLength)
     }
     catch (const InternalFailure& e)
     {
-        error("unknown file type, TYPE={FILE_TYP}", "FILE_TYP", fileType);
+        error("unknown file type, TYPE={FILE_TYPE}", "FILE_TYPE", fileType);
         encode_rw_file_by_type_resp(request->hdr.instance_id,
                                     PLDM_WRITE_FILE_BY_TYPE,
                                     PLDM_INVALID_FILE_TYPE, 0, responsePtr);
@@ -840,7 +844,7 @@ Response Handler::readFileByType(const pldm_msg* request, size_t payloadLength)
     }
     catch (const InternalFailure& e)
     {
-        error("unknown file type, TYPE={FILE_TYP}", "FILE_TYP", fileType);
+        error("unknown file type, TYPE={FILE_TYPE}", "FILE_TYPE", fileType);
         encode_rw_file_by_type_resp(request->hdr.instance_id,
                                     PLDM_READ_FILE_BY_TYPE,
                                     PLDM_INVALID_FILE_TYPE, 0, responsePtr);
@@ -960,7 +964,7 @@ Response Handler::newFileAvailable(const pldm_msg* request,
     }
     catch (const InternalFailure& e)
     {
-        error("unknown file type, TYPE={FILE_TYP}", "FILE_TYP", fileType);
+        error("unknown file type, TYPE={FILE_TYPE}", "FILE_TYPE", fileType);
         return CmdHandler::ccOnlyResponse(request, PLDM_INVALID_FILE_TYPE);
     }
 

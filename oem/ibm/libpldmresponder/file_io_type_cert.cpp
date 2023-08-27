@@ -45,8 +45,9 @@ void CertHandler::writeFromMemory(uint32_t offset, uint32_t length,
     auto fd = std::get<0>(it->second);
     transferFileData(fd, false, offset, length, address, responseHdr, event);
 
-    return ;
+    return;
 }
+
 void CertHandler::postDataTransferCallBack(bool IsWriteToMemOp)
 {
     if (IsWriteToMemOp)
@@ -56,7 +57,7 @@ void CertHandler::postDataTransferCallBack(bool IsWriteToMemOp)
         {
             std::cerr << "CertHandler::writeFromMemory:file for type "
                       << certType << " doesn't exist\n";
-            return ;
+            return;
         }
         // auto fd = std::get<0>(it->second);
         auto& remSize = std::get<1>(it->second);
@@ -151,6 +152,7 @@ int CertHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
         close(fd);
         certMap.erase(it);
     }
+    
     if (certType == PLDM_FILE_TYPE_SIGNED_CERT)
     {
         constexpr auto certObjPath = "/xyz/openbmc_project/certs/ca/entry/";

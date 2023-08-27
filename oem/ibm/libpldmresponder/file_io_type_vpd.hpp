@@ -29,7 +29,7 @@ class keywordHandler : public FileHandler
         FileHandler::dmaResponseToHost(responseHdr,
                                        PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
         FileHandler::deleteAIOobjects(nullptr, responseHdr);
-        return ;
+        return;
     }
     virtual void readIntoMemory(uint32_t /*offset*/, uint32_t& length,
                                 uint64_t /*address*/,
@@ -40,10 +40,11 @@ class keywordHandler : public FileHandler
         FileHandler::dmaResponseToHost(responseHdr,
                                        PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
         FileHandler::deleteAIOobjects(nullptr, responseHdr);
-        return ;
+        return;
     }
-    virtual int read(uint32_t offset, uint32_t& length, Response& response,
-                     oem_platform::Handler* /*oemPlatformHandler*/);
+     virtual int read(
+        uint32_t offset, uint32_t& length, Response& response,
+        oem_platform::Handler* /*oemPlatformHandler*/);
     virtual int write(const char* /*buffer*/, uint32_t /*offset*/,
                       uint32_t& /*length*/,
                       oem_platform::Handler* /*oemPlatformHandler*/)
@@ -74,7 +75,7 @@ class keywordHandler : public FileHandler
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
-    virtual void postDataTransferCallBack(bool /*IsWriteToMemOp*/){}
+    virtual void postDataTransferCallBack(bool /*IsWriteToMemOp*/) {}
 
     /** @brief keywordHandler destructor
      */

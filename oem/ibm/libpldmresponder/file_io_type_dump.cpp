@@ -21,6 +21,7 @@
 #include <type_traits>
 
 PHOSPHOR_LOG2_USING;
+
 using namespace pldm::responder::utils;
 using namespace pldm::utils;
 
@@ -290,7 +291,9 @@ void DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
         if (sock < 0)
         {
             close(DumpHandler::fd);
-            error("DumpHandler::writeFromMemory: setupUnixSocket() failed.");
+            error(
+                "DumpHandler::writeFromMemory: setupUnixSocket() failed errno:{ERR}",
+                "ERR", errno);
             std::remove(socketInterface.c_str());
             resetOffloadUri();
 
