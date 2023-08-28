@@ -1288,7 +1288,9 @@ void pldm::responder::oem_ibm_platform::Handler::resetWatchDogTimer()
             bus.new_method_call(watchDogService, watchDogObjectPath,
                                 watchDogInterface, watchDogResetPropName);
         resetMethod.append(true);
-        bus.call_noreply(resetMethod);
+        bus.call_noreply(
+            resetMethod,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     }
     catch (const std::exception& e)
     {
@@ -1357,7 +1359,9 @@ void pldm::responder::oem_ibm_platform::Handler::setBitmapMethodCall(
                                           dbusMethod);
         auto val = std::get_if<std::vector<uint8_t>>(&value);
         method.append(*val);
-        bus.call_noreply(method);
+        bus.call_noreply(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     }
     catch (const std::exception& e)
     {
