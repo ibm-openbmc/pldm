@@ -485,7 +485,9 @@ void BIOSConfig::updateBaseBIOSTableProperty()
         }
 #endif
         method.append(biosConfigInterface, biosConfigPropertyName, value);
-        bus.call_noreply(method);
+        bus.call_noreply(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     }
     catch (const std::exception& e)
     {
