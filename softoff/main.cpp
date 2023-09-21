@@ -77,9 +77,7 @@ int main(int argc, char* argv[])
             method.append(
                 std::vector<std::pair<std::string,
                                       std::variant<std::string, uint64_t>>>());
-            bus.call_noreply(
-                method, std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
-                            .count());
+            bus.call_noreply(method, dbusTimeout);
         }
         catch (const sdbusplus::exception::exception& e)
         {
