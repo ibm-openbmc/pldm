@@ -33,9 +33,7 @@ int ProgressCodeHandler::setRawBootProperty(
                       std::variant<std::tuple<uint64_t, std::vector<uint8_t>>>(
                           progressCodeBuffer));
 
-        bus.call_noreply(
-            method,
-            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
+        bus.call_noreply(method, dbusTimeout);
     }
     catch (const std::exception& e)
     {

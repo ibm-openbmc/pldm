@@ -193,9 +193,7 @@ void CodeUpdate::setVersions()
         method.append("xyz.openbmc_project.Association", "endpoints");
         std::variant<std::vector<std::string>> paths;
 
-        auto reply = bus.call(
-            method,
-            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
+        auto reply = bus.call(method, dbusTimeout);
         reply.read(paths);
 
         runningVersion = std::get<std::vector<std::string>>(paths)[0];
@@ -207,9 +205,7 @@ void CodeUpdate::setVersions()
                                            propIntf, "Get");
         method1.append("xyz.openbmc_project.Association", "endpoints");
 
-        auto reply1 = bus.call(
-            method1,
-            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
+        auto reply1 = bus.call(method1, dbusTimeout);
         reply1.read(paths);
         for (const auto& path : std::get<std::vector<std::string>>(paths))
         {
@@ -595,9 +591,7 @@ void CodeUpdate::deleteImage()
     {
         auto method = bus.new_method_call(UPDATER_SERVICE, SW_OBJ_PATH,
                                           DELETE_INTF, "DeleteAll");
-        bus.call_noreply(
-            method,
-            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
+        bus.call_noreply(method, dbusTimeout);
     }
     catch (const std::exception& e)
     {
@@ -799,9 +793,7 @@ int CodeUpdate::assembleCodeUpdateImage()
         auto method = bus.new_method_call(UPDATER_SERVICE, SOFTWARE_PATH,
                                           LID_INTERFACE,
                                           "AssembleCodeUpdateImage");
-        bus.call_noreply(
-            method,
-            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
+        bus.call_noreply(method, dbusTimeout);
     }
     catch (const std::exception& e)
     {
