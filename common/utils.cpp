@@ -236,9 +236,7 @@ std::string DBusHandler::getService(const char* path,
         mapper.append(path, DbusInterfaceList({}));
     }
 
-    auto mapperResponseMsg = bus.call(
-        mapper,
-        std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
+    auto mapperResponseMsg = bus.call(mapper, dbusTimeout);
     mapperResponseMsg.read(mapperResponse);
     return mapperResponse.begin()->first;
 }
@@ -254,9 +252,7 @@ GetSubTreeResponse
         auto method = bus.new_method_call(mapperBusName, mapperPath,
                                           mapperInterface, "GetSubTree");
         method.append(searchPath, depth, ifaceList);
-        auto reply = bus.call(
-            method,
-            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
+        auto reply = bus.call(method, dbusTimeout);
         reply.read(response);
     }
     catch (const std::exception& e)
@@ -289,9 +285,7 @@ void reportError(const char* errorMsg, const Severity& sev)
         }
         std::map<std::string, std::string> addlData{};
         method.append(errorMsg, severity, addlData);
-        bus.call_noreply(
-            method,
-            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
+        bus.call_noreply(method, dbusTimeout);
     }
     catch (const std::exception& e)
     {
@@ -326,9 +320,7 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
                 service.c_str(), "/xyz/openbmc_project/inventory",
                 "xyz.openbmc_project.Inventory.Manager", "Notify");
             method.append(std::move(objectValueTree));
-            bus.call_noreply(
-                method, std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
-                            .count());
+            bus.call_noreply(method, dbusTimeout);
         }
         else
         {
@@ -347,9 +339,7 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
             }
             method.append(dBusMap.interface.c_str(),
                           dBusMap.propertyName.c_str(), variant);
-            bus.call_noreply(
-                method, std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
-                            .count());
+            bus.call_noreply(method, dbusTimeout);
         }
     };
 
@@ -438,9 +428,7 @@ PropertyValue DBusHandler::getDbusPropertyVariant(
                                       "Get");
     method.append(dbusInterface, dbusProp);
     PropertyValue value{};
-    auto reply = bus.call(
-        method,
-        std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
+    auto reply = bus.call(method, dbusTimeout);
     reply.read(value);
     return value;
 }
@@ -453,9 +441,7 @@ ObjectValueTree DBusHandler::getManagedObj(const char* service,
     auto method = bus.new_method_call(service, rootPath,
                                       "org.freedesktop.DBus.ObjectManager",
                                       "GetManagedObjects");
-    auto reply = bus.call(
-        method,
-        std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
+    auto reply = bus.call(method, dbusTimeout);
     reply.read(objects);
     return objects;
 }
@@ -689,9 +675,7 @@ std::string getBiosAttrValue(const std::string& dbusAttrName)
             service.c_str(), biosConfigPath,
             "xyz.openbmc_project.BIOSConfig.Manager", "GetAttribute");
         method.append(dbusAttrName);
-        auto reply = bus.call(
-            method,
-            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
+        auto reply = bus.call(method, dbusTimeout);
         reply.read(var1, var2, var3);
     }
     catch (const sdbusplus::exception::SdBusError& e)
@@ -733,9 +717,7 @@ void setBiosAttr(const BiosAttributeList& biosAttrList)
             method.append(
                 biosConfigIntf, "PendingAttributes",
                 std::variant<PendingAttributesType>(pendingAttributes));
-            bus.call_noreply(
-                method, std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
-                            .count());
+            bus.call_noreply(method, dbusTimeout);
         }
         catch (const sdbusplus::exception::SdBusError& e)
         {
