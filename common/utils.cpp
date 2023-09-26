@@ -261,8 +261,9 @@ GetSubTreeResponse
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed GetSubTree query for interface " << ifaceList[0]
-                  << " with ERROR=" << e.what() << "\n";
+        error(
+            "failed GetSubTree query for interface {FACE_LIST} with ERROR = {ERR_EXCEP}",
+            "FACE_LIST", ifaceList[0], "ERR_EXCEP", e.what());
     }
     return response;
 }

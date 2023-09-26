@@ -54,8 +54,9 @@ int keywordHandler::read(uint32_t offset, uint32_t& length, Response& response,
 
     if (length < keywrdSize)
     {
-        std::cerr << "length requested is less the keyword size, length: "
-                  << length << " keyword size: " << keywrdSize << std::endl;
+        error(
+            "length requested is less the keyword size, length: {LEN} keyword size: {KEYWORD_SIZE}",
+            "LEN", length, "KEYWORD_SIZE", keywrdSize);
         return PLDM_ERROR_INVALID_DATA;
     }
 
@@ -84,8 +85,8 @@ int keywordHandler::read(uint32_t offset, uint32_t& length, Response& response,
 
     if (offset > keywrdSize)
     {
-        std::cerr << "Offset exceeds file size, OFFSET=" << offset
-                  << " FILE_SIZE=" << keywrdSize << std::endl;
+        error("Offset exceeds file size, OFFSET={OFFSET} FILE_SIZE={FILE_SIZE}",
+              "OFFSET", offset, "FILE_SIZE", keywrdSize);
         return PLDM_DATA_OUT_OF_RANGE;
     }
     // length of keyword data should be same as keyword data size in dbus object
@@ -93,9 +94,7 @@ int keywordHandler::read(uint32_t offset, uint32_t& length, Response& response,
     auto returnCode = lseek(fd, offset, SEEK_SET);
     if (returnCode == -1)
     {
-        std::cerr
-            << "Could not find keyword data at given offset. File Seek failed"
-            << std::endl;
+        error("Could not find keyword data at given offset. File Seek failed");
         return PLDM_ERROR;
     }
 

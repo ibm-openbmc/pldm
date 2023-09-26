@@ -73,7 +73,7 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
 {
     for (const auto& directory : dir)
     {
-        error("checking if : {DIR} exists", "DIR", directory.c_str());
+        info("checking if : {DIR} exists", "DIR", directory.c_str());
         if (!fs::exists(directory))
         {
             return;
