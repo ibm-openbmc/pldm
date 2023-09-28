@@ -656,28 +656,6 @@ int setBootSide(uint16_t entityInstance, uint8_t currState,
     return rc;
 }
 
-template <typename... T>
-int executeCmd(const T&... t)
-{
-    std::stringstream cmd;
-    ((cmd << t << " "), ...) << std::endl;
-    FILE* pipe = popen(cmd.str().c_str(), "r");
-    if (!pipe)
-    {
-        throw std::runtime_error("popen() failed!");
-    }
-    int rc = pclose(pipe);
-    if (WEXITSTATUS(rc))
-    {
-        std::cerr << "Error executing: ";
-        ((std::cerr << " " << t), ...);
-        std::cerr << "\n";
-        return -1;
-    }
-
-    return 0;
-}
-
 int processCodeUpdateLid(const std::string& filePath)
 {
     struct LidHeader
