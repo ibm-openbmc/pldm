@@ -1,7 +1,6 @@
 #pragma once
 
-#include "file_io_by_type.hpp"
-#include "xyz/openbmc_project/Common/error.hpp"
+#include "file_io.hpp"
 
 #include <phosphor-logging/elog-errors.hpp>
 #include <phosphor-logging/elog.hpp>
