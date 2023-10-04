@@ -620,8 +620,8 @@ void PCIeInfoHandler::parseSecondaryLink(
         std::filesystem::path mexConnecter(mexConnecterPath);
         auto mexSlotandAdapter = getMexSlotandAdapter(mexConnecter);
 
-        std::cout << "Creating associations under "
-                  << std::get<1>(mexSlotandAdapter) << std::endl;
+        info("Creating associations under {MEX_SLOT_ADAPTER}",
+             "MEX_SLOT_ADAPTER", std::get<1>(mexSlotandAdapter));
         std::vector<std::tuple<std::string, std::string, std::string>>
             associations;
         for (auto slot : ioSlotLocationCode)
@@ -973,7 +973,7 @@ void PCIeInfoHandler::parseTopologyData()
                 (struct SlotLocCodeSuf_t*)suffix_data;
             if (slot_loc_suf_data == nullptr)
             {
-                std::cerr << "slot location suffix data is nullptr \n";
+                error("slot location suffix data is nullptr");
                 break;
             }
 
