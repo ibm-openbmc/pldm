@@ -194,7 +194,9 @@ void Handler::setFirmwareUAK(std::vector<uint8_t> data)
                                           uakInterface, "WriteKeyword");
         method.append(static_cast<sdbusplus::message::object_path>(fruPath),
                       fruRecord, fruKeyword, data);
-        bus.call_noreply(method);
+        bus.call_noreply(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     }
     catch (const std::exception& e)
     {

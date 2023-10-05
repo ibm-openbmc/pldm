@@ -102,7 +102,9 @@ void SlotHandler::callVPDManager(const std::string& adapterObjPath,
                                               VPDInterface, "CollectFRUVPD");
             method.append(
                 static_cast<sdbusplus::message::object_path>(adapterObjPath));
-            bus.call_noreply(method);
+            bus.call_noreply(
+                method, std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
+                            .count());
         }
         else if (stateFiledValue == uint8_t(REMOVE) ||
                  stateFiledValue == uint8_t(REPLACE))
@@ -111,7 +113,9 @@ void SlotHandler::callVPDManager(const std::string& adapterObjPath,
                                               VPDInterface, "deleteFRUVPD");
             method.append(
                 static_cast<sdbusplus::message::object_path>(adapterObjPath));
-            bus.call_noreply(method);
+            bus.call_noreply(
+                method, std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
+                            .count());
         }
     }
     catch (const std::exception& e)
@@ -311,7 +315,9 @@ bool SlotHandler::fetchSensorStateFromDbus(const std::string& adapterObjectPath)
             bus.new_method_call(service.c_str(), adapterObjectPath.c_str(),
                                 FreedesktopInterface, GetMethod);
         method.append(ItemInterface, PresentProperty);
-        auto reply = bus.call(method);
+        auto reply = bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
         reply.read(presentProperty);
         return std::get<bool>(presentProperty);
     }
