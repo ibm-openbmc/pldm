@@ -132,7 +132,12 @@ void DbusToFileHandler::processNewResourceDump(
     }
     catch (const sdbusplus::exception::exception& e)
     {
-        error("Error in getting current resource dump status");
+        error(
+            "Error {ERR_EXCEP} found in getting current resource dump status while initiating a new resource dump with objPath={DUMP_OBJ_PATH} and intf={DUMP_PROG_INTF}",
+            "ERR_EXCEP", e.what(), "DUMP_OBJ_PATH",
+            resDumpCurrentObjPath.str.c_str(), "DUMP_PROG_INTF",
+            resDumpProgressIntf);
+
         return;
     }
 

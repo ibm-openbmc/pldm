@@ -24,7 +24,7 @@ uint8_t Requester::getInstanceId(uint8_t eid)
     {
         id = ids[eid].next();
     }
-    catch (const std::runtime_error& e)
+    catch (const std::runtime_error&)
     {
         throw TooManyResources();
     }
