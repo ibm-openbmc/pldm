@@ -1476,7 +1476,7 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
             ++sensorMapIndex;
             if (sensorMapIndex == sensorMap.end())
             {
-                // std::cerr << "sensor map completed\n";
+                // error("sensor map completed");
                 ++objMapIndex;
                 sensorMapIndex = sensorMap.begin();
             }
@@ -1543,7 +1543,7 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
         ++sensorMapIndex;
         if (sensorMapIndex == sensorMap.end())
         {
-            // std::cerr << "sensor map completed\n";
+            // error("sensor map completed");
             ++objMapIndex;
             sensorMapIndex = sensorMap.begin();
         }

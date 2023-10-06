@@ -261,8 +261,9 @@ GetSubTreeResponse
     }
     catch (const std::exception& e)
     {
-        std::cerr << "failed GetSubTree query for interface " << ifaceList[0]
-                  << " with ERROR=" << e.what() << "\n";
+        error(
+            "failed GetSubTree query for interface {FACE_LIST} with ERROR = {ERR_EXCEP}",
+            "FACE_LIST", ifaceList[0], "ERR_EXCEP", e.what());
     }
     return response;
 }
@@ -289,7 +290,9 @@ void reportError(const char* errorMsg, const Severity& sev)
         }
         std::map<std::string, std::string> addlData{};
         method.append(errorMsg, severity, addlData);
-        bus.call_noreply(method);
+        bus.call_noreply(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     }
     catch (const std::exception& e)
     {
@@ -324,7 +327,9 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
                 service.c_str(), "/xyz/openbmc_project/inventory",
                 "xyz.openbmc_project.Inventory.Manager", "Notify");
             method.append(std::move(objectValueTree));
-            bus.call_noreply(method);
+            bus.call_noreply(
+                method, std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
+                            .count());
         }
         else
         {
@@ -343,7 +348,9 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
             }
             method.append(dBusMap.interface.c_str(),
                           dBusMap.propertyName.c_str(), variant);
-            bus.call_noreply(method);
+            bus.call_noreply(
+                method, std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
+                            .count());
         }
     };
 
@@ -727,7 +734,9 @@ void setBiosAttr(const BiosAttributeList& biosAttrList)
             method.append(
                 biosConfigIntf, "PendingAttributes",
                 std::variant<PendingAttributesType>(pendingAttributes));
-            bus.call_noreply(method);
+            bus.call_noreply(
+                method, std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
+                            .count());
         }
         catch (const sdbusplus::exception::SdBusError& e)
         {

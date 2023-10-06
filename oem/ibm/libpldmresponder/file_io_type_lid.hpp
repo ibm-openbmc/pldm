@@ -162,8 +162,8 @@ class LidHandler : public FileHandler
                     phosphor::logging::commit<IncompatibleErr>();
                     validateStatus = MIN_MIF_FAIL;
                 }
-                std::cerr << "Marker lid validate error, "
-                          << "ERROR=" << e.what() << std::endl;
+                error("Marker lid validate error, ERROR={ERR_EXCEP}",
+                      "ERR_EXCEP", e.what());
             }
             oemIbmPlatformHandler->sendStateSensorEvent(
                 sensorId, PLDM_STATE_SENSOR_STATE, 0, validateStatus, VALID);

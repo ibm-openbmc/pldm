@@ -600,9 +600,9 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
             }
             catch (const std::exception& e)
             {
-                std::cerr << "failed to set token for resource dump, ERROR="
-                          << e.what() << "\n";
-                return PLDM_ERROR;
+                error("failed to set token for resource dump,
+                ERROR={ERR_EXCEP}", "ERR_EXCEP", e.what());
+            return PLDM_ERROR;
             }*/
         }
 
