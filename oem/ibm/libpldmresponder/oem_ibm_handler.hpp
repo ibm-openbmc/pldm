@@ -11,6 +11,7 @@
 #include "libpldmresponder/oem_handler.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
 #include "libpldmresponder/platform.hpp"
+#include "oem/ibm/requester/dbus_to_file_handler.hpp"
 #include "requester/handler.hpp"
 #include "utils.hpp"
 
@@ -20,8 +21,41 @@ namespace pldm
 {
 namespace responder
 {
+
 using ObjectPath = std::string;
 using AssociatedEntityMap = std::map<ObjectPath, pldm_entity>;
+
+namespace oem_ibm_fileio
+{
+
+class Handler : public oem_fileio::Handler
+{
+  public:
+    Handler(int mctp_fd, uint8_t mctp_eid, dbus_api::Requester* requester,
+            sdbusplus::message::object_path path,
+            pldm::requester::Handler<pldm::requester::Request>* handler)
+    {
+        dbusToFileHandler =
+            std::make_unique<pldm::requester::oem_ibm::DbusToFileHandler>(
+                mctp_fd, mctp_eid, requester, path, handler);
+    }
+    virtual void newChapDataFileAvailable(const std::string& chapNameStr,
+                                          const std::string& chapPasswordStr)
+    {
+        if (dbusToFileHandler != nullptr)
+        {
+            dbusToFileHandler->newChapDataFileAvailable(chapNameStr,
+                                                        chapPasswordStr);
+        }
+    }
+    virtual ~Handler() = default;
+
+  private:
+    std::unique_ptr<pldm::requester::oem_ibm::DbusToFileHandler>
+        dbusToFileHandler;
+};
+} // namespace oem_ibm_fileio
+
 namespace oem_ibm_platform
 {
 using AttributeName = std::string;
@@ -90,6 +124,10 @@ class Handler : public oem_platform::Handler
         setEventReceiverCnt = 0;
         pldm::responder::utils::hostPCIETopologyIntf(mctp_eid,
                                                      hostEffecterParser);
+        sdbusplus::message::object_path path;
+        dbusToFileioIntf = new pldm::responder::oem_ibm_fileio::Handler(
+            mctp_fd, mctp_eid, &requester, path, handler);
+        pldm::responder::utils::hostChapDataIntf(dbusToFileioIntf);
 
         createMatches();
 
@@ -461,7 +499,13 @@ class Handler : public oem_platform::Handler
      */
     void triggerHostEffecter(bool value, std::string path);
 
-    ~Handler() = default;
+    ~Handler()
+    {
+        if (dbusToFileioIntf)
+        {
+            delete dbusToFileioIntf;
+        }
+    }
 
     pldm::responder::CodeUpdate* codeUpdate; //!< pointer to CodeUpdate object
 
@@ -547,6 +591,9 @@ class Handler : public oem_platform::Handler
     /** @brief method to create matches for the proeprty changed signal for link
      * reset on all slot paths */
     void createMatches();
+    std::unique_ptr<pldm::requester::oem_ibm::DbusToFileHandler>
+        dbusToFileioHdl;
+    pldm::responder::oem_fileio::Handler* dbusToFileioIntf;
 };
 
 /** @brief Method to encode code update event msg

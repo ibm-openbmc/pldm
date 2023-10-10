@@ -5,6 +5,7 @@
 
 #include "common/utils.hpp"
 #include "file_io_type_cert.hpp"
+#include "file_io_type_chap.hpp"
 #include "file_io_type_dump.hpp"
 #include "file_io_type_lic.hpp"
 #include "file_io_type_lid.hpp"
@@ -187,6 +188,10 @@ std::unique_ptr<FileHandler> getHandlerByType(uint16_t fileType,
         case PLDM_FILE_TYPE_PSPD_VPD_PDD_KEYWORD:
         {
             return std::make_unique<keywordHandler>(fileHandle, fileType);
+        }
+        case PLDM_FILE_TYPE_CHAP_DATA:
+        {
+            return std::make_unique<ChapHandler>(fileHandle, fileType);
         }
         default:
         {
