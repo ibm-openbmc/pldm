@@ -516,6 +516,13 @@ void hostPCIETopologyIntf(
         "/xyz/openbmc_project/pldm", mctp_eid, hostEffecterParser);
 }
 
+void hostChapDataIntf(
+    pldm::responder::oem_fileio::Handler* dbusToFilehandlerObj)
+{
+    CustomDBus::getCustomDBus().implementChapDataInterface(
+        "/xyz/openbmc_project/pldm", dbusToFilehandlerObj);
+}
+
 std::string getObjectPathByLocationCode(const std::string& locationCode,
                                         const std::string& inventoryItemType)
 {
