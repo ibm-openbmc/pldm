@@ -81,6 +81,10 @@ class Handler : public CmdHandler
                          [this](const pldm_msg* request, size_t payloadLength) {
             return this->setNumericEffecterValue(request, payloadLength);
         });
+        handlers.emplace(PLDM_GET_NUMERIC_EFFECTER_VALUE,
+                         [this](const pldm_msg* request, size_t payloadLength) {
+            return this->getNumericEffecterValue(request, payloadLength);
+        });
         handlers.emplace(PLDM_SET_STATE_EFFECTER_STATES,
                          [this](const pldm_msg* request, size_t payloadLength) {
             return this->setStateEffecterStates(request, payloadLength);
@@ -235,6 +239,15 @@ class Handler : public CmdHandler
      *  @return Response - PLDM Response message
      */
     Response setNumericEffecterValue(const pldm_msg* request,
+                                     size_t payloadLength);
+
+    /** @brief Handler for getNumericEffecterValue
+     *
+     *  @param[in] request - Request message
+     *  @param[in] payloadLength - Request payload length
+     *  @return Response - PLDM Response message
+     */
+    Response getNumericEffecterValue(const pldm_msg* request,
                                      size_t payloadLength);
 
     /** @brief Handler for getStateSensorReadings

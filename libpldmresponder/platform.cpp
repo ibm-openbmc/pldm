@@ -1,6 +1,7 @@
 #include "platform.hpp"
 
 #include "libpldm/entity.h"
+#include "libpldm/platform.h"
 #include "libpldm/state_set.h"
 
 #include "common/types.hpp"
@@ -701,6 +702,90 @@ int Handler::getPDRRecordHandles(const ChangeEntry* changeEntryData,
               static_cast<unsigned>(i));
     }
     return PLDM_SUCCESS;
+}
+
+Response Handler::getNumericEffecterValue(const pldm_msg* request,
+                                          size_t payloadLength)
+{
+    if (payloadLength != PLDM_GET_NUMERIC_EFFECTER_VALUE_REQ_BYTES)
+    {
+        return ccOnlyResponse(request, PLDM_ERROR_INVALID_LENGTH);
+    }
+
+    uint16_t effecterId{};
+    auto rc = decode_get_numeric_effecter_value_req(request, payloadLength,
+                                                    &effecterId);
+
+    if (rc != PLDM_SUCCESS)
+    {
+        return ccOnlyResponse(request, rc);
+    }
+
+    const pldm::utils::DBusHandler dBusIntf;
+    uint16_t entityType{};
+    uint16_t entityInstance{};
+    uint16_t effecterSemanticId{};
+    real32_t effecterOffset{};
+    real32_t effecterResolution{};
+    uint8_t effecterDataSize{};
+    pldm::utils::PropertyValue dbusValue;
+    std::string propertyType;
+
+    // Default value - Enabled and Operating, The pending and presentValue
+    // fields return the present numeric setting
+    uint8_t effecterOperationalState =
+        EFFECTER_OPER_STATE_ENABLED_NOUPDATEPENDING;
+    if (isOemNumericEffecter(*this, effecterId, entityType, entityInstance,
+                             effecterDataSize, effecterSemanticId,
+                             effecterOffset, effecterResolution) &&
+        oemPlatformHandler != nullptr &&
+        !effecterDbusObjMaps.contains(effecterId))
+    {
+        // TODO:  Handle OEM effecter
+        error("OEM Effecter is not supported for EFFECTERID={EFFECTERID}",
+              "EFFECTERID", effecterId);
+    }
+    else
+    {
+        rc = platform_numeric_effecter::getNumericEffecterData<
+            pldm::utils::DBusHandler, Handler>(dBusIntf, *this, effecterId,
+                                               effecterDataSize, propertyType,
+                                               dbusValue);
+
+        if (rc != PLDM_SUCCESS)
+        {
+            return ccOnlyResponse(request, rc);
+        }
+    }
+    // GetNumericEffecterResponse contains below fields
+    // effecter_data_size, effecterOperationalState, pendingValue and
+    // PresentValue 1 is added for completion code
+    size_t responsePayloadLength = 1 + sizeof(effecterDataSize) +
+                                   sizeof(effecterOperationalState) +
+                                   getEffecterDataSize(effecterDataSize) +
+                                   getEffecterDataSize(effecterDataSize);
+
+    Response response(responsePayloadLength + sizeof(pldm_msg_hdr));
+    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+
+    info(
+        "Return Value [RC]=[{RC}]  EffecterDataSize[{EFFECTERDATASIZE}] OperationalState[{OPERATIONSTATE}] PayloadLength[{PAYLOADLENGTH}]",
+        "RC", rc, "EFFECTERDATASIZE", static_cast<int>(effecterDataSize),
+        "OPERATIONSTATE", static_cast<int>(effecterOperationalState),
+        "PAYLOADLENGTH", static_cast<int>(responsePayloadLength));
+
+    rc = platform_numeric_effecter::getNumericEffecterValueHandler(
+        propertyType, dbusValue, effecterDataSize, responsePtr,
+        responsePayloadLength, request->hdr.instance_id);
+
+    if (rc != PLDM_SUCCESS)
+    {
+        error(
+            "Reponse to GetNumeric Effecter failed RC={RC} for EffectorId={EFFECTERID} ",
+            "RC", rc, "EFFECTERID", effecterId);
+        return ccOnlyResponse(request, rc);
+    }
+    return response;
 }
 
 Response Handler::setNumericEffecterValue(const pldm_msg* request,
