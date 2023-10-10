@@ -8,6 +8,7 @@ test_sources = [
   '../dbus/custom_dbus.cpp',
   '../dbus/cpu_core.cpp',
   '../dbus/serialize.cpp',
+  '../dbus/chapdata.cpp',
 ]
 
 tests = [

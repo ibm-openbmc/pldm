@@ -33,6 +33,7 @@ sources = [
   '../host-bmc/dbus/serialize.cpp',
   '../host-bmc/dbus/deserialize.cpp',
   '../host-bmc/dbus/cpu_core.cpp',
+  '../host-bmc/dbus/chapdata.cpp',
   'event_parser.cpp'
 ]
 
@@ -49,6 +50,7 @@ if get_option('oem-ibm').allowed()
     '../oem/ibm/libpldmresponder/file_io_by_type.cpp',
     '../oem/ibm/libpldmresponder/file_io_type_pel.cpp',
     '../oem/ibm/libpldmresponder/file_io_type_dump.cpp',
+    '../oem/ibm/libpldmresponder/file_io_type_chap.cpp',
     '../oem/ibm/libpldmresponder/file_io_type_cert.cpp',
     '../oem/ibm/libpldmresponder/platform_oem_ibm.cpp',
     '../oem/ibm/libpldmresponder/fru_oem_ibm.cpp',
