@@ -1,6 +1,8 @@
 #pragma once
 
 #include "cable.hpp"
+#include "chapdata.hpp"
+#include "com/ibm/License/Entry/LicenseEntry/server.hpp"
 #include "common/utils.hpp"
 #include "cpu_core.hpp"
 #include "motherboard.hpp"
@@ -161,6 +163,16 @@ class CustomDBus
      */
     bool getOperationalStatus(const std::string& path) const;
 
+    /** @brief Implement ChapData  interface
+     *
+     *  @param[in] path - The object path
+     *  @param[in] dbusToFilehandlerObj - virtual pointer to raise
+     * NewChapdataFileAvailable method in oem layer request
+     */
+    void implementChapDataInterface(
+        const std::string& path,
+        pldm::responder::oem_fileio::Handler* dbusToFilehandlerObj);
+
     /** @brief Implement the license interface properties
      *
      *  @param[in] path      - The object path
@@ -208,6 +220,7 @@ class CustomDBus
     std::map<ObjectPath, std::unique_ptr<OperationalStatusIntf>> operationalStatus;
     std::map<ObjectPath, std::unique_ptr<AvailabilityIntf>> availabilityState;
     std::unordered_map<ObjectPath, std::unique_ptr<LicIntf>> codLic;
+    std::unordered_map<ObjectPath, std::unique_ptr<ChapDatas>> chapdata;
 };
 
 } // namespace dbus

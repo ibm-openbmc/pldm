@@ -439,6 +439,13 @@ int createOrUpdateLicenseObjs()
 
     return rc;
 }
+
+void hostChapDataIntf(
+    pldm::responder::oem_fileio::Handler* dbusToFilehandlerObj)
+{
+    CustomDBus::getCustomDBus().implementChapDataInterface(
+        "/xyz/openbmc_project/pldm", dbusToFilehandlerObj);
+}
 } // namespace utils
 
 namespace oem_ibm_utils
@@ -511,7 +518,6 @@ int pldm::responder::oem_ibm_utils::Handler::setCoreCount(
     }
     return coreCountRef;
 }
-
 } // namespace oem_ibm_utils
 } // namespace responder
 } // namespace pldm

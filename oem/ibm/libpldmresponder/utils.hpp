@@ -1,6 +1,8 @@
 #pragma once
 
+#include "host-bmc/dbus_to_terminus_effecters.hpp"
 #include "libpldmresponder/oem_handler.hpp"
+#include "oem/ibm/requester/dbus_to_file_handler.hpp"
 
 #include <unistd.h>
 
@@ -141,6 +143,13 @@ int createOrUpdateLicenseDbusPaths(const uint8_t& flag);
  *            on failure returns -1
  */
 int createOrUpdateLicenseObjs();
+
+/** @brief host ChapData Interface
+ *  @param[in] dbusToFilehandlerObj - ref object to raise NewFileAvailable
+ * request
+ */
+void hostChapDataIntf(
+    pldm::responder::oem_fileio::Handler* dbusToFilehandlerObj);
 
 } // namespace utils
 

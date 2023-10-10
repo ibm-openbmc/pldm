@@ -240,6 +240,49 @@ void DbusToFileHandler::newCsrFileAvailable(const std::string& csr,
                                PLDM_FILE_TYPE_CERT_SIGNING_REQUEST);
 }
 
+void DbusToFileHandler::newChapDataFileAvailable(
+    const std::string& chapNameStr, const std::string& userChallengeStr)
+{
+    namespace fs = std::filesystem;
+    const fs::path chapDataDirPath = "/var/lib/pldm/ChapData/";
+    if (!fs::exists(chapDataDirPath))
+    {
+        fs::create_directories(chapDataDirPath);
+        fs::permissions(chapDataDirPath,
+                        fs::perms::others_read | fs::perms::owner_write);
+    }
+
+    fs::path chapFilePath = std::string(chapDataDirPath) +
+                            std::string("chapsecret");
+    uint32_t fileHandle = atoi(fs::path((std::string)chapFilePath).c_str());
+    std::ofstream fileHandleFd;
+    fileHandleFd.open(chapFilePath, std::ios::out | std::ofstream::binary);
+    if (!fileHandleFd)
+    {
+        error("Chap data file open error:{CHAP_PATH}", "CHAP_PATH",
+              chapFilePath);
+        return;
+    }
+
+    // Fill up the file with chap data parameters and respective sizes
+    auto fileFunc = [&fileHandleFd](auto& paramBuf) {
+        uint32_t paramSize = paramBuf.size();
+        fileHandleFd.write((char*)&paramSize, sizeof(paramSize));
+        fileHandleFd << paramBuf;
+    };
+    fileFunc(chapNameStr);
+    fileFunc(userChallengeStr);
+    if (fileHandleFd.bad())
+    {
+        error("Error while writing to chap file: {CHAPFILE_PATH}",
+              "CHAPFILE_PATH", chapFilePath);
+    }
+    fileHandleFd.close();
+    size_t fileSize = fs::file_size(chapFilePath);
+
+    newFileAvailableSendToHost(fileSize, fileHandle, PLDM_FILE_TYPE_CHAP_DATA);
+}
+
 void DbusToFileHandler::newLicFileAvailable(const std::string& licenseStr)
 {
     namespace fs = std::filesystem;

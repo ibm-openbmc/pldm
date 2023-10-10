@@ -12,6 +12,7 @@ test_sources = [
     '../dbus/pcie_device.cpp',
     '../dbus/pcie_slot.cpp',
     '../dbus/serialize.cpp',
+    '../dbus/chapdata.cpp',
 ]
 
 tests = [
