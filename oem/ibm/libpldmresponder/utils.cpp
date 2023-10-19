@@ -26,7 +26,6 @@ namespace pldm
 using namespace pldm::dbus;
 namespace responder
 {
-std::atomic<SocketWriteStatus> socketWriteStatus = Free;
 std::mutex lockMutex;
 
 namespace utils
@@ -120,16 +119,9 @@ int setupUnixSocket(const std::string& socketInterface)
     return fd;
 }
 
-void writeToUnixSocket(const int sock, const char* buf,
-                       const uint64_t blockSize)
+int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
 {
     const std::lock_guard<std::mutex> lock(lockMutex);
-    if (socketWriteStatus == Error)
-    {
-        munmap((void*)buf, blockSize);
-        return;
-    }
-    socketWriteStatus = InProgress;
     uint64_t i;
     int nwrite = 0;
 
@@ -149,9 +141,7 @@ void writeToUnixSocket(const int sock, const char* buf,
         {
             error("writeToUnixSocket: select call failed {ERR}", "ERR", errno);
             close(sock);
-            socketWriteStatus = Error;
-            munmap((void*)buf, blockSize);
-            return;
+            return -1;
         }
         if (retval == 0)
         {
@@ -161,7 +151,6 @@ void writeToUnixSocket(const int sock, const char* buf,
         if ((retval > 0) && (FD_ISSET(sock, &wfd)))
         {
             nwrite = write(sock, buf + i, blockSize - i);
-
             if (nwrite < 0)
             {
                 if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
@@ -173,9 +162,7 @@ void writeToUnixSocket(const int sock, const char* buf,
                 }
                 error("writeToUnixSocket: Failed to write {ERR}", "ERR", errno);
                 close(sock);
-                socketWriteStatus = Error;
-                munmap((void*)buf, blockSize);
-                return;
+                return -1;
             }
         }
         else
@@ -184,15 +171,7 @@ void writeToUnixSocket(const int sock, const char* buf,
         }
     }
 
-    munmap((void*)buf, blockSize);
-    socketWriteStatus = Completed;
-    return;
-}
-
-void clearDumpSocketWriteStatus()
-{
-    socketWriteStatus = Free;
-    return;
+    return 0;
 }
 
 Json convertBinFileToJson(const fs::path& path)

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "file_io.hpp"
+#include "file_io_by_type.hpp"
 
 namespace pldm
 {
@@ -19,13 +19,17 @@ class PelHandler : public FileHandler
      */
     PelHandler(uint32_t fileHandle) : FileHandler(fileHandle) {}
 
-    virtual int writeFromMemory(uint32_t offset, uint32_t length,
-                                uint64_t address,
-                                oem_platform::Handler* /*oemPlatformHandler*/);
+    virtual void writeFromMemory(uint32_t offset, uint32_t length,
+                                 uint64_t address,
+                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                 ResponseHdr& responseHdr,
+                                 sdeventplus::Event& event);
 
-    virtual int readIntoMemory(uint32_t offset, uint32_t& length,
-                               uint64_t address,
-                               oem_platform::Handler* /*oemPlatformHandler*/);
+    virtual void readIntoMemory(uint32_t offset, uint32_t& length,
+                                uint64_t address,
+                                oem_platform::Handler* /*oemPlatformHandler*/,
+                                ResponseHdr& responseHdr,
+                                sdeventplus::Event& event);
 
     virtual int read(uint32_t offset, uint32_t& length, Response& response,
                      oem_platform::Handler* /*oemPlatformHandler*/);
@@ -42,6 +46,7 @@ class PelHandler : public FileHandler
      *  @param[in] pelFileName - the pel file path
      */
     virtual int storePel(std::string&& pelFileName);
+    virtual void postDataTransferCallBack(bool IsWriteToMemOp);
 
     virtual int newFileAvailable(uint64_t /*length*/)
     {
@@ -69,6 +74,10 @@ class PelHandler : public FileHandler
     /** @brief PelHandler destructor
      */
     ~PelHandler() {}
+
+  private:
+    fs::path Pelpath;
+    int fd;
 };
 
 } // namespace responder
