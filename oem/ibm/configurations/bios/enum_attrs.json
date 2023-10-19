@@ -573,6 +573,28 @@
             "default_values": ["MTU1500"],
             "helpText": "Specifies the maximum frame size (maximum transmission unit, MTU). The value is in terms of bytes per packet size.",
             "displayName": "Maximum Frame Size"
+        },
+        {
+            "attribute_name":"pvm_default_os_type",
+            "possible_values":["AIX", "Linux", "IBM I", "Linux KVM"],
+            "default_values":["AIX"],
+            "helpText" : "Specifies default OS type",
+            "displayName" : "pvm_default_os_type"
+        },
+        {
+            "attribute_name":"pvm_linux_kvm_memory",
+            "possible_values":["Automatic", "Custom"],
+            "default_values":["Automatic"],
+            "helpText" : "Controls whether the system or user specified percentage of available system memory will be reserved for the management of KVM guests.",
+            "displayName" : "Memory setting for KVM Guest Management"
+        },
+        {
+            "attribute_name":"pvm_linux_kvm_memory_current",
+            "possible_values":["Automatic", "Custom"],
+            "default_values":["Automatic"],
+            "helpText" : "Controls whether the system or user specified percentage of available system memory will be reserved for the management of KVM guests.",
+            "displayName" : "Memory setting for KVM Guest Management (current)",
+            "readOnly":true
         }
     ]
 }
