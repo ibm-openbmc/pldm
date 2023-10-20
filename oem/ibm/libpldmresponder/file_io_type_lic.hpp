@@ -1,6 +1,6 @@
 #pragma once
 
-#include "file_io_by_type.hpp"
+#include "file_io.hpp"
 
 namespace pldm
 {
@@ -23,15 +23,22 @@ class LicenseHandler : public FileHandler
         FileHandler(fileHandle), licType(fileType)
     {}
 
-    virtual int writeFromMemory(uint32_t offset, uint32_t length,
-                                uint64_t address,
-                                oem_platform::Handler* /*oemPlatformHandler*/);
+    virtual void writeFromMemory(uint32_t offset, uint32_t length,
+                                 uint64_t address,
+                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                 ResponseHdr& responseHdr,
+                                 sdeventplus::Event& event);
 
-    virtual int readIntoMemory(uint32_t /*offset*/, uint32_t& /*length*/,
-                               uint64_t /*address*/,
-                               oem_platform::Handler* /*oemPlatformHandler*/)
+    virtual void readIntoMemory(uint32_t /*offset*/, uint32_t& length,
+                                uint64_t /*address*/,
+                                oem_platform::Handler* /*oemPlatformHandler*/,
+                                ResponseHdr& responseHdr,
+                                sdeventplus::Event& /*event*/)
     {
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+        FileHandler::dmaResponseToHost(responseHdr,
+                                       PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
+        FileHandler::deleteAIOobjects(nullptr, responseHdr);
+        return;
     }
 
     virtual int read(uint32_t offset, uint32_t& length, Response& response,
@@ -46,6 +53,7 @@ class LicenseHandler : public FileHandler
     }
 
     virtual int newFileAvailable(uint64_t length);
+    virtual void postDataTransferCallBack(bool IsWriteToMemOp);
 
     virtual int fileAckWithMetaData(uint8_t /*fileStatus*/,
                                     uint32_t metaDataValue1,
@@ -70,6 +78,7 @@ class LicenseHandler : public FileHandler
   private:
     uint16_t licType;   //!< type of the license
     uint64_t licLength; //!< length of the full license data
+    uint32_t m_length;
 
     enum Status
     {
