@@ -455,7 +455,9 @@ void findPortObjects(const std::string& cardObjPath,
         method.append(cardObjPath);
         method.append(0);
         method.append(std::vector<std::string>({portInterface}));
-        auto reply = bus.call(method);
+        auto reply = bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
         reply.read(portObjects);
     }
     catch (const std::exception& e)
@@ -585,7 +587,9 @@ void findSlotObjects(const std::string& boardObjPath,
         method.append(boardObjPath);
         method.append(0);
         method.append(std::vector<std::string>({slotInterface}));
-        auto reply = bus.call(method);
+        auto reply = bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
         reply.read(slotObjects);
     }
     catch (const std::exception& e)

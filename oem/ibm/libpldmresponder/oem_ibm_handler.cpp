@@ -699,7 +699,9 @@ std::filesystem::path pldm::responder::oem_ibm_platform::Handler::getConfigDir()
                 serviceMap[0].first.c_str(), objectPath.c_str(),
                 orgFreeDesktopInterface, getMethod);
             method.append(ibmCompatible[0].c_str(), namesProperty);
-            auto reply = bus.call(method);
+            auto reply = bus.call(
+                method, std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
+                            .count());
             reply.read(value);
             return fs::path{std::get<std::vector<std::string>>(value)[0]};
         }
@@ -1015,7 +1017,9 @@ int pldm::responder::oem_ibm_platform::Handler::setNumericEffecter(
             (uint64_t)entityInstance;
         method.append(createParams);
 
-        auto response = bus.call(method);
+        auto response = bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
 
         sdbusplus::message::object_path reply;
         response.read(reply);
@@ -1278,7 +1282,9 @@ void pldm::responder::oem_ibm_platform::Handler::resetWatchDogTimer()
             bus.new_method_call(watchDogService, watchDogObjectPath,
                                 watchDogInterface, watchDogResetPropName);
         resetMethod.append(true);
-        bus.call_noreply(resetMethod);
+        bus.call_noreply(
+            resetMethod,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     }
     catch (const std::exception& e)
     {
@@ -1346,7 +1352,9 @@ void pldm::responder::oem_ibm_platform::Handler::setBitmapMethodCall(
             bus.new_method_call(service, objPath, dbusInterface, dbusMethod);
         auto val = std::get_if<std::vector<uint8_t>>(&value);
         method.append(*val);
-        bus.call_noreply(method);
+        bus.call_noreply(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     }
     catch (const std::exception& e)
     {
