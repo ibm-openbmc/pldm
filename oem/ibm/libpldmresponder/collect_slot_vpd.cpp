@@ -174,7 +174,7 @@ void SlotHandler::createPresenceMatch(const std::string& adapterObjectPath,
             this->processPropertyChangeFromVPD(value, adapterObjectPath,
                                                stateFieldValue, entity);
         }
-        });
+    });
 }
 
 void SlotHandler::processPropertyChangeFromVPD(

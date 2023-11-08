@@ -26,6 +26,7 @@ namespace pldm
 using namespace pldm::dbus;
 namespace responder
 {
+std::atomic<SocketWriteStatus> socketWriteStatus = Free;
 std::mutex lockMutex;
 
 namespace utils
@@ -119,9 +120,16 @@ int setupUnixSocket(const std::string& socketInterface)
     return fd;
 }
 
-int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
+void writeToUnixSocket(const int sock, const char* buf,
+                       const uint64_t blockSize)
 {
     const std::lock_guard<std::mutex> lock(lockMutex);
+    if (socketWriteStatus == Error)
+    {
+        munmap((void*)buf, blockSize);
+        return;
+    }
+    socketWriteStatus = InProgress;
     uint64_t i;
     int nwrite = 0;
 
@@ -141,7 +149,9 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
         {
             error("writeToUnixSocket: select call failed {ERR}", "ERR", errno);
             close(sock);
-            return -1;
+            socketWriteStatus = Error;
+            munmap((void*)buf, blockSize);
+            return;
         }
         if (retval == 0)
         {
@@ -151,6 +161,7 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
         if ((retval > 0) && (FD_ISSET(sock, &wfd)))
         {
             nwrite = write(sock, buf + i, blockSize - i);
+
             if (nwrite < 0)
             {
                 if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR)
@@ -162,7 +173,9 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
                 }
                 error("writeToUnixSocket: Failed to write {ERR}", "ERR", errno);
                 close(sock);
-                return -1;
+                socketWriteStatus = Error;
+                munmap((void*)buf, blockSize);
+                return;
             }
         }
         else
@@ -171,7 +184,15 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
         }
     }
 
-    return 0;
+    munmap((void*)buf, blockSize);
+    socketWriteStatus = Completed;
+    return;
+}
+
+void clearDumpSocketWriteStatus()
+{
+    socketWriteStatus = Free;
+    return;
 }
 
 Json convertBinFileToJson(const fs::path& path)

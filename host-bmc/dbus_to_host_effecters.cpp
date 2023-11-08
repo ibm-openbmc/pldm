@@ -349,7 +349,7 @@ void HostEffecterParser::createHostEffecterMatch(const std::string& objectPath,
         msg.read(iface, props);
         processHostEffecterChangeNotification(props, effecterInfoIndex,
                                               dbusInfoIndex, effecterId);
-            }));
+    }));
 }
 
 const pldm_pdr* HostEffecterParser::getPldmPDR()

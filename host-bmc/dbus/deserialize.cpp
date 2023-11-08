@@ -31,7 +31,7 @@ std::unordered_map<std::string, callback> ibmDbusHandler{
         pldm::dbus::CustomDBus::getCustomDBus().setLocationCode(
             path, std::get<std::string>(values.at("locationCode")));
     }
-     }},
+}},
     {"Associations",
      [](const std::string& path, Properties values) {
     if (values.contains("associations"))
@@ -39,7 +39,7 @@ std::unordered_map<std::string, callback> ibmDbusHandler{
         pldm::dbus::CustomDBus::getCustomDBus().setAssociations(
             path, std::get<dbus::AssociationsObj>(values.at("associations")));
     }
-     }},
+}},
     {"Available",
      [](const std::string& path, Properties values) {
     if (values.contains("available"))
@@ -47,7 +47,7 @@ std::unordered_map<std::string, callback> ibmDbusHandler{
         pldm::dbus::CustomDBus::getCustomDBus().setAvailabilityState(
             path, std::get<bool>(values.at("available")));
     }
-     }},
+}},
     {"OperationalStatus",
      [](const std::string& path, Properties values) {
     if (values.contains("functional"))
@@ -55,7 +55,7 @@ std::unordered_map<std::string, callback> ibmDbusHandler{
         pldm::dbus::CustomDBus::getCustomDBus().setOperationalStatus(
             path, std::get<bool>(values.at("functional")));
     }
-     }},
+}},
     {"InventoryItem",
      [](const std::string& path, Properties values) {
     if (values.contains("present"))
@@ -63,7 +63,7 @@ std::unordered_map<std::string, callback> ibmDbusHandler{
         pldm::dbus::CustomDBus::getCustomDBus().updateItemPresentStatus(
             path, std::get<bool>(values.at("present")));
     }
-     }},
+}},
     {"Enable",
      [](const std::string& path, Properties values) {
     if (values.contains("enabled"))
@@ -71,15 +71,15 @@ std::unordered_map<std::string, callback> ibmDbusHandler{
         pldm::dbus::CustomDBus::getCustomDBus().implementObjectEnableIface(
             path, std::get<bool>(values.at("enabled")));
     }
-     }},
+}},
     {"ItemChassis",
      [](const std::string& path, Properties /* values */) {
     pldm::dbus::CustomDBus::getCustomDBus().implementChassisInterface(path);
-     }},
+}},
     {"PCIeSlot",
      [](const std::string& path, Properties /* values */) {
     pldm::dbus::CustomDBus::getCustomDBus().implementPCIeSlotInterface(path);
-     }},
+}},
     {"CPUCore",
      [](const std::string& path, Properties values) {
     if (values.contains("microcode"))
@@ -91,39 +91,39 @@ std::unordered_map<std::string, callback> ibmDbusHandler{
     {
         pldm::dbus::CustomDBus::getCustomDBus().implementCpuCoreInterface(path);
     }
-     }},
+}},
     {"Motherboard",
      [](const std::string& path, Properties /* values */) {
     pldm::dbus::CustomDBus::getCustomDBus().implementMotherboardInterface(path);
-     }},
+}},
     {"PowerSupply",
      [](const std::string& path, Properties /* values */) {
     pldm::dbus::CustomDBus::getCustomDBus().implementPowerSupplyInterface(path);
-     }},
+}},
     {"Fan",
      [](const std::string& path, Properties /* values */) {
     pldm::dbus::CustomDBus::getCustomDBus().implementFanInterface(path);
-     }},
+}},
     {"Connector",
      [](const std::string& path, Properties /* values */) {
     pldm::dbus::CustomDBus::getCustomDBus().implementConnecterInterface(path);
-     }},
+}},
     {"VRM",
      [](const std::string& path, Properties /* values */) {
     pldm::dbus::CustomDBus::getCustomDBus().implementVRMInterface(path);
-     }},
+}},
     {"FabricAdapter",
      [](const std::string& path, Properties /* values */) {
     pldm::dbus::CustomDBus::getCustomDBus().implementFabricAdapter(path);
-     }},
+}},
     {"Board",
      [](const std::string& path, Properties /* values */) {
     pldm::dbus::CustomDBus::getCustomDBus().implementBoard(path);
-     }},
+}},
     {"Global",
      [](const std::string& path, Properties /* values */) {
     pldm::dbus::CustomDBus::getCustomDBus().implementGlobalInterface(path);
-     }},
+}},
     {"LicenseEntry",
      [](const std::string& path, Properties values) {
     std::string name{};
@@ -161,18 +161,17 @@ std::unordered_map<std::string, callback> ibmDbusHandler{
 
     pldm::dbus::CustomDBus::getCustomDBus().implementLicInterfaces(
         path, authdevno, name, serialno, exptime, type, authtype);
-     }},
+}},
     {"SoftWareVersion", [](const std::string& path, Properties values) {
-         std::string version{};
+    std::string version{};
 
-         if (values.contains("version"))
-         {
-             version = std::get<std::string>(values.at("version"));
-         }
+    if (values.contains("version"))
+    {
+        version = std::get<std::string>(values.at("version"));
+    }
 
-         pldm::dbus::CustomDBus::getCustomDBus().setSoftwareVersion(path,
-                                                                    version);
-     }}};
+    pldm::dbus::CustomDBus::getCustomDBus().setSoftwareVersion(path, version);
+}}};
 
 std::pair<std::set<uint16_t>, std::set<uint16_t>>
     getEntityTypes(const fs::path& path)

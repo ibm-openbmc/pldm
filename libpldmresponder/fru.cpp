@@ -879,7 +879,7 @@ void FruImpl::subscribeFruPresence(
                 std::string iface;
                 msg.read(iface, props);
                 processFruPresenceChange(props, fruObjPath, fruInterface);
-                    }));
+            }));
         }
     }
     catch (const std::exception& e)

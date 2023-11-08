@@ -182,17 +182,13 @@ class PCIeInfoHandler : public FileHandler
      */
     PCIeInfoHandler(uint32_t fileHandle, uint16_t fileType);
 
-    virtual void writeFromMemory(uint32_t offset, uint32_t length,
-                                 uint64_t address,
-                                 oem_platform::Handler* /*oemPlatformHandler*/,
-                                 ResponseHdr& responseHdr,
-                                 sdeventplus::Event& event);
-
-    virtual void readIntoMemory(uint32_t offset, uint32_t& length,
+    virtual int writeFromMemory(uint32_t offset, uint32_t length,
                                 uint64_t address,
-                                oem_platform::Handler* /*oemPlatformHandler*/,
-                                ResponseHdr& /*responseHdr*/,
-                                sdeventplus::Event& event);
+                                oem_platform::Handler* /*oemPlatformHandler*/);
+
+    virtual int readIntoMemory(uint32_t offset, uint32_t& length,
+                               uint64_t address,
+                               oem_platform::Handler* /*oemPlatformHandler*/);
 
     virtual int read(uint32_t offset, uint32_t& length, Response& response,
                      oem_platform::Handler* /*oemPlatformHandler*/);
@@ -263,7 +259,7 @@ class PCIeInfoHandler : public FileHandler
     virtual std::string
         getDownStreamChassis(const std::string& slotOrConnecterPath);
     virtual void parseSpeciallink(linkId_t linkId, linkId_t parentLinkId);
-    virtual void postDataTransferCallBack(bool /*IsWriteToMemOp*/) {}
+
     /** @brief PCIeInfoHandler destructor
      */
     ~PCIeInfoHandler() {}

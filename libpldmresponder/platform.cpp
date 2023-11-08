@@ -86,24 +86,23 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
     // generate the PDR structures. This function iterates through the map to
     // invoke all lambdas, so that all PDR types can be created.
 
-    const std::map<Type, generatePDR>
-        generateHandlers =
-            {{PLDM_STATE_EFFECTER_PDR,
-              [this](const DBusHandler& dBusIntf, const auto& json,
-                     RepoInterface& repo,
-                     pldm_entity_association_tree* bmcEntityTree) {
+    const std::map<Type, generatePDR> generateHandlers = {
+        {PLDM_STATE_EFFECTER_PDR,
+         [this](const DBusHandler& dBusIntf, const auto& json,
+                RepoInterface& repo,
+                pldm_entity_association_tree* bmcEntityTree) {
         pdr_state_effecter::generateStateEffecterPDR<pldm::utils::DBusHandler,
                                                      Handler>(
             dBusIntf, json, *this, repo, bmcEntityTree);
-              }},
-             {PLDM_NUMERIC_EFFECTER_PDR,
-              [this](const DBusHandler& dBusIntf, const auto& json,
-                     RepoInterface& repo,
-                     pldm_entity_association_tree* bmcEntityTree) {
+    }},
+        {PLDM_NUMERIC_EFFECTER_PDR,
+         [this](const DBusHandler& dBusIntf, const auto& json,
+                RepoInterface& repo,
+                pldm_entity_association_tree* bmcEntityTree) {
         pdr_numeric_effecter::generateNumericEffecterPDR<
             pldm::utils::DBusHandler, Handler>(dBusIntf, json, *this, repo,
                                                bmcEntityTree);
-              }},
+    }},
         {PLDM_STATE_SENSOR_PDR,
          [this](const DBusHandler& dBusIntf, const auto& json,
                 RepoInterface& repo,
@@ -111,7 +110,7 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
         pdr_state_sensor::generateStateSensorPDR<pldm::utils::DBusHandler,
                                                  Handler>(dBusIntf, json, *this,
                                                           repo, bmcEntityTree);
-         }}};
+    }}};
 
     Type pdrType{};
     for (const auto& directory : dir)

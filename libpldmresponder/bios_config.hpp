@@ -203,7 +203,7 @@ class BIOSConfig
                     std::string iface;
                     msg.read(iface, props);
                     processBiosAttrChangeNotification(props, biosAttrIndex);
-                        }));
+                }));
 
                 biosAttrMatch.push_back(
                     std::make_unique<sdbusplus::bus::match::match>(
@@ -221,7 +221,7 @@ class BIOSConfig
                         processBiosAttrChangeNotification(ifaceIt->second,
                                                           biosAttrIndex);
                     }
-                        }));
+                }));
             }
         }
         catch (const std::exception& e)

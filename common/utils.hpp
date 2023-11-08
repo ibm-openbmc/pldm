@@ -61,13 +61,11 @@ struct CustomFD
     CustomFD(CustomFD&&) = delete;
     CustomFD& operator=(CustomFD&&) = delete;
 
-    CustomFD(int fd, bool closeOnOutScope = true) :
-        fd(fd), closeOnOutScope(closeOnOutScope)
-    {}
+    CustomFD(int fd) : fd(fd) {}
 
     ~CustomFD()
     {
-        if (fd >= 0 && closeOnOutScope)
+        if (fd >= 0)
         {
             close(fd);
         }
@@ -80,7 +78,6 @@ struct CustomFD
 
   private:
     int fd = -1;
-    bool closeOnOutScope;
 };
 
 /** @brief Calculate the pad for PLDM data

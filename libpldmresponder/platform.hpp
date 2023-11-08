@@ -151,7 +151,7 @@ class Handler : public CmdHandler
                     clearMexObj = true;
                 }
             }
-            });
+        });
     }
 
     pdr_utils::Repo& getRepo()

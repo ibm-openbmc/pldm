@@ -168,8 +168,8 @@ std::tuple<TerminusHandle, SensorID, SensorInfo>
             reinterpret_cast<const state_sensor_possible_states*>(statesPtr);
         PossibleStates possibleStates{};
         uint8_t possibleStatesPos{};
-        auto updateStates =
-            [&possibleStates, &possibleStatesPos](const bitfield8_t& val) {
+        auto updateStates = [&possibleStates,
+                             &possibleStatesPos](const bitfield8_t& val) {
             for (int i = 0; i < CHAR_BIT; i++)
             {
                 if (val.byte & (1 << i))
@@ -270,8 +270,8 @@ std::vector<uint8_t> fetchBitMap(const std::vector<std::vector<uint8_t>>& pdrs)
                 reinterpret_cast<const state_effecter_possible_states*>(
                     statesPtr);
             uint8_t possibleStatesPos{};
-            auto printStates =
-                [&possibleStatesPos, &bitMap](const bitfield8_t& val) {
+            auto printStates = [&possibleStatesPos,
+                                &bitMap](const bitfield8_t& val) {
                 bitMap.emplace_back(static_cast<uint8_t>(val.byte));
                 possibleStatesPos++;
             };

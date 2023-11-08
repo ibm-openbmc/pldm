@@ -306,7 +306,7 @@ void CodeUpdate::setVersions()
         std::string iface;
         msg.read(iface, props);
         processPriorityChangeNotification(props);
-            }));
+    }));
     fwUpdateMatcher.push_back(std::make_unique<sdbusplus::bus::match::match>(
         pldm::utils::DBusHandler::getBus(),
         "interface='org.freedesktop.DBus.ObjectManager',type='signal',"
@@ -428,7 +428,7 @@ void CodeUpdate::setVersions()
                                         imageActivationMatch.reset();
                                     }
                                 }
-                                    });
+                            });
                         }
                         auto rc = setRequestedActivation();
                         if (rc != PLDM_SUCCESS)
@@ -459,7 +459,7 @@ void CodeUpdate::setVersions()
                 }
             }
         }
-        }));
+    }));
 }
 
 void CodeUpdate::processRenameEvent()
