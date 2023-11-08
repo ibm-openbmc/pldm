@@ -113,7 +113,7 @@ class Handler : public oem_platform::Handler
                     setEventReceiverCnt = 0;
                     disableWatchDogTimer();
                     pldm::responder::utils::clearLicenseStatus();
-                    // pldm::responder::utils::clearDumpSocketWriteStatus();
+                    pldm::responder::utils::clearDumpSocketWriteStatus();
                 }
                 else if (propVal ==
                          "xyz.openbmc_project.State.Host.HostState.Running")
@@ -128,7 +128,7 @@ class Handler : public oem_platform::Handler
                     hostTransitioningToOff = true;
                 }
             }
-            });
+        });
         updateBIOSMatch = std::make_unique<sdbusplus::bus::match::match>(
             pldm::utils::DBusHandler::getBus(),
             propertiesChanged("/xyz/openbmc_project/bios_config/manager",
@@ -162,7 +162,7 @@ class Handler : public oem_platform::Handler
                     codeUpdate->setNextBootSide(nextBootSide);
                 }
             }
-            });
+        });
         ibmCompatibleMatch = std::make_unique<sdbusplus::bus::match::match>(
             pldm::utils::DBusHandler::getBus(),
             sdbusplus::bus::match::rules::interfacesAdded() +
@@ -197,7 +197,7 @@ class Handler : public oem_platform::Handler
 
             restartCause = std::get<std::string>(properties.at("RestartCause"));
             setBootTypesBiosAttr(restartCause);
-            });
+        });
     }
 
     void ibmCompatibleAddedCallback(sdbusplus::message::message& msg)

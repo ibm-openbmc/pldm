@@ -1,5 +1,7 @@
 #pragma once
-#include "file_io.hpp"
+
+#include "file_io_by_type.hpp"
+#include "xyz/openbmc_project/Common/error.hpp"
 
 #include <phosphor-logging/elog-errors.hpp>
 #include <phosphor-logging/elog.hpp>
@@ -9,6 +11,7 @@
 #include <filesystem>
 #include <sstream>
 #include <string>
+
 PHOSPHOR_LOG2_USING;
 
 namespace pldm
@@ -168,21 +171,20 @@ class LidHandler : public FileHandler
         }
     }
 
-    virtual void writeFromMemory(uint32_t offset, uint32_t length,
-                                 uint64_t address,
-                                 oem_platform::Handler* oemPlatformHandler,
-                                 ResponseHdr& responseHdr,
-                                 sdeventplus::Event& event)
+    virtual int writeFromMemory(uint32_t offset, uint32_t length,
+                                uint64_t address,
+                                oem_platform::Handler* oemPlatformHandler)
     {
-        moemPlatformHandler = oemPlatformHandler;
+        int rc = PLDM_SUCCESS;
+        bool codeUpdateInProgress = false;
         if (oemPlatformHandler != nullptr)
         {
             pldm::responder::oem_ibm_platform::Handler* oemIbmPlatformHandler =
                 dynamic_cast<pldm::responder::oem_ibm_platform::Handler*>(
                     oemPlatformHandler);
-            mcodeUpdateInProgress =
+            codeUpdateInProgress =
                 oemIbmPlatformHandler->codeUpdate->isCodeUpdateInProgress();
-            if (mcodeUpdateInProgress || lidType == PLDM_FILE_TYPE_LID_MARKER)
+            if (codeUpdateInProgress || lidType == PLDM_FILE_TYPE_LID_MARKER)
             {
                 std::string dir = LID_STAGING_DIR;
                 std::stringstream stream;
@@ -206,63 +208,44 @@ class LidHandler : public FileHandler
         {
             error("Could not open file for writing {LID_PATH}", "LID_PATH",
                   lidPath.c_str());
-            FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
-            FileHandler::deleteAIOobjects(nullptr, responseHdr);
-            return;
+            return PLDM_ERROR;
         }
         close(fd);
 
-        transferFileData(lidPath, false, offset, length, address, responseHdr,
-                         event);
-        m_length = length;
-    }
-
-    virtual void postDataTransferCallBack(bool IsWriteToMemOp)
-    {
-        int rc = -1;
-        if (IsWriteToMemOp)
+        rc = transferFileData(lidPath, false, offset, length, address);
+        if (rc != PLDM_SUCCESS)
         {
-            if (lidType == PLDM_FILE_TYPE_LID_MARKER)
-            {
-                markerLIDremainingSize -= m_length;
-                if (markerLIDremainingSize == 0)
-                {
-                    rc = processCodeUpdateLid(lidPath);
-                    if (rc == PLDM_SUCCESS)
-                    {
-                        validateMarkerLid(moemPlatformHandler);
-                    }
-                }
-            }
-            else if (mcodeUpdateInProgress)
+            error("writeFileFromMemory failed with rc= {RC}", "RC", rc);
+            return rc;
+        }
+        if (lidType == PLDM_FILE_TYPE_LID_MARKER)
+        {
+            markerLIDremainingSize -= length;
+            if (markerLIDremainingSize == 0)
             {
                 rc = processCodeUpdateLid(lidPath);
-            }
-            if (rc < 0)
-            {
-                error(
-                    "Post DataTransfer CallBack Failed while lid transfer {LID_PATH}",
-                    "LID_PATH", lidPath.c_str());
+                if (rc == PLDM_SUCCESS)
+                {
+                    validateMarkerLid(oemPlatformHandler);
+                }
             }
         }
+        else if (codeUpdateInProgress)
+        {
+            rc = processCodeUpdateLid(lidPath);
+        }
+        return rc;
     }
 
-    virtual void readIntoMemory(uint32_t offset, uint32_t& length,
-                                uint64_t address,
-                                oem_platform::Handler* oemPlatformHandler,
-                                ResponseHdr& responseHdr,
-                                sdeventplus::Event& event)
+    virtual int readIntoMemory(uint32_t offset, uint32_t& length,
+                               uint64_t address,
+                               oem_platform::Handler* oemPlatformHandler)
     {
         if (constructLIDPath(oemPlatformHandler))
         {
-            transferFileData(lidPath, true, offset, length, address,
-                             responseHdr, event);
+            return transferFileData(lidPath, true, offset, length, address);
         }
-        else
-        {
-            FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
-            FileHandler::deleteAIOobjects(nullptr, responseHdr);
-        }
+        return PLDM_ERROR;
     }
 
     virtual int write(const char* buffer, uint32_t offset, uint32_t& length,
@@ -417,9 +400,6 @@ class LidHandler : public FileHandler
     bool isPatchDir;
     static inline MarkerLIDremainingSize markerLIDremainingSize;
     uint8_t lidType;
-    uint32_t m_length;
-    bool mcodeUpdateInProgress = false;
-    oem_platform::Handler* moemPlatformHandler;
 };
 
 } // namespace responder

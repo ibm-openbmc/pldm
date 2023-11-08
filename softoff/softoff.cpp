@@ -256,7 +256,7 @@ int SoftPowerOff::getSensorInfo()
             return PLDM_ERROR;
         }
 
-        pldm_state_sensor_pdr* pdr;
+        pldm_state_sensor_pdr* pdr = nullptr;
         for (auto& rep : Response)
         {
             pdr = reinterpret_cast<pldm_state_sensor_pdr*>(rep.data());
@@ -366,8 +366,8 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
     }
 
     // Add a timer to the event loop, default 30s.
-    auto timerCallback =
-        [=, this](Timer& /*source*/, Timer::TimePoint /*time*/) {
+    auto timerCallback = [=, this](Timer& /*source*/,
+                                   Timer::TimePoint /*time*/) {
         if (!responseReceived)
         {
             error(

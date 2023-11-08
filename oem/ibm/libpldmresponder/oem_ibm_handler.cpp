@@ -5,6 +5,7 @@
 
 #include "collect_slot_vpd.hpp"
 #include "file_io_type_lid.hpp"
+#include "libpldmresponder/file_io.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
 
 #include <phosphor-logging/lg2.hpp>
@@ -998,7 +999,7 @@ void pldm::responder::oem_ibm_platform::Handler::monitorDump(
             }
         }
         sbeDumpMatch = nullptr;
-        });
+    });
 }
 
 int pldm::responder::oem_ibm_platform::Handler::setNumericEffecter(
@@ -1229,7 +1230,7 @@ void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
                 }
             }
         }
-        });
+    });
 }
 
 void pldm::responder::oem_ibm_platform::Handler::checkAndDisableWatchDog()
@@ -1678,7 +1679,7 @@ void pldm::responder::oem_ibm_platform::Handler::createMatches()
             std::string iface;
             msg.read(iface, props);
             propertyChanged(props, slot);
-            }));
+        }));
     }
 }
 

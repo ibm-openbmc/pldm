@@ -20,31 +20,21 @@ class ProgressCodeHandler : public FileHandler
      */
     ProgressCodeHandler(uint32_t fileHandle) : FileHandler(fileHandle) {}
 
-    void writeFromMemory(uint32_t /*offset*/, uint32_t length,
-                         uint64_t /*address*/,
-                         oem_platform::Handler* /*oemPlatformHandler*/,
-                         ResponseHdr& responseHdr,
-                         sdeventplus::Event& /*event*/) override
+    int writeFromMemory(uint32_t /*offset*/, uint32_t /*length*/,
+                        uint64_t /*address*/,
+                        oem_platform::Handler* /*oemPlatformHandler*/) override
     {
-        FileHandler::dmaResponseToHost(responseHdr,
-                                       PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
-        FileHandler::deleteAIOobjects(nullptr, responseHdr);
-        return; // PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
 
     int write(const char* buffer, uint32_t offset, uint32_t& length,
               oem_platform::Handler* oemPlatformHandler) override;
 
-    void readIntoMemory(uint32_t /*offset*/, uint32_t& length,
-                        uint64_t /*address*/,
-                        oem_platform::Handler* /*oemPlatformHandler*/,
-                        ResponseHdr& responseHdr,
-                        sdeventplus::Event& /*event*/) override
+    int readIntoMemory(uint32_t /*offset*/, uint32_t& /*length*/,
+                       uint64_t /*address*/,
+                       oem_platform::Handler* /*oemPlatformHandler*/) override
     {
-        FileHandler::dmaResponseToHost(responseHdr,
-                                       PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
-        FileHandler::deleteAIOobjects(nullptr, responseHdr);
-        return; // PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
 
     int read(uint32_t /*offset*/, uint32_t& /*length*/, Response& /*response*/,
@@ -80,13 +70,6 @@ class ProgressCodeHandler : public FileHandler
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
-    /** @brief method to do necessary operation according different
-     *  file type and being call when data transfer completed.
-     *
-     *  @param[in] IsWriteToMemOp - type of operation to decide what operation
-     * needs to be done after data transfer.
-     */
-    virtual void postDataTransferCallBack(bool /*IsWriteToMemOp*/) {}
 
     /** @brief method to set the dbus Raw value Property with
      * the obtained progress code from the host.

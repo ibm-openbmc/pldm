@@ -129,10 +129,9 @@ class GetPLDMTypes : public CommandInterface
             bitfield8_t b = types[i / 8];
             if (b.byte & (1 << i % 8))
             {
-                auto it = std::find_if(pldmTypes.begin(), pldmTypes.end(),
-                                       [i](const auto& typePair) {
-                    return typePair.second == i;
-                });
+                auto it = std::find_if(
+                    pldmTypes.begin(), pldmTypes.end(),
+                    [i](const auto& typePair) { return typePair.second == i; });
                 if (it != pldmTypes.end())
                 {
                     jarray["PLDM Type"] = it->first;
@@ -190,10 +189,9 @@ class GetPLDMVersion : public CommandInterface
         char buffer[16] = {0};
         ver2str(&version, buffer, sizeof(buffer));
         ordered_json data;
-        auto it = std::find_if(pldmTypes.begin(), pldmTypes.end(),
-                               [&](const auto& typePair) {
-            return typePair.second == pldmType;
-        });
+        auto it = std::find_if(
+            pldmTypes.begin(), pldmTypes.end(),
+            [&](const auto& typePair) { return typePair.second == pldmType; });
 
         if (it != pldmTypes.end())
         {
@@ -295,10 +293,9 @@ class GetPLDMCommands : public CommandInterface
     template <typename CommandMap>
     void printCommand(CommandMap& commandMap, int i, ordered_json& jarray)
     {
-        auto it = std::find_if(commandMap.begin(), commandMap.end(),
-                               [i](const auto& typePair) {
-            return typePair.second == i;
-        });
+        auto it = std::find_if(
+            commandMap.begin(), commandMap.end(),
+            [i](const auto& typePair) { return typePair.second == i; });
         if (it != commandMap.end())
         {
             jarray["PLDM Command Code"] = i;

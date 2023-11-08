@@ -215,7 +215,7 @@ HostPDRHandler::HostPDRHandler(
                 }
             }
         }
-        });
+    });
 
     chassisOffMatch = std::make_unique<sdbusplus::bus::match::match>(
         pldm::utils::DBusHandler::getBus(),
@@ -267,7 +267,7 @@ HostPDRHandler::HostPDRHandler(
                 }
             }
         }
-        });
+    });
 }
 void HostPDRHandler::setPresenceFrus()
 {
