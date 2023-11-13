@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include "common/utils.hpp"
 #include "softoff.hpp"
 
@@ -74,7 +76,9 @@ int main(int argc, char* argv[])
                 std::pair<std::string, std::variant<std::string, uint64_t>>>());
         try
         {
-            bus.call_noreply(method);
+            bus.call_noreply(
+                method, std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
+                            .count());
         }
         catch (const sdbusplus::exception::exception& e)
         {

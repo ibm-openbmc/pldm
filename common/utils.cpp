@@ -236,7 +236,9 @@ std::string DBusHandler::getService(const char* path,
         mapper.append(path, DbusInterfaceList({}));
     }
 
-    auto mapperResponseMsg = bus.call(mapper);
+    auto mapperResponseMsg = bus.call(
+        mapper,
+        std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     mapperResponseMsg.read(mapperResponse);
     return mapperResponse.begin()->first;
 }
@@ -251,7 +253,9 @@ MapperGetSubTreeResponse
                                       mapperInterface, "GetSubTree");
     method.append(searchPath, depth);
     method.append(ifaceList);
-    auto reply = bus.call(method);
+    auto reply = bus.call(
+        method,
+        std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     MapperGetSubTreeResponse response;
     reply.read(response);
     return response;
@@ -279,7 +283,9 @@ void reportError(const char* errorMsg, const Severity& sev)
         }
         std::map<std::string, std::string> addlData{};
         method.append(errorMsg, severity, addlData);
-        bus.call_noreply(method);
+        bus.call_noreply(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     }
     catch (const std::exception& e)
     {
@@ -313,7 +319,9 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
                 service.c_str(), "/xyz/openbmc_project/inventory",
                 "xyz.openbmc_project.Inventory.Manager", "Notify");
             method.append(std::move(objectValueTree));
-            bus.call_noreply(method);
+            bus.call_noreply(
+                method, std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
+                            .count());
         }
         else
         {
@@ -332,7 +340,9 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
             }
             method.append(dBusMap.interface.c_str(),
                           dBusMap.propertyName.c_str(), variant);
-            bus.call_noreply(method);
+            bus.call_noreply(
+                method, std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
+                            .count());
         }
     };
 
@@ -420,7 +430,9 @@ PropertyValue DBusHandler::getDbusPropertyVariant(
         bus.new_method_call(service.c_str(), objPath, dbusProperties, "Get");
     method.append(dbusInterface, dbusProp);
     PropertyValue value{};
-    auto reply = bus.call(method);
+    auto reply = bus.call(
+        method,
+        std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     reply.read(value);
     return value;
 }
@@ -433,7 +445,9 @@ ObjectValueTree DBusHandler::getManagedObj(const char* service,
     auto method = bus.new_method_call(service, rootPath,
                                       "org.freedesktop.DBus.ObjectManager",
                                       "GetManagedObjects");
-    auto reply = bus.call(method);
+    auto reply = bus.call(
+        method,
+        std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     reply.read(objects);
     return objects;
 }
@@ -666,7 +680,9 @@ std::string getBiosAttrValue(const std::string& dbusAttrName)
             service.c_str(), biosConfigPath,
             "xyz.openbmc_project.BIOSConfig.Manager", "GetAttribute");
         method.append(dbusAttrName);
-        auto reply = bus.call(method);
+        auto reply = bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
         reply.read(var1, var2, var3);
     }
     catch (const sdbusplus::exception::SdBusError& e)
@@ -708,7 +724,9 @@ void setBiosAttr(const BiosAttributeList& biosAttrList)
             method.append(
                 biosConfigIntf, "PendingAttributes",
                 std::variant<PendingAttributesType>(pendingAttributes));
-            bus.call_noreply(method);
+            bus.call_noreply(
+                method, std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT))
+                            .count());
         }
         catch (const sdbusplus::exception::SdBusError& e)
         {

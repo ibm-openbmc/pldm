@@ -469,7 +469,9 @@ void BIOSConfig::updateBaseBIOSTableProperty()
         }
 #endif
         method.append(biosConfigInterface, biosConfigPropertyName, value);
-        bus.call_noreply(method);
+        bus.call_noreply(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
     }
     catch (const std::exception& e)
     {
@@ -512,7 +514,9 @@ void BIOSConfig::buildAndStoreAttrTables(const Table& stringTable)
             bus.new_method_call(service.c_str(), biosObjPath,
                                 "org.freedesktop.DBus.Properties", "Get");
         method.append(biosInterface, "BaseBIOSTable");
-        auto reply = bus.call(method);
+        auto reply = bus.call(
+            method,
+            std::chrono::duration_cast<microsec>(sec(DBUS_TIMEOUT)).count());
         std::variant<BaseBIOSTable> varBiosTable{};
         reply.read(varBiosTable);
         biosTable = std::get<BaseBIOSTable>(varBiosTable);
