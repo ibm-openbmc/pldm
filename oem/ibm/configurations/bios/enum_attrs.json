@@ -146,14 +146,26 @@
         },
         {
             "attribute_name": "pvm_default_os_type",
-            "possible_values": ["AIX", "Linux", "IBM I", "Linux KVM"],
+            "possible_values": [
+                "AIX",
+                "Linux",
+                "IBM I",
+                "Linux KVM",
+                "Default"
+            ],
             "default_values": ["AIX"],
             "helpText": "CEC Primary OS",
             "displayName": "CEC Primary OS"
         },
         {
             "attribute_name": "pvm_default_os_type_current",
-            "possible_values": ["AIX", "Linux", "IBM I", "Linux KVM"],
+            "possible_values": [
+                "AIX",
+                "Linux",
+                "IBM I",
+                "Linux KVM",
+                "Default"
+            ],
             "default_values": ["AIX"],
             "helpText": "Specifies the current CEC Primary OS type. Do not set this attribute directly; set pvm_default_os_type instead.",
             "displayName": "CEC Primary OS (current)",
