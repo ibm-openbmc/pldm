@@ -57,6 +57,7 @@
 #endif
 
 #ifdef OEM_IBM
+#include "libpldmresponder/bios_oem_ibm.hpp"
 #include "libpldmresponder/file_io.hpp"
 #include "libpldmresponder/fru_oem_ibm.hpp"
 #include "libpldmresponder/oem_ibm_handler.hpp"
@@ -250,9 +251,14 @@ int main(int argc, char** argv)
     std::unique_ptr<DbusToPLDMEvent> dbusToPLDMEventHandler;
     DBusHandler dbusHandler;
     auto hostEID = pldm::utils::readHostEID();
-    invoker.registerHandler(
-        PLDM_BIOS, std::make_unique<bios::Handler>(sockfd, hostEID,
-                                                   &dbusImplReq, &reqHandler));
+    std::unique_ptr<oem_bios::Handler> oemBiosHandler{};
+#ifdef OEM_IBM
+    oemBiosHandler = std::make_unique<pldm::responder::oem::ibm::bios::Handler>(
+        &dbusHandler);
+#endif
+    auto biosHandler = std::make_unique<bios::Handler>(
+        sockfd, hostEID, &dbusImplReq, &reqHandler, oemBiosHandler.get());
+    invoker.registerHandler(PLDM_BIOS, std::move(biosHandler));
     std::unique_ptr<oem_platform::Handler> oemPlatformHandler{};
     std::unique_ptr<oem_fru::Handler> oemFruHandler{};
 
@@ -305,6 +311,7 @@ int main(int argc, char** argv)
         dbusToPLDMEventHandler = std::make_unique<DbusToPLDMEvent>(
             sockfd, hostEID, dbusImplReq, &reqHandler);
     }
+
     auto fruHandler = std::make_unique<fru::Handler>(
         FRU_JSONS_DIR, FRU_MASTER_JSON, pdrRepo.get(), entityTree.get(),
         bmcEntityTree.get(), oemFruHandler.get(), dbusImplReq, &reqHandler,

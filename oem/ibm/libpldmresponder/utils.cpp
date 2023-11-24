@@ -47,7 +47,8 @@ using LicJsonObjMap = std::map<fs::path, nlohmann::json>;
 LicJsonObjMap licJsonMap;
 using PropertyValue =
     std::variant<bool, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t,
-                 uint64_t, double, std::string, std::vector<uint8_t>>;
+                 uint64_t, double, std::string, std::vector<uint8_t>,
+                 std::vector<std::string>>;
 using PropertyMap = std::map<std::string, PropertyValue>;
 using InterfaceMap = std::map<std::string, PropertyMap>;
 using ObjectValueTree = std::map<sdbusplus::message::object_path, InterfaceMap>;
