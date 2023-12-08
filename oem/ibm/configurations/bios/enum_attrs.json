@@ -153,7 +153,7 @@
                 "Linux KVM",
                 "Default"
             ],
-            "default_values": ["AIX"],
+            "default_values": ["Default"],
             "helpText": "CEC Primary OS",
             "displayName": "CEC Primary OS"
         },
@@ -166,7 +166,7 @@
                 "Linux KVM",
                 "Default"
             ],
-            "default_values": ["AIX"],
+            "default_values": ["Default"],
             "helpText": "Specifies the current CEC Primary OS type. Do not set this attribute directly; set pvm_default_os_type instead.",
             "displayName": "CEC Primary OS (current)",
             "readOnly": true
