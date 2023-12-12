@@ -533,7 +533,7 @@
               "interface" : "xyz.openbmc_project.Control.Power.RestorePolicy",
               "property_name" : "PowerRestorePolicy",
               "property_type" : "string",
-              "property_values" : ["xyz.openbmc_project.Control.Power.RestorePolicy.Policy.None", "xyz.openbmc_project.Control.Power.RestorePolicy.Policy.AlwaysOn"]
+              "property_values" : ["xyz.openbmc_project.Control.Power.RestorePolicy.Policy.AlwaysOff", "xyz.openbmc_project.Control.Power.RestorePolicy.Policy.AlwaysOn"]
            }
       },
       {
