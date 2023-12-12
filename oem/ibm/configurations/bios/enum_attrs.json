@@ -466,7 +466,7 @@
             "possible_values": ["Enabled", "Disabled"],
             "default_values": ["Enabled"],
             "helpText": "Controls whether or not a processor core will be de-configured on error.",
-            "displayName": "GARD on error"
+            "displayName": "Guard on error"
         },
         {
             "attribute_name": "pvm_rpd_policy",
