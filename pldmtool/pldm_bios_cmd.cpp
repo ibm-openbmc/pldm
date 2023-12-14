@@ -12,6 +12,8 @@
 #include <map>
 #include <optional>
 
+PHOSPHOR_LOG2_USING;
+
 namespace pldmtool
 {
 
@@ -73,8 +75,8 @@ class GetDateTime : public CommandInterface
                                             &month, &year);
         if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
         {
-            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
-                       rc, "KEY1", (int)cc);
+            error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0", rc,
+                  "KEY1", (int)cc);
             return;
         }
 
@@ -131,7 +133,7 @@ class SetDateTime : public CommandInterface
         if (!uintToDate(tmData, &year, &month, &day, &hours, &minutes,
                         &seconds))
         {
-            lg2::error("decode date Error: tmData={KEY0}", "KEY0", tmData);
+            error("decode date Error: tmData={KEY0}", "KEY0", tmData);
 
             return {PLDM_ERROR_INVALID_DATA, requestMsg};
         }
@@ -151,8 +153,8 @@ class SetDateTime : public CommandInterface
 
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
-            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
-                       rc, "KEY1", (int)completionCode);
+            error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0", rc,
+                  "KEY1", (int)completionCode);
 
             return;
         }
@@ -210,16 +212,15 @@ class GetBIOSTableHandler : public CommandInterface
                                             tableType, request);
         if (rc != PLDM_SUCCESS)
         {
-            lg2::error(
-                "Encode GetBIOSTable Error, tableType= {KEY0}, rc = {KEY1}",
-                "KEY0", pldmBIOSTableMap.at(tableType), "KEY1", rc);
+            error("Encode GetBIOSTable Error, tableType= {KEY0}, rc = {KEY1}",
+                  "KEY0", pldmBIOSTableMap.at(tableType), "KEY1", rc);
             return std::nullopt;
         }
         std::vector<uint8_t> responseMsg;
         rc = pldmSendRecv(requestMsg, responseMsg);
         if (rc != PLDM_SUCCESS)
         {
-            lg2::error("PLDM: Communication Error, rc ={KEY0}", "KEY0", rc);
+            error("PLDM: Communication Error, rc ={KEY0}", "KEY0", rc);
             return std::nullopt;
         }
 
@@ -236,7 +237,7 @@ class GetBIOSTableHandler : public CommandInterface
 
         if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
         {
-            lg2::error(
+            error(
                 "GetBIOSTable Response Error: tableType={KEY0}, rc ={KEY1}, cc={KEY2}",
                 "KEY0", pldmBIOSTableMap.at(tableType), "KEY1", rc, "KEY2",
                 (int)cc);
@@ -378,7 +379,7 @@ class GetBIOSTableHandler : public CommandInterface
             }
             else
             {
-                lg2::info("Get AttributeType failed.");
+                info("Get AttributeType failed.");
             }
         }
         switch (attrType)
@@ -453,7 +454,7 @@ class GetBIOSTableHandler : public CommandInterface
             case PLDM_BIOS_PASSWORD:
             case PLDM_BIOS_PASSWORD_READ_ONLY:
             {
-                lg2::info("Password attribute: Not Supported");
+                info("Password attribute: Not Supported");
                 break;
             }
         }
@@ -518,7 +519,7 @@ class GetBIOSTable : public GetBIOSTableHandler
     {
         if (!stringTable)
         {
-            lg2::error("GetBIOSStringTable Error");
+            error("GetBIOSStringTable Error");
             return;
         }
         ordered_json stringdata;
@@ -538,7 +539,7 @@ class GetBIOSTable : public GetBIOSTableHandler
     {
         if (!stringTable)
         {
-            lg2::error("GetBIOSAttributeTable Error");
+            error("GetBIOSAttributeTable Error");
             return;
         }
         ordered_json output;
@@ -564,7 +565,7 @@ class GetBIOSTable : public GetBIOSTableHandler
             }
             else
             {
-                lg2::error("Get AttributeType failed.");
+                error("Get AttributeType failed.");
             }
 
             switch (attrType)
@@ -657,7 +658,7 @@ class GetBIOSTable : public GetBIOSTableHandler
                 }
                 case PLDM_BIOS_PASSWORD:
                 case PLDM_BIOS_PASSWORD_READ_ONLY:
-                    lg2::alert("Password attribute: Not Supported");
+                    alert("Password attribute: Not Supported");
             }
             output.emplace_back(std::move(attrdata));
         }
@@ -669,7 +670,7 @@ class GetBIOSTable : public GetBIOSTableHandler
     {
         if (!attrValTable)
         {
-            lg2::error("GetBIOSAttributeValueTable Error");
+            error("GetBIOSAttributeValueTable Error");
             return;
         }
         ordered_json output;
@@ -714,14 +715,14 @@ class GetBIOSAttributeCurrentValueByHandle : public GetBIOSTableHandler
 
         if (!stringTable || !attrTable)
         {
-            lg2::info("StringTable/AttrTable Unavaliable");
+            info("StringTable/AttrTable Unavaliable");
             return;
         }
 
         auto handle = findAttrHandleByName(attrName, *attrTable, *stringTable);
         if (!handle)
         {
-            lg2::error("Can not find the attribute {KEY0}", "KEY0", attrName);
+            error("Can not find the attribute {KEY0}", "KEY0", attrName);
             return;
         }
 
@@ -734,7 +735,7 @@ class GetBIOSAttributeCurrentValueByHandle : public GetBIOSTableHandler
             instanceId, 0, PLDM_GET_FIRSTPART, *handle, request);
         if (rc != PLDM_SUCCESS)
         {
-            lg2::error("PLDM: Request Message Error, rc ={KEY0}", "KEY0", rc);
+            error("PLDM: Request Message Error, rc ={KEY0}", "KEY0", rc);
             return;
         }
 
@@ -742,7 +743,7 @@ class GetBIOSAttributeCurrentValueByHandle : public GetBIOSTableHandler
         rc = pldmSendRecv(requestMsg, responseMsg);
         if (rc != PLDM_SUCCESS)
         {
-            lg2::error("PLDM: Communication Error, rc ={KEY0}", "KEY0", rc);
+            error("PLDM: Communication Error, rc ={KEY0}", "KEY0", rc);
             return;
         }
 
@@ -758,8 +759,8 @@ class GetBIOSAttributeCurrentValueByHandle : public GetBIOSTableHandler
             &attributeData);
         if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
         {
-            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
-                       rc, "KEY1", (int)cc);
+            error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0", rc,
+                  "KEY1", (int)cc);
 
             return;
         }
@@ -809,7 +810,7 @@ class SetBIOSAttributeCurrentValue : public GetBIOSTableHandler
 
         if (!stringTable || !attrTable)
         {
-            lg2::info("StringTable/AttrTable Unavaliable");
+            info("StringTable/AttrTable Unavaliable");
             return;
         }
 
@@ -817,7 +818,7 @@ class SetBIOSAttributeCurrentValue : public GetBIOSTableHandler
                                              *stringTable);
         if (attrEntry == nullptr)
         {
-            lg2::info("Could not find attribute :{KEY0}", "KEY0", attrName);
+            info("Could not find attribute :{KEY0}", "KEY0", attrName);
             return;
         }
 
@@ -848,7 +849,7 @@ class SetBIOSAttributeCurrentValue : public GetBIOSTableHandler
                     attrValue.c_str());
                 if (stringEntry == nullptr)
                 {
-                    lg2::info("Set Attribute Error: It's not a possible value");
+                    info("Set Attribute Error: It's not a possible value");
 
                     return;
                 }
@@ -863,7 +864,7 @@ class SetBIOSAttributeCurrentValue : public GetBIOSTableHandler
                 }
                 if (i == pvNum)
                 {
-                    lg2::info("Set Attribute Error: It's not a possible value");
+                    info("Set Attribute Error: It's not a possible value");
                     return;
                 }
 
@@ -934,14 +935,14 @@ class SetBIOSAttributeCurrentValue : public GetBIOSTableHandler
 
         if (rc != PLDM_SUCCESS)
         {
-            lg2::error("PLDM: Request Message Error, rc ={KEY0}", "KEY0", rc);
+            error("PLDM: Request Message Error, rc ={KEY0}", "KEY0", rc);
             return;
         }
         std::vector<uint8_t> responseMsg;
         rc = pldmSendRecv(requestMsg, responseMsg);
         if (rc != PLDM_SUCCESS)
         {
-            lg2::error("PLDM: Communication Error, rc ={KEY0}", "KEY0", rc);
+            error("PLDM: Communication Error, rc ={KEY0}", "KEY0", rc);
             return;
         }
         uint8_t cc = 0;
@@ -954,8 +955,8 @@ class SetBIOSAttributeCurrentValue : public GetBIOSTableHandler
             responsePtr, payloadLength, &cc, &nextTransferHandle);
         if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
         {
-            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
-                       rc, "KEY1", (int)cc);
+            error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0", rc,
+                  "KEY1", (int)cc);
             return;
         }
 

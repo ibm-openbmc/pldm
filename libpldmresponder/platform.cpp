@@ -441,6 +441,8 @@ Response Handler::platformEventMessage(const pldm_msg* request,
         }
         catch (const std::out_of_range& e)
         {
+            error("Error in handling plateform event msg ERROR={ERR}", "ERR",
+                  e.what());
             return CmdHandler::ccOnlyResponse(request, PLDM_ERROR_INVALID_DATA);
         }
     }
@@ -517,7 +519,7 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
             std::tie(entityInfo, compositeSensorStates, stateSetIds) =
                 hostPDRHandler->lookupSensorInfo(sensorEntry);
         }
-        catch (const std::out_of_range& e)
+        catch (const std::out_of_range&)
         {
             // If there is no mapping for tid, sensorId combination, try
             // PLDM_TID_RESERVED, sensorId for terminus that is yet to
@@ -529,7 +531,7 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
                     hostPDRHandler->lookupSensorInfo(sensorEntry);
             }
             // If there is no mapping for events return PLDM_SUCCESS
-            catch (const std::out_of_range& e)
+            catch (const std::out_of_range&)
             {
                 return PLDM_SUCCESS;
             }
