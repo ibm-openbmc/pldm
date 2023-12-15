@@ -87,7 +87,16 @@ void Serialize::serialize(const std::string& path, const std::string& intf,
 
     std::ofstream os(filePath.c_str(), std::ios::binary);
     cereal::BinaryOutputArchive oarchive(os);
-    oarchive(savedObjs);
+    oarchive(savedObjs, savedKeyVal);
+}
+
+void Serialize::serializeKeyVal(const std::string& key,
+                                dbus::PropertyValue value)
+{
+    std::ofstream os(filePath.c_str(), std::ios::binary);
+    cereal::BinaryOutputArchive oarchive(os);
+    savedKeyVal[key] = value;
+    oarchive(savedObjs, savedKeyVal);
 }
 
 bool Serialize::deserialize()
@@ -102,9 +111,10 @@ bool Serialize::deserialize()
     try
     {
         savedObjs.clear();
+        savedKeyVal.clear();
         std::ifstream is(filePath.c_str(), std::ios::in | std::ios::binary);
         cereal::BinaryInputArchive iarchive(is);
-        iarchive(savedObjs);
+        iarchive(savedObjs, savedKeyVal);
 
         return true;
     }
@@ -158,7 +168,7 @@ void Serialize::reSerialize(const std::vector<uint16_t> types)
 
     std::ofstream os(filePath.c_str(), std::ios::binary);
     cereal::BinaryOutputArchive oarchive(os);
-    oarchive(this->savedObjs);
+    oarchive(this->savedObjs, this->savedKeyVal);
 }
 
 } // namespace serialize

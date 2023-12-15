@@ -45,11 +45,24 @@ class Serialize
                    const std::string& type = "",
                    dbus::PropertyValue value = {});
 
+    /** @brief Save the map of Key Value
+     *
+     *  @param[in] key
+     *  @param[in] Property value
+     *  @return void
+     */
+    void serializeKeyVal(const std::string& key, dbus::PropertyValue value);
+
     bool deserialize();
 
     dbus::SavedObjs getSavedObjs()
     {
         return savedObjs;
+    }
+
+    std::map<std::string, pldm::dbus::PropertyValue> getSavedKeyVals()
+    {
+        return savedKeyVal;
     }
 
     void setObjectPathMaps(const ObjectPathMaps& maps);
@@ -65,6 +78,7 @@ class Serialize
     fs::path filePath{PERSISTENT_FILE};
     std::set<uint16_t> storeEntityTypes;
     std::map<ObjectPath, pldm_entity> entityPathMaps;
+    std::map<std::string, pldm::dbus::PropertyValue> savedKeyVal;
 };
 
 } // namespace serialize
