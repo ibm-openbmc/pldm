@@ -146,15 +146,27 @@
         },
         {
             "attribute_name": "pvm_default_os_type",
-            "possible_values": ["AIX", "Linux", "IBM I", "Linux KVM"],
-            "default_values": ["AIX"],
+            "possible_values": [
+                "AIX",
+                "Linux",
+                "IBM I",
+                "Linux KVM",
+                "Default"
+            ],
+            "default_values": ["Default"],
             "helpText": "CEC Primary OS",
             "displayName": "CEC Primary OS"
         },
         {
             "attribute_name": "pvm_default_os_type_current",
-            "possible_values": ["AIX", "Linux", "IBM I", "Linux KVM"],
-            "default_values": ["AIX"],
+            "possible_values": [
+                "AIX",
+                "Linux",
+                "IBM I",
+                "Linux KVM",
+                "Default"
+            ],
+            "default_values": ["Default"],
             "helpText": "Specifies the current CEC Primary OS type. Do not set this attribute directly; set pvm_default_os_type instead.",
             "displayName": "CEC Primary OS (current)",
             "readOnly": true
@@ -367,7 +379,7 @@
                 "property_name": "PowerRestorePolicy",
                 "property_type": "string",
                 "property_values": [
-                    "xyz.openbmc_project.Control.Power.RestorePolicy.Policy.None",
+                    "xyz.openbmc_project.Control.Power.RestorePolicy.Policy.AlwaysOff",
                     "xyz.openbmc_project.Control.Power.RestorePolicy.Policy.AlwaysOn"
                 ]
             }
