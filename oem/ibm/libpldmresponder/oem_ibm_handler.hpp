@@ -93,6 +93,7 @@ struct InstanceInfo
     uint8_t dcmId;
 };
 using HostEffecterInstanceMap = std::map<pldm::pdr::EffecterID, InstanceInfo>;
+using HostEffecterDimmMap = std::map<pldm::pdr::EffecterID, uint16_t>;
 
 enum SetEventReceiverCount
 {
@@ -370,18 +371,21 @@ class Handler : public oem_platform::Handler
      *
      *  @param[in] entityInstance - the entity Instance
      *  @param[in] propertyValue - the value to be set
+     *  @param[in] entityType - the entity type
      *
      *  @return PLDM completion_code
      */
     int setNumericEffecter(uint16_t entityInstance,
-                           const pldm::utils::PropertyValue& propertyValue);
+                           const pldm::utils::PropertyValue& propertyValue,
+                           uint16_t entityType);
 
     /** @brief monitor the dump
      *
      *  @param[in] object_path - The object path of the dump to monitor
+     *  @param[in] entityType - the entity type
      *
      */
-    void monitorDump(const std::string& obj_path);
+    void monitorDump(const std::string& obj_path, uint16_t entityType);
 
     /*keeps track how many times setEventReceiver is sent */
     void countSetEventReceiver()
@@ -414,7 +418,12 @@ class Handler : public oem_platform::Handler
     /** @brief update the conatiner ID */
     void updateContainerID();
 
-    void setHostEffecterState(bool status);
+    /** @brief Method to set the host effecter state
+     *  @param status - the status of dump creation
+     *  @param entityTypeReceived - the entity type
+     *
+     */
+    void setHostEffecterState(bool status, uint16_t entityTypeReceived);
     /** @brief Method to perform actions when PLDM_RECORDS_MODIFIED event
      *  is received from host
      *  @param[in] entityType - entity type
@@ -586,6 +595,11 @@ class Handler : public oem_platform::Handler
      * InstanceInfo> */
     HostEffecterInstanceMap instanceMap;
 
+    /** @brief instanceDimmMap is a lookup data structure to lookup
+     * <EffecterID, DimmID>
+     */
+    HostEffecterDimmMap instanceDimmMap;
+
     bool update = true; // to indicate if update is done
 
     /** @brief method to create matches for the proeprty changed signal for link
@@ -620,7 +634,8 @@ int setNumericEffecter(uint16_t entityInstance,
 
 /* @brief method to get the processor object paths*/
 std::vector<std::string> getProcObjectPaths();
-
+/* @brief method to get the dimm object paths */
+std::vector<std::string> getDimmObjectPaths();
 } // namespace oem_ibm_platform
 
 } // namespace responder
