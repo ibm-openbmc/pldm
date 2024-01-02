@@ -427,7 +427,7 @@ bool checkIfIBMCableCard(const std::string& objPath)
             return true;
         }
     }
-    catch (const sdbusplus::exception::SdBusError& e)
+    catch (const sdbusplus::exception::SdBusError&)
     {
         return false;
     }
@@ -456,8 +456,8 @@ void findPortObjects(const std::string& cardObjPath,
     }
     catch (const std::exception& e)
     {
-        error("no ports under card {CARD_OBJ_PATH}", "CARD_OBJ_PATH",
-              cardObjPath.c_str());
+        error("no ports under card {CARD_OBJ_PATH} ERROR = { ERR_EXCEP }",
+              "CARD_OBJ_PATH", cardObjPath.c_str(), "ERR_EXCEP", e.what());
     }
 }
 
@@ -495,7 +495,10 @@ bool checkFruPresence(const char* objPath)
         isPresent = std::get<bool>(propVal);
     }
     catch (const sdbusplus::exception::SdBusError& e)
-    {}
+    {
+        error("D-Bus method call to get the FRU presence failed ERROR={ERR}",
+              "ERR", e.what());
+    }
     return isPresent;
 }
 
@@ -538,8 +541,9 @@ std::string getObjectPathByLocationCode(const std::string& locationCode,
     }
     catch (const std::exception& e)
     {
-        error("Look up of inventory objects failed for location {LOC_CODE}",
-              "LOC_CODE", locationCode);
+        error(
+            "Look up of inventory objects failed for location {LOC_CODE} ERROR={ERR_EXCEP}",
+            "LOC_CODE", locationCode, "ERR_EXCEP", e.what());
         return path;
     }
 
@@ -594,8 +598,9 @@ void findSlotObjects(const std::string& boardObjPath,
     }
     catch (const std::exception& e)
     {
-        error("no cec slots under motherboard {BOARD_OBJ_PATH}",
-              "BOARD_OBJ_PATH", boardObjPath.c_str());
+        error(
+            "No cec slots found under motherboard {BOARD_OBJ_PATH} ERROR={ERR_EXCEP}",
+            "BOARD_OBJ_PATH", boardObjPath.c_str(), "ERR_EXCEP", e.what());
     }
 }
 

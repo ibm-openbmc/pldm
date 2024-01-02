@@ -566,9 +566,8 @@ void HostPDRHandler::mergeEntityAssociations(
                         TERMINUS_HANDLE, 0xFFFFFFFF);
                 if (rc)
                 {
-                    std::cerr
-                        << "Failed to add entity association PDR from node: "
-                        << rc << std::endl;
+                    error("Failed to add entity association PDR from node:{RC}",
+                          "RC", rc);
                 }
             }
             else
@@ -581,9 +580,8 @@ void HostPDRHandler::mergeEntityAssociations(
                         terminus_handle, 0xFFFFFFFF);
                 if (rc)
                 {
-                    std::cerr
-                        << "Failed to add entity association PDR from node: "
-                        << rc << std::endl;
+                    error("Failed to add entity association PDR from node:{RC}",
+                          "RC", rc);
                 }
             }
         }
@@ -726,7 +724,7 @@ void HostPDRHandler::parseStateSensorPDRs()
         }
         // If there is no mapping for terminusHandle assign the reserved TID
         // value of 0xFF to indicate that.
-        catch (const std::out_of_range& e)
+        catch (const std::out_of_range&)
         {
             sensorEntry.terminusID = PLDM_TID_RESERVED;
         }
@@ -1240,7 +1238,7 @@ void HostPDRHandler::_setHostSensorState()
                                      stateSetIds) =
                                 lookupSensorInfo(sensorEntry);
                         }
-                        catch (const std::out_of_range& e)
+                        catch (const std::out_of_range&)
                         {
                             try
                             {
@@ -1249,7 +1247,7 @@ void HostPDRHandler::_setHostSensorState()
                                          stateSetIds) =
                                     lookupSensorInfo(sensorEntry);
                             }
-                            catch (const std::out_of_range& e)
+                            catch (const std::out_of_range&)
                             {
                                 error("No mapping for the events");
                                 continue;

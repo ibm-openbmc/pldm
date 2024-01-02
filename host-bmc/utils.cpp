@@ -122,7 +122,7 @@ void addObjectPathEntityAssociations(
                     objPathMap[entity_path] = entity;
                 }
             }
-            catch (const std::exception& e)
+            catch (const std::exception&)
             {
                 objPathMap[entity_path] = entity;
             }
@@ -156,7 +156,7 @@ void addObjectPathEntityAssociations(
                 objPathMap[dbusPath] = entity;
             }
         }
-        catch (const std::exception& e)
+        catch (const std::exception&)
         {
             objPathMap[dbusPath] = entity;
         }
