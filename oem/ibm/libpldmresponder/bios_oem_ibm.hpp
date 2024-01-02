@@ -58,13 +58,13 @@ class Handler : public oem_bios::Handler
      *
      *  @return - the system type information
      */
-    std::optional<std::string> readFile();
+    //std::optional<std::string> readFile();
 
     /** @brief Method to persist system type information
      *  @param[in] systemType - the system type
      *  @return - void
      */
-    void writeFile(std::string systemType);
+    //void writeFile(std::string systemType);
 };
 
 } // namespace oem::ibm::bios

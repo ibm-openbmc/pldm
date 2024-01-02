@@ -51,17 +51,34 @@ BIOSConfig::BIOSConfig(
     tableDir(tableDir), dbusHandler(dbusHandler), fd(fd), eid(eid),
     requester(requester), handler(handler), oemBiosHandler(oemBiosHandler)
 {
+    info("Bios Config constructor");
+    fs::create_directories(tableDir);
+    listenPendingAttributes();
+    initializeAttributesAndTables();
+}
+
+bool BIOSConfig::initializeAttributesAndTables()
+{
+    if (!sysType.empty())
+    {
+//	    info("SysType is already known {SYS_TYPE}", "SYS_TYPE", sysType);
+	    return true;
+    } 
+
     if (oemBiosHandler)
     {
         auto systemType = oemBiosHandler->getPlatformName();
         if (systemType.has_value())
         {
             sysType = systemType.value();
+    	    constructAttributes();
+            removeTables();
+            buildTables();
+	    return true;
         }
     }
-    fs::create_directories(tableDir);
-    constructAttributes();
-    listenPendingAttributes();
+    error("SystemType not found");
+    return false;
 }
 
 void BIOSConfig::buildTables()
@@ -1042,6 +1059,37 @@ uint16_t BIOSConfig::findAttrHandle(const std::string& attrName)
 void BIOSConfig::constructPendingAttribute(
     const PendingAttributes& pendingAttributes)
 {
+    info("Inside constructPendingAttribute");
+    if(!initializeAttributesAndTables())
+    {
+            error("Base Bios table is not ready");
+	   
+            for (auto& attribute : pendingAttributes)
+	    {
+               auto& [attributeType, attributeValue] = attribute.second;
+               auto type =
+                     BIOSConfigManager::convertAttributeTypeFromString(attributeType);
+
+               if (type == BIOSConfigManager::AttributeType::String)
+	       {
+	       error("Persisting attribute = {ATTR_NAME} and Value = {ATTR_VALUE}",
+                  "ATTR_NAME", attribute.first, "ATTR_VALUE", std::get<std::string>(attributeValue));
+	       }
+	       else if (type == BIOSConfigManager::AttributeType::Integer)
+	       {
+	       error("Persisting attribute = {ATTR_NAME} and Value = {ATTR_VALUE}",
+                  "ATTR_NAME", attribute.first, "ATTR_VALUE", std::get<int64_t>(attributeValue));
+
+	       }
+	       else
+	       {
+	       error("Persisting attribute = {ATTR_NAME}",
+                  "ATTR_NAME", attribute.first);
+	       }
+	    }
+	    return;
+    }
+
     std::vector<uint16_t> listOfHandles{};
 
     for (auto& attribute : pendingAttributes)

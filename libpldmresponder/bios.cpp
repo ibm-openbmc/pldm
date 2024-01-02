@@ -75,8 +75,6 @@ Handler::Handler(int fd, uint8_t eid, dbus_api::Requester* requester,
     biosConfig(BIOS_JSONS_DIR, BIOS_TABLES_DIR, &dbusHandler, fd, eid,
                requester, handler, oemBiosHandler)
 {
-    biosConfig.removeTables();
-    biosConfig.buildTables();
 
     handlers.emplace(PLDM_SET_DATE_TIME,
                      [this](const pldm_msg* request, size_t payloadLength) {
@@ -223,9 +221,15 @@ Response Handler::setDateTime(const pldm_msg* request, size_t payloadLength)
 
 Response Handler::getBIOSTable(const pldm_msg* request, size_t payloadLength)
 {
+	info("Inside getBIOSTable");
     uint32_t transferHandle{};
     uint8_t transferOpFlag{};
     uint8_t tableType{};
+
+    if (!biosConfig.initializeAttributesAndTables())
+    {
+        return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
+    }
 
     auto rc = decode_get_bios_table_req(request, payloadLength, &transferHandle,
                                         &transferOpFlag, &tableType);
@@ -258,10 +262,16 @@ Response Handler::getBIOSTable(const pldm_msg* request, size_t payloadLength)
 
 Response Handler::setBIOSTable(const pldm_msg* request, size_t payloadLength)
 {
+	info("Inside setBIOSTable");
     uint32_t transferHandle{};
     uint8_t transferOpFlag{};
     uint8_t tableType{};
     struct variable_field field;
+
+    if (!biosConfig.initializeAttributesAndTables())
+    {
+        return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
+    }
 
     auto rc = decode_set_bios_table_req(request, payloadLength, &transferHandle,
                                         &transferOpFlag, &tableType, &field);
@@ -293,9 +303,15 @@ Response Handler::setBIOSTable(const pldm_msg* request, size_t payloadLength)
 Response Handler::getBIOSAttributeCurrentValueByHandle(const pldm_msg* request,
                                                        size_t payloadLength)
 {
+	info("Inside getBIOSAttributeCurrentValue");
     uint32_t transferHandle;
     uint8_t transferOpFlag;
     uint16_t attributeHandle;
+
+    if (!biosConfig.initializeAttributesAndTables())
+    {
+        return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
+    }
 
     auto rc = decode_get_bios_attribute_current_value_by_handle_req(
         request, payloadLength, &transferHandle, &transferOpFlag,
@@ -338,9 +354,15 @@ Response Handler::getBIOSAttributeCurrentValueByHandle(const pldm_msg* request,
 Response Handler::setBIOSAttributeCurrentValue(const pldm_msg* request,
                                                size_t payloadLength)
 {
+	info("Inside setBIOSAttributeCurrentValue");
     uint32_t transferHandle;
     uint8_t transferOpFlag;
     variable_field attributeField;
+
+    if (!biosConfig.initializeAttributesAndTables())
+    {
+        return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
+    }
 
     auto rc = decode_set_bios_attribute_current_value_req(
         request, payloadLength, &transferHandle, &transferOpFlag,
