@@ -273,21 +273,6 @@
             "displayName": "Secure Version Lockin Enabled"
         },
         {
-            "attribute_name": "hb_memory_mirror_mode",
-            "possible_values": ["Disabled", "Enabled"],
-            "default_values": ["Disabled"],
-            "helpText": "Specifies if the memory mirroring is enabled, requires a reboot for a change to be applied.",
-            "displayName": "Memory Mirror Mode (pending)"
-        },
-        {
-            "attribute_name": "hb_memory_mirror_mode_current",
-            "possible_values": ["Disabled", "Enabled"],
-            "default_values": ["Disabled"],
-            "helpText": "Specifies if the memory mirroring is enabled for the current IPL. Do not set this attribute directly; set hb_memory_mirror_mode instead.",
-            "displayName": "Memory Mirror Mode (current)",
-            "readOnly": true
-        },
-        {
             "attribute_name": "hb_tpm_required",
             "possible_values": ["Required", "Not Required"],
             "default_values": ["Required"],
