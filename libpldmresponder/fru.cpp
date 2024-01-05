@@ -44,7 +44,7 @@ pldm_entity FruImpl::getEntityByObjectPath(const dbus::ObjectValueTree& objects,
             entity.entity_instance_num = 1;
             break;
         }
-        catch (const std::exception& e)
+        catch (const std::exception&)
         {
             continue;
         }
@@ -166,7 +166,8 @@ void FruImpl::buildFRUTable()
     catch (const std::exception& e)
     {
         info(
-            "Look up of inventory objects failed and PLDM FRU table creation failed");
+            "Look up of inventory objects failed and PLDM FRU table creation failed ERROR={ERR_EXCEP}",
+            "ERR_EXCEP", e.what());
         return;
     }
 
@@ -323,7 +324,7 @@ uint32_t FruImpl::populateRecords(
                               std::back_inserter(tlvs));
                 }
             }
-            catch (const std::out_of_range& e)
+            catch (const std::out_of_range&)
             {
                 continue;
             }
@@ -1136,7 +1137,7 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
                     pdr->container_id = e.value("container", 0);
                 }
             }
-            catch (const std::exception& ex)
+            catch (const std::exception&)
             {
                 pdr->entity_type = e.value("type", 0);
                 pdr->entity_instance = e.value("instance", 0);
@@ -1200,8 +1201,9 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
                 catch (const std::exception& e)
                 {
                     error(
-                        "D-Bus object path does not exist, effecter ID: {EFFECTER_ID}",
-                        "EFFECTER_ID", static_cast<uint16_t>(pdr->effecter_id));
+                        "D-Bus object path does not exist, effecter ID: {EFFECTER_ID} ERROR={ERR_EXCEP}",
+                        "EFFECTER_ID", static_cast<uint16_t>(pdr->effecter_id),
+                        "ERR_EXCEP", e.what());
                 }
                 dbusMappings.emplace_back(std::move(dbusMapping));
                 dbusValMaps.emplace_back(std::move(dbusIdToValMap));
@@ -1306,7 +1308,7 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
                     pdr->container_id = e.value("container", 0);
                 }
             }
-            catch (const std::exception& ex)
+            catch (const std::exception&)
             {
                 pdr->entity_type = e.value("type", 0);
                 pdr->entity_instance = e.value("instance", 0);
@@ -1379,8 +1381,9 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
                 catch (const std::exception& e)
                 {
                     error(
-                        "D-Bus object path does not exist, sensor ID: {SENSOR_ID}",
-                        "SENSOR_ID", static_cast<uint16_t>(pdr->sensor_id));
+                        "D-Bus object path does not exist, sensor ID: {SENSOR_ID} ERROR={ERR_EXCEP}",
+                        "SENSOR_ID", static_cast<uint16_t>(pdr->sensor_id),
+                        "ERR_EXCEP", e.what());
                 }
                 dbusMappings.emplace_back(std::move(dbusMapping));
                 dbusValMaps.emplace_back(std::move(dbusIdToValMap));

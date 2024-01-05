@@ -710,9 +710,9 @@ std::filesystem::path pldm::responder::oem_ibm_platform::Handler::getConfigDir()
         catch (const std::exception& e)
         {
             error(
-                "Error getting Names property , PATH={OBJ_PATH} Compatible interface = {INTF}",
+                "Error getting Names property, PATH={OBJ_PATH} Compatible interface = {INTF} ERROR={ERR_EXCEP}",
                 "OBJ_PATH", objectPath.c_str(), "INTF",
-                ibmCompatible[0].c_str());
+                ibmCompatible[0].c_str(), "ERR_EXCEP", e.what());
         }
     }
     return fs::path();
@@ -1256,7 +1256,7 @@ bool pldm::responder::oem_ibm_platform::Handler::watchDogRunning()
         isWatchDogRunning = pldm::utils::DBusHandler().getDbusProperty<bool>(
             watchDogObjectPath, watchDogEnablePropName, watchDogInterface);
     }
-    catch (const std::exception& e)
+    catch (const std::exception&)
     {
         return false;
     }
@@ -1336,7 +1336,8 @@ int pldm::responder::oem_ibm_platform::Handler::checkBMCState()
     }
     catch (const std::exception& e)
     {
-        error("Error getting the current BMC state");
+        error("Error getting the current BMC state ERROR={ERR_EXCEP}",
+              "ERR_EXCEP", e.what());
         return PLDM_ERROR;
     }
     return PLDM_SUCCESS;
@@ -1410,7 +1411,11 @@ void pldm::responder::oem_ibm_platform::Handler::handleBootTypesAtPowerOn()
             setBootTypesBiosAttr(restartCause);
         }
         catch (const std::exception& e)
-        {}
+        {
+            error(
+                "Failed to set the D-bus property for the Host restart reason ERROR={ERR}",
+                "ERR", e.what());
+        }
     }
 }
 

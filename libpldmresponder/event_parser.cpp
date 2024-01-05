@@ -147,8 +147,9 @@ int StateSensorHandler::eventAction(StateSensorEntry entry,
         }
         catch (const std::out_of_range& e)
         {
-            error("Invalid event state {EVENT_STATE}", "EVENT_STATE",
-                  static_cast<unsigned>(state));
+            error("Invalid event state {EVENT_STATE}  ERROR={ERR_EXCEP}",
+                  "EVENT_STATE", static_cast<unsigned>(state), "ERR_EXCEP",
+                  e.what());
             return PLDM_ERROR_INVALID_DATA;
         }
 
@@ -166,7 +167,7 @@ int StateSensorHandler::eventAction(StateSensorEntry entry,
             return PLDM_ERROR;
         }
     }
-    catch (const std::out_of_range& e)
+    catch (const std::out_of_range&)
     {
         // There is no BMC action for this PLDM event
         return PLDM_SUCCESS;

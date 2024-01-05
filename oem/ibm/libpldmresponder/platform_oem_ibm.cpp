@@ -44,7 +44,7 @@ int sendBiosAttributeUpdateEvent(
             return PLDM_SUCCESS;
         }
     }
-    catch (const sdbusplus::exception::exception& e)
+    catch (const sdbusplus::exception::exception&)
     {
         /* Execption is expected to happen in the case when state manager is
          * started after pldm, this is expected to happen in reboot case where

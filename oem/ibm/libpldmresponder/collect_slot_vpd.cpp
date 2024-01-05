@@ -78,6 +78,8 @@ void SlotHandler::processSlotOperations(const std::string& slotObjectPath,
     }
     catch (const std::bad_optional_access& e)
     {
+        error("Failed to get the adapter dbus object ERROR={ERR}", "ERR",
+              e.what());
         return;
     }
 

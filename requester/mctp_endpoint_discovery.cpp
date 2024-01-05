@@ -35,6 +35,9 @@ MctpDiscovery::MctpDiscovery(sdbusplus::bus_t& bus,
     }
     catch (const std::exception& e)
     {
+        error(
+            "D-bus method call to get the managed objects under MCTP Control failed ERROR={ERR}",
+            "ERR", e.what());
         return;
     }
 
