@@ -105,7 +105,8 @@ class BIOSConfig
     /** @brief Build bios tables(string,attribute,attribute value table)*/
     void buildTables();
 
-    /** @brief Construct attributes and tables based on the system type(platform name) */
+    /** @brief Construct attributes and tables based on the system type(platform
+     * name) */
     bool initializeAttributesAndTables();
 
     /** @brief Get BIOS table of specified type

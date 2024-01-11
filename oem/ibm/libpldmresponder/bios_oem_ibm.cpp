@@ -1,7 +1,5 @@
 #include "bios_oem_ibm.hpp"
 
-//#include "host-bmc/dbus/serialize.hpp"
-
 namespace pldm
 {
 namespace responder
@@ -59,7 +57,7 @@ std::optional<std::string>
         }
     }
 
-    return std::nullopt; 
+    return std::nullopt;
 }
 
 /** @brief callback function invoked when interfaces get added from
@@ -98,7 +96,7 @@ void pldm::responder::oem::ibm::bios::Handler::ibmCompatibleAddedCallback(
     if (!names.empty())
     {
         systemType = names.front();
-	info("Updated SystemType: {SYSTEM_TYPE}", "SYSTEM_TYPE", systemType);
+        info("Updated SystemType: {SYSTEM_TYPE}", "SYSTEM_TYPE", systemType);
     }
 
     if (!systemType.empty())
@@ -106,30 +104,6 @@ void pldm::responder::oem::ibm::bios::Handler::ibmCompatibleAddedCallback(
         ibmCompatibleMatchConfig.reset();
     }
 }
-
-/*
-void pldm::responder::oem::ibm::bios::Handler::writeFile(std::string systemType)
-{
-    info("SystemType written in the file : {SYSTEM_TYPE}", "SYSTEM_TYPE",
-         systemType);
-    pldm::serialize::Serialize::getSerialize().serializeKeyVal("SystemType",
-                                                               systemType);
-}
-std::optional<std::string> pldm::responder::oem::ibm::bios::Handler::readFile()
-{
-    std::map<std::string, pldm::dbus::PropertyValue> persistedData =
-        pldm::serialize::Serialize::getSerialize().getSavedKeyVals();
-
-    if (persistedData.contains("SystemType"))
-    {
-        info("SystemType read from the file: {SYSTEM_TYPE}", "SYSTEM_TYPE",
-             std::get<std::string>(persistedData["SystemType"]));
-        return std::get<std::string>(persistedData["SystemType"]);
-    }
-    error("Error in reading SystemType from the file");
-    return std::nullopt;
-}
-*/
 
 } // namespace oem::ibm::bios
 } // namespace responder

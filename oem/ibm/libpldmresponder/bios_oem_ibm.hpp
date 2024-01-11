@@ -53,18 +53,6 @@ class Handler : public oem_bios::Handler
      *  @param[in] msg - Data associated with subscribed signal
      */
     void ibmCompatibleAddedCallback(sdbusplus::message::message& msg);
-
-    /** @brief Method to get the persisted system type information
-     *
-     *  @return - the system type information
-     */
-    //std::optional<std::string> readFile();
-
-    /** @brief Method to persist system type information
-     *  @param[in] systemType - the system type
-     *  @return - void
-     */
-    //void writeFile(std::string systemType);
 };
 
 } // namespace oem::ibm::bios
