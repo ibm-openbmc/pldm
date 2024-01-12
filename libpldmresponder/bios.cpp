@@ -75,9 +75,6 @@ Handler::Handler(int fd, uint8_t eid, dbus_api::Requester* requester,
     biosConfig(BIOS_JSONS_DIR, BIOS_TABLES_DIR, &dbusHandler, fd, eid,
                requester, handler, oemBiosHandler)
 {
-    biosConfig.removeTables();
-    biosConfig.buildTables();
-
     handlers.emplace(PLDM_SET_DATE_TIME,
                      [this](const pldm_msg* request, size_t payloadLength) {
         return this->setDateTime(request, payloadLength);
@@ -224,6 +221,11 @@ Response Handler::setDateTime(const pldm_msg* request, size_t payloadLength)
 
 Response Handler::getBIOSTable(const pldm_msg* request, size_t payloadLength)
 {
+    if (!biosConfig.initializeAttributesAndTables())
+    {
+        return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
+    }
+
     uint32_t transferHandle{};
     uint8_t transferOpFlag{};
     uint8_t tableType{};
@@ -259,6 +261,11 @@ Response Handler::getBIOSTable(const pldm_msg* request, size_t payloadLength)
 
 Response Handler::setBIOSTable(const pldm_msg* request, size_t payloadLength)
 {
+    if (!biosConfig.initializeAttributesAndTables())
+    {
+        return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
+    }
+
     uint32_t transferHandle{};
     uint8_t transferOpFlag{};
     uint8_t tableType{};
@@ -294,6 +301,11 @@ Response Handler::setBIOSTable(const pldm_msg* request, size_t payloadLength)
 Response Handler::getBIOSAttributeCurrentValueByHandle(const pldm_msg* request,
                                                        size_t payloadLength)
 {
+    if (!biosConfig.initializeAttributesAndTables())
+    {
+        return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
+    }
+
     uint32_t transferHandle;
     uint8_t transferOpFlag;
     uint16_t attributeHandle;
@@ -339,6 +351,11 @@ Response Handler::getBIOSAttributeCurrentValueByHandle(const pldm_msg* request,
 Response Handler::setBIOSAttributeCurrentValue(const pldm_msg* request,
                                                size_t payloadLength)
 {
+    if (!biosConfig.initializeAttributesAndTables())
+    {
+        return ccOnlyResponse(request, PLDM_ERROR_NOT_READY);
+    }
+
     uint32_t transferHandle;
     uint8_t transferOpFlag;
     variable_field attributeField;
