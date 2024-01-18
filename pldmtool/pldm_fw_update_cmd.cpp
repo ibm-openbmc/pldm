@@ -7,8 +7,6 @@
 
 #include <phosphor-logging/lg2.hpp>
 
-PHOSPHOR_LOG2_USING;
-
 namespace pldmtool
 {
 
@@ -96,8 +94,8 @@ class GetStatus : public CommandInterface
             &reasonCode, &updateOptionFlagsEnabled);
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
-            error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0", rc,
-                  "KEY1", (int)completionCode);
+            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
+                       rc, "KEY1", (int)completionCode);
             return;
         }
 
@@ -181,8 +179,8 @@ class GetFwParams : public CommandInterface
             &pendingCompImageSetVersion, &compParameterTable);
         if (rc != PLDM_SUCCESS || fwParams.completion_code != PLDM_SUCCESS)
         {
-            error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0", rc,
-                  "KEY1", (int)fwParams.completion_code);
+            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
+                       rc, "KEY1", (int)fwParams.completion_code);
 
             return;
         }
@@ -271,7 +269,7 @@ class GetFwParams : public CommandInterface
                 &pendingCompVerStr);
             if (rc)
             {
-                error(
+                lg2::error(
                     "Decoding component parameter table entry failed, RC={KEY0}",
                     "KEY0", rc);
                 return;
