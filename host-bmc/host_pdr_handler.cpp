@@ -1827,7 +1827,7 @@ void HostPDRHandler::createDbusObjects()
             case PLDM_ENTITY_SLOT:
                 CustomDBus::getCustomDBus().implementPCIeSlotInterface(
                     entity.first);
-                CustomDBus::getCustomDBus().setlinkreset(
+                CustomDBus::getCustomDBus().setLinkReset(
                     entity.first, false, hostEffecterParser, mctp_eid);
                 break;
             case PLDM_ENTITY_CONNECTOR:
@@ -1856,6 +1856,8 @@ void HostPDRHandler::createDbusObjects()
                 CustomDBus::getCustomDBus().setSlotType(
                     entity.first,
                     "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.OEM");
+                CustomDBus::getCustomDBus().setLinkReset(
+                    entity.first, false, hostEffecterParser, mctp_eid);
                 break;
             default:
                 break;
@@ -1961,9 +1963,9 @@ void HostPDRHandler::setRecordPresent(uint32_t recordHandle)
         {
             error(
                 "Removing Host FRU [ {PATH} ] with entityid [ {ENTITY_TYP}, {ENTITY_NUM}, {ENTITY_ID} ]",
-                "ENTITY_TYP", (unsigned)recordEntity.entity_type, "ENTITY_NUM",
-                (unsigned)recordEntity.entity_instance_num, "ENTITY_ID",
-                (unsigned)recordEntity.entity_container_id);
+                "PATH", path, "ENTITY_TYP", (unsigned)recordEntity.entity_type,
+                "ENTITY_NUM", (unsigned)recordEntity.entity_instance_num,
+                "ENTITY_ID", (unsigned)recordEntity.entity_container_id);
             // if the record has the same entity id, mark that dbus object as
             // not present
             CustomDBus::getCustomDBus().updateItemPresentStatus(path, false);

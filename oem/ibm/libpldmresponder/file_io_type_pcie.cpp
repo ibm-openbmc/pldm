@@ -206,10 +206,11 @@ void PCIeInfoHandler::getMexObjects()
     // get the in memory cached copy of mex objects
     auto savedObjs = pldm::serialize::Serialize::getSerialize().getSavedObjs();
 
-    // Find the PCIE slots & PCIeAdapters & Connecters & their location codes
-    std::set<uint16_t> neededEntityTypes = {PLDM_ENTITY_SLOT, PLDM_ENTITY_CARD,
-                                            PLDM_ENTITY_CONNECTOR,
-                                            PLDM_ENTITY_SYSTEM_CHASSIS};
+    // Find the PCIE slots & PCIE logical slots & PCIeAdapters & Connecters &
+    // their location codes
+    std::set<uint16_t> neededEntityTypes = {
+        PLDM_ENTITY_SLOT, PLDM_ENTITY_CARD, PLDM_ENTITY_CONNECTOR,
+        PLDM_ENTITY_SYSTEM_CHASSIS, (0x8000 | PLDM_ENTITY_SLOT)};
     std::set<std::string> neededProperties = {"locationCode"};
 
     for (const auto& [entityType, objects] : savedObjs)
@@ -257,7 +258,9 @@ std::string PCIeInfoHandler::getMexObjectFromLocationCode(
 {
     for (const auto& [objectPath, obj] : mexObjectMap)
     {
-        if (std::get<0>(obj) == entityType &&
+        // Added the check for logical entity type
+        if (((std::get<0>(obj) == entityType) ||
+             (std::get<0>(obj) == (0x8000 | entityType))) &&
             (std::get<1>(obj) == "locationCode"))
         {
             if ((std::get<2>(obj)).has_value() &&
