@@ -312,7 +312,7 @@ class CustomDBus
     void setSlotType(const std::string& path, const std::string& slotType);
 
     /** set reset link value*/
-    void setlinkreset(
+    void setLinkReset(
         const std::string& path, bool value,
         pldm::host_effecters::HostEffecterParser* hostEffecterParser,
         uint8_t instanceId);

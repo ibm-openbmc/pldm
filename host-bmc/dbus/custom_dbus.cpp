@@ -156,7 +156,7 @@ void CustomDBus::setSlotProperties(const std::string& path,
         pcieSlot.at(path)->linkStatus(linkStatus);
     }
 }
-void CustomDBus::setlinkreset(
+void CustomDBus::setLinkReset(
     const std::string& path, bool value,
     pldm::host_effecters::HostEffecterParser* hostEffecterParser,
     uint8_t mctpEid)
