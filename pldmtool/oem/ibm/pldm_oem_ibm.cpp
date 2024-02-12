@@ -8,13 +8,8 @@
 
 #include <endian.h>
 
-#include <phosphor-logging/lg2.hpp>
-
 #include <iostream>
 #include <string>
-
-PHOSPHOR_LOG2_USING;
-
 namespace pldmtool
 {
 
@@ -76,8 +71,8 @@ class GetAlertStatus : public CommandInterface
 
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
-            error("Response Message Error: rc={RC} cc={CC}", "RC", rc, "CC",
-                  static_cast<int>(completionCode));
+            std::cerr << "Response Message Error: "
+                      << "rc=" << rc << ",cc=" << (int)completionCode << "\n";
             return;
         }
 
@@ -126,7 +121,7 @@ class GetFileTable : public CommandInterface
                                             0, request);
         if (rc != PLDM_SUCCESS)
         {
-            error("PLDM: Request Message Error, rc ={RC}", "RC", rc);
+            std::cerr << "PLDM: Request Message Error, rc =" << rc << std::endl;
             return;
         }
 
@@ -134,7 +129,7 @@ class GetFileTable : public CommandInterface
         rc = pldmSendRecv(requestMsg, responseMsg);
         if (rc != PLDM_SUCCESS)
         {
-            error("PLDM: Communication Error, rc ={RC}", "RC", rc);
+            std::cerr << "PLDM: Communication Error, rc =" << rc << std::endl;
             return;
         }
 
@@ -153,8 +148,8 @@ class GetFileTable : public CommandInterface
 
         if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
         {
-            error("Response Message Error: rc={RC} cc={CC}", "RC", rc, "CC",
-                  static_cast<int>(cc));
+            std::cerr << "Response Message Error: "
+                      << ", rc=" << rc << ", cc=" << (int)cc << std::endl;
             return;
         }
 
