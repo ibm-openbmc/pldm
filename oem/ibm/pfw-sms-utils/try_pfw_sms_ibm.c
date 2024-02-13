@@ -1,7 +1,7 @@
 // unit test stub
 // sample invocation: try_pfw_sms_ibm admin 0penBmc0
 
-#include "pfw_sms_menu_ibm.h"
+#include "pfw_sms_menu.hpp"
 #include <stdio.h>
 
 int main(int argc, char *argv[])

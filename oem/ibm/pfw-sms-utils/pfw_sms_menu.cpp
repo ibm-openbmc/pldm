@@ -2,10 +2,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <security/pam_appl.h>
-#include "pfw_sms_menu_ibm.h"
-
-// debug
-#include <stdio.h>
+#include "pfw_sms_menu.hpp"
 
 /** @struct Data for the PAM Conversation function
  *
@@ -13,7 +10,6 @@
  * [in] password - this the password that our application already has before invoking PAM.
  *    For authentication, this is the current password.
  *    For password change, this is the proposed new password.
-12345678901234567890123456789012345678901234567890123456789012345678901234567890
  * [out] changePasswordReasonCode - If one of the PAM modules (such as pam_pwquality) gives a
  *       response, we convert it to a reason code and store it here.
  *       The caller will need examine both this code and the return value from the pam_* function.
@@ -45,8 +41,7 @@ static int pamConversationFunction(int num_msg, const struct pam_message **messa
   }
 
   struct pfw_sms_pam_appdata* pfw_sms_appdata_ptr = (struct pfw_sms_pam_appdata*)appdata_ptr;
-  pfw_sms_appdata_ptr->reasonCode = 0;
-  *response_ptr = calloc(num_msg, sizeof(struct pam_response));  // PAM frees
+  *response_ptr = (pam_response *)calloc(num_msg, sizeof(struct pam_response));  // PAM frees
   if (*response_ptr == NULL)
   {
     return PAM_CONV_ERR;
@@ -68,6 +63,7 @@ static int pamConversationFunction(int num_msg, const struct pam_message **messa
       {
           return PAM_BUF_ERR; // *authenticated = false
       }
+      pfw_sms_appdata_ptr->reasonCode = PasswordChangeSuccessful; // working assumption
       response_ptr[msg]->resp = local_password;
       break;
     case PAM_PROMPT_ECHO_ON:
@@ -141,7 +137,7 @@ static void common_authentication_handler(const char *username, const char *pass
     *passwordChangeRequired = false;
     *operationAllowed = false;
 
-    struct pfw_sms_pam_appdata appdata = {password, 0};
+    struct pfw_sms_pam_appdata appdata = {password, PasswordChangeFailedUnknownReason};
     char* appData = (char*)&appdata;
     const struct pam_conv pamConversation = {pamConversationFunction,
                                              appData};
@@ -193,7 +189,7 @@ changePassword(const char *username, const char *currentPassword, const char *ne
         return NotAuthenticated;
     }
 
-    struct pfw_sms_pam_appdata appdata = {newPassword, 0};
+    struct pfw_sms_pam_appdata appdata = {newPassword, PasswordChangeFailedUnknownReason};
     char* appData = (char*)&appdata;
     const struct pam_conv pamConversation = {pamConversationFunction,
                                              appData};

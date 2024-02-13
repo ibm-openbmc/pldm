@@ -9,18 +9,6 @@ extern "C" {
 #include <stdbool.h>
 #include <security/pam_appl.h>
 
-/** @brief Authenticate a password request from PFW SMS
- *
- * @param[in] username - the name of the BMC account
- * @param[in] password - the password associated with the username
- * @param[out] authenticated - true if password authentication was successful; note this only reports password authentication, and the parameters passwordChangeRequired and operationAllowed should be checked as appropriate.
- * @param[out] passwordChangeRequired - true if the password needs to be changed
- * @param[out] operationAllowed - true if the user should be allowed to perform the PFW SMS operation
- *
- * @note Authentication is to BMC user account
-*/
-void authenticate(const char *username, const char *password, bool *authenticated, bool *passwordChangeRequired, bool *operationAllowed);
-
 enum changePasswordReasonCode
 {
   PasswordChangeSuccessful = 0,
@@ -40,6 +28,18 @@ enum changePasswordReasonCode
   // Codes from pam_ipmicheck.so:  etc.
   PasswordTooLongforIPMIUser = 2000, // IPMI users are limited to 20 character passwords
 };
+
+/** @brief Authenticate a password request from PFW SMS
+ *
+ * @param[in] username - the name of the BMC account
+ * @param[in] password - the password associated with the username
+ * @param[out] authenticated - true if password authentication was successful; note this only reports password authentication, and the parameters passwordChangeRequired and operationAllowed should be checked as appropriate.
+ * @param[out] passwordChangeRequired - true if the password needs to be changed
+ * @param[out] operationAllowed - true if the user should be allowed to perform the PFW SMS operation
+ *
+ * @note Authentication is to BMC user account
+*/
+void authenticate(const char *username, const char *password, bool *authenticated, bool *passwordChangeRequired, bool *operationAllowed);
 
 /** @brief Handle password change request from PFW SMS
  *
