@@ -1,7 +1,5 @@
 #include "bios_oem_ibm.hpp"
 
-#include "host-bmc/dbus/serialize.hpp"
-
 namespace pldm
 {
 namespace responder
@@ -47,7 +45,7 @@ std::optional<std::string>
                              .getDbusProperty<std::vector<std::string>>(
                                  objectPath.c_str(), namesProperty,
                                  ibmCompatible[0].c_str());
-            writeFile(value[0]);
+            info("SystemType is : {SYSTEM_TYPE}", "SYSTEM_TYPE", value[0]);
             return value[0];
         }
         catch (const sdbusplus::exception_t& e)
@@ -59,7 +57,7 @@ std::optional<std::string>
         }
     }
 
-    return readFile();
+    return std::nullopt;
 }
 
 /** @brief callback function invoked when interfaces get added from
@@ -98,36 +96,13 @@ void pldm::responder::oem::ibm::bios::Handler::ibmCompatibleAddedCallback(
     if (!names.empty())
     {
         systemType = names.front();
-        writeFile(systemType);
+        info("Updated SystemType: {SYSTEM_TYPE}", "SYSTEM_TYPE", systemType);
     }
 
     if (!systemType.empty())
     {
         ibmCompatibleMatchConfig.reset();
     }
-}
-
-void pldm::responder::oem::ibm::bios::Handler::writeFile(std::string systemType)
-{
-    info("SystemType written in the file : {SYSTEM_TYPE}", "SYSTEM_TYPE",
-         systemType);
-    pldm::serialize::Serialize::getSerialize().serializeKeyVal("SystemType",
-                                                               systemType);
-}
-
-std::optional<std::string> pldm::responder::oem::ibm::bios::Handler::readFile()
-{
-    std::map<std::string, pldm::dbus::PropertyValue> persistedData =
-        pldm::serialize::Serialize::getSerialize().getSavedKeyVals();
-
-    if (persistedData.contains("SystemType"))
-    {
-        info("SystemType read from the file: {SYSTEM_TYPE}", "SYSTEM_TYPE",
-             std::get<std::string>(persistedData["SystemType"]));
-        return std::get<std::string>(persistedData["SystemType"]);
-    }
-    error("Error in reading SystemType from the file");
-    return std::nullopt;
 }
 
 } // namespace oem::ibm::bios
