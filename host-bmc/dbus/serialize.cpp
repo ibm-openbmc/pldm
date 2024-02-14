@@ -93,6 +93,12 @@ void Serialize::serialize(const std::string& path, const std::string& intf,
 void Serialize::serializeKeyVal(const std::string& key,
                                 dbus::PropertyValue value)
 {
+    auto dir = filePath.parent_path();
+    if (!fs::exists(dir))
+    {
+        fs::create_directories(dir);
+    }
+
     std::ofstream os(filePath.c_str(), std::ios::binary);
     cereal::BinaryOutputArchive oarchive(os);
     savedKeyVal[key] = value;
