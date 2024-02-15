@@ -1893,6 +1893,9 @@ void HostPDRHandler::setRecordPresent(uint32_t recordHandle)
             CustomDBus::getCustomDBus().updateItemPresentStatus(path, false);
             CustomDBus::getCustomDBus().setOperationalStatus(
                 path, false, getParentChassis(path));
+            // Delete the LED object path
+            auto ledGroupPath = updateLedGroupPath(path);
+            pldm::dbus::CustomDBus::getCustomDBus().deleteObject(ledGroupPath);
             return;
         }
     }
