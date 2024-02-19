@@ -1,9 +1,13 @@
 // unit test stub
 // sample invocation: try_pfw_sms_ibm admin 0penBmc0
 
+#include <string>
+
 #include "pfw_sms_menu.hpp"
 
 #include <stdio.h>
+
+using namespace ibm_pfw_sms;
 
 int main(int argc, char* argv[])
 {
@@ -13,8 +17,8 @@ int main(int argc, char* argv[])
         bool authenticated = false;
         bool passwordChangeRequired = false;
         bool operationAllowed = false;
-        authenticate(argv[1], argv[2], &authenticated, &passwordChangeRequired,
-                     &operationAllowed);
+        authenticate(std::string(argv[1]), std::string(argv[2]), authenticated, passwordChangeRequired,
+                     operationAllowed);
         printf(
             "authenticated=%d, passwordChangeRequired=%d, operationAllowed=%d\n",
             (int)authenticated, (int)passwordChangeRequired,
@@ -24,9 +28,10 @@ int main(int argc, char* argv[])
     else if (argc == 4)
     {
         // change password
+	bool operationAllowed = false;
         enum changePasswordReasonCode rc;
-        rc = changePassword(argv[1], argv[2], argv[3]);
-        printf("change password rc=%d\n", rc);
+        rc = changePassword(std::string(argv[1]), std::string(argv[2]), std::string(argv[3]), operationAllowed);
+        printf("allowed=%d, rc=%d\n", (int)operationAllowed, rc);
         return rc;
     }
     else
