@@ -383,9 +383,11 @@ class Handler : public oem_platform::Handler
      *
      *  @param[in] object_path - The object path of the dump to monitor
      *  @param[in] entityType - the entity type
+     *  @param[in] entityInstance - the entity instance id of the effecter
      *
      */
-    void monitorDump(const std::string& obj_path, uint16_t entityType);
+    void monitorDump(const std::string& obj_path, uint16_t entityType,
+                     uint16_t entityInstance);
 
     /*keeps track how many times setEventReceiver is sent */
     void countSetEventReceiver()
@@ -421,9 +423,11 @@ class Handler : public oem_platform::Handler
     /** @brief Method to set the host effecter state
      *  @param status - the status of dump creation
      *  @param entityTypeReceived - the entity type
+     *  @param entityInstance - the entity instance id of the effecter
      *
      */
-    void setHostEffecterState(bool status, uint16_t entityTypeReceived);
+    void setHostEffecterState(bool status, uint16_t entityTypeReceived,
+                              uint16_t entityInstance);
     /** @brief Method to perform actions when PLDM_RECORDS_MODIFIED event
      *  is received from host
      *  @param[in] entityType - entity type

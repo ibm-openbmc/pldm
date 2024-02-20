@@ -119,10 +119,11 @@ class Handler : public CmdHandler
     /* @brief Interface to set the host effecter state
      *  @param status - the status of dump creation
      *  @param entityTypeReceived - the entity type
+     *  @param entityInstance - the entity instance id of the effecter
      *
      */
-    virtual void setHostEffecterState(bool status,
-                                      uint16_t entityTypeReceived) = 0;
+    virtual void setHostEffecterState(bool status, uint16_t entityTypeReceived,
+                                      uint16_t entityInstance) = 0;
 
     /** @brief Interface to keep track of how many times setEventReceiver
      *         is sent to host */
