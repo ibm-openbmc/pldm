@@ -1,12 +1,14 @@
 #include "pfw_sms_menu.hpp"
 
 #include <security/pam_appl.h>
-#include <cstring>
+
 #include <cstdlib>
+#include <cstring>
 
 // #include <iostream>
 
-namespace ibm_pfw_sms {
+namespace ibm_pfw_sms
+{
 
 /** @struct Data for the PAM Conversation function
  *
@@ -23,7 +25,7 @@ namespace ibm_pfw_sms {
  */
 struct pfw_sms_pam_appdata
 {
-    const std::string &password;
+    const std::string& password;
     enum changePasswordReasonCode reasonCode;
 };
 
@@ -66,14 +68,14 @@ static int pamConversationFunction(int num_msg,
     {
         char* local_password = NULL; // for PAM's malloc'd copy
         std::basic_string_view msg(msg_ptr[msg_index].msg);
-	switch (msg_ptr[msg_index].msg_style)
+        switch (msg_ptr[msg_index].msg_style)
         {
             case PAM_PROMPT_ECHO_OFF:
-		//std::cout << "PAM prompt echo off: " << msg << "\n";
-                //  Assume PAM is asking for the password.  Supply a malloc'd
-                //  password that PAM will free
-                local_password =
-                    ::strdup(pfw_sms_appdata_ptr->password.c_str()); // PAM will free
+                // std::cout << "PAM prompt echo off: " << msg << "\n";
+                //   Assume PAM is asking for the password.  Supply a malloc'd
+                //   password that PAM will free
+                local_password = ::strdup(
+                    pfw_sms_appdata_ptr->password.c_str()); // PAM will free
                 if (local_password == NULL)
                 {
                     return PAM_BUF_ERR; // *authenticated = false
@@ -84,18 +86,18 @@ static int pamConversationFunction(int num_msg,
                 break;
             case PAM_PROMPT_ECHO_ON:
                 // This is not expected
-		//std::cout << "PAM prompt echo on: " << msg << "\n";
-		response_ptr[msg_index]->resp = ::strdup("Unexpected");
+                // std::cout << "PAM prompt echo on: " << msg << "\n";
+                response_ptr[msg_index]->resp = ::strdup("Unexpected");
                 break;
             case PAM_ERROR_MSG:
-		//std::cout << "Error ";
-		// fall through
+                // std::cout << "Error ";
+                //  fall through
             case PAM_TEXT_INFO:
-		//std::cout << "PAM message: " << msg << "\n";
-		if (msg.starts_with("BAD PASSWORD: "))
+                // std::cout << "PAM message: " << msg << "\n";
+                if (msg.starts_with("BAD PASSWORD: "))
                 {
                     // Handle messages from lib_pwquality
-		    std::basic_string_view detail(msg_ptr[msg_index].msg + 14);
+                    std::basic_string_view detail(msg_ptr[msg_index].msg + 14);
                     pfw_sms_appdata_ptr->reasonCode =
                         BADPASSWORDFORUNKNOWNREASON;
                     if (detail == "The password is a palindrome")
@@ -103,8 +105,9 @@ static int pamConversationFunction(int num_msg,
                         pfw_sms_appdata_ptr->reasonCode =
                             BADPASSWORDISPALINDROME;
                     }
-                    if (detail == "The password contains the user name in some form")
-		    {
+                    if (detail ==
+                        "The password contains the user name in some form")
+                    {
                         pfw_sms_appdata_ptr->reasonCode =
                             BADPASSWORDCONTAINSUSERNAME;
                     }
@@ -113,14 +116,17 @@ static int pamConversationFunction(int num_msg,
                     {
                         pfw_sms_appdata_ptr->reasonCode = BADPASSWORDTOOSHORT;
                     }
-                    if ((detail == "The password does not contain enough character classes") ||
+                    if ((detail ==
+                         "The password does not contain enough character classes") ||
                         detail.starts_with("The password contains less than "))
                     {
                         pfw_sms_appdata_ptr->reasonCode =
                             BADPASSWORDNOTENOUGHCHARACTERCLASSES;
                     }
-                    if ((detail == "The password contains too long of a monotonic character sequence") ||
-                        detail.starts_with("The password contains monotonic sequence longer than "))
+                    if ((detail ==
+                         "The password contains too long of a monotonic character sequence") ||
+                        detail.starts_with(
+                            "The password contains monotonic sequence longer than "))
                     {
                         pfw_sms_appdata_ptr->reasonCode =
                             BADPASSWORDTOOLONGMONOTONICSEQUENCE;
@@ -130,7 +136,8 @@ static int pamConversationFunction(int num_msg,
                         pfw_sms_appdata_ptr->reasonCode =
                             BADPASSWORDNOPASSWORDSUPPLIED;
                     }
-                    if (detail.starts_with("The password fails the dictionary check"))
+                    if (detail.starts_with(
+                            "The password fails the dictionary check"))
                     {
                         pfw_sms_appdata_ptr->reasonCode =
                             BADPASSWORDDICTIONARYCHECK;
@@ -138,7 +145,8 @@ static int pamConversationFunction(int num_msg,
                 }
                 else if (msg.starts_with("Username ") &&
                          (std::string_view::npos != msg.find(" / Password ")) &&
-                         (std::string_view::npos != msg.find(" exceeds IPMI 16/20 limit")))
+                         (std::string_view::npos !=
+                          msg.find(" exceeds IPMI 16/20 limit")))
                 {
                     // Handle messages from
                     // https://github.com/openbmc/pam-ipmi/blob/master/src/pam_ipmicheck/pam_ipmicheck.c
@@ -159,11 +167,11 @@ static int pamConversationFunction(int num_msg,
 
 /** @brief Common code factored out between authenticate() and changePassword().
  */
-static void common_authentication_handler(const std::string &username,
-                                          const std::string &password,
-                                          bool &authenticated,
-                                          bool &passwordChangeRequired,
-                                          bool &operationAllowed)
+static void common_authentication_handler(const std::string& username,
+                                          const std::string& password,
+                                          bool& authenticated,
+                                          bool& passwordChangeRequired,
+                                          bool& operationAllowed)
 {
     authenticated = false;
     passwordChangeRequired = false;
@@ -174,8 +182,8 @@ static void common_authentication_handler(const std::string &username,
     char* appData = (char*)&appdata;
     const struct pam_conv pamConversation = {pamConversationFunction, appData};
     pam_handle_t* pamHandle = NULL; // this gets set by pam_start
-    int retval = pam_start("ibm-pfw-sms-menu", username.c_str(), &pamConversation,
-                           &pamHandle);
+    int retval = pam_start("ibm-pfw-sms-menu", username.c_str(),
+                           &pamConversation, &pamHandle);
     if (retval != PAM_SUCCESS)
     {
         return; // authenticated = false
@@ -204,18 +212,18 @@ static void common_authentication_handler(const std::string &username,
     retval = pam_end(pamHandle, retval); // ignore retval
 }
 
-void authenticate(const std::string &username, const std::string &password,
-                  bool &authenticated, bool &passwordChangeRequired,
-                  bool &operationAllowed)
+void authenticate(const std::string& username, const std::string& password,
+                  bool& authenticated, bool& passwordChangeRequired,
+                  bool& operationAllowed)
 {
     common_authentication_handler(username, password, authenticated,
                                   passwordChangeRequired, operationAllowed);
 }
 
-enum changePasswordReasonCode changePassword(const std::string &username,
-                                             const std::string &currentPassword,
-                                             const std::string &newPassword,
-					     bool &operationAllowed)
+enum changePasswordReasonCode changePassword(const std::string& username,
+                                             const std::string& currentPassword,
+                                             const std::string& newPassword,
+                                             bool& operationAllowed)
 {
     bool passwordChangeRequired = false;
     operationAllowed = false;
@@ -228,7 +236,7 @@ enum changePasswordReasonCode changePassword(const std::string &username,
     }
     if (!operationAllowed)
     {
-	return NOTALLOWED; 
+        return NOTALLOWED;
     }
 
     struct pfw_sms_pam_appdata appdata = {newPassword.c_str(),
@@ -236,8 +244,8 @@ enum changePasswordReasonCode changePassword(const std::string &username,
     char* appData = (char*)&appdata;
     const struct pam_conv pamConversation = {pamConversationFunction, appData};
     pam_handle_t* pamHandle = NULL; // this gets set by pam_start
-    int retval = pam_start("ibm-pfw-sms-menu", username.c_str(), &pamConversation,
-                           &pamHandle);
+    int retval = pam_start("ibm-pfw-sms-menu", username.c_str(),
+                           &pamConversation, &pamHandle);
     if (retval != PAM_SUCCESS)
     {
         return PAMSTARTFAILED;
