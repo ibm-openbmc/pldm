@@ -105,8 +105,8 @@ int pldm::responder::oem_ibm_platform::Handler::
 
         else
         {
-            error("Invalid entity type received. Entity type = {ENTITY_TYP}",
-                  "ENTITY_TYP", entityType);
+            error("Invalid entity type received: {ENTITY_TYPE}", "ENTITY_TYPE",
+                  entityType);
         }
         rc = setNumericEffecter(entityInstance, value, entityType);
     }
@@ -999,7 +999,7 @@ int encodeEventMsg(uint8_t eventType, const std::vector<uint8_t>& eventDataVec,
     return rc;
 }
 void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
-    bool status, uint16_t entityTypeReceived)
+    bool status, uint16_t entityTypeReceived, uint16_t entityInstance)
 {
     pldm::pdr::EntityType entityType;
     if (entityTypeReceived == PLDM_ENTITY_MEMORY_MODULE)
@@ -1012,8 +1012,8 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
     }
     else
     {
-        error("Invalid entity type received. Entity Type = {ENTITY_TYP}",
-              "ENTITY_TYP", entityTypeReceived);
+        error("Invalid entity type received: {ENTITY_TYPE}", "ENTITY_TYPE",
+              entityTypeReceived);
         return;
     }
     pldm::pdr::StateSetId stateSetId = PLDM_OEM_IBM_SBE_MAINTENANCE_STATE;
@@ -1026,88 +1026,92 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
         auto stateEffecterPDR =
             reinterpret_cast<pldm_state_effecter_pdr*>(pdr.data());
         uint16_t effecterId = stateEffecterPDR->effecter_id;
-        uint8_t compEffecterCount = stateEffecterPDR->composite_effecter_count;
-
-        std::vector<uint8_t> requestMsg(
-            sizeof(pldm_msg_hdr) + sizeof(effecterId) +
-                sizeof(compEffecterCount) +
-                sizeof(set_effecter_state_field) * compEffecterCount,
-            0);
-
-        auto instanceId = requester.getInstanceId(mctp_eid);
-
-        auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
-        std::vector<set_effecter_state_field> stateField;
-        if (status == true)
+        if (entityInstance == stateEffecterPDR->entity_instance)
         {
-            stateField.push_back(
-                set_effecter_state_field{PLDM_REQUEST_SET, SBE_DUMP_COMPLETED});
-        }
-        else
-        {
-            stateField.push_back(
-                set_effecter_state_field{PLDM_REQUEST_SET, SBE_RETRY_REQUIRED});
-        }
-        auto rc = encode_set_state_effecter_states_req(
-            instanceId, effecterId, compEffecterCount, stateField.data(),
-            request);
-        if (rc != PLDM_SUCCESS)
-        {
-            error(
-                " Set state effecter state command failure. PLDM error code ={RC}",
-                "RC", rc);
-            requester.markFree(mctp_eid, instanceId);
-            return;
-        }
-        auto setStateEffecterStatesRespHandler =
-            [=, this](mctp_eid_t /*eid*/, const pldm_msg* response,
-                      size_t respMsgLen) {
-            if (response == nullptr || !respMsgLen)
+            uint8_t compEffecterCount =
+                stateEffecterPDR->composite_effecter_count;
+
+            std::vector<uint8_t> requestMsg(
+                sizeof(pldm_msg_hdr) + sizeof(effecterId) +
+                    sizeof(compEffecterCount) +
+                    sizeof(set_effecter_state_field) * compEffecterCount,
+                0);
+
+            auto instanceId = requester.getInstanceId(mctp_eid);
+
+            auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+            std::vector<set_effecter_state_field> stateField;
+            if (status == true)
+            {
+                stateField.push_back(set_effecter_state_field{
+                    PLDM_REQUEST_SET, SBE_DUMP_COMPLETED});
+            }
+            else
+            {
+                stateField.push_back(set_effecter_state_field{
+                    PLDM_REQUEST_SET, SBE_RETRY_REQUIRED});
+            }
+            auto rc = encode_set_state_effecter_states_req(
+                instanceId, effecterId, compEffecterCount, stateField.data(),
+                request);
+            if (rc != PLDM_SUCCESS)
             {
                 error(
-                    "Failed to receive response for setstateEffecterSates command");
+                    " Set state effecter state command failure. PLDM error code: {RESPONSE_CODE}",
+                    "RESPONSE_CODE", rc);
+                requester.markFree(mctp_eid, instanceId);
                 return;
             }
-            uint8_t completionCode{};
-            auto rc = decode_set_state_effecter_states_resp(
-                response, respMsgLen, &completionCode);
+            auto setStateEffecterStatesRespHandler =
+                [=, this](mctp_eid_t /*eid*/, const pldm_msg* response,
+                          size_t respMsgLen) {
+                if (response == nullptr || !respMsgLen)
+                {
+                    error(
+                        "Failed to receive response for setstateEffecterSates command");
+                    return;
+                }
+                uint8_t completionCode{};
+                auto rc = decode_set_state_effecter_states_resp(
+                    response, respMsgLen, &completionCode);
+                if (rc)
+                {
+                    error(
+                        "Failed to decode setStateEffecterStates response: {RESPONSE_CODE}",
+                        "RESPONSE_CODE", rc);
+                    pldm::utils::reportError(
+                        "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
+                        pldm::PelSeverity::ERROR);
+                }
+                if (completionCode)
+                {
+                    error("Failed to set a Host effecter: {COMPLETION_CODE}",
+                          "COMPLETION_CODE", completionCode);
+                    pldm::utils::reportError(
+                        "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
+                        pldm::PelSeverity::ERROR);
+                }
+            };
+            rc = handler->registerRequest(
+                mctp_eid, instanceId, PLDM_PLATFORM,
+                PLDM_SET_STATE_EFFECTER_STATES, std::move(requestMsg),
+                std::move(setStateEffecterStatesRespHandler));
             if (rc)
             {
-                error(
-                    "Failed to decode setStateEffecterStates response,rc= {RC}",
-                    "RC", static_cast<unsigned>(rc));
-                pldm::utils::reportError(
-                    "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
-                    pldm::PelSeverity::ERROR);
+                error("Failed to send request to set an effecter on Host");
             }
-            if (completionCode)
-            {
-                error("Failed to set a Host effecter, cc={CC}", "CC",
-                      static_cast<unsigned>(completionCode));
-                pldm::utils::reportError(
-                    "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
-                    pldm::PelSeverity::ERROR);
-            }
-        };
-        rc = handler->registerRequest(
-            mctp_eid, instanceId, PLDM_PLATFORM, PLDM_SET_STATE_EFFECTER_STATES,
-            std::move(requestMsg),
-            std::move(setStateEffecterStatesRespHandler));
-        if (rc)
-        {
-            error("Failed to send request to set an effecter on Host");
         }
     }
 }
 void pldm::responder::oem_ibm_platform::Handler::monitorDump(
-    const std::string& obj_path, uint16_t entityType)
+    const std::string& obj_path, uint16_t entityType, uint16_t entityInstance)
 {
     std::string matchInterface = "xyz.openbmc_project.Common.Progress";
     sbeDumpMatch = std::make_unique<sdbusplus::bus::match::match>(
         pldm::utils::DBusHandler::getBus(),
         sdbusplus::bus::match::rules::propertiesChanged(obj_path.c_str(),
                                                         matchInterface.c_str()),
-        [&](sdbusplus::message::message& msg) {
+        [=, this](sdbusplus::message::message& msg) {
         DbusChangedProps props{};
         std::string intf;
         msg.read(intf, props);
@@ -1119,7 +1123,7 @@ void pldm::responder::oem_ibm_platform::Handler::monitorDump(
             if (propVal ==
                 "xyz.openbmc_project.Common.Progress.OperationStatus.Completed")
             {
-                setHostEffecterState(true, entityType);
+                setHostEffecterState(true, entityType, entityInstance);
             }
             else if (
                 propVal ==
@@ -1127,7 +1131,7 @@ void pldm::responder::oem_ibm_platform::Handler::monitorDump(
                 propVal ==
                     "xyz.openbmc_project.Common.Progress.OperationStatus.Aborted")
             {
-                setHostEffecterState(false, entityType);
+                setHostEffecterState(false, entityType, entityInstance);
             }
         }
         sbeDumpMatch = nullptr;
@@ -1171,8 +1175,8 @@ int pldm::responder::oem_ibm_platform::Handler::setNumericEffecter(
         }
         else
         {
-            error("Invalid entity type received. Entity Type = {ENTITY_TYP}",
-                  "ENTITY_TYP", entityType);
+            error("Invalid entity type received: {ENTITY_TYPE}", "ENTITY_TYPE",
+                  entityType);
             return PLDM_ERROR;
         }
         createParams[errLogIdParam] = (uint64_t)value;
@@ -1184,7 +1188,7 @@ int pldm::responder::oem_ibm_platform::Handler::setNumericEffecter(
         sdbusplus::message::object_path reply;
         response.read(reply);
 
-        monitorDump(reply, entityType);
+        monitorDump(reply, entityType, entityInstance);
     }
     catch (const std::exception& e)
     {
@@ -1193,7 +1197,7 @@ int pldm::responder::oem_ibm_platform::Handler::setNumericEffecter(
             "ERR_EXCEP", e.what());
         // case when the dump policy is disabled but we set the host effecter as
         // true and the host moves on
-        setHostEffecterState(true, entityType);
+        setHostEffecterState(true, entityType, entityInstance);
     }
     return PLDM_SUCCESS;
 }
