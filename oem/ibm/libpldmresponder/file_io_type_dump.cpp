@@ -329,7 +329,8 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
 }
 
 int DumpHandler::write(const char* buffer, uint32_t, uint32_t& length,
-                       oem_platform::Handler* /*oemPlatformHandler*/)
+                       oem_platform::Handler* /*oemPlatformHandler*/,
+                       struct fileack_status_metadata& /*metaDataObj*/)
 {
     info(
         "Enter DumpHandler::write length = {LEN} DumpHandler::fd ={FILE_DESCRIPTION}",

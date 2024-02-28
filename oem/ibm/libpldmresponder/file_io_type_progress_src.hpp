@@ -28,7 +28,8 @@ class ProgressCodeHandler : public FileHandler
     }
 
     int write(const char* buffer, uint32_t offset, uint32_t& length,
-              oem_platform::Handler* oemPlatformHandler) override;
+              oem_platform::Handler* /*oemPlatformHandler*/,
+              struct fileack_status_metadata& /*metaDataObj*/) override;
 
     int readIntoMemory(uint32_t /*offset*/, uint32_t& /*length*/,
                        uint64_t /*address*/,
@@ -70,6 +71,10 @@ class ProgressCodeHandler : public FileHandler
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
+
+    virtual void postWriteAction(
+        const uint16_t /*fileType*/, const uint32_t /*fileHandle*/,
+        const struct fileack_status_metadata& /*metaDataObj*/){};
 
     /** @brief method to set the dbus Raw value Property with
      * the obtained progress code from the host.

@@ -7,6 +7,7 @@
 #include "libpldmresponder/file_io_type_dump.hpp"
 #include "libpldmresponder/file_io_type_lid.hpp"
 #include "libpldmresponder/file_io_type_pel.hpp"
+#include "libpldmresponder/file_io_type_smsmenu.hpp"
 #include "libpldmresponder/file_table.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
 
@@ -885,6 +886,15 @@ TEST(getHandlerByType, allPaths)
     handler = getHandlerByType(PLDM_FILE_TYPE_ROOT_CERT, fileHandle);
     certType = dynamic_cast<CertHandler*>(handler.get());
     ASSERT_TRUE(certType != nullptr);
+
+    handler = getHandlerByType(PLDM_FILE_TYPE_USER_PASSWORD_AUTHENTICATION,
+      ` fileHandle);
+    smsMenuType = dynamic_cast<SmsMenuHandler*>(handler.get());
+    ASSERT_TRUE(smsMenuType != nullptr);
+
+    handler = getHandlerByType(PLDM_FILE_TYPE_USER_PASSWORD_CHANGE, fileHandle);
+    smsMenuType = dynamic_cast<SmsMenuHandler*>(handler.get());
+    ASSERT_TRUE(smsMenuType != nullptr);
 
     using namespace sdbusplus::xyz::openbmc_project::Common::Error;
     ASSERT_THROW(getHandlerByType(0xFFFF, fileHandle), InternalFailure);

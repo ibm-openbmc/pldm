@@ -12,6 +12,7 @@
 #include "file_io_type_pcie.hpp"
 #include "file_io_type_pel.hpp"
 #include "file_io_type_progress_src.hpp"
+#include "file_io_type_smsmenu.hpp"
 #include "file_io_type_vpd.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
 
@@ -128,8 +129,10 @@ int FileHandler::transferFileData(const fs::path& path, bool upstream,
     return transferFileData(fd(), upstream, offset, length, address);
 }
 
-std::unique_ptr<FileHandler> getHandlerByType(uint16_t fileType,
-                                              uint32_t fileHandle)
+std::unique_ptr<FileHandler> getHandlerByType(
+    uint16_t fileType, uint32_t fileHandle,
+    dbus_api::Requester* dbusImplReqester,
+    pldm::requester::Handler<pldm::requester::Request>* handler)
 {
     switch (fileType)
     {
@@ -192,6 +195,12 @@ std::unique_ptr<FileHandler> getHandlerByType(uint16_t fileType,
         case PLDM_FILE_TYPE_CHAP_DATA:
         {
             return std::make_unique<ChapHandler>(fileHandle, fileType);
+        }
+        case PLDM_FILE_TYPE_USER_PASSWORD_AUTHENTICATION:
+        case PLDM_FILE_TYPE_USER_PASSWORD_CHANGE:
+        {
+            return std::make_unique<SmsMenuHandler>(fileHandle, fileType,
+                                                    dbusImplReqester, handler);
         }
         default:
         {

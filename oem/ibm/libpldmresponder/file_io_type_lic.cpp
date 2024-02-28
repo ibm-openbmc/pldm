@@ -99,7 +99,8 @@ int LicenseHandler::writeFromMemory(
 
 int LicenseHandler::write(const char* buffer, uint32_t /*offset*/,
                           uint32_t& length,
-                          oem_platform::Handler* /*oemPlatformHandler*/)
+                          oem_platform::Handler* /*oemPlatformHandler*/,
+                          struct fileack_status_metadata& /*metaDataObj*/)
 {
     int rc = PLDM_SUCCESS;
 
