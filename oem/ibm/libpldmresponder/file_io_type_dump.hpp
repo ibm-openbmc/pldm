@@ -33,7 +33,8 @@ class DumpHandler : public FileHandler
                      oem_platform::Handler* /*oemPlatformHandler*/);
 
     virtual int write(const char* buffer, uint32_t offset, uint32_t& length,
-                      oem_platform::Handler* /*oemPlatformHandler*/);
+                      oem_platform::Handler* /*oemPlatformHandler*/,
+                      struct fileack_status_metadata& /*metaDataObj*/);
 
     virtual int newFileAvailable(uint64_t length);
 

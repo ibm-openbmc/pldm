@@ -285,9 +285,10 @@ int main(int argc, char** argv)
                                                            pdrRepo.get());
     codeUpdate->setOemPlatformHandler(oemPlatformHandler.get());
     slotHandler->setOemPlatformHandler(oemPlatformHandler.get());
-    invoker.registerHandler(PLDM_OEM, std::make_unique<oem_ibm::Handler>(
-                                          oemPlatformHandler.get(), sockfd,
-                                          hostEID, &dbusImplReq, &reqHandler));
+    invoker.registerHandler(PLDM_OEM,
+                            std::make_unique<oem_ibm::Handler>(
+                                oemPlatformHandler.get(), sockfd, hostEID,
+                                &dbusImplReq, &reqHandler, event));
 
     // host lamp test
     std::unique_ptr<pldm::led::HostLampTest> hostLampTest =

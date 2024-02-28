@@ -604,6 +604,33 @@ void findSlotObjects(const std::string& boardObjPath,
     }
 }
 
+std::vector<char> vecSplit(const std::vector<char>& inputVec,
+                           const uint32_t startIdx, const uint32_t endIdx)
+{
+    // Start and end iterators
+    auto startItr = inputVec.begin() + startIdx;
+    auto endItr = inputVec.begin() + endIdx;
+
+    // Resultant split vector
+    std::vector<char> resultVec(endIdx - startIdx + 1);
+
+    copy(startItr, endItr, resultVec.begin());
+    return resultVec;
+}
+
+uint32_t readVecContent(std::vector<char>& inputVec, const uint32_t startIdx,
+                        const uint32_t endIdx)
+{
+    uint32_t size = 0;
+    std::vector<char> userPassLenArr(inputVec.begin() + startIdx,
+                                     inputVec.begin() + endIdx);
+    for (uint32_t idx = 0; idx < 8; idx++)
+    {
+        size |= (uint32_t)userPassLenArr[idx] << 8 * idx;
+    }
+    return size;
+}
+
 } // namespace utils
 } // namespace responder
 } // namespace pldm

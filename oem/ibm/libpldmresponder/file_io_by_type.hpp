@@ -63,10 +63,12 @@ class FileHandler
      *  @param[in/out] length - length to be written
      *  @param[in] oemPlatformHandler - oem handler for PLDM platform related
      *                                  tasks
+     *  @param[out] metaDataObj - file ack meta data status and values
      *  @return PLDM status code
      */
     virtual int write(const char* buffer, uint32_t offset, uint32_t& length,
-                      oem_platform::Handler* oemPlatformHandler) = 0;
+                      oem_platform::Handler* oemPlatformHandler,
+                      struct fileack_status_metadata& metaDataObj) = 0;
 
     virtual int fileAck(uint8_t fileStatus) = 0;
 

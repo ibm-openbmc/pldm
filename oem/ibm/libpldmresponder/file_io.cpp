@@ -703,6 +703,22 @@ Response Handler::readFileByTypeIntoMemory(const pldm_msg* request,
                                   payloadLength, oemPlatformHandler);
 }
 
+void Handler::postWriteAction(const uint16_t fileType,
+                              const uint32_t fileHandle,
+                              const struct fileack_status_metadata& metaDataObj)
+{
+    smsEvent.reset();
+    sdbusplus::message::object_path path;
+    dbusToFileHandlers
+        .emplace_back(
+            std::make_unique<pldm::requester::oem_ibm::DbusToFileHandler>(
+                hostSockFd, hostEid, dbusImplReqester, path, Handler::handler))
+        ->sendFileAckWithMetaDataToHost(
+            fileType, fileHandle, metaDataObj.fileStatus,
+            metaDataObj.fileMetaData1, metaDataObj.fileMetaData2,
+            metaDataObj.fileMetaData3, metaDataObj.fileMetaData4);
+}
+
 Response Handler::writeFileByType(const pldm_msg* request, size_t payloadLength)
 {
     Response response(sizeof(pldm_msg_hdr) + PLDM_RW_FILE_BY_TYPE_RESP_BYTES);
@@ -745,12 +761,32 @@ Response Handler::writeFileByType(const pldm_msg* request, size_t payloadLength)
         return response;
     }
 
+    fileack_status_metadata metaDataObj;
     rc = handler->write(reinterpret_cast<const char*>(
                             request->payload + PLDM_RW_FILE_BY_TYPE_REQ_BYTES),
-                        offset, length, oemPlatformHandler);
+                        offset, length, oemPlatformHandler, metaDataObj);
+
     encode_rw_file_by_type_resp(request->hdr.instance_id,
                                 PLDM_WRITE_FILE_BY_TYPE, rc, length,
                                 responsePtr);
+
+    if (fileType == PLDM_FILE_TYPE_USER_PASSWORD_AUTHENTICATION ||
+        fileType == PLDM_FILE_TYPE_USER_PASSWORD_CHANGE)
+    {
+        sdbusplus::message::object_path path;
+        if (rc == PLDM_SUCCESS)
+        {
+            smsEvent = std::make_unique<sdeventplus::source::Defer>(
+                event, std::bind(&Handler::postWriteAction, this, fileType,
+                                 fileHandle, metaDataObj));
+        }
+        else
+        {
+            error("Due to write error, no fileackwithmetadata would send "
+                  "for SMS menu update");
+        }
+    }
+
     return response;
 }
 
