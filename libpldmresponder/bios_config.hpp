@@ -4,7 +4,7 @@
 
 #include "bios_attribute.hpp"
 #include "bios_table.hpp"
-#include "oem_handler.hpp"
+#include "platform_config.hpp"
 #include "pldmd/dbus_impl_requester.hpp"
 #include "requester/handler.hpp"
 
@@ -55,6 +55,7 @@ using BaseBIOSTable = std::map<AttributeName, BIOSTableObj>;
 
 using PendingObj = std::tuple<AttributeType, CurrentValue>;
 using PendingAttributes = std::map<AttributeName, PendingObj>;
+using Callback = std::function<void()>;
 
 /** @class BIOSConfig
  *  @brief Manager BIOS Attributes
@@ -77,14 +78,17 @@ class BIOSConfig
      *  @param[in] eid - MCTP EID of host firmware
      *  @param[in] requester - pointer to Requester object
      *  @param[in] handler - PLDM request handler
-     *  @param[in] oemBiosHandler - pointer to oem Bios Handler
+     *  @param[in] platformConfigHandler - pointer to platform config Handler
+     *  @param[in] requestPLDMServiceName - Callback for claiming the PLDM
+     * service name Called only after building BIOS tables.
      */
     explicit BIOSConfig(
         const char* jsonDir, const char* tableDir,
         pldm::utils::DBusHandler* const dbusHandler, int fd, uint8_t eid,
         dbus_api::Requester* requester,
         pldm::requester::Handler<pldm::requester::Request>* handler,
-        pldm::responder::oem_bios::Handler* oemBiosHandler);
+        pldm::responder::platform_config::Handler* platformConfigHandler,
+        pldm::responder::bios::Callback requestPLDMServiceName);
 
     /** @brief Set attribute value on dbus and attribute value table
      *  @param[in] entry - attribute value entry
@@ -123,6 +127,13 @@ class BIOSConfig
     int setBIOSTable(uint8_t tableType, const Table& table,
                      bool updateBaseBIOSTable = true);
 
+    /** @brief Construct the BIOS Attributes and build the tables
+     *         after receiving system type from entity manager.
+     *  @param[in] String - System Type
+     *  @return void
+     */
+    void initBIOSAttributes(const std::string& sysType);
+
   private:
     /** @enum Index into the fields in the BaseBIOSTable
      */
@@ -157,8 +168,11 @@ class BIOSConfig
     /** @brief PLDM request handler */
     pldm::requester::Handler<pldm::requester::Request>* handler;
 
-    /** @brief oem Bios Handler*/
-    pldm::responder::oem_bios::Handler* oemBiosHandler;
+    /** @brief platform config Handler*/
+    pldm::responder::platform_config::Handler* platformConfigHandler;
+
+    /** @brief Callback for registering the PLDM service name */
+    pldm::responder::bios::Callback requestPLDMServiceName;
 
     // vector persists all attributes
     using BIOSAttributes = std::vector<std::unique_ptr<BIOSAttribute>>;
@@ -185,6 +199,13 @@ class BIOSConfig
      */
     void processBiosAttrChangeNotification(
         const DbusChObjProperties& chProperties, uint32_t biosAttrIndex);
+
+    /** @brief Method to get know if the system type is received from entity
+     *  manager or if we want to use the default bios json files.
+     *  @return - Returns true is the system type is received from EM or
+     *            if default option is chosen
+     */
+    bool isSystemTypeAvailable();
 
     /** @brief Construct an attribute and persist it
      *  @tparam T - attribute type
