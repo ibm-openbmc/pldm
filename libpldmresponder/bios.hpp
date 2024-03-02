@@ -2,6 +2,7 @@
 
 #include "bios_config.hpp"
 #include "bios_table.hpp"
+#include "platform_config.hpp"
 #include "pldmd/dbus_impl_requester.hpp"
 #include "pldmd/handler.hpp"
 #include "requester/handler.hpp"
@@ -33,11 +34,14 @@ class Handler : public CmdHandler
      *  @param[in] eid - MCTP EID of host firmware
      *  @param[in] requester - pointer to Requester object
      *  @param[in] handler - PLDM request handler
-     *  @param[in] oemBiosHandler - pointer to oem bios handler
+     *  @param[in] platformConfigHandler - pointer to platform config object
+     *  @param[in] requestPLDMServiceName - Callback for registering the PLDM
+     * service
      */
     Handler(int fd, uint8_t eid, dbus_api::Requester* requester,
             pldm::requester::Handler<pldm::requester::Request>* handler,
-            pldm::responder::oem_bios::Handler* oemBiosHandler);
+            pldm::responder::platform_config::Handler* platformConfigHandler,
+            pldm::responder::bios::Callback requestPLDMServiceName);
 
     /** @brief Handler for GetDateTime
      *

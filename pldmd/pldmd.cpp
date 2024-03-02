@@ -53,11 +53,11 @@
 #include "libpldmresponder/fru.hpp"
 #include "libpldmresponder/oem_handler.hpp"
 #include "libpldmresponder/platform.hpp"
+#include "libpldmresponder/platform_config.hpp"
 #include "xyz/openbmc_project/PLDM/Event/server.hpp"
 #endif
 
 #ifdef OEM_IBM
-#include "libpldmresponder/bios_oem_ibm.hpp"
 #include "libpldmresponder/file_io.hpp"
 #include "libpldmresponder/fru_oem_ibm.hpp"
 #include "libpldmresponder/oem_ibm_handler.hpp"
@@ -84,6 +84,12 @@ void interruptFlightRecorderCallBack(Signal& /*signal*/,
 
     // obtain the flight recorder instance and dump the recorder
     FlightRecorder::GetInstance().playRecorder();
+}
+
+void requestPLDMServiceName()
+{
+    auto& bus = pldm::utils::DBusHandler::getBus();
+    bus.request_name("xyz.openbmc_project.PLDM");
 }
 
 static std::optional<Response>
@@ -252,13 +258,10 @@ int main(int argc, char** argv)
     std::unique_ptr<DbusToPLDMEvent> dbusToPLDMEventHandler;
     DBusHandler dbusHandler;
     auto hostEID = pldm::utils::readHostEID();
-    std::unique_ptr<oem_bios::Handler> oemBiosHandler{};
-#ifdef OEM_IBM
-    oemBiosHandler = std::make_unique<pldm::responder::oem::ibm::bios::Handler>(
-        &dbusHandler);
-#endif
+    auto platformConfigHandler = std::make_unique<platform_config::Handler>();
     auto biosHandler = std::make_unique<bios::Handler>(
-        sockfd, hostEID, &dbusImplReq, &reqHandler, oemBiosHandler.get());
+        sockfd, hostEID, &dbusImplReq, &reqHandler, platformConfigHandler.get(),
+        requestPLDMServiceName);
     invoker.registerHandler(PLDM_BIOS, std::move(biosHandler));
     std::unique_ptr<oem_platform::Handler> oemPlatformHandler{};
     std::unique_ptr<oem_fru::Handler> oemFruHandler{};
@@ -491,7 +494,10 @@ int main(int argc, char** argv)
     };
 
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
+#ifndef SYSTEM_SPECIFIC_BIOS_JSON
+    info("Requesting system Name from pldmd............");
     bus.request_name("xyz.openbmc_project.PLDM");
+#endif
     IO io(event, socketFd(), EPOLLIN, std::move(callback));
 #ifdef LIBPLDMRESPONDER
     if (hostPDRHandler)

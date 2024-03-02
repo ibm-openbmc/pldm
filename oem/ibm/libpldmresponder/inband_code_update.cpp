@@ -224,6 +224,19 @@ void CodeUpdate::setVersions()
             pldm_boot_side_data pldmBootSideData;
             std::string nextBootSideBiosValue =
                 getBiosAttrValue("fw_boot_side");
+
+            // We enter this path during Genesis boot/boot after Factory reset.
+            // PLDM waits for Entity manager to populate System Type. After
+            // receiving system Type from EM it populates the bios attributes
+            // specific to that system We do not have bios attributes populated
+            // when we reach here so setting it to default value of the
+            // attribute as mentioned in the json files.
+            if (nextBootSideBiosValue.empty())
+            {
+                info(
+                    "Boot side is not initialized yet, so setting default value");
+                nextBootSideBiosValue = "Temp";
+            }
             pldmBootSideData.current_boot_side = nextBootSideBiosValue;
             pldmBootSideData.next_boot_side = nextBootSideBiosValue;
             pldmBootSideData.running_version_object = runningPath;
