@@ -15,30 +15,30 @@ namespace ibm_pfw_sms
 enum changePasswordReasonCode
 {
     PASSWORD_CHANGE_SUCCESSFUL = 0x00,
-    NOT_AUTHENTICATED = 0x01,          // Username or password was not correct
-    NOT_ALLOWED = 0x02,                // User is not BMC admin
-    PAM_START_FAILED = 0x03,            // Should never happen
+    NOT_AUTHENTICATED = 0x01,            // Username or password was not correct
+    NOT_ALLOWED = 0x02,                  // User is not BMC admin
+    PAM_START_FAILED = 0x03,             // Should never happen
     LINUX_PAM_CONVERSATION_ERROR = 0x04, // Should never happen
     PASSWORD_CHANGE_FAILED_UNKNOWN_REASON = 0x0100,
     // Codes from pam_pwquality.so:
-    BAD_PASSWORD_FOR_UNKNOWN_REASON = 0x0101, // The reason why the new password was
-                                          // not accepted is unknown
-    BAD_PASSWORD_IS_PALINDROME = 0x0102,     // The new password is a palindrome
+    BAD_PASSWORD_FOR_UNKNOWN_REASON = 0x0101, // The reason why the new password
+                                              // was not accepted is unknown
+    BAD_PASSWORD_IS_PALINDROME = 0x0102, // The new password is a palindrome
     BAD_PASSWORD_CONTAINS_USERNAME =
-        0x0103,                   // The new password contains the username
+        0x0103,                      // The new password contains the username
     BAD_PASSWORD_TOO_SHORT = 0x0104, // The new password is too short
     BAD_PASSWORD_NOT_ENOUGH_CHARACTER_CLASSES =
-        0x0105,                   // The new password does not have
-                                  // enough different kinds of
-                                  // characters: lowercase, uppercase,
-                                  // numbers, and other
+        0x0105,                      // The new password does not have
+                                     // enough different kinds of
+                                     // characters: lowercase, uppercase,
+                                     // numbers, and other
     BAD_PASSWORD_TOO_LONG_MONOTONIC_SEQUENCE =
-        0x0106,                   // The new password has a monotonic
-                                  // sequence, like 1234
-    BAD_PASSWORD_NO_PASSWORD_SUPPLIED = 0x0107, // The new password is empty (zero
-                                            // length)
-    BAD_PASSWORD_DICTIONARY_CHECK = 0x0108,    // The new password contains a
-                                            // dictionary word
+        0x0106,                      // The new password has a monotonic
+                                     // sequence, like 1234
+    BAD_PASSWORD_NO_PASSWORD_SUPPLIED = 0x0107, // The new password is empty
+                                                // (zero length)
+    BAD_PASSWORD_DICTIONARY_CHECK = 0x0108,     // The new password contains a
+                                                // dictionary word
     // Gap in numbering to accomodate future errors from pam_pwquality
     // Codes from pam_ipmicheck.so:
     PASSWORD_TOO_LONG_FOR_IPMI_USER =

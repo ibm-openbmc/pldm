@@ -115,7 +115,8 @@ static int pamConversationFunction(int num_msg,
                     if ((detail == "The password is too short") ||
                         detail.starts_with("The password is shorter than "))
                     {
-                        pfw_sms_appdata_ptr->reasonCode = BAD_PASSWORD_TOO_SHORT;
+                        pfw_sms_appdata_ptr->reasonCode =
+                            BAD_PASSWORD_TOO_SHORT;
                     }
                     if ((detail ==
                          "The password does not contain enough character classes") ||
@@ -180,8 +181,8 @@ static void common_authentication_handler(const std::string& username,
     operationAllowed = false;
     passwordChangeAllowed = false;
 
-    struct pfw_sms_pam_appdata appdata = {password.c_str(),
-                                          PASSWORD_CHANGE_FAILED_UNKNOWN_REASON};
+    struct pfw_sms_pam_appdata appdata = {
+        password.c_str(), PASSWORD_CHANGE_FAILED_UNKNOWN_REASON};
     char* appData = (char*)&appdata;
     const struct pam_conv pamConversation = {pamConversationFunction, appData};
     pam_handle_t* pamHandle = NULL; // this gets set by pam_start
@@ -254,8 +255,8 @@ enum changePasswordReasonCode changePassword(const std::string& username,
         return NOT_ALLOWED;
     }
 
-    struct pfw_sms_pam_appdata appdata = {newPassword.c_str(),
-                                          PASSWORD_CHANGE_FAILED_UNKNOWN_REASON};
+    struct pfw_sms_pam_appdata appdata = {
+        newPassword.c_str(), PASSWORD_CHANGE_FAILED_UNKNOWN_REASON};
     char* appData = (char*)&appdata;
     const struct pam_conv pamConversation = {pamConversationFunction, appData};
     pam_handle_t* pamHandle = NULL; // this gets set by pam_start
