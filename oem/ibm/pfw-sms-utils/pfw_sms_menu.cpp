@@ -5,8 +5,6 @@
 #include <cstdlib>
 #include <cstring>
 
-// #include <iostream>
-
 namespace ibm_pfw_sms
 {
 
@@ -72,9 +70,8 @@ static int pamConversationFunction(int num_msg,
         switch (msg_ptr[msg_index].msg_style)
         {
             case PAM_PROMPT_ECHO_OFF:
-                // std::cout << "PAM prompt echo off: " << msg << "\n";
-                //   Assume PAM is asking for the password.  Supply a malloc'd
-                //   password that PAM will free
+                // Assume PAM is asking for the password.  Supply a malloc'd
+                // password that PAM will free
                 local_password = ::strdup(
                     pfw_sms_appdata_ptr->password.c_str()); // PAM will free
                 if (local_password == NULL)
@@ -87,14 +84,11 @@ static int pamConversationFunction(int num_msg,
                 break;
             case PAM_PROMPT_ECHO_ON:
                 // This is not expected
-                // std::cout << "PAM prompt echo on: " << msg << "\n";
                 response_ptr[msg_index]->resp = ::strdup("Unexpected");
                 break;
             case PAM_ERROR_MSG:
-                // std::cout << "Error ";
-                //  fall through
+                // fall through
             case PAM_TEXT_INFO:
-                // std::cout << "PAM message: " << msg << "\n";
                 if (msg.starts_with("BAD PASSWORD: "))
                 {
                     // Handle messages from lib_pwquality
