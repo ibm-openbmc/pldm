@@ -56,10 +56,10 @@ static int pamConversationFunction(int num_msg,
     }
 
     struct pfw_sms_pam_appdata* pfw_sms_appdata_ptr =
-        reinterpret_cast<struct pfw_sms_pam_appdata *>(appdata_ptr);
+        reinterpret_cast<struct pfw_sms_pam_appdata*>(appdata_ptr);
     // Malloc array of responses that PAM will free; required to use malloc.
-    *response_ptr = reinterpret_cast<struct pam_response*>(calloc(
-        num_msg, sizeof(struct pam_response))); // PAM will free
+    *response_ptr = reinterpret_cast<struct pam_response*>(
+        calloc(num_msg, sizeof(struct pam_response))); // PAM will free
     if (*response_ptr == nullptr)
     {
         return PAM_CONV_ERR;
