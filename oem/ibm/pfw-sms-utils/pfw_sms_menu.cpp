@@ -4,6 +4,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <ranges>
 
 namespace ibm_pfw_sms
 {
@@ -44,8 +45,8 @@ static int pamConversationFunction(int num_msg,
                                    struct pam_response** response_ptr,
                                    void* appdata_ptr)
 {
-    if ((appdata_ptr == NULL) || (message_ptr == NULL) ||
-        (response_ptr == NULL))
+    if ((appdata_ptr == nullptr) || (message_ptr == nullptr) ||
+        (response_ptr == nullptr))
     {
         return PAM_CONV_ERR;
     }
@@ -55,26 +56,27 @@ static int pamConversationFunction(int num_msg,
     }
 
     struct pfw_sms_pam_appdata* pfw_sms_appdata_ptr =
-        (struct pfw_sms_pam_appdata*)appdata_ptr;
-    *response_ptr = (pam_response*)calloc(
-        num_msg, sizeof(struct pam_response)); // PAM frees
-    if (*response_ptr == NULL)
+        reinterpret_cast<struct pfw_sms_pam_appdata *>(appdata_ptr);
+    // Malloc array of responses that PAM will free; required to use malloc.
+    *response_ptr = reinterpret_cast<struct pam_response*>(calloc(
+        num_msg, sizeof(struct pam_response))); // PAM will free
+    if (*response_ptr == nullptr)
     {
         return PAM_CONV_ERR;
     }
     const struct pam_message* msg_ptr = *message_ptr;
-    for (int msg_index = 0; msg_index < num_msg; ++msg_index)
+    for (const int msg_index : std::ranges::iota_view{1, num_msg})
     {
-        char* local_password = NULL; // for PAM's malloc'd copy
+        char* local_password = nullptr; // for PAM's malloc'd copy
         std::basic_string_view msg(msg_ptr[msg_index].msg);
         switch (msg_ptr[msg_index].msg_style)
         {
             case PAM_PROMPT_ECHO_OFF:
                 // Assume PAM is asking for the password.  Supply a malloc'd
-                // password that PAM will free
+                // password that PAM will free; note required to use malloc.
                 local_password = ::strdup(
                     pfw_sms_appdata_ptr->password.c_str()); // PAM will free
-                if (local_password == NULL)
+                if (local_password == nullptr)
                 {
                     return PAM_BUF_ERR; // *authenticated = false
                 }
@@ -84,6 +86,8 @@ static int pamConversationFunction(int num_msg,
                 break;
             case PAM_PROMPT_ECHO_ON:
                 // This is not expected
+                // Supply a malloc'd response that PAM will free.  Note that
+                // we are required to use malloc.
                 response_ptr[msg_index]->resp = ::strdup("Unexpected");
                 break;
             case PAM_ERROR_MSG:
@@ -177,9 +181,9 @@ static void common_authentication_handler(const std::string& username,
 
     struct pfw_sms_pam_appdata appdata = {
         password.c_str(), PASSWORD_CHANGE_FAILED_UNKNOWN_REASON};
-    char* appData = (char*)&appdata;
+    char* appData = reinterpret_cast<char*>(&appdata);
     const struct pam_conv pamConversation = {pamConversationFunction, appData};
-    pam_handle_t* pamHandle = NULL; // this gets set by pam_start
+    pam_handle_t* pamHandle = nullptr; // this gets set by pam_start
     int retval = pam_start("ibm-pfw-sms-menu", username.c_str(),
                            &pamConversation, &pamHandle);
     if (retval != PAM_SUCCESS)
@@ -251,9 +255,9 @@ enum changePasswordReasonCode changePassword(const std::string& username,
 
     struct pfw_sms_pam_appdata appdata = {
         newPassword.c_str(), PASSWORD_CHANGE_FAILED_UNKNOWN_REASON};
-    char* appData = (char*)&appdata;
+    char* appData = reinterpret_cast<char*>(&appdata);
     const struct pam_conv pamConversation = {pamConversationFunction, appData};
-    pam_handle_t* pamHandle = NULL; // this gets set by pam_start
+    pam_handle_t* pamHandle = nullptr; // this gets set by pam_start
     int retval = pam_start("ibm-pfw-sms-menu", username.c_str(),
                            &pamConversation, &pamHandle);
     if (retval != PAM_SUCCESS)
