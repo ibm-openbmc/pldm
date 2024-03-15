@@ -76,8 +76,8 @@ static int pamConversationFunction(int num_msg,
                 // Assume PAM is asking for the password.
                 // Allocate a response for PAM to free().  Note that PAM
                 // uses malloc/calloc/strdup style memory management.
-                local_password = ::strdup(
-                    pfw_sms_appdata_ptr->password.c_str());
+                local_password =
+                    ::strdup(pfw_sms_appdata_ptr->password.c_str());
                 if (local_password == nullptr)
                 {
                     return PAM_BUF_ERR; // *authenticated = false
