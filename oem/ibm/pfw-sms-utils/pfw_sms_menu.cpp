@@ -57,9 +57,10 @@ static int pamConversationFunction(int num_msg,
 
     struct pfw_sms_pam_appdata* pfw_sms_appdata_ptr =
         reinterpret_cast<struct pfw_sms_pam_appdata*>(appdata_ptr);
-    // Malloc array of responses that PAM will free; required to use malloc.
+    // Allocate an array of responses for PAM to free.  Note that PAM
+    // uses malloc/calloc/strdup style memory management.
     *response_ptr = reinterpret_cast<struct pam_response*>(
-        calloc(num_msg, sizeof(struct pam_response))); // PAM will free
+        calloc(num_msg, sizeof(struct pam_response)));
     if (*response_ptr == nullptr)
     {
         return PAM_CONV_ERR;
@@ -72,10 +73,11 @@ static int pamConversationFunction(int num_msg,
         switch (msg_ptr[msg_index].msg_style)
         {
             case PAM_PROMPT_ECHO_OFF:
-                // Assume PAM is asking for the password.  Supply a malloc'd
-                // password that PAM will free; note required to use malloc.
+                // Assume PAM is asking for the password.
+                // Allocate a response for PAM to free().  Note that PAM
+                // uses malloc/calloc/strdup style memory management.
                 local_password = ::strdup(
-                    pfw_sms_appdata_ptr->password.c_str()); // PAM will free
+                    pfw_sms_appdata_ptr->password.c_str());
                 if (local_password == nullptr)
                 {
                     return PAM_BUF_ERR; // *authenticated = false
@@ -86,8 +88,8 @@ static int pamConversationFunction(int num_msg,
                 break;
             case PAM_PROMPT_ECHO_ON:
                 // This is not expected
-                // Supply a malloc'd response that PAM will free.  Note that
-                // we are required to use malloc.
+                // Allocate a response for PAM to free().  Note that PAM
+                // uses malloc/calloc/strdup style memory management.
                 response_ptr[msg_index]->resp = ::strdup("Unexpected");
                 break;
             case PAM_ERROR_MSG:
@@ -188,6 +190,7 @@ static void common_authentication_handler(const std::string& username,
                            &pamConversation, &pamHandle);
     if (retval != PAM_SUCCESS)
     {
+        // Note pam_start() failed, so no cleanup is needed.
         return;
     }
 
@@ -219,7 +222,7 @@ static void common_authentication_handler(const std::string& username,
     operationAllowed = true;
     passwordChangeAllowed = true;
 
-    retval = pam_end(pamHandle, retval); // ignore retval
+    pam_end(pamHandle, retval); // ignore the return value
 }
 
 void authenticate(const std::string& username, const std::string& password,
@@ -262,6 +265,7 @@ enum changePasswordReasonCode changePassword(const std::string& username,
                            &pamConversation, &pamHandle);
     if (retval != PAM_SUCCESS)
     {
+        // Note pam_start() failed, so no cleanup is needed.
         return PAM_START_FAILED;
     }
 
@@ -273,7 +277,7 @@ enum changePasswordReasonCode changePassword(const std::string& username,
         return appdata.reasonCode;
     }
 
-    retval = pam_end(pamHandle, retval); // ignore retval
+    pam_end(pamHandle, retval); // ignore the return value
     return PASSWORD_CHANGE_SUCCESSFUL;
 }
 
