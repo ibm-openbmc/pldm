@@ -5,7 +5,6 @@
 
 #include "collect_slot_vpd.hpp"
 #include "file_io_type_lid.hpp"
-#include "libpldmresponder/file_io.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
 
 #include <phosphor-logging/lg2.hpp>

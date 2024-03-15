@@ -15,14 +15,6 @@ namespace pldm
 namespace responder
 {
 
-enum SocketWriteStatus
-{
-    Completed,
-    InProgress,
-    Free,
-    Error,
-    NotReady
-};
 namespace utils
 {
 namespace fs = std::filesystem;
@@ -51,8 +43,8 @@ int setupUnixSocket(const std::string& socketInterface);
  *            on failure returns -1
 
  */
-void writeToUnixSocket(const int sock, const char* buf,
-                       const uint64_t blockSize);
+int writeToUnixSocket(const int sock, const char* buf,
+                      const uint64_t blockSize);
 
 /** @brief Converts a binary file to json data
  *  This function converts bson data stored in a binary file to
@@ -83,14 +75,6 @@ void convertJsonToBinaryFile(const Json& jsonData, const fs::path& path);
  *  @return   None
  */
 void clearLicenseStatus();
-
-/** @brief Clear Dump Socket Write Status
- *  This function clears all the dump socket write status to "Free" during
- *  reset reload operation or when host is coming down to off state.
- *
- *  @return   None
- */
-void clearDumpSocketWriteStatus();
 
 /** @brief Create or update the d-bus license data
  *  This function creates or updates the d-bus license details. If the input

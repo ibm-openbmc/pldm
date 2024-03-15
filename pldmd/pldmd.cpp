@@ -9,6 +9,7 @@
 #include "fw-update/manager.hpp"
 #include "host-bmc/dbus/deserialize.hpp"
 #include "invoker.hpp"
+#include "pldm_resp_interface.hpp"
 #include "requester/handler.hpp"
 #include "requester/mctp_endpoint_discovery.hpp"
 #include "requester/request.hpp"
@@ -216,7 +217,7 @@ int main(int argc, char** argv)
     Invoker invoker{};
     requester::Handler<requester::Request> reqHandler(
         sockfd, event, dbusImplReq, currentSendbuffSize, verbose);
-
+    pldm::response_api::Interfaces respInterface;
 #ifdef LIBPLDMRESPONDER
     using namespace pldm::state_sensor;
     dbus_api::Host dbusImplHost(bus, "/xyz/openbmc_project/pldm");
@@ -272,6 +273,8 @@ int main(int argc, char** argv)
     }
 
 #ifdef OEM_IBM
+    respInterface.transport =
+        std::make_unique<pldm::response_api::Transport>(sockfd, verbose);
     std::unique_ptr<pldm::responder::CodeUpdate> codeUpdate =
         std::make_unique<pldm::responder::CodeUpdate>(&dbusHandler);
     std::unique_ptr<pldm::responder::SlotHandler> slotHandler =
@@ -287,7 +290,8 @@ int main(int argc, char** argv)
     slotHandler->setOemPlatformHandler(oemPlatformHandler.get());
     invoker.registerHandler(PLDM_OEM, std::make_unique<oem_ibm::Handler>(
                                           oemPlatformHandler.get(), sockfd,
-                                          hostEID, &dbusImplReq, &reqHandler));
+                                          hostEID, &dbusImplReq, &reqHandler,
+                                          respInterface.transport.get()));
 
     // host lamp test
     std::unique_ptr<pldm::led::HostLampTest> hostLampTest =
@@ -382,7 +386,8 @@ int main(int argc, char** argv)
         std::make_unique<MctpDiscovery>(bus, fwManager.get());
 
     auto callback = [verbose, &invoker, &reqHandler, currentSendbuffSize,
-                     &fwManager](IO& io, int fd, uint32_t revents) mutable {
+                     &fwManager,
+                     &respInterface](IO& io, int fd, uint32_t revents) mutable {
         if (!(revents & EPOLLIN))
         {
             return;
@@ -432,6 +437,18 @@ int main(int argc, char** argv)
                 }
                 else
                 {
+                    if (respInterface.transport)
+                    {
+                        using type = uint8_t;
+                        uint8_t eid = requestMsg[0];
+                        auto hdr = reinterpret_cast<const pldm_msg_hdr*>(
+                            requestMsg.data() + sizeof(eid) + sizeof(type));
+                        if (hdr->type == PLDM_OEM)
+                        {
+                            respInterface.transport->setRequestMsgRef(
+                                requestMsg);
+                        }
+                    }
                     // process message and send response
                     auto response = processRxMsg(requestMsg, invoker,
                                                  reqHandler, fwManager.get());

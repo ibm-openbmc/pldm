@@ -21,6 +21,7 @@
 #include <type_traits>
 
 PHOSPHOR_LOG2_USING;
+
 using namespace pldm::responder::utils;
 using namespace pldm::utils;
 
@@ -44,7 +45,6 @@ static constexpr auto hardwareDumpObjPath =
 
 int DumpHandler::fd = -1;
 namespace fs = std::filesystem;
-extern SocketWriteStatus socketWriteStatus;
 
 std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
 {
@@ -257,62 +257,10 @@ std::string DumpHandler::getOffloadUri(uint32_t fileHandle)
     return socketInterface;
 }
 
-int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
-                                 oem_platform::Handler* /*oemPlatformHandler*/)
+void DumpHandler::postDataTransferCallBack(bool IsWriteToMemOp)
 {
-    if (DumpHandler::fd == -1)
-    {
-        auto socketInterface = getOffloadUri(fileHandle);
-        int sock = setupUnixSocket(socketInterface);
-        if (sock < 0)
-        {
-            sock = -errno;
-            close(DumpHandler::fd);
-            error("DumpHandler::writeFromMemory: setupUnixSocket() failed");
-            std::remove(socketInterface.c_str());
-            resetOffloadUri();
-            return PLDM_ERROR;
-        }
-
-        DumpHandler::fd = sock;
-        auto rc = transferFileDataToSocket(DumpHandler::fd, length, address);
-        if (rc < 0)
-        {
-            error(
-                "DumpHandler::writeFromMemory: transferFileDataToSocket failed");
-            if (DumpHandler::fd >= 0)
-            {
-                close(DumpHandler::fd);
-                DumpHandler::fd = -1;
-            }
-            std::remove(socketInterface.c_str());
-            resetOffloadUri();
-            return PLDM_ERROR;
-        }
-        return rc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
-    }
-
-    if (socketWriteStatus == Error)
-    {
-        error(
-            "DumpHandler::writeFromMemory: Error while writing to Unix socket");
-        if (DumpHandler::fd >= 0)
-        {
-            close(DumpHandler::fd);
-            DumpHandler::fd = -1;
-        }
-        auto socketInterface = getOffloadUri(fileHandle);
-        std::remove(socketInterface.c_str());
-        resetOffloadUri();
-        return PLDM_ERROR;
-    }
-    else if (socketWriteStatus == InProgress || socketWriteStatus == NotReady)
-    {
-        return PLDM_ERROR_NOT_READY;
-    }
-
-    auto rc = transferFileDataToSocket(DumpHandler::fd, length, address);
-    if (rc < 0)
+    /// execute when DMA transfer failed.
+    if (IsWriteToMemOp)
     {
         error("DumpHandler::writeFromMemory: transferFileDataToSocket failed");
         if (DumpHandler::fd >= 0)
@@ -323,9 +271,39 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
         auto socketInterface = getOffloadUri(fileHandle);
         std::remove(socketInterface.c_str());
         resetOffloadUri();
-        return PLDM_ERROR;
+        return;
     }
-    return rc < 0 ? PLDM_ERROR : PLDM_SUCCESS;
+}
+
+void DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
+                                  oem_platform::Handler* /*oemPlatformHandler*/,
+                                  ResponseHdr& responseHdr,
+                                  sdeventplus::Event& event)
+{
+    if (DumpHandler::fd == -1)
+    {
+        auto socketInterface = getOffloadUri(fileHandle);
+        int sock = setupUnixSocket(socketInterface);
+        if (sock < 0)
+        {
+            close(DumpHandler::fd);
+            error(
+                "DumpHandler::writeFromMemory: setupUnixSocket() failed errno:{ERR}",
+                "ERR", errno);
+            std::remove(socketInterface.c_str());
+            resetOffloadUri();
+
+            FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+            FileHandler::deleteAIOobjects(nullptr, responseHdr);
+
+            return;
+        }
+
+        DumpHandler::fd = sock;
+    }
+
+    transferFileDataToSocket(DumpHandler::fd, length, address, responseHdr,
+                             event);
 }
 
 int DumpHandler::write(const char* buffer, uint32_t, uint32_t& length,
@@ -335,22 +313,8 @@ int DumpHandler::write(const char* buffer, uint32_t, uint32_t& length,
         "Enter DumpHandler::write length = {LEN} DumpHandler::fd ={FILE_DESCRIPTION}",
         "LEN", length, "FILE_DESCRIPTION", DumpHandler::fd);
 
-    if (socketWriteStatus == Error)
-    {
-        error("DumpHandler::write: Error while writing to Unix socket");
-        close(fd);
-        auto socketInterface = getOffloadUri(fileHandle);
-        std::remove(socketInterface.c_str());
-        resetOffloadUri();
-        return PLDM_ERROR;
-    }
-    else if (socketWriteStatus == InProgress)
-    {
-        return PLDM_ERROR_NOT_READY;
-    }
-
-    writeToUnixSocket(DumpHandler::fd, buffer, length);
-    if (socketWriteStatus == Error)
+    int rc = writeToUnixSocket(DumpHandler::fd, buffer, length);
+    if (rc < 0)
     {
         error("DumpHandler::write: Error while writing to Unix socket");
         close(fd);
@@ -457,11 +421,6 @@ int DumpHandler::fileAck(uint8_t fileStatus)
         if (dumpType == PLDM_FILE_TYPE_DUMP ||
             dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
         {
-            if (socketWriteStatus == InProgress)
-            {
-                return PLDM_ERROR_NOT_READY;
-            }
-
             PropertyValue value{true};
             DBusMapping dbusMapping{path, dumpEntry, "Offloaded", "bool"};
             try
@@ -495,9 +454,11 @@ int DumpHandler::fileAck(uint8_t fileStatus)
     return PLDM_ERROR;
 }
 
-int DumpHandler::readIntoMemory(uint32_t offset, uint32_t& length,
-                                uint64_t address,
-                                oem_platform::Handler* /*oemPlatformHandler*/)
+void DumpHandler::readIntoMemory(uint32_t offset, uint32_t& length,
+                                 uint64_t address,
+                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                 ResponseHdr& responseHdr,
+                                 sdeventplus::Event& event)
 {
     auto path = findDumpObjPath(fileHandle);
     static constexpr auto dumpFilepathInterface =
@@ -505,7 +466,10 @@ int DumpHandler::readIntoMemory(uint32_t offset, uint32_t& length,
     if ((dumpType == PLDM_FILE_TYPE_DUMP) ||
         (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP))
     {
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+        FileHandler::dmaResponseToHost(responseHdr,
+                                       PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
+        FileHandler::deleteAIOobjects(nullptr, responseHdr);
+        return;
     }
     else if (dumpType != PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
     {
@@ -514,9 +478,9 @@ int DumpHandler::readIntoMemory(uint32_t offset, uint32_t& length,
             auto filePath =
                 pldm::utils::DBusHandler().getDbusProperty<std::string>(
                     path.c_str(), "Path", dumpFilepathInterface);
-            auto rc = transferFileData(fs::path(filePath), true, offset, length,
-                                       address);
-            return rc;
+            transferFileData(fs::path(filePath), true, offset, length, address,
+                             responseHdr, event);
+            return;
         }
         catch (const sdbusplus::exception_t& e)
         {
@@ -526,11 +490,13 @@ int DumpHandler::readIntoMemory(uint32_t offset, uint32_t& length,
             pldm::utils::reportError(
                 "xyz.openbmc_project.PLDM.Error.readIntoMemory.GetFilepathFail",
                 pldm::PelSeverity::ERROR);
-            return PLDM_ERROR;
+            FileHandler::dmaResponseToHost(responseHdr, PLDM_ERROR, 0);
+            FileHandler::deleteAIOobjects(nullptr, responseHdr);
+            return;
         }
     }
-    return transferFileData(resDumpRequestDirPath, true, offset, length,
-                            address);
+    transferFileData(resDumpRequestDirPath, true, offset, length, address,
+                     responseHdr, event);
 }
 
 int DumpHandler::read(uint32_t offset, uint32_t& length, Response& response,
