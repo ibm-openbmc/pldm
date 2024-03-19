@@ -12,6 +12,18 @@
 
 namespace pldm
 {
+
+/** @brief Holds the file ack with meta data status and values
+ */
+struct fileack_status_metadata
+{
+    uint8_t fileStatus;
+    uint32_t fileMetaData1;
+    uint32_t fileMetaData2;
+    uint32_t fileMetaData3;
+    uint32_t fileMetaData4;
+};
+
 namespace responder
 {
 
@@ -170,6 +182,25 @@ uint32_t getLinkResetInstanceNumber(std::string& path);
 /** @brief method to find slot objects */
 void findSlotObjects(const std::string& boardObjPath,
                      std::vector<std::string>& slotObjects);
+
+/** @brief Split the vector according to the start and end index and return
+ *  back the resultant vector
+ *  @param[in] inputVec - input vector
+ *  @param[in] startIdx - start index
+ *  @param[in] endIdx - end index
+ *  @return  the resultant split vector
+ */
+std::vector<char> vecSplit(const std::vector<char>& inputVec,
+                           const uint32_t startIdx, const uint32_t endIdx);
+
+/** @brief Reads the contents of the input vector and returns the value back
+ *  @param[in] inputVec - input vector
+ *  @param[in] startIdx - start index
+ *  @param[in] endIdx - end index
+ *  @return  the value contained in the input vector
+ */
+uint32_t readVecContent(std::vector<char>& inputVec, const uint32_t startIdx,
+                        const uint32_t endIdx);
 
 } // namespace utils
 } // namespace responder

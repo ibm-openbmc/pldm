@@ -172,10 +172,11 @@ class Handler : public CmdHandler
   public:
     Handler(oem_platform::Handler* oemPlatformHandler, int hostSockFd,
             uint8_t hostEid, dbus_api::Requester* dbusImplReqester,
-            pldm::requester::Handler<pldm::requester::Request>* handler) :
+            pldm::requester::Handler<pldm::requester::Request>* handler,
+            sdeventplus::Event& event) :
         oemPlatformHandler(oemPlatformHandler),
         hostSockFd(hostSockFd), hostEid(hostEid),
-        dbusImplReqester(dbusImplReqester), handler(handler)
+        dbusImplReqester(dbusImplReqester), handler(handler), event(event)
     {
         handlers.emplace(PLDM_READ_FILE_INTO_MEMORY,
                          [this](const pldm_msg* request, size_t payloadLength) {
@@ -467,6 +468,15 @@ class Handler : public CmdHandler
     Response newFileAvailableWithMetaData(const pldm_msg* request,
                                           size_t payloadLength);
 
+    /** @brief Execute the post actions after sending back the write command
+     *  responde to the host
+     *  @param[in] fileType - type of the file
+     *  @param[in] fileHandle - file handle
+     *  @param[in] metaDataObj - file ack meta data status and values
+     */
+    void postWriteAction(const uint16_t fileType, const uint32_t fileHandle,
+                         const struct fileack_status_metadata& metaDataObj);
+
   private:
     oem_platform::Handler* oemPlatformHandler;
     int hostSockFd;
@@ -490,6 +500,11 @@ class Handler : public CmdHandler
     pldm::requester::Handler<pldm::requester::Request>* handler;
     std::vector<std::unique_ptr<pldm::requester::oem_ibm::DbusToFileHandler>>
         dbusToFileHandlers;
+
+    /** @brief sdeventplus event */
+    sdeventplus::Event& event;
+    /** @brief sdeventplus defer event source */
+    std::unique_ptr<sdeventplus::source::Defer> smsEvent;
 };
 
 } // namespace oem_ibm

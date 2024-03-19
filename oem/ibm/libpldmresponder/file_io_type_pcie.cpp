@@ -103,7 +103,8 @@ int PCIeInfoHandler::writeFromMemory(
 }
 
 int PCIeInfoHandler::write(const char* buffer, uint32_t, uint32_t& length,
-                           oem_platform::Handler* /*oemPlatformHandler*/)
+                           oem_platform::Handler* /*oemPlatformHandler*/,
+                           struct fileack_status_metadata& /*metaDataObj*/)
 {
     fs::path infoFile(fs::path(pciePath) / topologyFile);
     if (infoType == PLDM_FILE_TYPE_CABLE_INFO)
