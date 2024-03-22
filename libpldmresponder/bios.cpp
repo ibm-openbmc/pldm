@@ -69,15 +69,15 @@ using EpochTimeUS = uint64_t;
 
 DBusHandler dbusHandler;
 
-Handler::Handler(int fd, uint8_t eid, dbus_api::Requester* requester,
-                 pldm::requester::Handler<pldm::requester::Request>* handler,
-                 pldm::responder::oem_bios::Handler* oemBiosHandler) :
+Handler::Handler(
+    int fd, uint8_t eid, dbus_api::Requester* requester,
+    pldm::requester::Handler<pldm::requester::Request>* handler,
+    pldm::responder::platform_config::Handler* platformConfigHandler,
+    pldm::responder::bios::Callback requestPLDMServiceName) :
     biosConfig(BIOS_JSONS_DIR, BIOS_TABLES_DIR, &dbusHandler, fd, eid,
-               requester, handler, oemBiosHandler)
+               requester, handler, platformConfigHandler,
+               requestPLDMServiceName)
 {
-    biosConfig.removeTables();
-    biosConfig.buildTables();
-
     handlers.emplace(PLDM_SET_DATE_TIME,
                      [this](const pldm_msg* request, size_t payloadLength) {
         return this->setDateTime(request, payloadLength);
