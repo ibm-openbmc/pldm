@@ -11,9 +11,15 @@ test_sources = [
     '../dbus/cpu_core.cpp',
     '../dbus/pcie_device.cpp',
     '../dbus/pcie_slot.cpp',
+    '../dbus/serialize.cpp',
 ]
 
-tests = ['dbus_to_terminus_effecter_test', 'utils_test', 'custom_dbus_test']
+tests = [
+  'dbus_to_terminus_effecter_test',
+  'utils_test',
+  'custom_dbus_test',
+  'serialize_test'
+]
 
 foreach t : tests
     test(

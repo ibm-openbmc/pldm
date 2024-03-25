@@ -6,6 +6,7 @@ libpldmresponder_deps = [
     sdeventplus,
     libpldm_dep,
     libpldmutils,
+    cereal_dep,
 ]
 
 sources = [
