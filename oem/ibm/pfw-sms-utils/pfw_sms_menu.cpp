@@ -24,7 +24,7 @@ namespace ibm_pfw_sms
  */
 struct pfw_sms_pam_appdata
 {
-    const std::string& password;
+    const char* password;
     enum changePasswordReasonCode reasonCode;
 };
 
@@ -77,7 +77,7 @@ static int pamConversationFunction(int num_msg,
                 // Allocate a response for PAM to free().  Note that PAM
                 // uses malloc/calloc/strdup style memory management.
                 local_password =
-                    ::strdup(pfw_sms_appdata_ptr->password.c_str());
+                    ::strdup(pfw_sms_appdata_ptr->password);
                 if (local_password == nullptr)
                 {
                     return PAM_BUF_ERR; // *authenticated = false
