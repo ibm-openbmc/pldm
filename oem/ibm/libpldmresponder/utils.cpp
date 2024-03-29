@@ -604,6 +604,20 @@ void findSlotObjects(const std::string& boardObjPath,
     }
 }
 
+std::vector<char> vecSplit(const std::vector<char>& inputVec,
+                           const uint32_t startIdx, const uint32_t endIdx)
+{
+    // Start and end iterators
+    auto startItr = inputVec.begin() + startIdx;
+    auto endItr = inputVec.begin() + endIdx;
+
+    // Resultant split vector
+    std::vector<char> resultVec(endIdx - startIdx + 1);
+
+    copy(startItr, endItr, resultVec.begin());
+    return resultVec;
+}
+
 } // namespace utils
 } // namespace responder
 } // namespace pldm

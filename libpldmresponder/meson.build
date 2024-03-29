@@ -81,6 +81,7 @@ if get_option('oem-ibm').enabled()
     '../oem/ibm/host-bmc/host_lamp_test.cpp',
     '../oem/ibm/libpldmresponder/bios_oem_ibm.cpp',
     '../oem/ibm/pfw-sms-utils/pfw_sms_menu.cpp',
+    '../oem/ibm/libpldmresponder/file_io_type_smsmenu.cpp',
   ]
   libpam = cpp.find_library('pam', required: true)
   libpldmresponder_deps += [libpam]
