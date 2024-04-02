@@ -96,7 +96,6 @@ void BIOSIntegerAttribute::setAttrValueOnDbus(
         return dbusHandler->setDbusProperty(*dBusMap,
                                             static_cast<double>(currentValue));
     }
-
     error("Unsupported property type on dbus: {DBUS_PROP_TYP}", "DBUS_PROP_TYP",
           dBusMap->propertyType);
     throw std::invalid_argument("dbus type error");

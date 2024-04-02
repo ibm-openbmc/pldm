@@ -11,7 +11,6 @@
 
 #include <phosphor-logging/lg2.hpp>
 
-#include <iostream>
 #include <ranges>
 
 PHOSPHOR_LOG2_USING;
@@ -400,8 +399,13 @@ void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
                         link_speed[linkSpeed], itemPCIeDevice, "string");
 
             // set link width
-            setProperty(slotAndAdapter.second, "LanesInUse", linkWidth,
-                        itemPCIeDevice, "int64_t");
+            auto& bus = pldm::utils::DBusHandler::getBus();
+            auto service = pldm::utils::DBusHandler().getService(slotAndAdapter.second.c_str(),
+                                      itemPCIeDevice);
+            auto method = bus.new_method_call(
+                service.c_str(), slotAndAdapter.second.c_str(), "org.freedesktop.DBus.Properties", "Set");
+            method.append(itemPCIeDevice, "LanesInUse",
+                      linkWidth);
             std::filesystem::path adapter(slotAndAdapter.second);
 
             error(
@@ -449,8 +453,13 @@ void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
                             link_speed[linkSpeed], itemPCIeDevice, "string");
 
                 // set link width
-                setProperty(slotAndAdapter.second, "LanesInUse", linkWidth,
-                            itemPCIeDevice, "int64_t");
+                auto& bus = pldm::utils::DBusHandler::getBus();
+                auto service = pldm::utils::DBusHandler().getService(slotAndAdapter.second.c_str(),
+                                      itemPCIeDevice);
+                auto method = bus.new_method_call(
+                    service.c_str(), slotAndAdapter.second.c_str(), "org.freedesktop.DBus.Properties", "Set");
+                method.append(itemPCIeDevice, "LanesInUse",
+                          linkWidth);
             }
 
             std::filesystem::path adapter(slotAndAdapter.second);
