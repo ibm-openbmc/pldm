@@ -1,7 +1,7 @@
 #include "utils.hpp"
 
 #include "common/utils.hpp"
-#include "host-bmc/custom_dbus.hpp"
+#include "host-bmc/dbus/custom_dbus.hpp"
 
 #include <libpldm/base.h>
 #include <sys/socket.h>
