@@ -190,7 +190,7 @@ void CustomDBus::implementPCIeDeviceInterface(const std::string& path)
     }
 }
 
-void CustomDBus::setPCIeDeviceProps(const std::string& path, int64_t lanesInuse,
+void CustomDBus::setPCIeDeviceProps(const std::string& path, size_t lanesInuse,
                                     const std::string& value)
 {
     Generations generationsInuse =

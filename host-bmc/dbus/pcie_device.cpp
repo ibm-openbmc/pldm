@@ -17,13 +17,13 @@ auto PCIeDevice::generationInUse(Generations value) -> Generations
         PCIeDevice::generationInUse(value);
 }
 
-int64_t PCIeDevice::lanesInUse() const
+size_t PCIeDevice::lanesInUse() const
 {
     return sdbusplus::xyz::openbmc_project::Inventory::Item::server::
         PCIeDevice::lanesInUse();
 }
 
-int64_t PCIeDevice::lanesInUse(int64_t value)
+size_t PCIeDevice::lanesInUse(size_t value)
 {
     return sdbusplus::xyz::openbmc_project::Inventory::Item::server::
         PCIeDevice::lanesInUse(value);
