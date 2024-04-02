@@ -35,6 +35,8 @@ sources = [
     '../host-bmc/utils.cpp',
     '../host-bmc/dbus/pcie_device.cpp',
     '../host-bmc/dbus/pcie_slot.cpp',
+    '../host-bmc/dbus/serialize.cpp',
+    '../host-bmc/dbus/deserialize.cpp',
     'event_parser.cpp',
 ]
 

@@ -5,6 +5,8 @@
 #include <libpldm/oem/ibm/fru.h>
 #endif
 #include "dbus/custom_dbus.hpp"
+#include "dbus/deserialize.hpp"
+#include "dbus/serialize.hpp"
 
 #include <nlohmann/json.hpp>
 #include <phosphor-logging/lg2.hpp>
@@ -101,16 +103,16 @@ HostPDRHandler::HostPDRHandler(
         propertiesChanged("/xyz/openbmc_project/state/host0",
                           "xyz.openbmc_project.State.Host"),
         [this, repo, entityTree, bmcEntityTree](sdbusplus::message_t& msg) {
-            DbusChangedProps props{};
-            std::string intf;
-            msg.read(intf, props);
-            const auto itr = props.find("CurrentHostState");
-            if (itr != props.end())
+        DbusChangedProps props{};
+        std::string intf;
+        msg.read(intf, props);
+        const auto itr = props.find("CurrentHostState");
+        if (itr != props.end())
+        {
+            pldm::utils::PropertyValue value = itr->second;
+            auto propVal = std::get<std::string>(value);
+            if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
             {
-                PropertyValue value = itr->second;
-                auto propVal = std::get<std::string>(value);
-                if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
-                {
                     // Delete all the remote terminus information
                     std::erase_if(tlPDRInfo, [](const auto& item) {
                         const auto& [key, value] = item;
@@ -695,6 +697,8 @@ void HostPDRHandler::processHostPDRs(
         {
             oemUtilsHandler->setCoreCount(entityAssociations, entityMaps);
         }
+        pldm::serialize::Serialize::getSerialize().setObjectPathMaps(
+            objPathMap);
         /*received last record*/
         this->parseStateSensorPDRs();
         this->createDbusObjects();
