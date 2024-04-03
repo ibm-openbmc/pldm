@@ -1211,9 +1211,17 @@ void HostPDRHandler::setFRUDataOnDBus(
 }
 void HostPDRHandler::createDbusObjects()
 {
-    // TODO: Creating and Refreshing dbus hosted by remote PLDM entity Fru PDRs
-
-    // getFRURecordTableMetadataByRemote();
+    for (const auto& entity : objPathMap)
+    {
+        switch (entity.second.entity_type)
+        {
+            case PLDM_ENTITY_PROC | 0x8000:
+                CustomDBus::getCustomDBus().implementCpuCoreInterface(
+                    entity.first);
+                break;
+        }
+    }
+    // getFRURecordTableMetadataByRemote(fruRecordSetPDRs);
 }
 
 } // namespace pldm

@@ -2,6 +2,7 @@
 
 #include "com/ibm/License/Entry/LicenseEntry/server.hpp"
 #include "common/utils.hpp"
+#include "cpu_core.hpp"
 
 #include <libpldm/state_set.h>
 
@@ -65,7 +66,7 @@ class CustomDBus
 
     /** @brief Get the LocationCode property
      *
-     *  @param[in] path     - The object path
+     *  @param[in] path  - The object path
      *
      *  @return std::optional<std::string> - The value of the LocationCode
      *          property
@@ -125,12 +126,36 @@ class CustomDBus
      */
     void setAvailabilityState(const std::string& path, const bool& state);
 
+    /** @brief Implement CpuCore Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
+    void implementCpuCoreInterface(const std::string& path);
+
+    /** @brief Set the setMicroCode property
+     *
+     *  @param[in] path   - The object path
+     *
+     *  @param[in] value  - microcode value
+     */
+    void setMicroCode(const std::string& path, uint32_t value);
+
+    /** @brief Get the microcode property
+     *
+     *  @param[in] path   - The object path
+     *
+     *  @return std::optional<uint32_t> - The value of the microcode value
+     */
+    std::optional<uint32_t> getMicroCode(const std::string& path) const;
+
   private:
     std::unordered_map<ObjectPath, std::unique_ptr<LocationIntf>> location;
     std::map<ObjectPath, std::unique_ptr<OperationalStatusIntf>>
         operationalStatus;
     std::map<ObjectPath, std::unique_ptr<AvailabilityIntf>> availabilityState;
     std::unordered_map<ObjectPath, std::unique_ptr<LicIntf>> codLic;
+    std::unordered_map<ObjectPath, std::unique_ptr<CPUCore>> cpuCore;
 };
 
 } // namespace dbus
