@@ -1212,7 +1212,7 @@ void HostPDRHandler::setFRUDataOnDBus(
 }
 void HostPDRHandler::createDbusObjects()
 {
-    // TODO: Creating and Refreshing dbus hosted by remote PLDM entity Fru PDRs
+    // Creating and Refreshing dbus hosted by remote PLDM entity Fru PDRs
     for (const auto& entity : objPathMap)
     {
         switch (entity.second.entity_type)
