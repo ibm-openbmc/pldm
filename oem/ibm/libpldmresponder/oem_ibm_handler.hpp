@@ -1,5 +1,6 @@
 #pragma once
 #include "libpldm/entity.h"
+#include "libpldm/entity_oem_ibm.h"
 #include "libpldm/pdr_oem_ibm.h"
 #include "libpldm/platform.h"
 #include "libpldm/state_set_oem_ibm.h"
@@ -44,7 +45,6 @@ using PendingObj = std::tuple<AttributeType, CurrentValue>;
 using PendingAttributes = std::map<AttributeName, PendingObj>;
 static constexpr auto PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE = 24577;
 static constexpr auto PLDM_OEM_IBM_FRONT_PANEL_TRIGGER = 32837;
-static constexpr auto PLDM_OEM_IBM_ENTITY_REAL_SAI = 24581;
 static constexpr auto PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER = 24580;
 
 constexpr uint16_t ENTITY_INSTANCE_0 = 0;
@@ -127,6 +127,36 @@ class Handler : public oem_platform::Handler
                 {
                     hostTransitioningToOff = true;
                 }
+            }
+            });
+        platformSAIMatch = std::make_unique<sdbusplus::bus::match::match>(
+            pldm::utils::DBusHandler::getBus(),
+            propertiesChanged(
+                "/xyz/openbmc_project/led/groups/partition_system_attention_indicator",
+                "xyz.openbmc_project.Led.Group"),
+            [this](sdbusplus::message::message& msg) {
+            pldm::utils::DbusChangedProps props{};
+            std::string intf;
+            msg.read(intf, props);
+            const auto itr = props.find("Asserted");
+            if (itr != props.end())
+            {
+                processSAIUpdate();
+            }
+            });
+        partitionSAIMatch = std::make_unique<sdbusplus::bus::match::match>(
+            pldm::utils::DBusHandler::getBus(),
+            propertiesChanged(
+                "/xyz/openbmc_project/led/groups/platform_system_attention_indicator",
+                "xyz.openbmc_project.Led.Group"),
+            [this](sdbusplus::message::message& msg) {
+            pldm::utils::DbusChangedProps props{};
+            std::string intf;
+            msg.read(intf, props);
+            const auto itr = props.find("Asserted");
+            if (itr != props.end())
+            {
+                processSAIUpdate();
             }
             });
         updateBIOSMatch = std::make_unique<sdbusplus::bus::match::match>(
@@ -421,6 +451,9 @@ class Handler : public oem_platform::Handler
      */
     uint8_t fetchRealSAIStatus();
 
+    /** @brief Method to process virtual platform/partition SAI update*/
+    void processSAIUpdate();
+
     /** @brief To process the graceful shutdown, cycle chassis power, and boot
      *  the host back up*/
     void processPowerCycleOffSoftGraceful();
@@ -519,6 +552,10 @@ class Handler : public oem_platform::Handler
 
     /** @brief D-Bus property changed signal match */
     std::unique_ptr<sdbusplus::bus::match::match> hostOffMatch;
+    /** @brief D-Bus Interface added signal match for virtual platform SAI */
+    std::unique_ptr<sdbusplus::bus::match::match> platformSAIMatch;
+    /** @brief D-Bus Interface added signal match for virtual partition SAI */
+    std::unique_ptr<sdbusplus::bus::match::match> partitionSAIMatch;
     std::unique_ptr<sdbusplus::bus::match::match> updateBIOSMatch;
     /** @brief D-Bus Interfaced added signal match for Entity Manager */
     std::unique_ptr<sdbusplus::bus::match::match> ibmCompatibleMatch;
@@ -537,6 +574,9 @@ class Handler : public oem_platform::Handler
     bool hostTransitioningToOff = true;
 
     int setEventReceiverCnt = 0;
+
+    /** @brief Real SAI sensor id*/
+    uint16_t realSAISensorId;
 
     /** @brief instanceMap is a lookup data structure to lookup <EffecterID,
      * InstanceInfo> */
