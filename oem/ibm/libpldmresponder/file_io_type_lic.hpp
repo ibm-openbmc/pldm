@@ -27,7 +27,7 @@ class LicenseHandler : public FileHandler
                                 uint64_t address,
                                 oem_platform::Handler* /*oemPlatformHandler*/);
 
-    virtual int readIntoMemory(uint32_t /*offset*/, uint32_t& /*length*/,
+    virtual int readIntoMemory(uint32_t /*offset*/, uint32_t /*length*/,
                                uint64_t /*address*/,
                                oem_platform::Handler* /*oemPlatformHandler*/)
     {
