@@ -53,7 +53,7 @@ static std::map<uint8_t, std::string> link_speed{
     {0xFF, "xyz.openbmc_project.Inventory.Item.PCIeSlot.Generations.Unknown"}};
 
 static std::map<uint8_t, int64_t> link_width{{0x01, 1}, {0x02, 2},  {0x04, 4},
-                                             {0x08, 8}, {0x10, 16}, {0xFF, -1},
+                                             {0x08, 8}, {0x10, 16}, {0xFF, UINT_MAX},
                                              {0x00, 0}};
 
 struct SlotLocCode_t
