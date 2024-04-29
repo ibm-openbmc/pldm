@@ -27,6 +27,8 @@ package_localstatedir = join_paths(get_option('prefix'), get_option('localstated
 conf_data = configuration_data()
 if get_option('libpldmresponder').enabled()
 conf_data.set_quoted('BIOS_JSONS_DIR', join_paths(package_datadir, 'bios'))
+conf_data.set('SYSTEM_SPECIFIC_BIOS_JSON',
+get_option('system-specific-bios-json').allowed())
 conf_data.set_quoted('BIOS_TABLES_DIR', join_paths(package_localstatedir, 'bios'))
 conf_data.set_quoted('PDR_JSONS_DIR', join_paths(package_datadir, 'pdr'))
 conf_data.set_quoted('FRU_JSONS_DIR', join_paths(package_datadir, 'fru'))

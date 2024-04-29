@@ -46,22 +46,62 @@ BIOSConfig::BIOSConfig(
     const char* jsonDir, const char* tableDir, DBusHandler* const dbusHandler,
     int fd, uint8_t eid, dbus_api::Requester* requester,
     pldm::requester::Handler<pldm::requester::Request>* handler,
-    pldm::responder::oem_bios::Handler* oemBiosHandler) :
+    pldm::responder::platform_config::Handler* platformConfigHandler,
+    pldm::responder::bios::Callback requestPLDMServiceName) :
     jsonDir(jsonDir),
     tableDir(tableDir), dbusHandler(dbusHandler), fd(fd), eid(eid),
-    requester(requester), handler(handler), oemBiosHandler(oemBiosHandler)
+    requester(requester), handler(handler),
+    platformConfigHandler(platformConfigHandler),
+    requestPLDMServiceName(requestPLDMServiceName)
 {
-    if (oemBiosHandler)
+    fs::create_directories(tableDir);
+    removeTables();
+#ifdef SYSTEM_SPECIFIC_BIOS_JSON
+    checkSystemTypeAvailability();
+#else
+    initBIOSAttributes(sysType, false);
+#endif
+    listenPendingAttributes();
+}
+
+void BIOSConfig::checkSystemTypeAvailability()
+{
+    if (platformConfigHandler)
     {
-        auto systemType = oemBiosHandler->getPlatformName();
+        auto systemType = platformConfigHandler->getPlatformName();
         if (systemType.has_value())
         {
+            // Received System Type from Entity Manager
             sysType = systemType.value();
+            initBIOSAttributes(sysType, true);
+        }
+        else
+        {
+            platformConfigHandler->registerSystemTypeCallback(
+                std::bind(&BIOSConfig::initBIOSAttributes, this,
+                          std::placeholders::_1, std::placeholders::_2));
         }
     }
-    fs::create_directories(tableDir);
+}
+
+void BIOSConfig::initBIOSAttributes(const std::string& systemType,
+                                    bool registerService)
+{
+    sysType = systemType;
+    fs::path dir{jsonDir / sysType};
+    if (!fs::exists(dir))
+    {
+        error("Bios attribute directory {DIR} does not exit", "DIR",
+              dir.string());
+        // TODO: Assert here as we can not continue without BIOS tables
+        return;
+    }
     constructAttributes();
-    listenPendingAttributes();
+    buildTables();
+    if (registerService)
+    {
+        requestPLDMServiceName();
+    }
 }
 
 void BIOSConfig::buildTables()
@@ -1125,7 +1165,6 @@ void BIOSConfig::listenPendingAttributes()
         using Value =
             std::variant<std::string, PendingAttributes, BaseBIOSTable>;
         using Properties = std::map<DbusProp, Value>;
-
         Properties props{};
         std::string intf;
         msg.read(intf, props);

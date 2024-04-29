@@ -10,6 +10,9 @@ option('softoff-timeout-seconds', type: 'integer', description: 'softoff: Time t
 
 option('systemd', type: 'feature', description: 'Include systemd support', value: 'enabled')
 
+option('system-specific-bios-json', type: 'feature', description:
+'System specific BIOS attribute support', value: 'disabled')
+
 # Timing specifications for PLDM messages
 option('number-of-request-retries', type: 'integer', min: 2, max: 30, description: 'The number of times a requester is obligated to retry a request', value: 2)
 option('instance-id-expiration-interval', type: 'integer', min: 5, max: 6, description: 'Instance ID expiration interval in seconds', value: 5)

@@ -23,6 +23,7 @@ sources = [
   'platform.cpp',
   'fru_parser.cpp',
   'fru.cpp',
+  'platform_config.cpp',
   '../host-bmc/host_pdr_handler.cpp',
   '../host-bmc/dbus_to_event_handler.cpp',
   '../host-bmc/dbus_to_host_effecters.cpp',
@@ -79,7 +80,6 @@ if get_option('oem-ibm').enabled()
     '../oem/ibm/libpldmresponder/file_io_type_pcie.cpp',
     '../oem/ibm/libpldmresponder/file_io_type_vpd.cpp',
     '../oem/ibm/host-bmc/host_lamp_test.cpp',
-    '../oem/ibm/libpldmresponder/bios_oem_ibm.cpp',
     '../oem/ibm/pfw-sms-utils/pfw_sms_menu.cpp',
     '../oem/ibm/libpldmresponder/file_io_type_smsmenu.cpp',
   ]
