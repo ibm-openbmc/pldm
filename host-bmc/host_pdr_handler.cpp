@@ -94,7 +94,7 @@ HostPDRHandler::HostPDRHandler(
     mctp_eid(mctp_eid), event(event), repo(repo),
     stateSensorHandler(eventsJsonsDir), entityTree(entityTree),
     instanceIdDb(instanceIdDb), handler(handler),
-    entityMaps(parseEntityMap(ENTITY_MAP_JSON)), oemUtilsHandler(nullptr)
+    entityMaps(parseEntityMap(ENTITY_MAP_JSON))
 {
     isHostOff = false;
     mergedHostParents = false;
@@ -699,6 +699,10 @@ void HostPDRHandler::processHostPDRs(
         }
         pldm::serialize::Serialize::getSerialize().setObjectPathMaps(
             objPathMap);
+        if (oemUtilsHandler)
+        {
+            oemUtilsHandler->setCoreCount(entityAssociations, entityMaps);
+        }
         /*received last record*/
         this->parseStateSensorPDRs();
         this->createDbusObjects();

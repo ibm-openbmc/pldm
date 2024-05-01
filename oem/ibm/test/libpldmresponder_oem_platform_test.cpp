@@ -532,10 +532,12 @@ TEST(SetCoreCount, testgoodpath)
     DBusMapping dbusMapping{"/foo/bar", "xyz.openbmc_project.Foo.Bar",
                             "propertyName", "uint64_t"};
     std::vector<std::string> cpuInterface = {"xyz.openbmc_project.Foo.Bar"};
+    pldm::utils::PropertyValue value;
+    pldm::utils::GetSubTreeResponse res{};
     auto oemMockedUtils =
         std::make_unique<MockOemUtilsHandler>(&mockedDbusUtils);
-    int coreCount =
-        oemMockedUtils->setCoreCount(entityAssociations, entityMaps);
+    int coreCount = oemMockedUtils->setCoreCount(entityAssociations,
+                                                 entityMaps);
     EXPECT_EQ(coreCount, 2);
     pldm_entity_association_tree_destroy(tree);
 }
