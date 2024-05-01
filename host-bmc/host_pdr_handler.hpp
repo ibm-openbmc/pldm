@@ -87,6 +87,7 @@ class HostPDRHandler
      *  @param[in] bmcEntityTree - pointer to BMC's entity association tree
      *  @param[in] instanceIdDb - reference to an InstanceIdDb object
      *  @param[in] handler - PLDM request handler
+     *  @param[in] oemUtilsHandler - pointer oem utils handler
      */
     explicit HostPDRHandler(
         int mctp_fd, uint8_t mctp_eid, sdeventplus::Event& event,
@@ -181,6 +182,15 @@ class HostPDRHandler
                                      const pldm_entity entity)
     {
         objPathMap[path] = entity;
+    }
+
+    /* @brief Method to set the oem utils handler in host pdr handler class
+     *
+     * @param[in] handler - oem utils handler
+     */
+    inline void setOemUtilsHandler(pldm::responder::oem_utils::Handler* handler)
+    {
+        oemUtilsHandler = handler;
     }
 
     /** @brief map that captures various terminus information **/
@@ -342,6 +352,9 @@ class HostPDRHandler
     /** @brief entityID and entity name is only loaded once
      */
     pldm::utils::EntityMaps entityMaps;
+
+    /** @OEM Utils handler */
+    pldm::responder::oem_utils::Handler* oemUtilsHandler;
 
     PDRList stateSensorPDRs;
     PDRList fruRecordSetPDRs{};

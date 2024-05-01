@@ -13,7 +13,7 @@ namespace pldm
 {
 namespace dbus
 {
-using CoreIntf = sdbusplus::server::object::object<
+using CoreIntf = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Inventory::Item::server::CpuCore>;
 
 /** @class CPUCore
@@ -30,7 +30,7 @@ class CPUCore : public CoreIntf
     CPUCore(CPUCore&&) = default;
     CPUCore& operator=(CPUCore&&) = default;
 
-    CPUCore(sdbusplus::bus::bus& bus, const std::string& objPath) :
+    CPUCore(sdbusplus::bus_t& bus, const std::string& objPath) :
         CoreIntf(bus, objPath.c_str()), path(objPath)
     {
         pldm::serialize::Serialize::getSerialize().serialize(path, "CPUCore");
