@@ -176,7 +176,7 @@ using InterfaceMap = std::map<std::string, PropertyMap>;
 using ObjectValueTree = std::map<sdbusplus::message::object_path, InterfaceMap>;
 
 /* eg: {{entity type,  {object path, {entity instance number, entity,container,
- * id, {interfaces, {property name, PropertyValue value}}}}}}
+ *       id, {interfaces, {property name, PropertyValue value}}}}}}
  */
 using SavedObjs = std::unordered_map<
     uint16_t, std::unordered_map<std::string,

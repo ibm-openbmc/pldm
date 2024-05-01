@@ -64,6 +64,7 @@ PHOSPHOR_LOG2_USING;
 #include "libpldmresponder/file_io.hpp"
 #include "libpldmresponder/fru_oem_ibm.hpp"
 #include "libpldmresponder/oem_ibm_handler.hpp"
+#include "libpldmresponder/utils.hpp"
 #endif
 
 constexpr uint8_t MCTP_MSG_TYPE_PLDM = 1;
@@ -235,6 +236,7 @@ int main(int argc, char** argv)
     std::unique_ptr<platform_config::Handler> platformConfigHandler{};
     platformConfigHandler = std::make_unique<platform_config::Handler>();
     std::unique_ptr<oem_fru::Handler> oemFruHandler{};
+    std::unique_ptr<oem_utils::Handler> oemUtilsHandler{};
 
 #ifdef OEM_IBM
     std::unique_ptr<pldm::responder::CodeUpdate> codeUpdate =
@@ -243,6 +245,7 @@ int main(int argc, char** argv)
     oemPlatformHandler = std::make_unique<oem_ibm_platform::Handler>(
         &dbusHandler, codeUpdate.get(), pldmTransport.getEventSource(), hostEID,
         instanceIdDb, event, &reqHandler);
+    oemUtilsHandler = std::make_unique<oem_ibm_utils::Handler>();
     codeUpdate->setOemPlatformHandler(oemPlatformHandler.get());
     oemFruHandler = std::make_unique<oem_ibm_fru::Handler>(pdrRepo.get());
     invoker.registerHandler(PLDM_OEM, std::make_unique<oem_ibm::Handler>(
@@ -255,7 +258,8 @@ int main(int argc, char** argv)
         hostPDRHandler = std::make_shared<HostPDRHandler>(
             pldmTransport.getEventSource(), hostEID, event, pdrRepo.get(),
             EVENTS_JSONS_DIR, entityTree.get(), bmcEntityTree.get(),
-            instanceIdDb, &reqHandler, oemPlatformHandler.get());
+            instanceIdDb, &reqHandler, oemPlatformHandler.get(),
+            oemUtilsHandler.get());
         // HostFirmware interface needs access to hostPDR to know if host
         // is running
         dbusImplHost.setHostPdrObj(hostPDRHandler);
