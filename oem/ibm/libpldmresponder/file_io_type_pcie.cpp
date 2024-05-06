@@ -1113,8 +1113,7 @@ int PCIeInfoHandler::newFileAvailable(uint64_t)
 }
 
 int PCIeInfoHandler::readIntoMemory(
-    uint32_t, uint32_t&, uint64_t,
-    oem_platform::Handler* /*oemPlatformHandler*/)
+    uint32_t, uint32_t, uint64_t, oem_platform::Handler* /*oemPlatformHandler*/)
 {
     return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
 }
