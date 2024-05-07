@@ -30,7 +30,7 @@ TEST(Serialize, SerializeGoodPath)
     std::string interface = "com.abc.DEF.TEST";
     std::string propertyname = "TEST";
     std::string propValue = "unittest";
-    objectMaps[path] = l1;
+    objectMaps[path] = entities;
 
     // Changing file location to store data for testing
     pldm::serialize::Serialize::getSerialize(filepath);
