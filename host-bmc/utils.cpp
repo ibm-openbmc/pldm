@@ -113,12 +113,12 @@ void addObjectPathEntityAssociations(
                 // exist.
                 if (objPathMap.contains(entity_path))
                 {
-                    objPathMap[entity_path] = entity;
+                    objPathMap[entity_path] = node_entity;
                 }
             }
-            catch (const std::exception&)
+            catch (const std::exception& e)
             {
-                objPathMap[entity_path] = entity;
+                objPathMap[entity_path] = node_entity;
             }
 
             for (size_t i = 1; i < ev.size(); i++)
@@ -145,12 +145,12 @@ void addObjectPathEntityAssociations(
             pldm::utils::DBusHandler().getService(dbusPath.c_str(), nullptr);
             if (objPathMap.contains(dbusPath))
             {
-                objPathMap[dbusPath] = entity;
+                objPathMap[dbusPath] = node_entity;
             }
         }
         catch (const std::exception&)
         {
-            objPathMap[dbusPath] = entity;
+            objPathMap[dbusPath] = node_entity;
         }
     }
 }

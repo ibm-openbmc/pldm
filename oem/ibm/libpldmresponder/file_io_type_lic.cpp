@@ -5,10 +5,9 @@
 
 #include "common/utils.hpp"
 
-#include <stdint.h>
-
 #include <phosphor-logging/lg2.hpp>
 
+#include <cstdint>
 #include <iostream>
 
 PHOSPHOR_LOG2_USING;

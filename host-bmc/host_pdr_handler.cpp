@@ -128,6 +128,15 @@ HostPDRHandler::HostPDRHandler(
                     fruRecordSetPDRs.clear();
                     isHostOff = true;
                     this->sensorIndex = stateSensorPDRs.begin();
+
+                    // After a power off , the remote nodes will be deleted
+                    // from the entity association tree, making the nodes point
+                    // to junk values, so set them to nullptr
+                    for (const auto& element : this->objPathMap)
+                    {
+                        pldm_entity obj{};
+                        this->objPathMap[element.first] = obj;
+                    }
                 }
             }
         });
@@ -1169,8 +1178,7 @@ void HostPDRHandler::setFRUDataOnDBus(
 #ifdef OEM_IBM
     for (const auto& entity : objPathMap)
     {
-        pldm_entity node = pldm_entity_extract(entity.second);
-        auto fruRSI = getRSI(node);
+        auto fruRSI = getRSI(entity.second);
 
         for (const auto& data : fruRecordData)
         {
@@ -1203,8 +1211,7 @@ void HostPDRHandler::createDbusObjects()
     // TODO: Creating and Refreshing dbus hosted by remote PLDM entity Fru PDRs
     for (const auto& entity : objPathMap)
     {
-        pldm_entity node = pldm_entity_extract(entity.second);
-        switch (node.entity_type)
+        switch (entity.second.entity_type)
         {
             case PLDM_ENTITY_PROC | 0x8000:
                 CustomDBus::getCustomDBus().implementCpuCoreInterface(
