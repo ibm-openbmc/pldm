@@ -1,5 +1,7 @@
 #pragma once
 
+#include "serialize.hpp"
+
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server.hpp>
 #include <sdbusplus/server/object.hpp>
@@ -30,8 +32,14 @@ class Motherboard : public ItemMotherboard
     Motherboard& operator=(Motherboard&&) = delete;
 
     Motherboard(sdbusplus::bus_t& bus, const std::string& objPath) :
-        ItemMotherboard(bus, objPath.c_str())
-    {}
+        ItemMotherboard(bus, objPath.c_str()), path(objPath)
+    {
+        pldm::serialize::Serialize::getSerialize().serialize(path,
+                                                             "Motherboard");
+    }
+
+  private:
+    std::string path;
 };
 
 } // namespace dbus
