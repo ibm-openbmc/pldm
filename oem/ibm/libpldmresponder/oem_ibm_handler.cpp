@@ -105,8 +105,9 @@ int pldm::responder::oem_ibm_platform::Handler::
 
         else
         {
-            error("Invalid entity type received: {ENTITY_TYPE}", "ENTITY_TYPE",
-                  entityType);
+            error(
+                "Invalid entity type '{TYPE}' received for entityInstance '{INSTANCE}'",
+                "ENTITY_TYPE", entityType, "INSTANCE", entityInstance);
         }
         rc = setNumericEffecter(entityInstance, value, entityType);
     }
@@ -631,8 +632,10 @@ void buildAllNumericEffecterDimmPDR(oem_ibm_platform::Handler* platformHandler,
         reinterpret_cast<pldm_numeric_effecter_value_pdr*>(entry.data());
     if (!pdr)
     {
-        error("Failed to get record by PDR type, ERROR:{ERR}", "ERR", lg2::hex,
-              static_cast<unsigned>(PLDM_PLATFORM_INVALID_EFFECTER_ID));
+        error(
+            "Failed to get record by Numeric Effecter PDR type for Dimms, ERROR:{ERR}",
+            "ERR", lg2::hex,
+            static_cast<unsigned>(PLDM_PLATFORM_INVALID_EFFECTER_ID));
         return;
     }
     if (entityType == PLDM_ENTITY_MEMORY_MODULE &&
@@ -1074,8 +1077,9 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
     }
     else
     {
-        error("Invalid entity type received: {ENTITY_TYPE}", "ENTITY_TYPE",
-              entityTypeReceived);
+        error(
+            "Invalid entity type '{TYPE}' received for entityInstance '{INSTANCE}'",
+            "TYPE", entityTypeReceived, "INSTANCE", entityInstance);
         return;
     }
     pldm::pdr::StateSetId stateSetId = PLDM_OEM_IBM_SBE_MAINTENANCE_STATE;
@@ -1107,11 +1111,17 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
             {
                 stateField.push_back(set_effecter_state_field{
                     PLDM_REQUEST_SET, SBE_DUMP_COMPLETED});
+                info(
+                    "State effecter ID {EFFECTER_ID} will be set with state as - SBE_DUMP_COMPLETED",
+                    "EFFECTER_ID", effecterId);
             }
             else
             {
                 stateField.push_back(set_effecter_state_field{
                     PLDM_REQUEST_SET, SBE_RETRY_REQUIRED});
+                info(
+                    "State effecter ID {EFFECTER_ID} will be set with state as - SBE_RETRY_REQUIRED",
+                    "EFFECTER_ID", effecterId);
             }
             auto rc = encode_set_state_effecter_states_req(
                 instanceId, effecterId, compEffecterCount, stateField.data(),
@@ -1119,7 +1129,8 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
             if (rc != PLDM_SUCCESS)
             {
                 error(
-                    " Set state effecter state command failure. PLDM error code: {RESPONSE_CODE}",
+                    "Set state effecter state command failure for state effecter ID '{EFFECTER_ID}' and entityInstance '{INSTANCE}'. PLDM error code: {RESPONSE_CODE}",
+                    "EFFECTER_ID", effecterId, "INSTANCE", entityInstance,
                     "RESPONSE_CODE", rc);
                 requester.markFree(mctp_eid, instanceId);
                 return;
@@ -1130,7 +1141,8 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
                 if (response == nullptr || !respMsgLen)
                 {
                     error(
-                        "Failed to receive response for setstateEffecterSates command");
+                        "Failed to receive response for setstateEffecterSates command for state effecter ID '{EFFECTER_ID}' and entityInstance '{INSTANCE}'",
+                        "EFFECTER_ID", effecterId, "INSTANCE", entityInstance);
                     return;
                 }
                 uint8_t completionCode{};
@@ -1139,7 +1151,8 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
                 if (rc)
                 {
                     error(
-                        "Failed to decode setStateEffecterStates response: {RESPONSE_CODE}",
+                        "Failed to decode setStateEffecterStates for state effecter ID '{EFFECTER_ID}' and entityInstance '{INSTANCE}', response: {RESPONSE_CODE}",
+                        "EFFECTER_ID", effecterId, "INSTANCE", entityInstance,
                         "RESPONSE_CODE", rc);
                     pldm::utils::reportError(
                         "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
@@ -1147,8 +1160,10 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
                 }
                 if (completionCode)
                 {
-                    error("Failed to set a Host effecter: {COMPLETION_CODE}",
-                          "COMPLETION_CODE", completionCode);
+                    error(
+                        "Failed to set a Host effecter for state effecter ID '{EFFECTER_ID}', response code '{COMPLETION_CODE}'",
+                        "EFFECTER_ID", effecterId, "COMPLETION_CODE",
+                        completionCode);
                     pldm::utils::reportError(
                         "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
                         pldm::PelSeverity::ERROR);
@@ -1160,7 +1175,9 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
                 std::move(setStateEffecterStatesRespHandler));
             if (rc)
             {
-                error("Failed to send request to set an effecter on Host");
+                error(
+                    "Failed to send request to set an effecter on Host for state effecter ID '{EFFECTER_ID}' and entityInstance '{INSTANCE}'",
+                    "EFFECTER_ID", effecterId, "INSTANCE", entityInstance);
             }
         }
     }
@@ -1237,8 +1254,9 @@ int pldm::responder::oem_ibm_platform::Handler::setNumericEffecter(
         }
         else
         {
-            error("Invalid entity type received: {ENTITY_TYPE}", "ENTITY_TYPE",
-                  entityType);
+            error(
+                "Invalid entity type '{TYPE}' received for entityInstance '{INSTANCE}'",
+                "TYPE", entityType, "INSTANCE", entityInstance);
             return PLDM_ERROR;
         }
         createParams[errLogIdParam] = (uint64_t)value;
@@ -1255,7 +1273,7 @@ int pldm::responder::oem_ibm_platform::Handler::setNumericEffecter(
     catch (const std::exception& e)
     {
         error(
-            "Failed to make a DBus call as the dump policy is disabled,ERROR= {ERR_EXCEP}",
+            "Failed to make a DBus call as the dump policy is disabled, ERROR= {ERR_EXCEP}",
             "ERR_EXCEP", e.what());
         // case when the dump policy is disabled but we set the host effecter as
         // true and the host moves on
