@@ -1,7 +1,12 @@
 #pragma once
 
 #include "common/utils.hpp"
+#include "associations.hpp"
 #include "cpu_core.hpp"
+#include "motherboard.hpp"
+#include "pcie_device.hpp"
+#include "pcie_slot.hpp"
+#include "../dbus_to_host_effecters.hpp"
 
 #include <sdbusplus/server.hpp>
 #include <xyz/openbmc_project/Inventory/Decorator/LocationCode/server.hpp>
@@ -82,9 +87,57 @@ class CustomDBus
      */
     void setMicrocode(const std::string& path, uint32_t value);
 
+    /** @brief Implement interface for motherboard property
+     *
+     *  @param[in] path  - The object path
+     *
+     */
+    void implementMotherboardInterface(const std::string& path);
+
+    /** @brief Set the Associations property
+     *
+     *  @param[in] path     - The object path
+     *
+     *  @param[in] value    - An array of forward, reverse, endpoint tuples
+     */
+    void setAssociations(const std::string& path, AssociationsObj assoc);
+
+    /** @brief Get the current Associations property
+     *
+     *  @param[in] path     - The object path
+     *
+     *  @return current Associations -  An array of forward, reverse, endpoint
+     * tuples
+     */
+    const std::vector<std::tuple<std::string, std::string, std::string>>
+        getAssociations(const std::string& path);
+
+    /** @brief get Bus ID
+     *  @param[in] path - The object path
+     */
+    size_t getBusId(const std::string& path) const;
+    void implementPCIeSlotInterface(const std::string& path);
+    void implementPCIeDeviceInterface(const std::string& path);
+    /** @brief set properties  on slots */
+    void setSlotProperties(const std::string& path, const uint32_t& value,
+                           const std::string& linkState);
+
+    /** @brief set pcie device properties */
+    void setPCIeDeviceProps(const std::string& path, int64_t lanesInuse,
+                            const std::string& value);
+
+    /* @brief set partNumber */
+    void setPartNumber(const std::string& path, const std::string& partNumber);
+
+    void setSlotType(const std::string& path, const std::string& slotType);
+
   private:
     std::unordered_map<ObjectPath, std::unique_ptr<LocationIntf>> location;
     std::unordered_map<ObjectPath, std::unique_ptr<CPUCore>> cpuCore;
+    std::unordered_map<ObjectPath, std::unique_ptr<Motherboard>> motherboard;
+    std::unordered_map<ObjectPath, std::unique_ptr<Associations>> associations;
+    std::unordered_map<ObjectPath, std::unique_ptr<PCIeDevice>> pcieDevice;
+    std::unordered_map<ObjectPath, std::unique_ptr<PCIeSlot>> pcieSlot;
 };
 
 } // namespace dbus

@@ -18,13 +18,14 @@ namespace fs = std::filesystem;
 using namespace pldm::utils;
 
 using Json = nlohmann::json;
+using Properties = std::map<std::string, dbus::PropertyValue>;
 
 using callback =
-    std::function<void(const std::string& path, PropertyMap values)>;
+    std::function<void(const std::string& path, Properties values)>;
 
 std::unordered_map<std::string, callback> dBusInterfaceHandler{
     {"CPUCore",
-     [](const std::string& path, PropertyMap values) {
+     [](const std::string& path, Properties values) {
     if (values.contains("microcode"))
     {
         pldm::dbus::CustomDBus::getCustomDBus().setMicrocode(
@@ -35,7 +36,9 @@ std::unordered_map<std::string, callback> dBusInterfaceHandler{
         pldm::dbus::CustomDBus::getCustomDBus().implementCpuCoreInterface(path);
     }
 }},
-};
+    {"Motherboard", [](const std::string& path, Properties /* values */) {
+    pldm::dbus::CustomDBus::getCustomDBus().implementMotherboardInterface(path);
+}}};
 
 std::pair<std::set<uint16_t>, std::set<uint16_t>>
     getEntityTypes(const fs::path& path)

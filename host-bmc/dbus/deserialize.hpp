@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../common/utils.hpp"
+#include "type.hpp"
 #include "host-bmc/host_pdr_handler.hpp"
 
 #include <filesystem>

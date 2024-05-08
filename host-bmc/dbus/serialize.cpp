@@ -25,7 +25,7 @@ namespace serialize
 namespace fs = std::filesystem;
 
 void Serialize::serialize(const std::string& path, const std::string& intf,
-                          const std::string& name, utils::PropertyValue value)
+                          const std::string& name, dbus::PropertyValue value)
 {
     if (path.empty() || intf.empty())
     {
@@ -43,7 +43,7 @@ void Serialize::serialize(const std::string& path, const std::string& intf,
     uint16_t cid = entity.entity_container_id;
     if (!savedObjs.contains(type) || !savedObjs[type].contains(path))
     {
-        std::map<std::string, std::map<std::string, pldm::utils::PropertyValue>>
+        std::map<std::string, std::map<std::string, pldm::dbus::PropertyValue>>
             maps{{{intf, {{name, value}}}}};
         savedObjs[type][path] = std::make_tuple(num, cid, maps);
     }
