@@ -3,6 +3,7 @@
 #include "com/ibm/License/Entry/LicenseEntry/server.hpp"
 #include "common/utils.hpp"
 #include "cpu_core.hpp"
+#include "motherboard.hpp"
 
 #include <libpldm/state_set.h>
 
@@ -149,6 +150,13 @@ class CustomDBus
      */
     std::optional<uint32_t> getMicroCode(const std::string& path) const;
 
+    /** @brief Implement interface for motherboard property
+     *
+     *  @param[in] path  - The object path
+     *
+     */
+    void implementMotherboardInterface(const std::string& path);
+
   private:
     std::unordered_map<ObjectPath, std::unique_ptr<LocationIntf>> location;
     std::map<ObjectPath, std::unique_ptr<OperationalStatusIntf>>
@@ -156,6 +164,7 @@ class CustomDBus
     std::map<ObjectPath, std::unique_ptr<AvailabilityIntf>> availabilityState;
     std::unordered_map<ObjectPath, std::unique_ptr<LicIntf>> codLic;
     std::unordered_map<ObjectPath, std::unique_ptr<CPUCore>> cpuCore;
+    std::unordered_map<ObjectPath, std::unique_ptr<Motherboard>> motherboard;
 };
 
 } // namespace dbus
