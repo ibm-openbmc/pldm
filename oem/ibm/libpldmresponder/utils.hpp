@@ -1,5 +1,7 @@
 #pragma once
 
+#include "common/utils.hpp"
+
 #include <unistd.h>
 
 #include <cstdint>

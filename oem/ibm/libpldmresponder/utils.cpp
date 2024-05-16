@@ -1,7 +1,5 @@
 #include "utils.hpp"
 
-#include "common/utils.hpp"
-
 #include <libpldm/base.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -14,6 +12,8 @@
 #include <xyz/openbmc_project/ObjectMapper/client.hpp>
 
 PHOSPHOR_LOG2_USING;
+
+using namespace pldm::utils;
 
 namespace pldm
 {
