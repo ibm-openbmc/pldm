@@ -290,7 +290,7 @@ int HostEffecterParser::sendSetStateEffecterStates(
                 << effecterId << " , rc " << rc << "\n";
             pldm::utils::reportError(
                 "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
-                pldm::PelSeverity::ERROR);
+                pldm::PelSeverity::INFORMATIONAL);
         }
         if (completionCode)
         {
@@ -300,7 +300,7 @@ int HostEffecterParser::sendSetStateEffecterStates(
                       << "\n";
             pldm::utils::reportError(
                 "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
-                pldm::PelSeverity::ERROR);
+                pldm::PelSeverity::INFORMATIONAL);
         }
         else
         {
