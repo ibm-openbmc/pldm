@@ -1010,7 +1010,7 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
                     "RC", static_cast<unsigned>(rc));
                 pldm::utils::reportError(
                     "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
-                    pldm::PelSeverity::ERROR);
+                    pldm::PelSeverity::INFORMATIONAL);
             }
             if (completionCode)
             {
@@ -1018,7 +1018,7 @@ void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
                       static_cast<unsigned>(completionCode));
                 pldm::utils::reportError(
                     "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed",
-                    pldm::PelSeverity::ERROR);
+                    pldm::PelSeverity::INFORMATIONAL);
             }
         };
         rc = handler->registerRequest(
