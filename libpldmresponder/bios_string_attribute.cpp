@@ -4,7 +4,6 @@
 
 #include <phosphor-logging/lg2.hpp>
 
-#include <iostream>
 #include <tuple>
 #include <variant>
 
@@ -89,8 +88,9 @@ std::string BIOSStringAttribute::getAttrValue()
     }
     catch (const std::exception& e)
     {
-        error("Get String Attribute Value Error: AttributeName = {ATTR_NAME}",
-              "ATTR_NAME", name);
+        error(
+            "Error getting string attribute '{ATTR}' from '{INTERFACE}': {ERROR}",
+            "ATTR", name, "INTERFACE", dBusMap->interface, "ERROR", e);
         return stringInfo.defString;
     }
 }

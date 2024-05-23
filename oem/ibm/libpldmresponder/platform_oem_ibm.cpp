@@ -3,12 +3,11 @@
 #include "common/utils.hpp"
 #include "libpldmresponder/pdr.hpp"
 
-#include <libpldm/platform_oem_ibm.h>
+#include <libpldm/oem/ibm/platform.h>
 
 #include <phosphor-logging/lg2.hpp>
 #include <xyz/openbmc_project/Common/error.hpp>
-
-#include <iostream>
+#include <xyz/openbmc_project/State/Boot/Progress/client.hpp>
 
 PHOSPHOR_LOG2_USING;
 
@@ -23,29 +22,31 @@ int sendBiosAttributeUpdateEvent(
     const std::vector<uint16_t>& handles,
     pldm::requester::Handler<pldm::requester::Request>* handler)
 {
+    using BootProgress =
+        sdbusplus::client::xyz::openbmc_project::state::boot::Progress<>;
+
     constexpr auto hostStatePath = "/xyz/openbmc_project/state/host0";
-    constexpr auto hostStateInterface =
-        "xyz.openbmc_project.State.Boot.Progress";
     constexpr auto hostStateProperty = "BootProgress";
 
     try
     {
         auto propVal = pldm::utils::DBusHandler().getDbusPropertyVariant(
-            hostStatePath, hostStateProperty, hostStateInterface);
-        const auto& currHostState = std::get<std::string>(propVal);
-        if ((currHostState != "xyz.openbmc_project.State.Boot.Progress."
-                              "ProgressStages.SystemInitComplete") &&
-            (currHostState != "xyz.openbmc_project.State.Boot.Progress."
-                              "ProgressStages.OSRunning") &&
-            (currHostState != "xyz.openbmc_project.State.Boot.Progress."
-                              "ProgressStages.SystemSetup"))
+            hostStatePath, hostStateProperty, BootProgress::interface);
+
+        using Stages = BootProgress::ProgressStages;
+        auto currHostState = sdbusplus::message::convert_from_string<Stages>(
+                                 std::get<std::string>(propVal))
+                                 .value();
+
+        if (currHostState != Stages::SystemInitComplete &&
+            currHostState != Stages::OSRunning &&
+            currHostState != Stages::SystemSetup)
         {
             return PLDM_SUCCESS;
         }
     }
     catch (
-        const sdbusplus::xyz::openbmc_project::Common::Error::ResourceNotFound&
-            e)
+        const sdbusplus::xyz::openbmc_project::Common::Error::ResourceNotFound&)
     {
         /* Exception is expected to happen in the case when state manager is
          * started after pldm, this is expected to happen in reboot case

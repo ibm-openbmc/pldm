@@ -5,9 +5,10 @@
 #include "libpldmresponder/pdr_utils.hpp"
 
 #include <libpldm/entity.h>
-#include <libpldm/entity_oem_ibm.h>
+#include <libpldm/oem/ibm/entity.h>
 
 #include <phosphor-logging/lg2.hpp>
+#include <xyz/openbmc_project/State/BMC/client.hpp>
 
 PHOSPHOR_LOG2_USING;
 
@@ -418,6 +419,36 @@ void pldm::responder::oem_ibm_platform::Handler::_processStartUpdate(
                          uint8_t(CodeUpdateState::END));
 }
 
+void pldm::responder::oem_ibm_platform::Handler::updateOemDbusPaths(
+    std::string& dbusPath)
+{
+    std::string toFind("system1/chassis1/motherboard1");
+    if (dbusPath.find(toFind) != std::string::npos)
+    {
+        size_t pos = dbusPath.find(toFind);
+        dbusPath.replace(pos, toFind.length(), "system/chassis/motherboard");
+    }
+    toFind = "system1";
+    if (dbusPath.find(toFind) != std::string::npos)
+    {
+        size_t pos = dbusPath.find(toFind);
+        dbusPath.replace(pos, toFind.length(), "system");
+    }
+    /* below logic to replace path 'motherboard/socket/chassis' to
+       'motherboard/chassis' or 'motherboard/socket123/chassis' to
+       'motherboard/chassis' */
+    toFind = "socket";
+    size_t pos1 = dbusPath.find(toFind);
+    // while loop to detect multiple substring 'socket' in the path
+    while (pos1 != std::string::npos)
+    {
+        size_t pos2 = dbusPath.substr(pos1 + 1).find('/') + 1;
+        // Replacing starting from substring to next occurence of char '/'
+        dbusPath.replace(pos1, pos2 + 1, "");
+        pos1 = dbusPath.find(toFind);
+    }
+}
+
 void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
     sdeventplus::source::EventBase& /*source */)
 {
@@ -513,7 +544,7 @@ bool pldm::responder::oem_ibm_platform::Handler::watchDogRunning()
         isWatchDogRunning = pldm::utils::DBusHandler().getDbusProperty<bool>(
             watchDogObjectPath, watchDogEnablePropName, watchDogInterface);
     }
-    catch (const std::exception& e)
+    catch (const std::exception&)
     {
         return false;
     }
@@ -575,12 +606,14 @@ void pldm::responder::oem_ibm_platform::Handler::disableWatchDogTimer()
 }
 int pldm::responder::oem_ibm_platform::Handler::checkBMCState()
 {
+    using BMC = sdbusplus::client::xyz::openbmc_project::state::BMC<>;
+    auto bmcPath = sdbusplus::message::object_path(BMC::namespace_path::value) /
+                   BMC::namespace_path::bmc;
     try
     {
         pldm::utils::PropertyValue propertyValue =
             pldm::utils::DBusHandler().getDbusPropertyVariant(
-                "/xyz/openbmc_project/state/bmc0", "CurrentBMCState",
-                "xyz.openbmc_project.State.BMC");
+                bmcPath.str.c_str(), "CurrentBMCState", BMC::interface);
 
         if (std::get<std::string>(propertyValue) ==
             "xyz.openbmc_project.State.BMC.BMCState.NotReady")
@@ -591,7 +624,7 @@ int pldm::responder::oem_ibm_platform::Handler::checkBMCState()
     }
     catch (const std::exception& e)
     {
-        error("Error getting the current BMC state");
+        error("Error getting the current BMC state: {ERROR}", "ERROR", e);
         return PLDM_ERROR;
     }
     return PLDM_SUCCESS;

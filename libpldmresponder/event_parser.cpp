@@ -5,7 +5,6 @@
 
 #include <filesystem>
 #include <fstream>
-#include <iostream>
 #include <set>
 
 PHOSPHOR_LOG2_USING;
@@ -58,6 +57,8 @@ StateSensorHandler::StateSensorHandler(const std::string& dirPath)
                 static_cast<uint16_t>(entry.value("entityInstance", 0));
             stateSensorEntry.sensorOffset =
                 static_cast<uint8_t>(entry.value("sensorOffset", 0));
+            stateSensorEntry.stateSetid =
+                static_cast<uint16_t>(entry.value("stateSetId", 0));
 
             pldm::utils::DBusMapping dbusInfo{};
 
@@ -68,8 +69,7 @@ StateSensorHandler::StateSensorHandler(const std::string& dirPath)
             dbusInfo.propertyType = dbus.value("property_type", "");
             if (dbusInfo.objectPath.empty() || dbusInfo.interface.empty() ||
                 dbusInfo.propertyName.empty() ||
-                (supportedDbusPropertyTypes.find(dbusInfo.propertyType) ==
-                 supportedDbusPropertyTypes.end()))
+                !supportedDbusPropertyTypes.contains(dbusInfo.propertyType))
             {
                 error(
                     "Invalid dbus config, OBJPATH= {DBUS_OBJ_PATH} INTERFACE={DBUS_INTF} PROPERTY_NAME={DBUS_PROP} PROPERTY_TYPE={DBUS_PROP_TYPE}",
@@ -129,8 +129,8 @@ int StateSensorHandler::eventAction(const StateSensorEntry& entry,
         }
         catch (const std::out_of_range& e)
         {
-            error("Invalid event state {EVENT_STATE}", "EVENT_STATE",
-                  static_cast<unsigned>(state));
+            error("Invalid event state '{EVENT_STATE}': {ERROR}", "EVENT_STATE",
+                  state, "ERROR", e);
             return PLDM_ERROR_INVALID_DATA;
         }
 
@@ -141,14 +141,14 @@ int StateSensorHandler::eventAction(const StateSensorEntry& entry,
         catch (const std::exception& e)
         {
             error(
-                "Error setting property, ERROR={ERR_EXCEP} PROPERTY={DBUS_PROP} INTERFACE={DBUS_INTF} PATH = {DBUS_OBJ_PATH}",
-                "ERR_EXCEP", e.what(), "DBUS_PROP", dbusMapping.propertyName,
-                "DBUS_INTF", dbusMapping.interface, "DBUS_OBJ_PATH",
-                dbusMapping.objectPath.c_str());
+                "Error setting property value '{PROPERTY}' on interface '{INTERFACE}' at '{PATH}': {ERROR}",
+                "PROPERTY", dbusMapping.propertyName, "INTERFACE",
+                dbusMapping.interface, "PATH", dbusMapping.objectPath, "ERROR",
+                e);
             return PLDM_ERROR;
         }
     }
-    catch (const std::out_of_range& e)
+    catch (const std::out_of_range&)
     {
         // There is no BMC action for this PLDM event
         return PLDM_SUCCESS;

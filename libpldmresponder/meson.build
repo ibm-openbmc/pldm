@@ -20,13 +20,16 @@ sources = [
   'pdr_utils.cpp',
   'pdr.cpp',
   'platform.cpp',
+  'platform_config.cpp',
   'fru_parser.cpp',
   'fru.cpp',
   '../host-bmc/host_pdr_handler.cpp',
+  '../host-bmc/utils.cpp',
   '../host-bmc/dbus_to_event_handler.cpp',
   '../host-bmc/dbus_to_host_effecters.cpp',
   '../host-bmc/host_condition.cpp',
   '../host-bmc/custom_dbus.cpp',
+  '../host-bmc/utils.cpp',
   'event_parser.cpp'
 ]
 
@@ -45,12 +48,13 @@ if get_option('oem-ibm').allowed()
     '../oem/ibm/libpldmresponder/file_io_type_dump.cpp',
     '../oem/ibm/libpldmresponder/file_io_type_cert.cpp',
     '../oem/ibm/libpldmresponder/platform_oem_ibm.cpp',
+    '../oem/ibm/libpldmresponder/fru_oem_ibm.cpp',
     '../oem/ibm/libpldmresponder/oem_ibm_handler.cpp',
     '../oem/ibm/libpldmresponder/inband_code_update.cpp',
     '../oem/ibm/requester/dbus_to_file_handler.cpp',
     '../oem/ibm/libpldmresponder/file_io_type_progress_src.cpp',
     '../oem/ibm/libpldmresponder/file_io_type_vpd.cpp',
-    '../oem/ibm/libpldmresponder/bios_oem_ibm.cpp',
+    '../oem/ibm/libpldmresponder/file_io_type_pcie.cpp',
   ]
 endif
 

@@ -9,7 +9,6 @@
 #include <phosphor-logging/lg2.hpp>
 #include <sdbusplus/bus.hpp>
 
-#include <iostream>
 #include <optional>
 #include <set>
 #include <stack>
@@ -34,7 +33,7 @@ std::optional<pldm_entity>
             entity.entity_type = parser.getEntityType(intfMap.first);
             return entity;
         }
-        catch (const std::exception& e)
+        catch (const std::exception&)
         {
             continue;
         }
@@ -101,7 +100,7 @@ void FruImpl::updateAssociationTree(const dbus::ObjectValueTree& objects,
 
                 pldm_entity entity = *entityPtr;
 
-                for (auto& it : objToEntityNode)
+                for (const auto& it : objToEntityNode)
                 {
                     pldm_entity node = pldm_entity_extract(it.second);
                     if (node.entity_type == entity.entity_type)
@@ -146,23 +145,17 @@ void FruImpl::buildFRUTable()
     }
 
     fru_parser::DBusLookupInfo dbusInfo;
-    // Read the all the inventory D-Bus objects
-    auto& bus = pldm::utils::DBusHandler::getBus();
-    dbus::ObjectValueTree objects;
 
     try
     {
         dbusInfo = parser.inventoryLookup();
-        auto method = bus.new_method_call(
-            std::get<0>(dbusInfo).c_str(), std::get<1>(dbusInfo).c_str(),
-            "org.freedesktop.DBus.ObjectManager", "GetManagedObjects");
-        auto reply = bus.call(method, dbusTimeout);
-        reply.read(objects);
+        objects = pldm::utils::DBusHandler::getInventoryObjects<
+            pldm::utils::DBusHandler>();
     }
     catch (const std::exception& e)
     {
-        error(
-            "Look up of inventory objects failed and PLDM FRU table creation failed");
+        error("Failed building FRU table due to inventory lookup: {ERROR}",
+              "ERROR", e);
         return;
     }
 
@@ -171,17 +164,16 @@ void FruImpl::buildFRUTable()
     for (const auto& object : objects)
     {
         const auto& interfaces = object.second;
-        bool isPresent = pldm::utils::checkForFruPresence(object.first.str);
-        // Do not create fru record if fru is not present.
-        // Pick up the next available fru.
-        if (!isPresent)
-        {
-            continue;
-        }
         for (const auto& interface : interfaces)
         {
-            if (itemIntfsLookup.find(interface.first) != itemIntfsLookup.end())
+            if (itemIntfsLookup.contains(interface.first))
             {
+                // checking fru present property is available or not.
+                if (!pldm::utils::checkForFruPresence(object.first.str))
+                {
+                    continue;
+                }
+
                 // An exception will be thrown by getRecordInfo, if the item
                 // D-Bus interface name specified in FRU_Master.json does
                 // not have corresponding config jsons
@@ -227,14 +219,6 @@ void FruImpl::buildFRUTable()
     // save a copy of bmc's entity association tree
     pldm_entity_association_tree_copy_root(entityTree, bmcEntityTree);
 
-    if (table.size())
-    {
-        padBytes = pldm::utils::getNumPadBytes(table.size());
-        table.resize(table.size() + padBytes, 0);
-
-        // Calculate the checksum
-        checksum = crc32(table.data(), table.size());
-    }
     isBuilt = true;
 }
 std::string FruImpl::populatefwVersion()
@@ -325,7 +309,7 @@ void FruImpl::populateRecords(
                               std::back_inserter(tlvs));
                 }
             }
-            catch (const std::out_of_range& e)
+            catch (const std::out_of_range&)
             {
                 continue;
             }
@@ -358,17 +342,46 @@ void FruImpl::populateRecords(
     }
 }
 
+std::vector<uint8_t> FruImpl::tableResize()
+{
+    std::vector<uint8_t> tempTable;
+
+    if (table.size())
+    {
+        std::copy(table.begin(), table.end(), std::back_inserter(tempTable));
+        padBytes = pldm::utils::getNumPadBytes(table.size());
+        tempTable.resize(tempTable.size() + padBytes, 0);
+    }
+    return tempTable;
+}
+
 void FruImpl::getFRUTable(Response& response)
 {
     auto hdrSize = response.size();
+    std::vector<uint8_t> tempTable;
 
-    response.resize(hdrSize + table.size() + sizeof(checksum), 0);
-    std::copy(table.begin(), table.end(), response.begin() + hdrSize);
+    if (table.size())
+    {
+        tempTable = tableResize();
+        checksum = crc32(tempTable.data(), tempTable.size());
+    }
+    response.resize(hdrSize + tempTable.size() + sizeof(checksum), 0);
+    std::copy(tempTable.begin(), tempTable.end(), response.begin() + hdrSize);
 
     // Copy the checksum to response data
-    auto iter = response.begin() + hdrSize + table.size();
+    auto iter = response.begin() + hdrSize + tempTable.size();
     std::copy_n(reinterpret_cast<const uint8_t*>(&checksum), sizeof(checksum),
                 iter);
+}
+
+void FruImpl::getFRURecordTableMetadata()
+{
+    std::vector<uint8_t> tempTable;
+    if (table.size())
+    {
+        tempTable = tableResize();
+        checksum = crc32(tempTable.data(), tempTable.size());
+    }
 }
 
 int FruImpl::getFRURecordByOption(std::vector<uint8_t>& fruData,
@@ -409,6 +422,24 @@ int FruImpl::getFRURecordByOption(std::vector<uint8_t>& fruData,
     return PLDM_SUCCESS;
 }
 
+int FruImpl::setFRUTable(const std::vector<uint8_t>& fruData)
+{
+    auto record =
+        reinterpret_cast<const pldm_fru_record_data_format*>(fruData.data());
+    if (record)
+    {
+        if (oemFruHandler && record->record_type == PLDM_FRU_RECORD_TYPE_OEM)
+        {
+            auto rc = oemFruHandler->processOEMFRUTable(fruData);
+            if (!rc)
+            {
+                return PLDM_SUCCESS;
+            }
+        }
+    }
+    return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+}
+
 namespace fru
 {
 Response Handler::getFRURecordTableMetadata(const pldm_msg* request,
@@ -425,6 +456,8 @@ Response Handler::getFRURecordTableMetadata(const pldm_msg* request,
                           PLDM_GET_FRU_RECORD_TABLE_METADATA_RESP_BYTES,
                       0);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+
+    impl.getFRURecordTableMetadata();
 
     auto rc = encode_get_fru_record_table_metadata_resp(
         request->hdr.instance_id, PLDM_SUCCESS, major, minor, maxSize,
@@ -508,6 +541,44 @@ Response Handler::getFRURecordByOption(const pldm_msg* request,
     rc = encode_get_fru_record_by_option_resp(
         request->hdr.instance_id, PLDM_SUCCESS, 0, PLDM_START_AND_END,
         fruData.data(), fruData.size(), responsePtr, respPayloadLength);
+
+    if (rc != PLDM_SUCCESS)
+    {
+        return ccOnlyResponse(request, rc);
+    }
+
+    return response;
+}
+
+Response Handler::setFRURecordTable(const pldm_msg* request,
+                                    size_t payloadLength)
+{
+    uint32_t transferHandle{};
+    uint8_t transferOpFlag{};
+    struct variable_field fruData;
+
+    auto rc = decode_set_fru_record_table_req(
+        request, payloadLength, &transferHandle, &transferOpFlag, &fruData);
+
+    if (rc != PLDM_SUCCESS)
+    {
+        return ccOnlyResponse(request, rc);
+    }
+
+    Table table(fruData.ptr, fruData.ptr + fruData.length);
+    rc = impl.setFRUTable(table);
+    if (rc != PLDM_SUCCESS)
+    {
+        return ccOnlyResponse(request, rc);
+    }
+
+    Response response(sizeof(pldm_msg_hdr) +
+                      PLDM_SET_FRU_RECORD_TABLE_RESP_BYTES);
+    struct pldm_msg* responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+
+    rc = encode_set_fru_record_table_resp(
+        request->hdr.instance_id, PLDM_SUCCESS, 0 /* nextDataTransferHandle */,
+        response.size() - sizeof(pldm_msg_hdr), responsePtr);
 
     if (rc != PLDM_SUCCESS)
     {

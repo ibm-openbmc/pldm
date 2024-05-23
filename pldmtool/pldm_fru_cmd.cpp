@@ -3,7 +3,7 @@
 #include "pldm_cmd_helper.hpp"
 
 #ifdef OEM_IBM
-#include <libpldm/fru_oem_ibm.h>
+#include <libpldm/oem/ibm/fru.h>
 #endif
 
 #include <endian.h>
@@ -152,8 +152,7 @@ class FRUTablePrint
                         auto oemIPZValue = fruFieldValuestring(tlv->value,
                                                                tlv->length);
 
-                        if (populateMaps.find(oemIPZValue) !=
-                            populateMaps.end())
+                        if (populateMaps.contains(oemIPZValue))
                         {
                             const std::map<uint8_t, std::string> IPZTypes =
                                 populateMaps.at(oemIPZValue);

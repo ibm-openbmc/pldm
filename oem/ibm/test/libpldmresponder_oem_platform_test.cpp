@@ -9,11 +9,9 @@
 #include "test/test_instance_id.hpp"
 
 #include <libpldm/entity.h>
-#include <libpldm/entity_oem_ibm.h>
+#include <libpldm/oem/ibm/entity.h>
 
 #include <sdeventplus/event.hpp>
-
-#include <iostream>
 
 using namespace pldm::utils;
 using namespace pldm::responder;
@@ -82,12 +80,14 @@ TEST(OemSetStateEffecterStatesHandler, testGoodRequest)
     std::vector<get_sensor_state_field> stateField1;
     rc = oemPlatformHandler->getOemStateSensorReadingsHandler(
         entityID_, entityInstance_, stateSetId_, compSensorCnt_, stateField1);
+    ASSERT_EQ(rc, PLDM_SUCCESS);
     ASSERT_EQ(stateField1.size(), 1);
     ASSERT_EQ(stateField1[0].event_state, tSideNum);
 
     entityInstance_ = 2;
     rc = oemPlatformHandler->getOemStateSensorReadingsHandler(
         entityID_, entityInstance_, stateSetId_, compSensorCnt_, stateField1);
+    ASSERT_EQ(rc, PLDM_SUCCESS);
     ASSERT_EQ(stateField1[0].event_state, PLDM_SENSOR_UNKNOWN);
 
     entityID_ = 40;
@@ -187,7 +187,6 @@ TEST(generateStateEffecterOEMPDR, testGoodRequest)
 {
     auto inPDRRepo = pldm_pdr_init();
     sdbusplus::bus_t bus(sdbusplus::bus::new_default());
-    std::filesystem::path dbPath;
     TestInstanceIdDb instanceIdDb;
     auto mockDbusHandler = std::make_unique<MockdBusHandler>();
     auto event = sdeventplus::Event::get_default();
@@ -293,7 +292,6 @@ TEST(generateStateSensorOEMPDR, testGoodRequest)
 {
     auto inPDRRepo = pldm_pdr_init();
     sdbusplus::bus_t bus(sdbusplus::bus::new_default());
-    std::filesystem::path dbPath;
     TestInstanceIdDb instanceIdDb;
 
     auto mockDbusHandler = std::make_unique<MockdBusHandler>();
@@ -390,4 +388,24 @@ TEST(generateStateSensorOEMPDR, testGoodRequest)
     ASSERT_EQ(states->states[0].byte, bf3.byte);
 
     pldm_pdr_destroy(inPDRRepo);
+}
+
+TEST(updateOemDbusPath, testgoodpath)
+{
+    TestInstanceIdDb instanceIdDb;
+    auto mockDbusHandler = std::make_unique<MockdBusHandler>();
+    auto event = sdeventplus::Event::get_default();
+    std::unique_ptr<CodeUpdate> mockCodeUpdate =
+        std::make_unique<MockCodeUpdate>(mockDbusHandler.get());
+    std::unique_ptr<oem_ibm_platform::Handler> mockoemPlatformHandler =
+        std::make_unique<MockOemPlatformHandler>(mockDbusHandler.get(),
+                                                 mockCodeUpdate.get(), 0x1, 0x9,
+                                                 instanceIdDb, event);
+    std::string dbuspath = "/inventory/system1/chassis1/motherboard1/dcm0";
+    mockoemPlatformHandler->updateOemDbusPaths(dbuspath);
+    EXPECT_EQ(dbuspath, "/inventory/system/chassis/motherboard/dcm0");
+
+    dbuspath = "/inventory/system/chassis/socket1/motherboard/dcm0";
+    mockoemPlatformHandler->updateOemDbusPaths(dbuspath);
+    EXPECT_EQ(dbuspath, "/inventory/system/chassis/motherboard/dcm0");
 }

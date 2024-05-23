@@ -14,7 +14,9 @@
 
 #include <nlohmann/json.hpp>
 #include <sdbusplus/server.hpp>
+#include <xyz/openbmc_project/Inventory/Manager/client.hpp>
 #include <xyz/openbmc_project/Logging/Entry/server.hpp>
+#include <xyz/openbmc_project/ObjectMapper/client.hpp>
 
 #include <deque>
 #include <exception>
@@ -38,41 +40,13 @@ namespace fs = std::filesystem;
 using Json = nlohmann::json;
 constexpr bool Tx = true;
 constexpr bool Rx = false;
+using ObjectMapper = sdbusplus::client::xyz::openbmc_project::ObjectMapper<>;
+using inventoryManager =
+    sdbusplus::client::xyz::openbmc_project::inventory::Manager<>;
 
-using EntityName = std::string;
-using EntityType = uint16_t;
-
-using Entities = std::vector<pldm_entity_node*>;
-using EntityAssociations = std::vector<Entities>;
-using ObjectPathMaps = std::map<fs::path, pldm_entity_node*>;
-
-const std::map<EntityType, EntityName> entityMaps = {
-    {PLDM_ENTITY_SYSTEM_CHASSIS, "chassis"},
-    {PLDM_ENTITY_BOARD, "io_board"},
-    {PLDM_ENTITY_SYS_BOARD, "motherboard"},
-    {PLDM_ENTITY_POWER_SUPPLY, "powersupply"},
-    {PLDM_ENTITY_PROC, "cpu"},
-    {PLDM_ENTITY_SYSTEM_CHASSIS | 0x8000, "system"},
-    {PLDM_ENTITY_PROC_MODULE, "dcm"},
-    {PLDM_ENTITY_PROC | 0x8000, "core"},
-    {PLDM_ENTITY_IO_MODULE, "io_module"},
-    {PLDM_ENTITY_FAN, "fan"},
-    {PLDM_ENTITY_SYS_MGMT_MODULE, "system_management_module"},
-    {PLDM_ENTITY_POWER_CONVERTER, "power_converter"},
-    {PLDM_ENTITY_SLOT, "slot"},
-    {PLDM_ENTITY_CONNECTOR, "connector"}};
-
-/** @brief Vector a entity name to pldm_entity from entity association tree
- *  @param[in]  entityAssoc    - Vector of associated pldm entities
- *  @param[in]  entityTree     - entity association tree
- *  @param[out] objPathMap     - maps an object path to pldm_entity from the
- *                               BMC's entity association tree
- *  @return
- */
-void updateEntityAssociation(const EntityAssociations& entityAssoc,
-                             pldm_entity_association_tree* entityTree,
-                             ObjectPathMaps& objPathMap);
-
+constexpr auto dbusProperties = "org.freedesktop.DBus.Properties";
+constexpr auto mapperService = ObjectMapper::default_service;
+constexpr auto inventoryPath = "/xyz/openbmc_project/inventory";
 /** @struct CustomFD
  *
  *  RAII wrapper for file descriptor.
@@ -165,9 +139,6 @@ T decimalToBcd(T decimal)
     return bcd;
 }
 
-constexpr auto dbusProperties = "org.freedesktop.DBus.Properties";
-constexpr auto mapperService = "xyz.openbmc_project.ObjectMapper";
-
 struct DBusMapping
 {
     std::string objectPath;   //!< D-Bus object path
@@ -178,7 +149,8 @@ struct DBusMapping
 
 using PropertyValue =
     std::variant<bool, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t,
-                 uint64_t, double, std::string, std::vector<std::string>>;
+                 uint64_t, double, std::string, std::vector<uint8_t>,
+                 std::vector<std::string>>;
 using DbusProp = std::string;
 using DbusChangedProps = std::map<DbusProp, PropertyValue>;
 using DBusInterfaceAdded = std::vector<
@@ -190,8 +162,10 @@ using ServiceName = std::string;
 using Interfaces = std::vector<std::string>;
 using MapperServiceMap = std::vector<std::pair<ServiceName, Interfaces>>;
 using GetSubTreeResponse = std::vector<std::pair<ObjectPath, MapperServiceMap>>;
+using GetSubTreePathsResponse = std::vector<std::string>;
 using PropertyMap = std::map<std::string, PropertyValue>;
 using InterfaceMap = std::map<std::string, PropertyMap>;
+using ObjectValueTree = std::map<sdbusplus::message::object_path, InterfaceMap>;
 
 /**
  * @brief The interface for DBusHandler
@@ -207,12 +181,20 @@ class DBusHandlerInterface
         getSubtree(const std::string& path, int depth,
                    const std::vector<std::string>& ifaceList) const = 0;
 
+    virtual GetSubTreePathsResponse
+        getSubTreePaths(const std::string& objectPath, int depth,
+                        const std::vector<std::string>& ifaceList) const = 0;
+
     virtual void setDbusProperty(const DBusMapping& dBusMap,
                                  const PropertyValue& value) const = 0;
 
     virtual PropertyValue
         getDbusPropertyVariant(const char* objPath, const char* dbusProp,
                                const char* dbusInterface) const = 0;
+
+    virtual PropertyMap
+        getDbusPropertiesVariant(const char* serviceName, const char* objPath,
+                                 const char* dbusInterface) const = 0;
 };
 
 /**
@@ -263,6 +245,19 @@ class DBusHandler : public DBusHandlerInterface
         getSubtree(const std::string& path, int depth,
                    const std::vector<std::string>& ifaceList) const override;
 
+    /** @brief Get Subtree path response from the mapper
+     *
+     *  @param[in] path - DBUS object path
+     *  @param[in] depth - Search depth
+     *  @param[in] ifaceList - list of the interface that are being
+     *                         queried from the mapper
+     *
+     *  @return std::vector<std::string> vector of subtree paths
+     */
+    GetSubTreePathsResponse getSubTreePaths(
+        const std::string& objectPath, int depth,
+        const std::vector<std::string>& ifaceList) const override;
+
     /** @brief Get property(type: variant) from the requested dbus
      *
      *  @param[in] objPath - The Dbus object path
@@ -276,6 +271,20 @@ class DBusHandler : public DBusHandlerInterface
     PropertyValue
         getDbusPropertyVariant(const char* objPath, const char* dbusProp,
                                const char* dbusInterface) const override;
+
+    /** @brief Get All properties(type: variant) from the requested dbus
+     *
+     *  @param[in] serviceName - The Dbus service name
+     *  @param[in] objPath - The Dbus object path
+     *  @param[in] dbusInterface - The Dbus interface
+     *
+     *  @return The values of the properties(type: variant)
+     *
+     *  @throw sdbusplus::exception_t when it fails
+     */
+    PropertyMap
+        getDbusPropertiesVariant(const char* serviceName, const char* objPath,
+                                 const char* dbusInterface) const override;
 
     /** @brief The template function to get property from the requested dbus
      *         path
@@ -311,6 +320,34 @@ class DBusHandler : public DBusHandlerInterface
      */
     void setDbusProperty(const DBusMapping& dBusMap,
                          const PropertyValue& value) const override;
+
+    /** @brief This function retrieves the properties of an object managed
+     *         by the specified D-Bus service located at the given object path.
+     *
+     *  @param[in] service - The D-Bus service providing the managed object
+     *  @param[in] value - The object path of the managed object
+     *
+     *  @return A hierarchical structure representing the properties of the
+     *          managed object.
+     *  @throw sdbusplus::exception_t when it fails
+     */
+    static ObjectValueTree getManagedObj(const char* service, const char* path);
+
+    /** @brief Retrieve the inventory objects managed by a specified class.
+     *         The retrieved inventory objects are cached statically
+     *         and returned upon subsequent calls to this function.
+     *
+     *  @tparam ClassType - The class type that manages the inventory objects.
+     *
+     *  @return A reference to the cached inventory objects.
+     */
+    template <typename ClassType>
+    static auto& getInventoryObjects()
+    {
+        static ObjectValueTree object = ClassType::getManagedObj(
+            inventoryManager::interface, inventoryPath);
+        return object;
+    }
 };
 
 /** @brief Fetch parent D-Bus object based on pathname
@@ -464,5 +501,12 @@ bool checkForFruPresence(const std::string& objPath);
  *  @return true or false based on the logic bit set
  */
 bool checkIfLogicalBitSet(const uint16_t& containerId);
+
+/** @brief setting the present property
+ *
+ *  @param[in] objPath - the object path of the fru
+ *  @param[in] present - status to set either true/false
+ */
+void setFruPresence(const std::string& fruObjPath, bool present);
 } // namespace utils
 } // namespace pldm

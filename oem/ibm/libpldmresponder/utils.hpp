@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace pldm
 {
@@ -35,6 +36,22 @@ int setupUnixSocket(const std::string& socketInterface);
  */
 int writeToUnixSocket(const int sock, const char* buf,
                       const uint64_t blockSize);
+
+/** @brief checks if given FRU is IBM specific
+ *
+ *  @param[in] objPath - FRU object path
+ *
+ *  @return bool - true if IBM specific FRU
+ */
+bool checkIfIBMFru(const std::string& objPath);
+
+/** @brief finds the ports under an adapter
+ *
+ *  @param[in] adapterObjPath - D-Bus object path for the adapter
+ *
+ *  @return std::vector<std::string> - port object paths
+ */
+std::vector<std::string> findPortObjects(const std::string& adapterObjPath);
 
 } // namespace utils
 } // namespace responder

@@ -2,7 +2,6 @@ tests = [
   'libpldmresponder_base_test',
   'libpldmresponder_bios_test',
   'libpldmresponder_bios_attribute_test',
-  'libpldmresponder_bios_config_test',
   'libpldmresponder_bios_enum_attribute_test',
   'libpldmresponder_bios_integer_attribute_test',
   'libpldmresponder_bios_string_attribute_test',
@@ -21,12 +20,20 @@ if get_option('oem-ibm').allowed()
   ]
 endif
 
+if get_option('system-specific-bios-json').allowed()
+  tests += [
+    'libpldmresponder_systemspecific_bios_test'
+  ]
+else
+  tests += [
+    'libpldmresponder_bios_config_test'
+  ]
+endif
+
 foreach t : tests
   test(t, executable(t.underscorify(), t + '.cpp',
                      implicit_include_directories: false,
                      include_directories: [ '../../requester', '../../pldmd' ],
-                     link_args: dynamic_linker,
-                     build_rpath: get_option('oe-sdk').allowed() ? rpath : '',
                      dependencies: [
                          libpldm_dep,
                          libpldmresponder_dep,

@@ -12,14 +12,13 @@
 
 #include <array>
 #include <cstring>
-#include <iostream>
 #include <map>
 #include <stdexcept>
 #include <vector>
 
 #ifdef OEM_IBM
-#include <libpldm/file_io.h>
-#include <libpldm/host.h>
+#include <libpldm/oem/ibm/file_io.h>
+#include <libpldm/oem/ibm/host.h>
 #endif
 
 PHOSPHOR_LOG2_USING;
@@ -112,7 +111,7 @@ Response Handler::getPLDMCommands(const pldm_msg* request, size_t payloadLength)
 
     // DSP0240 has this as a bitfield8[N], where N = 0 to 31
     std::array<bitfield8_t, 32> cmds{};
-    if (capabilities.find(type) == capabilities.end())
+    if (!capabilities.contains(type))
     {
         return CmdHandler::ccOnlyResponse(request,
                                           PLDM_ERROR_INVALID_PLDM_TYPE);

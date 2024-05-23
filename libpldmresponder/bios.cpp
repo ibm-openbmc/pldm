@@ -9,7 +9,6 @@
 #include <array>
 #include <chrono>
 #include <ctime>
-#include <iostream>
 #include <stdexcept>
 #include <string>
 #include <variant>
@@ -69,15 +68,15 @@ using EpochTimeUS = uint64_t;
 
 DBusHandler dbusHandler;
 
-Handler::Handler(int fd, uint8_t eid, pldm::InstanceIdDb* instanceIdDb,
-                 pldm::requester::Handler<pldm::requester::Request>* handler,
-                 pldm::responder::oem_bios::Handler* oemBiosHandler) :
+Handler::Handler(
+    int fd, uint8_t eid, pldm::InstanceIdDb* instanceIdDb,
+    pldm::requester::Handler<pldm::requester::Request>* handler,
+    pldm::responder::platform_config::Handler* platformConfigHandler,
+    pldm::responder::bios::Callback requestPLDMServiceName) :
     biosConfig(BIOS_JSONS_DIR, BIOS_TABLES_DIR, &dbusHandler, fd, eid,
-               instanceIdDb, handler, oemBiosHandler)
+               instanceIdDb, handler, platformConfigHandler,
+               requestPLDMServiceName)
 {
-    biosConfig.removeTables();
-    biosConfig.buildTables();
-
     handlers.emplace(
         PLDM_SET_DATE_TIME,
         [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
@@ -134,9 +133,8 @@ Response Handler::getDateTime(const pldm_msg* request, size_t /*payloadLength*/)
     catch (const sdbusplus::exception_t& e)
     {
         error(
-            "Error getting time, PATH={BMC_TIME_PATH} TIME INTERACE={TIME_INTERFACE}",
-            "BMC_TIME_PATH", bmcTimePath, "TIME_INTERFACE", timeInterface);
-
+            "Error getting time from Elapsed property at '{PATH}' on '{INTERFACE}': {ERROR}",
+            "PATH", bmcTimePath, "INTERFACE", timeInterface, "ERROR", e);
         return CmdHandler::ccOnlyResponse(request, PLDM_ERROR);
     }
 

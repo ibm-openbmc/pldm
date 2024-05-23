@@ -4,8 +4,6 @@
 
 #include <phosphor-logging/lg2.hpp>
 
-#include <iostream>
-
 PHOSPHOR_LOG2_USING;
 
 using namespace pldm::utils;
@@ -32,6 +30,12 @@ BIOSEnumAttribute::BIOSEnumAttribute(const Json& entry,
     for (auto& val : dv)
     {
         defaultValues.emplace_back(val);
+    }
+
+    Json vdn = entry.at("value_names");
+    for (auto& val : vdn)
+    {
+        valueDisplayNames.emplace_back(val);
     }
     assert(defaultValues.size() == 1);
     defaultValue = defaultValues[0];
@@ -144,7 +148,7 @@ uint8_t BIOSEnumAttribute::getAttrValueIndex()
         auto currentValue = iter->second;
         return getValueIndex(currentValue, possibleValues);
     }
-    catch (const std::exception& e)
+    catch (const std::exception&)
     {
         return defaultValueIndex;
     }
@@ -156,7 +160,7 @@ uint8_t BIOSEnumAttribute::getAttrValueIndex(const PropertyValue& propValue)
     {
         return getValueIndex(std::get<std::string>(propValue), possibleValues);
     }
-    catch (const std::exception& e)
+    catch (const std::exception&)
     {
         return getValueIndex(defaultValue, possibleValues);
     }
@@ -189,6 +193,14 @@ void BIOSEnumAttribute::setAttrValueOnDbus(
     dbusHandler->setDbusProperty(*dBusMap, it->first);
 }
 
+void BIOSEnumAttribute::populateValueDisplayNamesMap(uint16_t attrHandle)
+{
+    for (auto& vdn : valueDisplayNames)
+    {
+        valueDisplayNamesMap[attrHandle].push_back(vdn);
+    }
+}
+
 void BIOSEnumAttribute::constructEntry(
     const BIOSStringTable& stringTable, Table& attrTable, Table& attrValueTable,
     std::optional<std::variant<int64_t, std::string>> optAttributeValue)
@@ -201,13 +213,14 @@ void BIOSEnumAttribute::constructEntry(
     pldm_bios_table_attr_entry_enum_info info = {
         stringTable.findHandle(name),         readOnly,
         (uint8_t)possibleValuesHandle.size(), possibleValuesHandle.data(),
-        (uint8_t)defaultIndices.size(),       defaultIndices.data(),
-    };
+        (uint8_t)defaultIndices.size(),       defaultIndices.data()};
 
     auto attrTableEntry = table::attribute::constructEnumEntry(attrTable,
                                                                &info);
     auto [attrHandle, attrType,
           _] = table::attribute::decodeHeader(attrTableEntry);
+
+    populateValueDisplayNamesMap(attrHandle);
 
     std::vector<uint8_t> currValueIndices(1, 0);
 

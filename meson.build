@@ -33,10 +33,12 @@ if cpp.has_header('poll.h')
 endif
 if get_option('libpldmresponder').allowed()
 conf_data.set_quoted('BIOS_JSONS_DIR', join_paths(package_datadir, 'bios'))
+conf_data.set('SYSTEM_SPECIFIC_BIOS_JSON', get_option('system-specific-bios-json').allowed())
 conf_data.set_quoted('BIOS_TABLES_DIR', join_paths(package_localstatedir, 'bios'))
 conf_data.set_quoted('PDR_JSONS_DIR', join_paths(package_datadir, 'pdr'))
 conf_data.set_quoted('FRU_JSONS_DIR', join_paths(package_datadir, 'fru'))
 conf_data.set_quoted('FRU_MASTER_JSON', join_paths(package_datadir, 'fru_master.json'))
+conf_data.set_quoted('ENTITY_MAP_JSON', join_paths(package_datadir, 'entityMap.json'))
 conf_data.set_quoted('HOST_JSONS_DIR', join_paths(package_datadir, 'host'))
 conf_data.set_quoted('EVENTS_JSONS_DIR', join_paths(package_datadir, 'events'))
 conf_data.set('HEARTBEAT_TIMEOUT', get_option('heartbeat-timeout-seconds'))
@@ -47,6 +49,7 @@ add_project_arguments('-DLIBPLDMRESPONDER', language : ['c','cpp'])
 endif
 if get_option('softoff').allowed()
   conf_data.set('SOFTOFF_TIMEOUT_SECONDS', get_option('softoff-timeout-seconds'))
+  conf_data.set_quoted('SOFTOFF_CONFIG_JSON', join_paths(package_datadir, 'softoff'))
 endif
 if get_option('oem-ibm').allowed()
   conf_data.set_quoted('FILE_TABLE_JSON', join_paths(package_datadir, 'fileTable.json'))
@@ -69,11 +72,12 @@ if get_option('transport-implementation') == 'mctp-demux'
 elif get_option('transport-implementation') == 'af-mctp'
   conf_data.set('PLDM_TRANSPORT_WITH_AF_MCTP', 1)
 endif
-config = configure_file(output: 'config.h',
+
+configure_file(output: 'config.h',
   configuration: conf_data
 )
 
-add_project_arguments('-include', '@0@'.format(config), language: 'cpp')
+add_project_arguments('-include', '@0@'.format(meson.current_build_dir() /'config.h'), language: 'cpp')
 
 filesystem = import('fs')
 
@@ -89,20 +93,6 @@ if cpp.has_header('CLI/CLI.hpp')
   CLI11_dep = declare_dependency()
 else
   CLI11_dep = dependency('CLI11')
-endif
-
-if get_option('oe-sdk').allowed()
-  # Setup OE SYSROOT
-  OECORE_TARGET_SYSROOT = run_command('sh', '-c', 'echo $OECORE_TARGET_SYSROOT').stdout().strip()
-  if OECORE_TARGET_SYSROOT == ''
-      error('Unable to get $OECORE_TARGET_SYSROOT, check your environment.')
-  endif
-  message('OE_SYSROOT: ' + OECORE_TARGET_SYSROOT)
-  rpath = ':'.join([OECORE_TARGET_SYSROOT + '/lib', OECORE_TARGET_SYSROOT + '/usr/lib'])
-  ld_so = run_command('sh', '-c', 'find ' + OECORE_TARGET_SYSROOT + '/lib/ld-*.so | sort -r -n | head -n1').stdout().strip()
-  dynamic_linker = ['-Wl,-dynamic-linker,' + ld_so]
-else
-  dynamic_linker = []
 endif
 
 if get_option('tests').allowed()
@@ -128,7 +118,7 @@ if get_option('tests').allowed()
     endif
 endif
 
-libpldm_dep = dependency('libpldm', fallback:['libpldm','libpldm_dep'])
+libpldm_dep = dependency('libpldm', fallback:['libpldm','libpldm_dep'], include_type: 'system')
 
 
 libpldmutils_headers = ['.']

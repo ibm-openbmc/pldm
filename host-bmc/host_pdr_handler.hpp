@@ -7,6 +7,7 @@
 #include "libpldmresponder/oem_handler.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
 #include "requester/handler.hpp"
+#include "utils.hpp"
 
 #include <libpldm/base.h>
 #include <libpldm/platform.h>
@@ -294,7 +295,6 @@ class HostPDRHandler
     /** @brief list of PDR record handles modified pointing to host PDRs */
     PDRRecordHandles modifiedPDRRecordHandles;
 
-    std::map<EntityType, pldm_entity> parents;
     /** @brief D-Bus property changed signal match */
     std::unique_ptr<sdbusplus::bus::match_t> hostOffMatch;
 
@@ -312,20 +312,14 @@ class HostPDRHandler
      */
     bool mergedHostParents;
 
-    /** @brief whether timed out waiting for a response from Host */
-    bool timeOut;
-
-    /** @brief request message instance id */
-    uint8_t insId;
-
     /** @brief maps an object path to pldm_entity from the BMC's entity
      *         association tree
      */
-    utils::ObjectPathMaps objPathMap;
+    ObjectPathMaps objPathMap;
 
     /** @brief maps an entity name to map, maps to entity name to pldm_entity
      */
-    utils::EntityAssociations entityAssociations;
+    EntityAssociations entityAssociations;
 
     /** @brief the vector of FRU Record Data Format
      */
@@ -334,9 +328,9 @@ class HostPDRHandler
     /** @OEM platform handler */
     pldm::responder::oem_platform::Handler* oemPlatformHandler;
 
-    /** @brief Object path and entity association and is only loaded once
+    /** @brief entityID and entity name is only loaded once
      */
-    bool objPathEntityAssociation;
+    EntityMaps entityMaps;
 };
 
 } // namespace pldm

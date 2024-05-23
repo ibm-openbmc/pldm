@@ -1,5 +1,6 @@
 #include "common/test/mocked_utils.hpp"
 #include "common/utils.hpp"
+#include "host-bmc/dbus_to_event_handler.hpp"
 #include "libpldmresponder/event_parser.hpp"
 #include "libpldmresponder/pdr.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
@@ -10,8 +11,6 @@
 
 #include <sdbusplus/test/sdbus_mock.hpp>
 #include <sdeventplus/event.hpp>
-
-#include <iostream>
 
 using namespace pldm::pdr;
 using namespace pldm::utils;
@@ -44,7 +43,7 @@ TEST(getPDR, testGoodPath)
     auto event = sdeventplus::Event::get_default();
     Handler handler(&mockedUtils, 0, nullptr, "./pdr_jsons/state_effecter/good",
                     pdrRepo, nullptr, nullptr, nullptr, nullptr, nullptr,
-                    event);
+                    nullptr, event);
     Repo repo(pdrRepo);
     ASSERT_EQ(repo.empty(), false);
     auto response = handler.getPDR(req, requestPayloadLength);
@@ -83,7 +82,7 @@ TEST(getPDR, testShortRead)
     auto event = sdeventplus::Event::get_default();
     Handler handler(&mockedUtils, 0, nullptr, "./pdr_jsons/state_effecter/good",
                     pdrRepo, nullptr, nullptr, nullptr, nullptr, nullptr,
-                    event);
+                    nullptr, event);
     Repo repo(pdrRepo);
     ASSERT_EQ(repo.empty(), false);
     auto response = handler.getPDR(req, requestPayloadLength);
@@ -116,7 +115,7 @@ TEST(getPDR, testBadRecordHandle)
     auto event = sdeventplus::Event::get_default();
     Handler handler(&mockedUtils, 0, nullptr, "./pdr_jsons/state_effecter/good",
                     pdrRepo, nullptr, nullptr, nullptr, nullptr, nullptr,
-                    event);
+                    nullptr, event);
     Repo repo(pdrRepo);
     ASSERT_EQ(repo.empty(), false);
     auto response = handler.getPDR(req, requestPayloadLength);
@@ -147,7 +146,7 @@ TEST(getPDR, testNoNextRecord)
     auto event = sdeventplus::Event::get_default();
     Handler handler(&mockedUtils, 0, nullptr, "./pdr_jsons/state_effecter/good",
                     pdrRepo, nullptr, nullptr, nullptr, nullptr, nullptr,
-                    event);
+                    nullptr, event);
     Repo repo(pdrRepo);
     ASSERT_EQ(repo.empty(), false);
     auto response = handler.getPDR(req, requestPayloadLength);
@@ -180,7 +179,7 @@ TEST(getPDR, testFindPDR)
     auto event = sdeventplus::Event::get_default();
     Handler handler(&mockedUtils, 0, nullptr, "./pdr_jsons/state_effecter/good",
                     pdrRepo, nullptr, nullptr, nullptr, nullptr, nullptr,
-                    event);
+                    nullptr, event);
     Repo repo(pdrRepo);
     ASSERT_EQ(repo.empty(), false);
     auto response = handler.getPDR(req, requestPayloadLength);
@@ -241,7 +240,7 @@ TEST(setStateEffecterStatesHandler, testGoodRequest)
     auto event = sdeventplus::Event::get_default();
     Handler handler(&mockedUtils, 0, nullptr, "./pdr_jsons/state_effecter/good",
                     inPDRRepo, nullptr, nullptr, nullptr, nullptr, nullptr,
-                    event);
+                    nullptr, event);
     handler.getPDR(req, requestPayloadLength);
     Repo inRepo(inPDRRepo);
     getRepoByType(inRepo, outRepo, PLDM_STATE_EFFECTER_PDR);
@@ -289,7 +288,7 @@ TEST(setStateEffecterStatesHandler, testBadRequest)
     auto event = sdeventplus::Event::get_default();
     Handler handler(&mockedUtils, 0, nullptr, "./pdr_jsons/state_effecter/good",
                     inPDRRepo, nullptr, nullptr, nullptr, nullptr, nullptr,
-                    event);
+                    nullptr, event);
     handler.getPDR(req, requestPayloadLength);
     Repo inRepo(inPDRRepo);
     getRepoByType(inRepo, outRepo, PLDM_STATE_EFFECTER_PDR);
@@ -336,7 +335,7 @@ TEST(setNumericEffecterValueHandler, testGoodRequest)
     auto event = sdeventplus::Event::get_default();
     Handler handler(&mockedUtils, 0, nullptr, "./pdr_jsons/state_effecter/good",
                     inPDRRepo, nullptr, nullptr, nullptr, nullptr, nullptr,
-                    event);
+                    nullptr, event);
     Repo inRepo(inPDRRepo);
     getRepoByType(inRepo, numericEffecterPDRs, PLDM_NUMERIC_EFFECTER_PDR);
 
@@ -380,7 +379,7 @@ TEST(setNumericEffecterValueHandler, testBadRequest)
     auto event = sdeventplus::Event::get_default();
     Handler handler(&mockedUtils, 0, nullptr, "./pdr_jsons/state_effecter/good",
                     inPDRRepo, nullptr, nullptr, nullptr, nullptr, nullptr,
-                    event);
+                    nullptr, event);
     Repo inRepo(inPDRRepo);
     getRepoByType(inRepo, numericEffecterPDRs, PLDM_NUMERIC_EFFECTER_PDR);
 
@@ -417,7 +416,7 @@ TEST(getNumericEffecterValueHandler, testGoodRequest)
     auto event = sdeventplus::Event::get_default();
     Handler handler(&mockedUtils, 0, nullptr, "./pdr_jsons/state_effecter/good",
                     inPDRRepo, nullptr, nullptr, nullptr, nullptr, nullptr,
-                    event);
+                    nullptr, event);
     Repo inRepo(inPDRRepo);
     getRepoByType(inRepo, numericEffecterPDRs, PLDM_NUMERIC_EFFECTER_PDR);
 
@@ -494,7 +493,7 @@ TEST(getNumericEffecterValueHandler, testBadRequest)
     auto event = sdeventplus::Event::get_default();
     Handler handler(&mockedUtils, 0, nullptr, "./pdr_jsons/state_effecter/good",
                     inPDRRepo, nullptr, nullptr, nullptr, nullptr, nullptr,
-                    event);
+                    nullptr, event);
     Repo inRepo(inPDRRepo);
     getRepoByType(inRepo, numericEffecterPDRs, PLDM_NUMERIC_EFFECTER_PDR);
 
@@ -603,7 +602,7 @@ TEST(StateSensorHandler, allScenarios)
 
     // Event Entry 1
     {
-        StateSensorEntry entry{1, 64, 1, 0};
+        StateSensorEntry entry{1, 64, 1, 0, 1};
         const auto& [dbusMapping, eventStateMap] = handler.getEventInfo(entry);
         DBusMapping mapping{"/xyz/abc/def",
                             "xyz.openbmc_project.example1.value", "value1",
@@ -626,7 +625,7 @@ TEST(StateSensorHandler, allScenarios)
 
     // Event Entry 2
     {
-        StateSensorEntry entry{1, 64, 1, 1};
+        StateSensorEntry entry{1, 64, 1, 1, 1};
         const auto& [dbusMapping, eventStateMap] = handler.getEventInfo(entry);
         DBusMapping mapping{"/xyz/abc/def",
                             "xyz.openbmc_project.example2.value", "value2",
@@ -643,7 +642,7 @@ TEST(StateSensorHandler, allScenarios)
 
     // Event Entry 3
     {
-        StateSensorEntry entry{2, 67, 2, 0};
+        StateSensorEntry entry{2, 67, 2, 0, 1};
         const auto& [dbusMapping, eventStateMap] = handler.getEventInfo(entry);
         DBusMapping mapping{"/xyz/abc/ghi",
                             "xyz.openbmc_project.example3.value", "value3",
@@ -658,9 +657,29 @@ TEST(StateSensorHandler, allScenarios)
         ASSERT_EQ(value1 == propValue1, true);
     }
 
+    // Event Entry 4
+    {
+        StateSensorEntry entry{2, 67, 2, 0, 2};
+        const auto& [dbusMapping, eventStateMap] = handler.getEventInfo(entry);
+        DBusMapping mapping{"/xyz/abc/jkl",
+                            "xyz.openbmc_project.example4.value", "value4",
+                            "string"};
+        ASSERT_EQ(mapping == dbusMapping, true);
+
+        const auto& propValue0 = eventStateMap.at(eventState0);
+        const auto& propValue1 = eventStateMap.at(eventState1);
+        const auto& propValue2 = eventStateMap.at(eventState2);
+        PropertyValue value0{std::in_place_type<std::string>, "Enabled"};
+        PropertyValue value1{std::in_place_type<std::string>, "Disabled"};
+        PropertyValue value2{std::in_place_type<std::string>, "Auto"};
+        ASSERT_EQ(value0 == propValue0, true);
+        ASSERT_EQ(value1 == propValue1, true);
+        ASSERT_EQ(value2 == propValue2, true);
+    }
+
     // Invalid Entry
     {
-        StateSensorEntry entry{0, 0, 0, 0};
+        StateSensorEntry entry{0, 0, 0, 0, 1};
         ASSERT_THROW(handler.getEventInfo(entry), std::out_of_range);
     }
 }
@@ -673,7 +692,7 @@ TEST(TerminusLocatorPDR, BMCTerminusLocatorPDR)
     MockdBusHandler mockedUtils;
     auto event = sdeventplus::Event::get_default();
     Handler handler(&mockedUtils, 0, nullptr, "", inPDRRepo, nullptr, nullptr,
-                    nullptr, nullptr, nullptr, event);
+                    nullptr, nullptr, nullptr, nullptr, event);
     Repo inRepo(inPDRRepo);
     getRepoByType(inRepo, outRepo, PLDM_TERMINUS_LOCATOR_PDR);
 
@@ -719,7 +738,7 @@ TEST(getStateSensorReadingsHandler, testGoodRequest)
     auto event = sdeventplus::Event::get_default();
     Handler handler(&mockedUtils, 0, nullptr, "./pdr_jsons/state_sensor/good",
                     inPDRRepo, nullptr, nullptr, nullptr, nullptr, nullptr,
-                    event);
+                    nullptr, event);
     Repo inRepo(inPDRRepo);
     getRepoByType(inRepo, outRepo, PLDM_STATE_SENSOR_PDR);
     pdr_utils::PdrEntry e;
@@ -739,15 +758,17 @@ TEST(getStateSensorReadingsHandler, testGoodRequest)
                                        StrEq("xyz.openbmc_project.Foo.Bar")))
         .WillOnce(Return(
             PropertyValue(std::string("xyz.openbmc_project.Foo.Bar.V0"))));
-
+    EventStates cache = {PLDM_SENSOR_NORMAL};
+    pldm::stateSensorCacheMaps sensorCache;
+    sensorCache.emplace(0x1, cache);
     auto rc = platform_state_sensor::getStateSensorReadingsHandler<
         MockdBusHandler, Handler>(handlerObj, handler, 0x1, sensorRearmCnt,
-                                  compSensorCnt, stateField);
+                                  compSensorCnt, stateField, sensorCache);
     ASSERT_EQ(rc, 0);
     ASSERT_EQ(compSensorCnt, 1);
     ASSERT_EQ(stateField[0].sensor_op_state, PLDM_SENSOR_UNAVAILABLE);
     ASSERT_EQ(stateField[0].present_state, PLDM_SENSOR_NORMAL);
-    ASSERT_EQ(stateField[0].previous_state, PLDM_SENSOR_UNKNOWN);
+    ASSERT_EQ(stateField[0].previous_state, PLDM_SENSOR_NORMAL);
     ASSERT_EQ(stateField[0].event_state, PLDM_SENSOR_UNKNOWN);
 
     pldm_pdr_destroy(inPDRRepo);
@@ -767,7 +788,7 @@ TEST(getStateSensorReadingsHandler, testBadRequest)
     auto event = sdeventplus::Event::get_default();
     Handler handler(&mockedUtils, 0, nullptr, "./pdr_jsons/state_sensor/good",
                     inPDRRepo, nullptr, nullptr, nullptr, nullptr, nullptr,
-                    event);
+                    nullptr, event);
     Repo inRepo(inPDRRepo);
     getRepoByType(inRepo, outRepo, PLDM_STATE_SENSOR_PDR);
     pdr_utils::PdrEntry e;
@@ -782,9 +803,12 @@ TEST(getStateSensorReadingsHandler, testBadRequest)
     uint8_t sensorRearmCnt = 3;
 
     MockdBusHandler handlerObj;
+    EventStates cache = {PLDM_SENSOR_NORMAL};
+    pldm::stateSensorCacheMaps sensorCache;
+    sensorCache.emplace(0x1, cache);
     auto rc = platform_state_sensor::getStateSensorReadingsHandler<
         MockdBusHandler, Handler>(handlerObj, handler, 0x1, sensorRearmCnt,
-                                  compSensorCnt, stateField);
+                                  compSensorCnt, stateField, sensorCache);
     ASSERT_EQ(rc, PLDM_PLATFORM_REARM_UNAVAILABLE_IN_PRESENT_STATE);
 
     pldm_pdr_destroy(inPDRRepo);

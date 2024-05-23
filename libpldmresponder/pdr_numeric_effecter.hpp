@@ -52,14 +52,12 @@ void generateNumericEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
                           sizeof(pldm_pdr_hdr);
 
         pdr->terminus_handle = e.value("terminus_handle", 0);
-        pdr->effecter_id = handler.getNextEffecterId();
 
         try
         {
             std::string entity_path = e.value("entity_path", "");
             auto& associatedEntityMap = handler.getAssociateEntityMap();
-            if (entity_path != "" && associatedEntityMap.find(entity_path) !=
-                                         associatedEntityMap.end())
+            if (entity_path != "" && associatedEntityMap.contains(entity_path))
             {
                 pdr->entity_type =
                     associatedEntityMap.at(entity_path).entity_type;
@@ -78,12 +76,11 @@ void generateNumericEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
                 // present
                 if (!pdr->entity_type)
                 {
-                    error("The entity path for the FRU is not present.");
                     continue;
                 }
             }
         }
-        catch (const std::exception& ex)
+        catch (const std::exception&)
         {
             pdr->entity_type = e.value("type", 0);
             pdr->entity_instance = e.value("instance", 0);
@@ -222,9 +219,10 @@ void generateNumericEffecterPDR(const DBusInterface& dBusIntf, const Json& json,
             error(
                 "D-Bus object path does not exist, effecter ID: {EFFECTER_ID}",
                 "EFFECTER_ID", static_cast<uint16_t>(pdr->effecter_id));
+            continue;
         }
         dbusMappings.emplace_back(std::move(dbusMapping));
-
+        pdr->effecter_id = handler.getNextEffecterId();
         handler.addDbusObjMaps(
             pdr->effecter_id,
             std::make_tuple(std::move(dbusMappings), std::move(dbusValMaps)));

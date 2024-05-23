@@ -1,5 +1,7 @@
 #include "utils.hpp"
 
+#include "common/utils.hpp"
+
 #include <libpldm/base.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -7,8 +9,9 @@
 #include <unistd.h>
 
 #include <phosphor-logging/lg2.hpp>
-
-#include <iostream>
+#include <xyz/openbmc_project/Inventory/Decorator/Asset/client.hpp>
+#include <xyz/openbmc_project/Inventory/Item/Connector/client.hpp>
+#include <xyz/openbmc_project/ObjectMapper/client.hpp>
 
 PHOSPHOR_LOG2_USING;
 
@@ -139,6 +142,48 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
     return 0;
 }
 
+bool checkIfIBMFru(const std::string& objPath)
+{
+    using DecoratorAsset =
+        sdbusplus::client::xyz::openbmc_project::inventory::decorator::Asset<>;
+
+    try
+    {
+        auto propVal = pldm::utils::DBusHandler().getDbusPropertyVariant(
+            objPath.c_str(), "Model", DecoratorAsset::interface);
+        const auto& model = std::get<std::string>(propVal);
+        if (!model.empty())
+        {
+            return true;
+        }
+    }
+    catch (const std::exception&)
+    {
+        return false;
+    }
+    return false;
+}
+
+std::vector<std::string> findPortObjects(const std::string& adapterObjPath)
+{
+    using ItemConnector =
+        sdbusplus::client::xyz::openbmc_project::inventory::item::Connector<>;
+
+    std::vector<std::string> portObjects;
+    try
+    {
+        portObjects = pldm::utils::DBusHandler().getSubTreePaths(
+            adapterObjPath, 0,
+            std::vector<std::string>({ItemConnector::interface}));
+    }
+    catch (const std::exception& e)
+    {
+        error("No ports under adapter '{ADAPTER_OBJ_PATH}'  - {ERROR}.",
+              "ADAPTER_OBJ_PATH", adapterObjPath.c_str(), "ERROR", e);
+    }
+
+    return portObjects;
+}
 } // namespace utils
 } // namespace responder
 } // namespace pldm

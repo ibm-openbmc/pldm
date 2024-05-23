@@ -5,10 +5,10 @@
 
 #include <phosphor-logging/lg2.hpp>
 #include <xyz/openbmc_project/Common/error.hpp>
+#include <xyz/openbmc_project/State/Boot/Progress/client.hpp>
 #include <xyz/openbmc_project/State/OperatingSystem/Status/server.hpp>
 
 #include <fstream>
-#include <iostream>
 
 PHOSPHOR_LOG2_USING;
 
@@ -40,16 +40,15 @@ void HostEffecterParser::parseEffecterJson(const std::string& jsonPath)
     fs::path jsonDir(jsonPath);
     if (!fs::exists(jsonDir) || fs::is_empty(jsonDir))
     {
-        error("Host Effecter json path does not exist, DIR = {JSON_PATH}",
-              "JSON_PATH", jsonPath.c_str());
+        error("Effecter json file for remote terminus '{PATH}' does not exist.",
+              "PATH", jsonPath);
         return;
     }
 
     fs::path jsonFilePath = jsonDir / hostEffecterJson;
     if (!fs::exists(jsonFilePath))
     {
-        error("json does not exist, PATH = {JSON_PATH}", "JSON_PATH",
-              jsonFilePath.c_str());
+        error("Json at path '{PATH}' does not exist.", "PATH", jsonFilePath);
         throw InternalFailure();
     }
 
@@ -57,8 +56,7 @@ void HostEffecterParser::parseEffecterJson(const std::string& jsonPath)
     auto data = Json::parse(jsonFile, nullptr, false);
     if (data.is_discarded())
     {
-        error("Parsing json file failed, FILE = {JSON_PATH}", "JSON_PATH",
-              jsonFilePath.c_str());
+        error("Failed to parse json file {PATH}", "PATH", jsonFilePath);
         throw InternalFailure();
     }
     const Json empty{};
@@ -101,9 +99,9 @@ void HostEffecterParser::parseEffecterJson(const std::string& jsonPath)
             if (dbusInfo.propertyValues.size() != states.size())
             {
                 error(
-                    "Number of states do not match with number of D-Bus property values in the json. Object path {OBJ_PATH} and property {PROP_NAME}  will not be monitored",
-                    "OBJ_PATH", dbusInfo.dbusMap.objectPath.c_str(),
-                    "PROP_NAME", dbusInfo.dbusMap.propertyName);
+                    "Number of states do not match with number of D-Bus property values in the json. Object path at '{PATH}' and property '{PROPERTY}' will not be monitored",
+                    "PATH", dbusInfo.dbusMap.objectPath, "PROPERTY",
+                    dbusInfo.dbusMap.propertyName);
                 continue;
             }
             for (const auto& s : states)
@@ -126,6 +124,9 @@ void HostEffecterParser::processHostEffecterChangeNotification(
     const DbusChgHostEffecterProps& chProperties, size_t effecterInfoIndex,
     size_t dbusInfoIndex, uint16_t effecterId)
 {
+    using BootProgress =
+        sdbusplus::client::xyz::openbmc_project::state::boot::Progress<>;
+
     const auto& propertyName = hostEffecterInfo[effecterInfoIndex]
                                    .dbusInfo[dbusInfoIndex]
                                    .dbusMap.propertyName;
@@ -150,36 +151,43 @@ void HostEffecterParser::processHostEffecterChangeNotification(
             localOrRemote);
         if (effecterId == PLDM_INVALID_EFFECTER_ID)
         {
-            error("Effecter id not found in pdr repo");
+            error(
+                "Effecter ID '{EFFECTERID}' of entity type '{TYPE}', entityInstance '{INSTANCE}' and containerID '{CONTAINER_ID}' not found in pdr repo",
+                "EFFECTERID", effecterId, "TYPE",
+                hostEffecterInfo[effecterInfoIndex].entityType, "INSTANCE",
+                hostEffecterInfo[effecterInfoIndex].entityInstance,
+                "CONTAINER_ID",
+                hostEffecterInfo[effecterInfoIndex].containerId);
             return;
         }
     }
-    constexpr auto hostStateInterface =
-        "xyz.openbmc_project.State.Boot.Progress";
     constexpr auto hostStatePath = "/xyz/openbmc_project/state/host0";
 
     try
     {
         auto propVal = dbusHandler->getDbusPropertyVariant(
-            hostStatePath, "BootProgress", hostStateInterface);
-        const auto& currHostState = std::get<std::string>(propVal);
-        if ((currHostState != "xyz.openbmc_project.State.Boot.Progress."
-                              "ProgressStages.SystemInitComplete") &&
-            (currHostState != "xyz.openbmc_project.State.Boot.Progress."
-                              "ProgressStages.OSRunning") &&
-            (currHostState != "xyz.openbmc_project.State.Boot.Progress."
-                              "ProgressStages.SystemSetup"))
+            hostStatePath, "BootProgress", BootProgress::interface);
+
+        using Stages = BootProgress::ProgressStages;
+        auto currHostState = sdbusplus::message::convert_from_string<Stages>(
+                                 std::get<std::string>(propVal))
+                                 .value();
+
+        if (currHostState != Stages::SystemInitComplete &&
+            currHostState != Stages::OSRunning &&
+            currHostState != Stages::SystemSetup)
         {
-            info("Host is not up. Current host state: {CUR_HOST_STATE}",
-                 "CUR_HOST_STATE", currHostState.c_str());
+            info(
+                "Remote terminus is not up/active, current remote terminus state is: '{CURRENT_HOST_STATE}'",
+                "CURRENT_HOST_STATE", currHostState);
             return;
         }
     }
     catch (const sdbusplus::exception_t& e)
     {
         error(
-            "Error in getting current host state. Will still continue to set the host effecter - {ERR_EXCEP}",
-            "ERR_EXCEP", e.what());
+            "Error in getting current remote terminus state. Will still continue to set the remote terminus effecter, error - {ERROR}",
+            "ERROR", e);
     }
     uint8_t newState{};
     try
@@ -189,7 +197,8 @@ void HostEffecterParser::processHostEffecterChangeNotification(
     }
     catch (const std::out_of_range& e)
     {
-        error("New state not found in json");
+        error("Failed to find new state '{NEW_STATE}' in json, error - {ERROR}",
+              "ERROR", e, "NEW_STATE", newState);
         return;
     }
 
@@ -213,12 +222,16 @@ void HostEffecterParser::processHostEffecterChangeNotification(
     }
     catch (const std::runtime_error& e)
     {
-        error("Could not set host state effecter");
+        error(
+            "Failed to set remote terminus state effecter for effecter ID '{EFFECTERID}', error - {ERROR}",
+            "ERROR", e, "EFFECTERID", effecterId);
         return;
     }
     if (rc != PLDM_SUCCESS)
     {
-        error("Could not set the host state effecter, rc= {RC}", "RC", rc);
+        error(
+            "Failed to set the remote terminus state effecter for effecter ID '{EFFECTERID}', response code '{RC}'",
+            "EFFECTERID", effecterId, "RC", rc);
     }
 }
 
@@ -264,8 +277,10 @@ int HostEffecterParser::setHostStateEffecter(
 
     if (rc != PLDM_SUCCESS)
     {
-        error("Message encode failure. PLDM error code = {RC}", "RC", lg2::hex,
-              rc);
+        error(
+            "Failed to encode set state effecter states message for effecter ID '{EFFECTERID}' and instanceID '{INSTANCE}' with response code '{RC}'",
+            "EFFECTERID", effecterId, "INSTANCE", instanceId, "RC", lg2::hex,
+            rc);
         instanceIdDb->free(mctpEid, instanceId);
         return rc;
     }
@@ -275,7 +290,7 @@ int HostEffecterParser::setHostStateEffecter(
         if (response == nullptr || !respMsgLen)
         {
             error(
-                "Failed to receive response for setStateEffecterStates command");
+                "Failed to receive response for setting state effecter states.");
             return;
         }
         uint8_t completionCode{};
@@ -283,15 +298,17 @@ int HostEffecterParser::setHostStateEffecter(
                                                         &completionCode);
         if (rc)
         {
-            error("Failed to decode setStateEffecterStates response, rc {RC}",
-                  "RC", rc);
+            error(
+                "Failed to decode response of set state effecter states, response code '{RC}'",
+                "RC", rc);
             pldm::utils::reportError(
                 "xyz.openbmc_project.bmc.pldm.SetHostEffecterFailed");
         }
         if (completionCode)
         {
-            error("Failed to set a Host effecter, cc = {CC}", "CC",
-                  static_cast<unsigned>(completionCode));
+            error(
+                "Failed to set a remote terminus effecter, completion code '{CC}'",
+                "CC", completionCode);
             pldm::utils::reportError(
                 "xyz.openbmc_project.bmc.pldm.SetHostEffecterFailed");
         }
@@ -302,7 +319,9 @@ int HostEffecterParser::setHostStateEffecter(
         std::move(requestMsg), std::move(setStateEffecterStatesRespHandler));
     if (rc)
     {
-        error("Failed to send request to set an effecter on Host");
+        error(
+            "Failed to send request to set an effecter on remote terminus for effecter ID '{EFFECTERID}', response code '{RC}'",
+            "EFFECTERID", effecterId, "RC", rc);
     }
     return rc;
 }

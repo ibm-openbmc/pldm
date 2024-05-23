@@ -3,7 +3,6 @@
 #include "bios_config.hpp"
 #include "common/utils.hpp"
 
-#include <iostream>
 #include <variant>
 
 using namespace pldm::utils;
@@ -25,7 +24,7 @@ BIOSAttribute::BIOSAttribute(const Json& entry,
     {
         readOnly = entry.at("readOnly");
     }
-    catch (const std::exception& e)
+    catch (const std::exception&)
     {
         // No action required, readOnly is initialised to false
     }
@@ -39,7 +38,7 @@ BIOSAttribute::BIOSAttribute(const Json& entry,
 
         dBusMap = {objectPath, interface, propertyName, propertyType};
     }
-    catch (const std::exception& e)
+    catch (const std::exception&)
     {
         // No action required, dBusMap whill have no value
     }

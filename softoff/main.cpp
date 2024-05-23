@@ -1,9 +1,8 @@
+#include "common/instance_id.hpp"
 #include "common/utils.hpp"
 #include "softoff.hpp"
 
 #include <phosphor-logging/lg2.hpp>
-
-#include <iostream>
 
 PHOSPHOR_LOG2_USING;
 
@@ -15,10 +14,13 @@ int main()
     // Get a handle to system D-Bus.
     auto& bus = pldm::utils::DBusHandler::getBus();
 
+    // Obtain the instance database
+    pldm::InstanceIdDb instanceIdDb;
+
     // Attach the bus to sd_event to service user requests
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
 
-    pldm::SoftPowerOff softPower(bus, event.get());
+    pldm::SoftPowerOff softPower(bus, event.get(), instanceIdDb);
 
     if (softPower.isError())
     {

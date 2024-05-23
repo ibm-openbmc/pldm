@@ -66,11 +66,15 @@ const std::tuple<pdr_utils::DbusMappings, pdr_utils::DbusValMaps>&
 }
 
 void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
-                       const std::string& dir, Repo& repo)
+                       const std::vector<fs::path>& dir, Repo& repo)
 {
-    if (!fs::exists(dir))
+    for (const auto& directory : dir)
     {
-        return;
+        info("checking if : {DIR} exists", "DIR", directory);
+        if (!fs::exists(directory))
+        {
+            return;
+        }
     }
 
     // A map of PDR type to a lambda that handles creation of that PDR type.
@@ -100,50 +104,55 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
     }}};
 
     Type pdrType{};
-    for (const auto& dirEntry : fs::directory_iterator(dir))
+    for (const auto& directory : dir)
     {
-        try
+        for (const auto& dirEntry : fs::directory_iterator(directory))
         {
-            auto json = readJson(dirEntry.path().string());
-            if (!json.empty())
+            try
             {
-                auto effecterPDRs = json.value("effecterPDRs", empty);
-                for (const auto& effecter : effecterPDRs)
+                if (fs::is_regular_file(dirEntry.path().string()))
                 {
-                    pdrType = effecter.value("pdrType", 0);
-                    generateHandlers.at(pdrType)(dBusIntf, effecter, repo);
-                }
+                    auto json = readJson(dirEntry.path().string());
+                    if (!json.empty())
+                    {
+                        auto effecterPDRs = json.value("effecterPDRs", empty);
+                        for (const auto& effecter : effecterPDRs)
+                        {
+                            pdrType = effecter.value("pdrType", 0);
+                            generateHandlers.at(pdrType)(dBusIntf, effecter,
+                                                         repo);
+                        }
 
-                auto sensorPDRs = json.value("sensorPDRs", empty);
-                for (const auto& sensor : sensorPDRs)
-                {
-                    pdrType = sensor.value("pdrType", 0);
-                    generateHandlers.at(pdrType)(dBusIntf, sensor, repo);
+                        auto sensorPDRs = json.value("sensorPDRs", empty);
+                        for (const auto& sensor : sensorPDRs)
+                        {
+                            pdrType = sensor.value("pdrType", 0);
+                            generateHandlers.at(pdrType)(dBusIntf, sensor,
+                                                         repo);
+                        }
+                    }
                 }
             }
-        }
-        catch (const InternalFailure& e)
-        {
-            error(
-                "PDR config directory does not exist or empty, TYPE= {PDR_TYPE} PATH={DIR_PATH} ERROR={ERR_EXCEP}",
-                "PDR_TYPE", pdrType, "DIR_PATH", dirEntry.path().string(),
-                "ERR_EXCEP", e.what());
-        }
-        catch (const Json::exception& e)
-        {
-            error(
-                "Failed parsing PDR JSON file, TYPE={PDR_TYPE} ERROR={ERR_EXCEP}",
-                "PDR_TYPE", pdrType, "ERR_EXCEP", e.what());
-            pldm::utils::reportError(
-                "xyz.openbmc_project.bmc.pldm.InternalFailure");
-        }
-        catch (const std::exception& e)
-        {
-            error(
-                "Failed parsing PDR JSON file, TYPE= {PDR_TYPE} ERROR={ERR_EXCEP}",
-                "PDR_TYPE", pdrType, "ERR_EXCEP", e.what());
-            pldm::utils::reportError(
-                "xyz.openbmc_project.bmc.pldm.InternalFailure");
+            catch (const InternalFailure& e)
+            {
+                error(
+                    "PDR config directory '{PATH}' does not exist or empty for '{TYPE}' pdr: {ERROR}",
+                    "TYPE", pdrType, "PATH", dirEntry.path(), "ERROR", e);
+            }
+            catch (const Json::exception& e)
+            {
+                error("Failed parsing PDR JSON file for '{TYPE}' pdr: {ERROR}",
+                      "TYPE", pdrType, "ERROR", e);
+                pldm::utils::reportError(
+                    "xyz.openbmc_project.PLDM.Error.Generate.PDRJsonFileParseFail");
+            }
+            catch (const std::exception& e)
+            {
+                error("Failed parsing PDR JSON file for '{TYPE}' pdr: {ERROR}",
+                      "TYPE", pdrType, "ERROR", e);
+                pldm::utils::reportError(
+                    "xyz.openbmc_project.PLDM.Error.Generate.PDRJsonFileParseFail");
+            }
         }
     }
 }
@@ -172,11 +181,25 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
     if (!pdrCreated)
     {
         generateTerminusLocatorPDR(pdrRepo);
-        generate(*dBusIntf, pdrJsonsDir, pdrRepo);
+        if (platformConfigHandler)
+        {
+            auto systemType = platformConfigHandler->getPlatformName();
+            if (systemType.has_value())
+            {
+                // In case of normal poweron , the system type would have been
+                // already filled by entity manager when ever BMC reaches Ready
+                // state. If this is not filled by time we get a getpdr request
+                // we can assume that the entity manager service is not present
+                // on this system & continue to build the common PDR's.
+                pdrJsonsDir.push_back(pdrJsonDir / systemType.value());
+            }
+        }
+
         if (oemPlatformHandler != nullptr)
         {
             oemPlatformHandler->buildOEMPDR(pdrRepo);
         }
+        generate(*dBusIntf, pdrJsonsDir, pdrRepo);
 
         pdrCreated = true;
 
@@ -357,6 +380,7 @@ Response Handler::platformEventMessage(const pldm_msg* request,
         }
         catch (const std::out_of_range& e)
         {
+            error("Error in handling platform event msg: {ERROR}", "ERROR", e);
             return CmdHandler::ccOnlyResponse(request, PLDM_ERROR_INVALID_DATA);
         }
     }
@@ -426,13 +450,14 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
 
         pldm::pdr::EntityInfo entityInfo{};
         pldm::pdr::CompositeSensorStates compositeSensorStates{};
+        std::vector<pldm::pdr::StateSetId> stateSetIds{};
 
         try
         {
-            std::tie(entityInfo, compositeSensorStates) =
+            std::tie(entityInfo, compositeSensorStates, stateSetIds) =
                 hostPDRHandler->lookupSensorInfo(sensorEntry);
         }
-        catch (const std::out_of_range& e)
+        catch (const std::out_of_range&)
         {
             // If there is no mapping for tid, sensorId combination, try
             // PLDM_TID_RESERVED, sensorId for terminus that is yet to
@@ -440,11 +465,11 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
             try
             {
                 sensorEntry.terminusID = PLDM_TID_RESERVED;
-                std::tie(entityInfo, compositeSensorStates) =
+                std::tie(entityInfo, compositeSensorStates, stateSetIds) =
                     hostPDRHandler->lookupSensorInfo(sensorEntry);
             }
             // If there is no mapping for events return PLDM_SUCCESS
-            catch (const std::out_of_range& e)
+            catch (const std::out_of_range&)
             {
                 return PLDM_SUCCESS;
             }
@@ -456,14 +481,15 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
         }
 
         const auto& possibleStates = compositeSensorStates[sensorOffset];
-        if (possibleStates.find(eventState) == possibleStates.end())
+        if (!possibleStates.contains(eventState))
         {
             return PLDM_ERROR_INVALID_DATA;
         }
 
         const auto& [containerId, entityType, entityInstance] = entityInfo;
         events::StateSensorEntry stateSensorEntry{containerId, entityType,
-                                                  entityInstance, sensorOffset};
+                                                  entityInstance, sensorOffset,
+                                                  stateSetIds[sensorOffset]};
         return hostPDRHandler->handleStateSensorEvent(stateSensorEntry,
                                                       eventState);
     }
@@ -762,9 +788,9 @@ Response Handler::getStateSensorReadings(const pldm_msg* request,
     else
     {
         rc = platform_state_sensor::getStateSensorReadingsHandler<
-            pldm::utils::DBusHandler, Handler>(dBusIntf, *this, sensorId,
-                                               sensorRearmCount, comSensorCnt,
-                                               stateField);
+            pldm::utils::DBusHandler, Handler>(
+            dBusIntf, *this, sensorId, sensorRearmCount, comSensorCnt,
+            stateField, dbusToPLDMEventHandler->getSensorCache());
     }
 
     if (rc != PLDM_SUCCESS)

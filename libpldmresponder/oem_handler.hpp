@@ -90,6 +90,9 @@ class Handler : public CmdHandler
     /** @brief Interface to check the BMC state */
     virtual int checkBMCState() = 0;
 
+    /** @brief update the dbus object paths */
+    virtual void updateOemDbusPaths(std::string& dbusPath) = 0;
+
     /** @brief Interface to fetch the last BMC record from the PDR repository
      *
      *  @param[in] repo - pointer to BMC's primary PDR repo
@@ -118,27 +121,26 @@ class Handler : public CmdHandler
 
 } // namespace oem_platform
 
-namespace oem_bios
+namespace oem_fru
 {
-/** Interface to the oem bios Handler class*/
+
 class Handler : public CmdHandler
 {
   public:
-    Handler(const pldm::utils::DBusHandler* dBusIntf) : dBusIntf(dBusIntf) {}
+    Handler() {}
 
-    /** @brief Interface to get the system type information
+    /** @brief Process OEM FRU record
      *
-     *  @return - the system type information
+     * @param[in] fruData - the data of the fru
+     *
+     * @return success or failure
      */
-    virtual std::optional<std::string> getPlatformName() = 0;
+    virtual int processOEMFRUTable(const std::vector<uint8_t>& fruData) = 0;
 
     virtual ~Handler() = default;
-
-  protected:
-    const pldm::utils::DBusHandler* dBusIntf;
 };
 
-} // namespace oem_bios
+} // namespace oem_fru
 
 } // namespace responder
 

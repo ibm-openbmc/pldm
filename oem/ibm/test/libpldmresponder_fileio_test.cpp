@@ -4,12 +4,13 @@
 #include "libpldmresponder/file_io_type_cert.hpp"
 #include "libpldmresponder/file_io_type_dump.hpp"
 #include "libpldmresponder/file_io_type_lid.hpp"
+#include "libpldmresponder/file_io_type_pcie.hpp"
 #include "libpldmresponder/file_io_type_pel.hpp"
 #include "libpldmresponder/file_table.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
 
 #include <libpldm/base.h>
-#include <libpldm/file_io.h>
+#include <libpldm/oem/ibm/file_io.h>
 
 #include <nlohmann/json.hpp>
 
@@ -883,6 +884,14 @@ TEST(getHandlerByType, allPaths)
     certType = dynamic_cast<CertHandler*>(handler.get());
     ASSERT_TRUE(certType != nullptr);
 
+    handler = getHandlerByType(PLDM_FILE_TYPE_PCIE_TOPOLOGY, fileHandle);
+    auto pcieTopologyType = dynamic_cast<PCIeInfoHandler*>(handler.get());
+    ASSERT_TRUE(pcieTopologyType != nullptr);
+
+    handler = getHandlerByType(PLDM_FILE_TYPE_CABLE_INFO, fileHandle);
+    auto cableInfoType = dynamic_cast<PCIeInfoHandler*>(handler.get());
+    ASSERT_TRUE(cableInfoType != nullptr);
+
     handler = getHandlerByType(PLDM_FILE_TYPE_ROOT_CERT, fileHandle);
     certType = dynamic_cast<CertHandler*>(handler.get());
     ASSERT_TRUE(certType != nullptr);
@@ -980,6 +989,7 @@ TEST(readFileByType, testReadFile)
     auto fd = mkstemp(tmplt);
     std::vector<uint8_t> in = {100, 10, 56, 78, 34, 56, 79, 235, 111};
     rc = write(fd, in.data(), in.size());
+    ASSERT_NE(rc, PLDM_ERROR);
     close(fd);
     length = in.size() + 1000;
     rc = handler.readFile(tmplt, 0, length, response);

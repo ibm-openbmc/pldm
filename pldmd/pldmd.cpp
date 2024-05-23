@@ -34,7 +34,6 @@
 #include <cstring>
 #include <fstream>
 #include <iomanip>
-#include <iostream>
 #include <iterator>
 #include <memory>
 #include <ranges>
@@ -56,12 +55,13 @@ PHOSPHOR_LOG2_USING;
 #include "libpldmresponder/fru.hpp"
 #include "libpldmresponder/oem_handler.hpp"
 #include "libpldmresponder/platform.hpp"
+#include "libpldmresponder/platform_config.hpp"
 #include "xyz/openbmc_project/PLDM/Event/server.hpp"
 #endif
 
 #ifdef OEM_IBM
-#include "libpldmresponder/bios_oem_ibm.hpp"
 #include "libpldmresponder/file_io.hpp"
+#include "libpldmresponder/fru_oem_ibm.hpp"
 #include "libpldmresponder/oem_ibm_handler.hpp"
 #endif
 
@@ -81,6 +81,12 @@ void interruptFlightRecorderCallBack(Signal& /*signal*/,
     error("Received SIGUR1(10) Signal interrupt");
     // obtain the flight recorder instance and dump the recorder
     FlightRecorder::GetInstance().playRecorder();
+}
+
+void requestPLDMServiceName()
+{
+    auto& bus = pldm::utils::DBusHandler::getBus();
+    bus.request_name("xyz.openbmc_project.PLDM");
 }
 
 static std::optional<Response>
@@ -129,7 +135,7 @@ static std::optional<Response>
             header.command = hdrFields.command;
             if (PLDM_SUCCESS != pack_pldm_header(&header, responseHdr))
             {
-                error("Failed adding response header");
+                error("Failed adding response header: {ERROR}", "ERROR", e);
                 return std::nullopt;
             }
             response.insert(response.end(), completion_code);
@@ -171,7 +177,6 @@ int main(int argc, char** argv)
             optionUsage();
             exit(EXIT_FAILURE);
     }
-
     // Setup PLDM requester transport
     auto hostEID = pldm::utils::readHostEID();
     /* To maintain current behaviour until we have the infrastructure to find
@@ -226,7 +231,9 @@ int main(int argc, char** argv)
     std::unique_ptr<DbusToPLDMEvent> dbusToPLDMEventHandler;
     DBusHandler dbusHandler;
     std::unique_ptr<oem_platform::Handler> oemPlatformHandler{};
-    std::unique_ptr<oem_bios::Handler> oemBiosHandler{};
+    std::unique_ptr<platform_config::Handler> platformConfigHandler{};
+    platformConfigHandler = std::make_unique<platform_config::Handler>();
+    std::unique_ptr<oem_fru::Handler> oemFruHandler{};
 
 #ifdef OEM_IBM
     std::unique_ptr<pldm::responder::CodeUpdate> codeUpdate =
@@ -236,11 +243,11 @@ int main(int argc, char** argv)
         &dbusHandler, codeUpdate.get(), pldmTransport.getEventSource(), hostEID,
         instanceIdDb, event, &reqHandler);
     codeUpdate->setOemPlatformHandler(oemPlatformHandler.get());
+    oemFruHandler = std::make_unique<oem_ibm_fru::Handler>(pdrRepo.get());
     invoker.registerHandler(PLDM_OEM, std::make_unique<oem_ibm::Handler>(
                                           oemPlatformHandler.get(),
                                           pldmTransport.getEventSource(),
                                           hostEID, &instanceIdDb, &reqHandler));
-    oemBiosHandler = std::make_unique<oem::ibm::bios::Handler>(&dbusHandler);
 #endif
     if (hostEID)
     {
@@ -261,22 +268,30 @@ int main(int argc, char** argv)
     }
     auto biosHandler = std::make_unique<bios::Handler>(
         pldmTransport.getEventSource(), hostEID, &instanceIdDb, &reqHandler,
-        oemBiosHandler.get());
+        platformConfigHandler.get(), requestPLDMServiceName);
+
     auto fruHandler = std::make_unique<fru::Handler>(
         FRU_JSONS_DIR, FRU_MASTER_JSON, pdrRepo.get(), entityTree.get(),
-        bmcEntityTree.get());
+        bmcEntityTree.get(), oemFruHandler.get());
+
     // FRU table is built lazily when a FRU command or Get PDR command is
     // handled. To enable building FRU table, the FRU handler is passed to the
     // Platform handler.
     auto platformHandler = std::make_unique<platform::Handler>(
         &dbusHandler, hostEID, &instanceIdDb, PDR_JSONS_DIR, pdrRepo.get(),
         hostPDRHandler.get(), dbusToPLDMEventHandler.get(), fruHandler.get(),
-        oemPlatformHandler.get(), &reqHandler, event, true);
+        oemPlatformHandler.get(), platformConfigHandler.get(), &reqHandler,
+        event, true);
 #ifdef OEM_IBM
     pldm::responder::oem_ibm_platform::Handler* oemIbmPlatformHandler =
         dynamic_cast<pldm::responder::oem_ibm_platform::Handler*>(
             oemPlatformHandler.get());
     oemIbmPlatformHandler->setPlatformHandler(platformHandler.get());
+
+    pldm::responder::oem_ibm_fru::Handler* oemIbmFruHandler =
+        dynamic_cast<pldm::responder::oem_ibm_fru::Handler*>(
+            oemFruHandler.get());
+    oemIbmFruHandler->setIBMFruHandler(fruHandler.get());
 #endif
 
     invoker.registerHandler(PLDM_BIOS, std::move(biosHandler));
@@ -293,7 +308,9 @@ int main(int argc, char** argv)
     std::unique_ptr<fw_update::Manager> fwManager =
         std::make_unique<fw_update::Manager>(event, reqHandler, instanceIdDb);
     std::unique_ptr<MctpDiscovery> mctpDiscoveryHandler =
-        std::make_unique<MctpDiscovery>(bus, fwManager.get());
+        std::make_unique<MctpDiscovery>(
+            bus,
+            std::initializer_list<MctpDiscoveryHandlerIntf*>{fwManager.get()});
     auto callback = [verbose, &invoker, &reqHandler, &fwManager, &pldmTransport,
                      TID](IO& io, int fd, uint32_t revents) mutable {
         if (!(revents & EPOLLIN))
@@ -356,10 +373,14 @@ int main(int argc, char** argv)
             warning("Failed to receive PLDM request: {RETURN_CODE}",
                     "RETURN_CODE", returnCode);
         }
+        /* Free requestMsg after using */
+        free(requestMsg);
     };
 
     bus.attach_event(event.get(), SD_EVENT_PRIORITY_NORMAL);
+#ifndef SYSTEM_SPECIFIC_BIOS_JSON
     bus.request_name("xyz.openbmc_project.PLDM");
+#endif
     IO io(event, pldmTransport.getEventSource(), EPOLLIN, std::move(callback));
 #ifdef LIBPLDMRESPONDER
     if (hostPDRHandler)

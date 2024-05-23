@@ -8,8 +8,8 @@
 
 #include <fcntl.h>
 #include <libpldm/base.h>
-#include <libpldm/file_io.h>
-#include <libpldm/host.h>
+#include <libpldm/oem/ibm/file_io.h>
+#include <libpldm/oem/ibm/host.h>
 #include <stdint.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -249,7 +249,7 @@ class Handler : public CmdHandler
             std::string vspstring;
             std::string password;
 
-            for (auto& interface : interfaces)
+            for (const auto& interface : interfaces)
             {
                 if (interface.first == resDumpEntry)
                 {
@@ -288,7 +288,7 @@ class Handler : public CmdHandler
             msg.read(path, interfaces);
             std::string csr;
 
-            for (auto& interface : interfaces)
+            for (const auto& interface : interfaces)
             {
                 if (interface.first == certAuthority)
                 {

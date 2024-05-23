@@ -73,14 +73,12 @@ void generateStateSensorPDR(const DBusInterface& dBusIntf, const Json& json,
         HTOLE16(pdr->hdr.length);
 
         pdr->terminus_handle = TERMINUS_HANDLE;
-        pdr->sensor_id = handler.getNextSensorId();
 
         try
         {
             std::string entity_path = e.value("entity_path", "");
             auto& associatedEntityMap = handler.getAssociateEntityMap();
-            if (entity_path != "" && associatedEntityMap.find(entity_path) !=
-                                         associatedEntityMap.end())
+            if (entity_path != "" && associatedEntityMap.contains(entity_path))
             {
                 pdr->entity_type =
                     associatedEntityMap.at(entity_path).entity_type;
@@ -99,12 +97,11 @@ void generateStateSensorPDR(const DBusInterface& dBusIntf, const Json& json,
                 // present
                 if (!pdr->entity_type)
                 {
-                    error("The entity path for the FRU is not present.");
                     continue;
                 }
             }
         }
-        catch (const std::exception& ex)
+        catch (const std::exception&)
         {
             pdr->entity_type = e.value("type", 0);
             pdr->entity_instance = e.value("instance", 0);
@@ -120,7 +117,6 @@ void generateStateSensorPDR(const DBusInterface& dBusIntf, const Json& json,
         pdr->composite_sensor_count = sensors.size();
 
         HTOLE16(pdr->terminus_handle);
-        HTOLE16(pdr->sensor_id);
         HTOLE16(pdr->entity_type);
         HTOLE16(pdr->entity_instance);
         HTOLE16(pdr->container_id);
@@ -173,22 +169,28 @@ void generateStateSensorPDR(const DBusInterface& dBusIntf, const Json& json,
             catch (const std::exception& e)
             {
                 error(
-                    "D-Bus object path does not exist, sensor ID: {SENSOR_ID}",
-                    "SENSOR_ID", static_cast<uint16_t>(pdr->sensor_id));
+                    "Failed to create sensor PDR, D-Bus object '{PATH}' returned {ERROR}",
+                    "PATH", objectPath, "ERROR", e);
+                break;
             }
-
             dbusMappings.emplace_back(std::move(dbusMapping));
             dbusValMaps.emplace_back(std::move(dbusIdToValMap));
         }
 
-        handler.addDbusObjMaps(
-            pdr->sensor_id,
-            std::make_tuple(std::move(dbusMappings), std::move(dbusValMaps)),
-            pldm::responder::pdr_utils::TypeId::PLDM_SENSOR_ID);
-        pldm::responder::pdr_utils::PdrEntry pdrEntry{};
-        pdrEntry.data = entry.data();
-        pdrEntry.size = pdrSize;
-        repo.addRecord(pdrEntry);
+        if (!(dbusMappings.empty() && dbusValMaps.empty()))
+        {
+            pdr->sensor_id = handler.getNextSensorId();
+            HTOLE16(pdr->sensor_id);
+            handler.addDbusObjMaps(
+                pdr->sensor_id,
+                std::make_tuple(std::move(dbusMappings),
+                                std::move(dbusValMaps)),
+                pldm::responder::pdr_utils::TypeId::PLDM_SENSOR_ID);
+            pldm::responder::pdr_utils::PdrEntry pdrEntry{};
+            pdrEntry.data = entry.data();
+            pdrEntry.size = pdrSize;
+            repo.addRecord(pdrEntry);
+        }
     }
 }
 

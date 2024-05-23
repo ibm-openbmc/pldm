@@ -36,7 +36,7 @@ class FileHandler
      *  file types need to override this method to do the file specific
      *  processing
      *  @param[in] offset - offset to read
-     *  @param[in/out] length - length to be read mentioned by Host
+     *  @param[in] length - length to be read mentioned by Host
      *  @param[in] address - DMA address
      *  @param[in] oemPlatformHandler - oem handler for PLDM platform related
      *                                  tasks

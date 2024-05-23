@@ -1,10 +1,65 @@
 #include "common/utils.hpp"
+#include "mocked_utils.hpp"
 
 #include <libpldm/platform.h>
 
 #include <gtest/gtest.h>
 
 using namespace pldm::utils;
+
+TEST(GetInventoryObjects, testForEmptyObject)
+{
+    ObjectValueTree result =
+        DBusHandler::getInventoryObjects<GetManagedEmptyObject>();
+    EXPECT_TRUE(result.empty());
+}
+
+TEST(GetInventoryObjects, testForObject)
+{
+    std::string path = "/foo/bar";
+    std::string service = "foo.bar";
+    auto result = DBusHandler::getInventoryObjects<GetManagedObject>();
+    EXPECT_EQ(result[path].begin()->first, service);
+    auto function =
+        std::get<bool>(result[path][service][std::string("Functional")]);
+    auto model =
+        std::get<std::string>(result[path][service][std::string("Model")]);
+    EXPECT_FALSE(result.empty());
+    EXPECT_TRUE(function);
+    EXPECT_EQ(model, std::string("1234 - 00Z"));
+}
+
+TEST(printBuffer, testprintBufferGoodPath)
+{
+    std::vector<uint8_t> buffer = {10, 12, 14, 25, 233};
+    std::ostringstream localString;
+    auto coutBuffer = std::cout.rdbuf();
+    std::cout.rdbuf(localString.rdbuf());
+    printBuffer(false, buffer);
+    std::cout.rdbuf(coutBuffer);
+    EXPECT_EQ(localString.str(), "Rx: 0a 0c 0e 19 e9 \n");
+    localString.str("");
+    localString.clear();
+    std::cerr << localString.str() << std::endl;
+    buffer = {12, 0, 200, 12, 255};
+    std::cout.rdbuf(localString.rdbuf());
+    printBuffer(true, buffer);
+    std::cout.rdbuf(coutBuffer);
+    EXPECT_EQ(localString.str(), "Tx: 0c 00 c8 0c ff \n");
+}
+
+TEST(printBuffer, testprintBufferBadPath)
+{
+    std::vector<uint8_t> buffer = {};
+    std::ostringstream localString;
+    auto coutBuffer = std::cout.rdbuf();
+    std::cout.rdbuf(localString.rdbuf());
+    printBuffer(false, buffer);
+    EXPECT_EQ(localString.str(), "");
+    printBuffer(true, buffer);
+    std::cout.rdbuf(coutBuffer);
+    EXPECT_EQ(localString.str(), "");
+}
 
 TEST(decodeDate, testGooduintToDate)
 {
