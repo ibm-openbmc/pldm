@@ -94,20 +94,21 @@ class LidHandler : public FileHandler
         return true;
     }
 
-    virtual int writeFromMemory(uint32_t offset, uint32_t length,
-                                uint64_t address,
-                                oem_platform::Handler* oemPlatformHandler)
+    virtual void writeFromMemory(uint32_t offset, uint32_t length,
+                                 uint64_t address,
+                                 oem_platform::Handler* oemPlatformHandler,
+                                 SharedAIORespData& sharedAIORespDataobj,
+                                 sdeventplus::Event& event)
     {
-        int rc = PLDM_SUCCESS;
-        bool codeUpdateInProgress = false;
+        moemPlatformHandler = oemPlatformHandler;
         if (oemPlatformHandler != nullptr)
         {
             pldm::responder::oem_ibm_platform::Handler* oemIbmPlatformHandler =
                 dynamic_cast<pldm::responder::oem_ibm_platform::Handler*>(
                     oemPlatformHandler);
-            codeUpdateInProgress =
+            mcodeUpdateInProgress =
                 oemIbmPlatformHandler->codeUpdate->isCodeUpdateInProgress();
-            if (codeUpdateInProgress || lidType == PLDM_FILE_TYPE_LID_MARKER)
+            if (mcodeUpdateInProgress || lidType == PLDM_FILE_TYPE_LID_MARKER)
             {
                 std::string dir = LID_STAGING_DIR;
                 std::stringstream stream;
@@ -131,51 +132,76 @@ class LidHandler : public FileHandler
         {
             error("Failed to open file '{LID_PATH}' for writing", "LID_PATH",
                   lidPath);
-            return PLDM_ERROR;
+            FileHandler::dmaResponseToRemoteTerminus(sharedAIORespDataobj,
+                                                     PLDM_ERROR, 0);
+            FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
+            return;
         }
         close(fd);
-
-        rc = transferFileData(lidPath, false, offset, length, address);
-        if (rc != PLDM_SUCCESS)
-        {
-            error("Failed to write file from memory with response code '{RC}'",
-                  "RC", rc);
-            return rc;
-        }
-        if (lidType == PLDM_FILE_TYPE_LID_MARKER)
-        {
-            markerLIDremainingSize -= length;
-            if (markerLIDremainingSize == 0)
-            {
-                pldm::responder::oem_ibm_platform::Handler*
-                    oemIbmPlatformHandler = dynamic_cast<
-                        pldm::responder::oem_ibm_platform::Handler*>(
-                        oemPlatformHandler);
-                auto sensorId =
-                    oemIbmPlatformHandler->codeUpdate->getMarkerLidSensor();
-                using namespace pldm::responder::oem_ibm_platform;
-                oemIbmPlatformHandler->sendStateSensorEvent(
-                    sensorId, PLDM_STATE_SENSOR_STATE, 0, VALID, VALID);
-                // rc = validate api;
-                rc = PLDM_SUCCESS;
-            }
-        }
-        else if (codeUpdateInProgress)
-        {
-            rc = processCodeUpdateLid(lidPath);
-        }
-        return rc;
+        transferFileData(lidPath, false, offset, length, address,
+                         sharedAIORespDataobj, event);
     }
 
-    virtual int readIntoMemory(uint32_t offset, uint32_t length,
-                               uint64_t address,
-                               oem_platform::Handler* oemPlatformHandler)
+    virtual void postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length)
+    {
+        int rc = -1;
+        if (IsWriteToMemOp)
+        {
+            if (lidType == PLDM_FILE_TYPE_LID_MARKER)
+            {
+                markerLIDremainingSize -= length;
+                if (markerLIDremainingSize == 0)
+                {
+                    pldm::responder::oem_ibm_platform::Handler*
+                        oemIbmPlatformHandler = dynamic_cast<
+                            pldm::responder::oem_ibm_platform::Handler*>(
+                            moemPlatformHandler);
+                    if (oemIbmPlatformHandler)
+                    {
+                        auto sensorId = oemIbmPlatformHandler->codeUpdate
+                                            ->getMarkerLidSensor();
+                        using namespace pldm::responder::oem_ibm_platform;
+                        oemIbmPlatformHandler->sendStateSensorEvent(
+                            sensorId, PLDM_STATE_SENSOR_STATE, 0, VALID, VALID);
+                        // rc = validate api;
+                        rc = PLDM_SUCCESS;
+                    }
+                    else
+                    {
+                        rc = -1;
+                    }
+                }
+            }
+            else if (mcodeUpdateInProgress)
+            {
+                rc = processCodeUpdateLid(lidPath);
+            }
+            if (rc < 0)
+            {
+                error(
+                    "Failed to Post Data Transfer CallBack while lid transfer {LID_PATH}",
+                    "LID_PATH", lidPath);
+            }
+        }
+    }
+
+    virtual void readIntoMemory(uint32_t offset, uint32_t length,
+                                uint64_t address,
+                                oem_platform::Handler* oemPlatformHandler,
+                                SharedAIORespData& sharedAIORespDataobj,
+                                sdeventplus::Event& event)
     {
         if (constructLIDPath(oemPlatformHandler))
         {
-            return transferFileData(lidPath, true, offset, length, address);
+            transferFileData(lidPath, true, offset, length, address,
+                             sharedAIORespDataobj, event);
         }
-        return PLDM_ERROR;
+        else
+        {
+            FileHandler::dmaResponseToRemoteTerminus(sharedAIORespDataobj,
+                                                     PLDM_ERROR, 0);
+            FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
+        }
     }
 
     virtual int write(const char* buffer, uint32_t offset, uint32_t& length,
@@ -297,6 +323,15 @@ class LidHandler : public FileHandler
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
 
+    virtual int fileAckWithMetaData(uint8_t /*fileStatus*/,
+                                    uint32_t /*metaDataValue1*/,
+                                    uint32_t /*metaDataValue2*/,
+                                    uint32_t /*metaDataValue3*/,
+                                    uint32_t /*metaDataValue4*/)
+    {
+        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+    }
+
     virtual int newFileAvailable(uint64_t length)
 
     {
@@ -317,15 +352,6 @@ class LidHandler : public FileHandler
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
 
-    virtual int fileAckWithMetaData(uint8_t /*fileStatus*/,
-                                    uint32_t /*metaDataValue1*/,
-                                    uint32_t /*metaDataValue2*/,
-                                    uint32_t /*metaDataValue3*/,
-                                    uint32_t /*metaDataValue4*/)
-    {
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
-    }
-
     /** @brief LidHandler destructor
      */
     ~LidHandler() {}
@@ -336,6 +362,8 @@ class LidHandler : public FileHandler
     bool isPatchDir;
     static inline MarkerLIDremainingSize markerLIDremainingSize;
     uint8_t lidType;
+    bool mcodeUpdateInProgress = false;
+    oem_platform::Handler* moemPlatformHandler;
 };
 
 } // namespace responder

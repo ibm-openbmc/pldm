@@ -6,6 +6,7 @@
 #include "dbus_impl_requester.hpp"
 #include "fw-update/manager.hpp"
 #include "invoker.hpp"
+#include "pldm_resp_interface.hpp"
 #include "requester/handler.hpp"
 #include "requester/mctp_endpoint_discovery.hpp"
 #include "requester/request.hpp"
@@ -199,7 +200,7 @@ int main(int argc, char** argv)
     Invoker invoker{};
     requester::Handler<requester::Request> reqHandler(&pldmTransport, event,
                                                       instanceIdDb, verbose);
-
+    pldm::response_api::ResponseInterface respInterface;
 #ifdef LIBPLDMRESPONDER
     using namespace pldm::state_sensor;
     dbus_api::Host dbusImplHost(bus, "/xyz/openbmc_project/pldm");
@@ -238,6 +239,9 @@ int main(int argc, char** argv)
     std::unique_ptr<oem_fru::Handler> oemFruHandler{};
 
 #ifdef OEM_IBM
+    respInterface.responseObj =
+        std::make_unique<pldm::response_api::AltResponse>(&pldmTransport, TID,
+                                                          verbose);
     std::unique_ptr<pldm::responder::CodeUpdate> codeUpdate =
         std::make_unique<pldm::responder::CodeUpdate>(&dbusHandler);
     codeUpdate->clearDirPath(LID_STAGING_DIR);
@@ -249,7 +253,8 @@ int main(int argc, char** argv)
     invoker.registerHandler(PLDM_OEM, std::make_unique<oem_ibm::Handler>(
                                           oemPlatformHandler.get(),
                                           pldmTransport.getEventSource(),
-                                          hostEID, &instanceIdDb, &reqHandler));
+                                          hostEID, &instanceIdDb, &reqHandler,
+                                          respInterface.responseObj.get()));
 #endif
     if (hostEID)
     {
@@ -342,32 +347,43 @@ int main(int argc, char** argv)
             // process message and send response
             auto response = processRxMsg(requestMsgVec, invoker, reqHandler,
                                          fwManager.get(), TID);
-            if (response.has_value())
+            try
             {
-                FlightRecorder::GetInstance().saveRecord(*response, true);
-                if (verbose)
+                if (!response.value().empty())
                 {
-                    printBuffer(Tx, *response);
-                }
+                    FlightRecorder::GetInstance().saveRecord(*response, true);
+                    if (verbose)
+                    {
+                        printBuffer(Tx, *response);
+                    }
 
-                returnCode = pldmTransport.sendMsg(TID, (*response).data(),
-                                                   (*response).size());
-                if (returnCode != PLDM_REQUESTER_SUCCESS)
-                {
-                    warning(
-                        "Failed to send pldmTransport message for TID '{TID}', response code '{RETURN_CODE}'",
-                        "TID", TID, "RETURN_CODE", returnCode);
+                    returnCode = pldmTransport.sendMsg(TID, (*response).data(),
+                                                       (*response).size());
+                    if (returnCode != PLDM_REQUESTER_SUCCESS)
+                    {
+                        warning(
+                            "Failed to send pldmTransport message for TID '{TID}', response code '{RETURN_CODE}'",
+                            "TID", TID, "RETURN_CODE", returnCode);
+                    }
                 }
+            }
+            catch (const std::bad_optional_access& /*e*/)
+            {
+                //   This is working scenario which represents the file transfer
+                //   between BMC and DMA are happening using 'Eventloop
+                //   mechanism' so as per design File transfer response would be
+                //   not sending from here instead it would be sending via
+                //   'pldm::response_api::AltResponse' class.
             }
         }
         // TODO check that we get here if mctp-demux dies?
         else if (returnCode == PLDM_REQUESTER_RECV_FAIL)
         {
-            // MCTP daemon has closed the socket this daemon is connected to.
-            // This may or may not be an error scenario, in either case the
-            // recovery mechanism for this daemon is to restart, and hence exit
-            // the event loop, that will cause this daemon to exit with a
-            // failure code.
+            // MCTP daemon has closed the socket this daemon is connected
+            // to. This may or may not be an error scenario, in either case
+            // the recovery mechanism for this daemon is to restart, and
+            // hence exit the event loop, that will cause this daemon to
+            // exit with a failure code.
             error(
                 "MCTP daemon closed the socket, IO exiting with response code '{RC}'",
                 "RC", returnCode);
