@@ -79,6 +79,12 @@ class FileHandler
      */
     virtual int newFileAvailable(uint64_t length) = 0;
 
+    virtual int newFileAvailableWithMetaData(uint64_t length,
+                                             uint32_t metaDataValue1,
+                                             uint32_t metaDataValue2,
+                                             uint32_t metaDataValue3,
+                                             uint32_t metaDataValue4) = 0;
+
     /** @brief Method to read an oem file type's content into the PLDM response.
      *  @param[in] filePath - file to read from
      *  @param[in] offset - offset to read
