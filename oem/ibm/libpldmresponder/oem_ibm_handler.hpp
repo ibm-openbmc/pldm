@@ -5,6 +5,7 @@
 #include "libpldmresponder/pdr_utils.hpp"
 #include "libpldmresponder/platform.hpp"
 #include "requester/handler.hpp"
+#include "utils.hpp"
 
 #include <libpldm/entity.h>
 #include <libpldm/oem/ibm/state_set.h>
@@ -56,6 +57,7 @@ class Handler : public oem_platform::Handler
         hostTransitioningToOff(true)
     {
         codeUpdate->setVersions();
+        pldm::responder::utils::clearLicenseStatus();
         setEventReceiverCnt = 0;
 
         using namespace sdbusplus::bus::match::rules;
@@ -78,6 +80,7 @@ class Handler : public oem_platform::Handler
                     setEventReceiverCnt = 0;
                     disableWatchDogTimer();
                     startStopTimer(false);
+                    pldm::responder::utils::clearLicenseStatus();
                 }
                 else if (propVal ==
                          "xyz.openbmc_project.State.Host.HostState.Running")
