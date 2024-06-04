@@ -3,6 +3,7 @@
 #include "common/utils.hpp"
 #include "file_io_type_cert.hpp"
 #include "file_io_type_dump.hpp"
+#include "file_io_type_lic.hpp"
 #include "file_io_type_lid.hpp"
 #include "file_io_type_pcie.hpp"
 #include "file_io_type_pel.hpp"
@@ -118,7 +119,7 @@ int FileHandler::transferFileData(const fs::path& path, bool upstream,
         error("File '{PATH}' does not exist.", "PATH", path);
         return PLDM_ERROR;
     }
-    utils::CustomFD fd(file);
+    pldm::utils::CustomFD fd(file);
 
     return transferFileData(fd(), upstream, offset, length, address);
 }
@@ -160,6 +161,11 @@ std::unique_ptr<FileHandler> getHandlerByType(uint16_t fileType,
         case PLDM_FILE_TYPE_PROGRESS_SRC:
         {
             return std::make_unique<ProgressCodeHandler>(fileHandle);
+        }
+        case PLDM_FILE_TYPE_COD_LICENSE_KEY:
+        case PLDM_FILE_TYPE_COD_LICENSED_RESOURCES:
+        {
+            return std::make_unique<LicenseHandler>(fileHandle, fileType);
         }
         case PLDM_FILE_TYPE_LID_RUNNING:
         {

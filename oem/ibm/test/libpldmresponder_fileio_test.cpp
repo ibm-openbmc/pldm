@@ -3,6 +3,7 @@
 #include "libpldmresponder/file_io_by_type.hpp"
 #include "libpldmresponder/file_io_type_cert.hpp"
 #include "libpldmresponder/file_io_type_dump.hpp"
+#include "libpldmresponder/file_io_type_lic.hpp"
 #include "libpldmresponder/file_io_type_lid.hpp"
 #include "libpldmresponder/file_io_type_pcie.hpp"
 #include "libpldmresponder/file_io_type_pel.hpp"
@@ -895,6 +896,15 @@ TEST(getHandlerByType, allPaths)
     handler = getHandlerByType(PLDM_FILE_TYPE_ROOT_CERT, fileHandle);
     certType = dynamic_cast<CertHandler*>(handler.get());
     ASSERT_TRUE(certType != nullptr);
+
+    handler = getHandlerByType(PLDM_FILE_TYPE_COD_LICENSE_KEY, fileHandle);
+    auto licType = dynamic_cast<LicenseHandler*>(handler.get());
+    ASSERT_TRUE(licType != nullptr);
+
+    handler = getHandlerByType(PLDM_FILE_TYPE_COD_LICENSED_RESOURCES,
+                               fileHandle);
+    licType = dynamic_cast<LicenseHandler*>(handler.get());
+    ASSERT_TRUE(licType != nullptr);
 
     using namespace sdbusplus::xyz::openbmc_project::Common::Error;
     ASSERT_THROW(getHandlerByType(0xFFFF, fileHandle), InternalFailure);

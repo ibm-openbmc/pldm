@@ -195,6 +195,8 @@ int main(int argc, char** argv)
                                     instanceIdDb);
     sdbusplus::server::manager_t inventoryManager(
         bus, "/xyz/openbmc_project/inventory");
+    sdbusplus::server::manager::manager licObjManager(
+        bus, "/xyz/openbmc_project/license");
 
     Invoker invoker{};
     requester::Handler<requester::Request> reqHandler(&pldmTransport, event,
