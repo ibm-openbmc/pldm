@@ -64,7 +64,8 @@ class Serialize
      *  @param[in] value - Property Value over interface
      */
     void serialize(const std::string& path, const std::string& intf,
-                   const std::string& name = "", pldm::dbus::PropertyValue value = {});
+                   const std::string& name = "",
+                   pldm::dbus::PropertyValue value = {});
 
     /** @brief This function is to Read all values from binary file.
      *  @return true is success else false.

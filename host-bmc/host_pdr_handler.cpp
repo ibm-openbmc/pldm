@@ -1141,15 +1141,76 @@ void HostPDRHandler::createDbusObjects(const PDRList& fruRecordSetPDRs)
 
     for (const auto& entity : objPathMap)
     {
+        std::cout << "Entity Type received is " << entity.first << "\n";
         switch (entity.second.entity_type)
         {
             case PLDM_ENTITY_PROC | 0x8000:
                 CustomDBus::getCustomDBus().implementCpuCoreInterface(
                     entity.first);
+                CustomDBus::getCustomDBus().implementObjectEnableIface(
+                    entity.first, false);
                 break;
             case PLDM_ENTITY_SYS_BOARD:
                 CustomDBus::getCustomDBus().implementMotherboardInterface(
                     entity.first);
+                break;
+            case PLDM_ENTITY_SYSTEM_CHASSIS:
+                CustomDBus::getCustomDBus().implementChassisInterface(
+                    entity.first);
+                CustomDBus::getCustomDBus().implementGlobalInterface(
+                    entity.first);
+                break;
+            case PLDM_ENTITY_POWER_SUPPLY:
+                CustomDBus::getCustomDBus().implementPowerSupplyInterface(
+                    entity.first);
+                break;
+            case PLDM_ENTITY_CHASSIS_FRONT_PANEL_BOARD:
+                CustomDBus::getCustomDBus().implementPanelInterface(
+                    entity.first);
+                break;
+            case PLDM_ENTITY_FAN:
+                CustomDBus::getCustomDBus().implementFanInterface(entity.first);
+                break;
+            case PLDM_ENTITY_POWER_CONVERTER:
+                CustomDBus::getCustomDBus().implementVRMInterface(entity.first);
+                break;
+            case PLDM_ENTITY_SLOT:
+                CustomDBus::getCustomDBus().implementPCIeSlotInterface(
+                    entity.first);
+                //    CustomDBus::getCustomDBus().setLinkReset(
+                //      entity.first, false, hostEffecterParser, mctp_eid);
+                break;
+            case PLDM_ENTITY_CONNECTOR:
+                CustomDBus::getCustomDBus().implementConnecterInterface(
+                    entity.first);
+                break;
+            case PLDM_ENTITY_COOLING_DEVICE:
+            case PLDM_ENTITY_EXTERNAL_ENVIRONMENT:
+            case PLDM_ENTITY_BOARD:
+            case PLDM_ENTITY_MODULE:
+                CustomDBus::getCustomDBus().implementBoard(entity.first);
+                break;
+            case PLDM_ENTITY_CARD:
+                CustomDBus::getCustomDBus().implementPCIeDeviceInterface(
+                    entity.first);
+                break;
+            case PLDM_ENTITY_IO_MODULE:
+                CustomDBus::getCustomDBus().implementFabricAdapter(
+                    entity.first);
+                CustomDBus::getCustomDBus().implementPCIeDeviceInterface(
+                    entity.first);
+                break;
+            case 32954:
+                CustomDBus::getCustomDBus().implementPCIeSlotInterface(
+                    entity.first);
+                CustomDBus::getCustomDBus().setSlotType(
+                    entity.first,
+                    "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.OEM");
+                // CustomDBus::getCustomDBus().setLinkReset(
+                //   entity.first, false, hostEffecterParser, mctp_eid);
+                break;
+            default:
+                break;
                 break;
         }
     }

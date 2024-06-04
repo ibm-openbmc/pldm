@@ -36,6 +36,13 @@ sources = [
   '../host-bmc/dbus/associations.cpp',
   '../host-bmc/dbus/pcie_slot.cpp',
   '../host-bmc/dbus/pcie_device.cpp',
+  '../host-bmc/dbus/availability.cpp',
+  '../host-bmc/dbus/chassis.cpp',
+  '../host-bmc/dbus/enable.cpp',
+  '../host-bmc/dbus/inventory_item.cpp',
+  '../host-bmc/dbus/operational_status.cpp',
+  '../host-bmc/dbus/cable.cpp',
+  '../host-bmc/dbus/asset.cpp',
   'event_parser.cpp'
 ]
 

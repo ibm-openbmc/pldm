@@ -1,13 +1,29 @@
 #pragma once
 
-#include "common/utils.hpp"
+#include "../dbus_to_host_effecters.hpp"
+#include "asset.hpp"
 #include "associations.hpp"
+#include "availability.hpp"
+#include "board.hpp"
+#include "cable.hpp"
+#include "chassis.hpp"
+#include "common/utils.hpp"
+#include "connector.hpp"
 #include "cpu_core.hpp"
+#include "enable.hpp"
+#include "fabric_adapter.hpp"
+#include "fan.hpp"
+#include "global.hpp"
+#include "inventory_item.hpp"
 #include "motherboard.hpp"
+#include "operational_status.hpp"
+#include "panel.hpp"
 #include "pcie_device.hpp"
 #include "pcie_slot.hpp"
-#include "../dbus_to_host_effecters.hpp"
+#include "power_supply.hpp"
+#include "vrm.hpp"
 
+#include <sdbusplus/bus.hpp>
 #include <sdbusplus/server.hpp>
 #include <xyz/openbmc_project/Inventory/Decorator/LocationCode/server.hpp>
 
@@ -66,6 +82,35 @@ class CustomDBus
      */
     std::optional<std::string> getLocationCode(const std::string& path) const;
 
+    /** @brief Set the Functional property
+     *
+     *  @param[in] path   - The object path
+     *
+     *  @param[in] status - PLDM operational fault status
+     *  @param [in] parentChassis - The parent chassis of the FRU
+     *
+     */
+    void setOperationalStatus(const std::string& path, bool status,
+                              const std::string& parentChassis = "");
+
+    /** @brief Get the Functional property
+     *
+     *  @param[in] path   - The object path
+     *
+     *  @return status    - PLDM operational fault status
+     */
+    bool getOperationalStatus(const std::string& path) const;
+
+    /** @brief Set the Inventory Item property
+     *  @param[in] path - The object path
+     *  @param[in] bool - the presence of fru
+     */
+    void updateItemPresentStatus(const std::string& path, bool isPresent);
+
+    /** @brief get Bus ID
+     *  @param[in] path - The object path
+     */
+
     /** @brief Implement CpuCore Interface
      *
      *  @param[in] path - The object path
@@ -78,6 +123,33 @@ class CustomDBus
      *        in the PLDM created core inventory item object.
      */
     void implementCpuCoreInterface(const std::string& path);
+
+    /** @brief Implement Chassis Interface
+     *  @param[in] path - the object path
+     */
+    void implementChassisInterface(const std::string& path);
+
+    void implementPowerSupplyInterface(const std::string& path);
+
+    void implementFanInterface(const std::string& path);
+
+    void implementConnecterInterface(const std::string& path);
+
+    void implementVRMInterface(const std::string& path);
+
+    void implementFabricAdapter(const std::string& path);
+
+    void implementBoard(const std::string& path);
+
+    void implementGlobalInterface(const std::string& path);
+
+    void implementCableInterface(const std::string& path);
+
+    void implementAssetInterface(const std::string& path);
+
+    void implementPanelInterface(const std::string& path);
+
+    void implementObjectEnableIface(const std::string& path, bool value);
 
     /** @brief Set the microcode property
      *
@@ -131,6 +203,19 @@ class CustomDBus
 
     void setSlotType(const std::string& path, const std::string& slotType);
 
+    /** @brief set cable attributes */
+    void setCableAttributes(const std::string& path, double length,
+                            const std::string& cableDescription,
+                            const std::string& cableStatus);
+
+    /** @brief Set the availability state property
+     *
+     *  @param[in] path   - The object path
+     *
+     *  @param[in] state  - Availability state
+     */
+    void setAvailabilityState(const std::string& path, const bool& state);
+
   private:
     std::unordered_map<ObjectPath, std::unique_ptr<LocationIntf>> location;
     std::unordered_map<ObjectPath, std::unique_ptr<CPUCore>> cpuCore;
@@ -138,6 +223,25 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<Associations>> associations;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIeDevice>> pcieDevice;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIeSlot>> pcieSlot;
+    std::unordered_map<ObjectPath, std::unique_ptr<OperationalStatus>>
+        operationalStatus;
+    std::unordered_map<ObjectPath, std::unique_ptr<InventoryItem>>
+        presentStatus;
+    std::unordered_map<ObjectPath, std::unique_ptr<ItemChassis>> chassis;
+    std::unordered_map<ObjectPath, std::unique_ptr<Fan>> fan;
+    std::unordered_map<ObjectPath, std::unique_ptr<Connector>> connector;
+    std::unordered_map<ObjectPath, std::unique_ptr<VRM>> vrm;
+    std::unordered_map<ObjectPath, std::unique_ptr<Global>> global;
+    std::unordered_map<ObjectPath, std::unique_ptr<PowerSupply>> powersupply;
+    std::unordered_map<ObjectPath, std::unique_ptr<Board>> board;
+    std::unordered_map<ObjectPath, std::unique_ptr<FabricAdapter>>
+        fabricAdapter;
+    std::unordered_map<ObjectPath, std::unique_ptr<Availability>>
+        availabilityState;
+    std::unordered_map<ObjectPath, std::unique_ptr<Enable>> _enabledStatus;
+    std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
+    std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
+    std::unordered_map<ObjectPath, std::unique_ptr<Panel>> panel;
 };
 
 } // namespace dbus
