@@ -24,6 +24,62 @@ using callback =
     std::function<void(const std::string& path, Properties values)>;
 
 std::unordered_map<std::string, callback> dBusInterfaceHandler{
+    {"LocationCode",
+     [](const std::string& path, Properties values) {
+    if (values.contains("locationCode"))
+    {
+        pldm::dbus::CustomDBus::getCustomDBus().setLocationCode(
+            path, std::get<std::string>(values.at("locationCode")));
+    }
+}},
+    {"Associations",
+     [](const std::string& path, Properties values) {
+    if (values.contains("associations"))
+    {
+        pldm::dbus::CustomDBus::getCustomDBus().setAssociations(
+            path, std::get<dbus::AssociationsObj>(values.at("associations")));
+    }
+}},
+    {"Available",
+     [](const std::string& path, Properties values) {
+    if (values.contains("available"))
+    {
+        pldm::dbus::CustomDBus::getCustomDBus().setAvailabilityState(
+            path, std::get<bool>(values.at("available")));
+    }
+}},
+    {"OperationalStatus",
+     [](const std::string& path, Properties values) {
+    if (values.contains("functional"))
+    {
+        pldm::dbus::CustomDBus::getCustomDBus().setOperationalStatus(
+            path, std::get<bool>(values.at("functional")));
+    }
+}},
+    {"InventoryItem",
+     [](const std::string& path, Properties values) {
+    if (values.contains("present"))
+    {
+        pldm::dbus::CustomDBus::getCustomDBus().updateItemPresentStatus(
+            path, std::get<bool>(values.at("present")));
+    }
+}},
+    {"Enable",
+     [](const std::string& path, Properties values) {
+    if (values.contains("enabled"))
+    {
+        pldm::dbus::CustomDBus::getCustomDBus().implementObjectEnableIface(
+            path, std::get<bool>(values.at("enabled")));
+    }
+}},
+    {"ItemChassis",
+     [](const std::string& path, Properties /* values */) {
+    pldm::dbus::CustomDBus::getCustomDBus().implementChassisInterface(path);
+}},
+    {"PCIeSlot",
+     [](const std::string& path, Properties /* values */) {
+    pldm::dbus::CustomDBus::getCustomDBus().implementPCIeSlotInterface(path);
+}},
     {"CPUCore",
      [](const std::string& path, Properties values) {
     if (values.contains("microcode"))
@@ -36,8 +92,49 @@ std::unordered_map<std::string, callback> dBusInterfaceHandler{
         pldm::dbus::CustomDBus::getCustomDBus().implementCpuCoreInterface(path);
     }
 }},
-    {"Motherboard", [](const std::string& path, Properties /* values */) {
+    {"Motherboard",
+     [](const std::string& path, Properties /* values */) {
     pldm::dbus::CustomDBus::getCustomDBus().implementMotherboardInterface(path);
+}},
+    {"PowerSupply",
+     [](const std::string& path, Properties /* values */) {
+    pldm::dbus::CustomDBus::getCustomDBus().implementPowerSupplyInterface(path);
+}},
+    {"Fan",
+     [](const std::string& path, Properties /* values */) {
+    pldm::dbus::CustomDBus::getCustomDBus().implementFanInterface(path);
+}},
+    {"Connector",
+     [](const std::string& path, Properties /* values */) {
+    pldm::dbus::CustomDBus::getCustomDBus().implementConnecterInterface(path);
+}},
+    {"VRM",
+     [](const std::string& path, Properties /* values */) {
+    pldm::dbus::CustomDBus::getCustomDBus().implementVRMInterface(path);
+}},
+    {"FabricAdapter",
+     [](const std::string& path, Properties /* values */) {
+    pldm::dbus::CustomDBus::getCustomDBus().implementFabricAdapter(path);
+}},
+    {"Board",
+     [](const std::string& path, Properties /* values */) {
+    pldm::dbus::CustomDBus::getCustomDBus().implementBoard(path);
+}},
+    {"Global",
+     [](const std::string& path, Properties /* values */) {
+    pldm::dbus::CustomDBus::getCustomDBus().implementGlobalInterface(path);
+}},
+
+    {"CPUCore", [](const std::string& path, Properties values) {
+    if (values.contains("microcode"))
+    {
+        pldm::dbus::CustomDBus::getCustomDBus().setMicrocode(
+            path, std::get<uint32_t>(values.at("microcode")));
+    }
+    else
+    {
+        pldm::dbus::CustomDBus::getCustomDBus().implementCpuCoreInterface(path);
+    }
 }}};
 
 std::pair<std::set<uint16_t>, std::set<uint16_t>>
