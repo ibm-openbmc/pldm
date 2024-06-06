@@ -967,8 +967,9 @@ Response Handler::newFileAvailableWithMetaData(const pldm_msg* request,
     }
     catch (const InternalFailure& e)
     {
-        error("unknown file type, '{TYPE}' error - {ERROR}", "TYPE", fileType,
-              "ERROR", e);
+        error(
+            "Unknown file type, '{TYPE}' in NewFileAvailableMetaData response, error - {ERROR}",
+            "TYPE", fileType, "ERROR", e);
         return CmdHandler::ccOnlyResponse(request, PLDM_INVALID_FILE_TYPE);
     }
 
@@ -1015,8 +1016,9 @@ Response Handler::fileAckWithMetaData(const pldm_msg* request,
     }
     catch (const InternalFailure& e)
     {
-        error("unknown file type, '{TYPE}' and error - {ERROR}", "TYPE",
-              fileType, "ERROR", e);
+        error(
+            "Unknown file type, '{TYPE}' in FileAckWithMetaData response and error - {ERROR}",
+            "TYPE", fileType, "ERROR", e);
         return CmdHandler::ccOnlyResponse(request, PLDM_INVALID_FILE_TYPE);
     }
 

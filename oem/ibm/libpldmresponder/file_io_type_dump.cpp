@@ -31,7 +31,7 @@ static constexpr auto dumpEntry = "xyz.openbmc_project.Dump.Entry";
 static constexpr auto dumpObjPath = "/xyz/openbmc_project/dump/system";
 static constexpr auto systemDumpEntry = "xyz.openbmc_project.Dump.Entry.System";
 static constexpr auto resDumpEntry = "com.ibm.Dump.Entry.Resource";
-static constexpr auto resDumpEntryObjPath =
+static constexpr auto dumpEntryObjPath =
     "/xyz/openbmc_project/dump/system/entry/";
 static constexpr auto bmcDumpObjPath = "/xyz/openbmc_project/dump/bmc/entry";
 
@@ -59,28 +59,19 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
                                 std::to_string(fileHandle);
     }
 
-    // Stores the current resource dump entry path
-    std::string curResDumpEntryPath{};
+    std::string curDumpEntryPath{};
 
     if (dumpType == PLDM_FILE_TYPE_BMC_DUMP)
     {
-        curResDumpEntryPath = (std::string)bmcDumpObjPath + "/" +
-                              std::to_string(fileHandle);
+        curDumpEntryPath = (std::string)bmcDumpObjPath + "/" +
+                           std::to_string(fileHandle);
     }
-    else if (dumpType == PLDM_FILE_TYPE_SBE_DUMP)
+    else if (dumpType == PLDM_FILE_TYPE_SBE_DUMP ||
+             dumpType == PLDM_FILE_TYPE_HOSTBOOT_DUMP ||
+             dumpType == PLDM_FILE_TYPE_HARDWARE_DUMP)
     {
-        curResDumpEntryPath = (std::string)dumpObjPath + "/" +
-                              std::to_string(fileHandle);
-    }
-    else if (dumpType == PLDM_FILE_TYPE_HOSTBOOT_DUMP)
-    {
-        curResDumpEntryPath = (std::string)dumpObjPath + "/" +
-                              std::to_string(fileHandle);
-    }
-    else if (dumpType == PLDM_FILE_TYPE_HARDWARE_DUMP)
-    {
-        curResDumpEntryPath = (std::string)dumpObjPath + "/" +
-                              std::to_string(fileHandle);
+        curDumpEntryPath = (std::string)dumpObjPath + "/" +
+                           std::to_string(fileHandle);
     }
 
     std::string dumpEntryIntf{};
@@ -96,7 +87,7 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
     }
     else
     {
-        return curResDumpEntryPath;
+        return curDumpEntryPath;
     }
 
     dbus::ObjectValueTree objects;
@@ -114,7 +105,7 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
         error(
             "Failure with GetManagedObjects in findDumpObjPath call '{PATH}' and interface '{INTERFACE}', error - {ERROR}",
             "PATH", DUMP_MANAGER_PATH, "INTERFACE", dumpEntryIntf, "ERROR", e);
-        return curResDumpEntryPath;
+        return curDumpEntryPath;
     }
 
     for (const auto& object : objects)
@@ -136,23 +127,23 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
                         auto dumpId = *dumpIdPtr;
                         if (fileHandle == dumpId)
                         {
-                            curResDumpEntryPath = object.first.str;
+                            curDumpEntryPath = object.first.str;
                             info("Hit the object path match for {CUR_RES_DUMP}",
-                                 "CUR_RES_DUMP", curResDumpEntryPath);
-                            return curResDumpEntryPath;
+                                 "CUR_RES_DUMP", curDumpEntryPath);
+                            return curDumpEntryPath;
                         }
                     }
                     else
                     {
                         error(
-                            "Invalid SourceDumpId in curResDumpEntryPath '{CUR_RES_DUMP}' but continuing with next entry for a match...",
-                            "CUR_RES_DUMP", curResDumpEntryPath);
+                            "Invalid SourceDumpId in curDumpEntryPath '{CUR_RES_DUMP}' but continuing with next entry for a match...",
+                            "CUR_RES_DUMP", curDumpEntryPath);
                     }
                 }
             }
         }
     }
-    return curResDumpEntryPath;
+    return curDumpEntryPath;
 }
 
 int DumpHandler::newFileAvailable(uint64_t length)
@@ -235,7 +226,8 @@ std::string DumpHandler::getOffloadUri(uint32_t fileHandle)
         socketInterface =
             pldm::utils::DBusHandler().getDbusProperty<std::string>(
                 path.c_str(), "OffloadUri", dumpEntry);
-        info("socketInterface={SOCKET_INTF}", "SOCKET_INTF", socketInterface);
+        info("Offload URI socketInterface={SOCKET_INTF}", "SOCKET_INTF",
+             socketInterface);
     }
     catch (const std::exception& e)
     {
@@ -534,7 +526,7 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
     {
         DBusMapping dbusMapping;
         std::string idString = std::format("{:08X}", fileHandle);
-        dbusMapping.objectPath = resDumpEntryObjPath + idString;
+        dbusMapping.objectPath = dumpEntryObjPath + idString;
         dbusMapping.interface = resDumpEntry;
         dbusMapping.propertyName = "DumpRequestStatus";
         dbusMapping.propertyType = "string";
@@ -580,8 +572,9 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
             }
             catch (const std::exception& e)
             {
-                error("failed to set token for resource dump,error - {ERROR}",
-                      "ERROR", e);
+                error(
+                    "failed to set token '{TOKEN}' for resource dump,error - {ERROR}",
+                    "TOKEN", metaDataValue1, "ERROR", e);
                 return PLDM_ERROR;
             }
         }
@@ -607,7 +600,7 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
             PropertyValue value{
                 "xyz.openbmc_project.Common.Progress.OperationStatus.Failed"};
             DBusMapping dbusMapping{
-                resDumpEntryObjPath + std::to_string(fileHandle),
+                dumpEntryObjPath + std::to_string(fileHandle),
                 "xyz.openbmc_project.Common.Progress", "Status", "string"};
             try
             {
@@ -616,9 +609,8 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
             catch (const sdbusplus::exception_t& e)
             {
                 error(
-                    "Failure in setting Progress as OperationStatus.Failed in fileAckWithMetaData, error - {ERROR}"
-                    "ERROR",
-                    e);
+                    "Failure in setting Progress as OperationStatus.Failed in fileAckWithMetaData, error - {ERROR}",
+                    "ERROR", e);
             }
         }
 
