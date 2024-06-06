@@ -54,8 +54,11 @@ class DumpHandler : public FileHandler
     ~DumpHandler() {}
 
   private:
-    static int fd;     //!< fd to manage the dump offload to bmc
-    uint16_t dumpType; //!< type of the dump
+    static int fd;             //!< fd to manage the dump offload to bmc
+    uint16_t dumpType;         //!< type of the dump
+    std::string
+        resDumpRequestDirPath; //!< directory where the resource
+                               //!< dump request parameter file is stored
 };
 
 } // namespace responder
