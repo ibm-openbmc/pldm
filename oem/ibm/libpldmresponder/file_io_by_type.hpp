@@ -129,6 +129,22 @@ class FileHandler
                                              uint32_t metaDataValue3,
                                              uint32_t metaDataValue4) = 0;
 
+    /** @brief Method to process a file ack with meta data notification from the
+     *  host. The bmc can chose to do different actions based on the file type.
+     *
+     *  @param[in] fileStatus - Status of the file transfer
+     *  @param[in] metaDataValue1 - value of meta data sent by host
+     *  @param[in] metaDataValue2 - value of meta data sent by host
+     *  @param[in] metaDataValue3 - value of meta data sent by host
+     *  @param[in] metaDataValue4 - value of meta data sent by host
+     *
+     *  @return PLDM status code
+     */
+    virtual int fileAckWithMetaData(uint8_t fileStatus, uint32_t metaDataValue1,
+                                    uint32_t metaDataValue2,
+                                    uint32_t metaDataValue3,
+                                    uint32_t metaDataValue4) = 0;
+
     /** @brief Constructor to create a FileHandler object
      */
     FileHandler(uint32_t fileHandle) : fileHandle(fileHandle) {}
