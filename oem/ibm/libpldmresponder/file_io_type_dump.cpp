@@ -1,5 +1,6 @@
 #include "file_io_type_dump.hpp"
 
+#include "com/ibm/Dump/Notify/server.hpp"
 #include "common/utils.hpp"
 #include "utils.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
@@ -11,7 +12,6 @@
 
 #include <phosphor-logging/lg2.hpp>
 #include <sdbusplus/server.hpp>
-#include <xyz/openbmc_project/Dump/NewDump/server.hpp>
 
 #include <cstdint>
 #include <exception>
@@ -30,7 +30,6 @@ namespace responder
 static constexpr auto dumpEntry = "xyz.openbmc_project.Dump.Entry";
 static constexpr auto dumpObjPath = "/xyz/openbmc_project/dump/system";
 static constexpr auto systemDumpEntry = "xyz.openbmc_project.Dump.Entry.System";
-static constexpr auto resDumpObjPath = "/xyz/openbmc_project/dump/resource";
 static constexpr auto resDumpEntry = "com.ibm.Dump.Entry.Resource";
 
 // Resource dump file path to be deleted once hyperviosr validates the input
@@ -110,24 +109,26 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
 
 int DumpHandler::newFileAvailable(uint64_t length)
 {
-    static constexpr auto dumpInterface = "xyz.openbmc_project.Dump.NewDump";
+    static constexpr auto dumpInterface = "com.ibm.Dump.Notify";
     auto& bus = pldm::utils::DBusHandler::getBus();
 
     auto notifyObjPath = dumpObjPath;
+    auto notifyDumpType =
+        sdbusplus::common::com::ibm::dump::Notify::DumpType::System;
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
     {
-        // Setting the Notify path for resource dump
-        notifyObjPath = resDumpObjPath;
+        // Setting the dump type for resource dump
+        notifyDumpType =
+            sdbusplus::common::com::ibm::dump::Notify::DumpType::Resource;
     }
 
     try
     {
-        auto service =
-            pldm::utils::DBusHandler().getService(notifyObjPath, dumpInterface);
-        using namespace sdbusplus::xyz::openbmc_project::Dump::server;
+        auto service = pldm::utils::DBusHandler().getService(notifyObjPath,
+                                                             dumpInterface);
         auto method = bus.new_method_call(service.c_str(), notifyObjPath,
-                                          dumpInterface, "Notify");
-        method.append(fileHandle, length);
+                                          dumpInterface, "NotifyDump");
+        method.append(fileHandle, length, notifyDumpType, 0);
         bus.call_noreply(method, dbusTimeout);
     }
     catch (const std::exception& e)
@@ -343,5 +344,44 @@ int DumpHandler::read(uint32_t offset, uint32_t& length, Response& response,
     return readFile(resDumpDirPath, offset, length, response);
 }
 
+int DumpHandler::newFileAvailableWithMetaData(uint64_t length,
+                                              uint32_t metaDataValue1,
+                                              uint32_t /*metaDataValue2*/,
+                                              uint32_t /*metaDataValue3*/,
+                                              uint32_t /*metaDataValue4*/)
+{
+    static constexpr auto dumpInterface = "com.ibm.Dump.Notify";
+    auto& bus = pldm::utils::DBusHandler::getBus();
+
+    auto notifyObjPath = dumpObjPath;
+    auto notifyDumpType =
+        sdbusplus::common::com::ibm::dump::Notify::DumpType::System;
+    if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
+    {
+        notifyDumpType =
+            sdbusplus::common::com::ibm::dump::Notify::DumpType::Resource;
+    }
+
+    try
+    {
+        auto service = pldm::utils::DBusHandler().getService(notifyObjPath,
+                                                             dumpInterface);
+        auto method = bus.new_method_call(service.c_str(), notifyObjPath,
+                                          dumpInterface, "NotifyDump");
+        method.append(fileHandle, length, notifyDumpType, metaDataValue1);
+        bus.call(method, dbusTimeout);
+    }
+    catch (const sdbusplus::exception_t& e)
+    {
+        error(
+            "failed to make a d-bus call to notify a new dump request using newFileAvailableWithMetaData, error - {ERROR}",
+            "ERROR", e);
+        pldm::utils::reportError(
+            "xyz.openbmc_project.PLDM.Error.newFileAvailableWithMetaData.NewDumpNotifyFail");
+        return PLDM_ERROR;
+    }
+
+    return PLDM_SUCCESS;
+}
 } // namespace responder
 } // namespace pldm
