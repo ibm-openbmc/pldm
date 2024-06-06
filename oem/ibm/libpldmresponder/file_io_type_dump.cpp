@@ -190,6 +190,34 @@ int DumpHandler::newFileAvailable(uint64_t length)
     return PLDM_SUCCESS;
 }
 
+void DumpHandler::resetOffloadUri()
+{
+    auto path = findDumpObjPath(fileHandle);
+    if (path.empty())
+    {
+        return;
+    }
+
+    info("DumpHandler::resetOffloadUri path = {PATH} fileHandle = {FILE_HNDLE}",
+         "PATH", path.c_str(), "FILE_HNDL", fileHandle);
+
+    PropertyValue offloadUriValue{""};
+    DBusMapping dbusMapping{path, dumpEntry, "OffloadUri", "string"};
+    try
+    {
+        pldm::utils::DBusHandler().setDbusProperty(dbusMapping,
+                                                   offloadUriValue);
+    }
+    catch (const sdbusplus::exception_t& e)
+    {
+        error("Failed to set the OffloadUri dbus property,error - '{ERROR}'",
+              "ERROR", e);
+        pldm::utils::reportError(
+            "xyz.openbmc_project.PLDM.Error.fileAck.DumpEntryOffloadUriSetFail");
+    }
+    return;
+}
+
 std::string DumpHandler::getOffloadUri(uint32_t fileHandle)
 {
     auto path = findDumpObjPath(fileHandle);
@@ -364,6 +392,8 @@ int DumpHandler::fileAck(uint8_t fileStatus)
                 error(
                     "Failed to make a D-bus call to DUMP manager to set the dump offloaded property 'true' for dump file '{PATH}', error - {ERROR}",
                     "PATH", path, "ERROR", e);
+                resetOffloadUri();
+                return PLDM_ERROR;
             }
 
             auto socketInterface = getOffloadUri(fileHandle);
@@ -373,6 +403,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
                 DumpHandler::fd = -1;
             }
             std::remove(socketInterface.c_str());
+            resetOffloadUri();
         }
         return PLDM_SUCCESS;
     }
