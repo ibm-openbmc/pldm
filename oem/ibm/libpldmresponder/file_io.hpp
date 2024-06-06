@@ -157,8 +157,9 @@ Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
 
 namespace oem_ibm
 {
-static constexpr auto dumpObjPath = "/xyz/openbmc_project/dump/resource/entry/";
+static constexpr auto dumpObjPath = "/xyz/openbmc_project/dump/system/entry/";
 static constexpr auto resDumpEntry = "com.ibm.Dump.Entry.Resource";
+static constexpr auto sysDumpEntry = "xyz.openbmc_project.Dump.Entry.System";
 
 static constexpr auto certObjPath = "/xyz/openbmc_project/certs/ca/";
 static constexpr auto certAuthority =
@@ -249,14 +250,13 @@ class Handler : public CmdHandler
                 sdbusplus::bus::match::rules::argNpath(0, dumpObjPath),
             [this, hostSockFd, hostEid, instanceIdDb,
              handler](sdbusplus::message_t& msg) {
-                std::map<
-                    std::string,
-                    std::map<std::string, std::variant<std::string, uint32_t>>>
-                    interfaces;
-                sdbusplus::message::object_path path;
-                msg.read(path, interfaces);
-                std::string vspstring;
-                std::string password;
+            std::map<std::string,
+                     std::map<std::string, std::variant<std::string, uint32_t>>>
+                interfaces;
+            sdbusplus::message::object_path path;
+            msg.read(path, interfaces);
+            std::string vspstring;
+            std::string userchallenge;
 
                 for (const auto& interface : interfaces)
                 {
@@ -266,24 +266,50 @@ class Handler : public CmdHandler
                         {
                             if (property.first == "VSPString")
                             {
-                                vspstring =
-                                    std::get<std::string>(property.second);
-                            }
-                            else if (property.first == "Password")
+                            vspstring = std::get<std::string>(property.second);
+                        }
+                        else if (property.first == "UserChallenge")
+                        {
+                            userchallenge =
+                                std::get<std::string>(property.second);
+                        }
+                        }
+                    dbusToFileHandlers
+                        .emplace_back(
+                            std::make_unique<
+                                pldm::requester::oem_ibm::DbusToFileHandler>(
+                                hostSockFd, hostEid, instanceIdDb, path,
+                                handler))
+                        ->processNewResourceDump(vspstring, userchallenge);
+                    break;
+                }
+                if (interface.first == sysDumpEntry)
+                {
+                    for (const auto& property : interface.second)
+                    {
+                        if (property.first == "SystemImpact")
+                        {
+                            if (std::get<std::string>(property.second) ==
+                                "xyz.openbmc_project.Dump.Entry.System.SystemImpact.NonDisruptive")
                             {
-                                password =
-                                    std::get<std::string>(property.second);
+                                vspstring = "system";
                             }
                         }
-                        dbusToFileHandlers
-                            .emplace_back(
-                                std::make_unique<pldm::requester::oem_ibm::
-                                                     DbusToFileHandler>(
-                                    hostSockFd, hostEid, instanceIdDb, path,
-                                    handler))
-                            ->processNewResourceDump(vspstring, password);
-                        break;
+                        else if (property.first == "UserChallenge")
+                        {
+                            userchallenge =
+                                std::get<std::string>(property.second);
+                        }
                     }
+                    dbusToFileHandlers
+                        .emplace_back(
+                            std::make_unique<
+                                pldm::requester::oem_ibm::DbusToFileHandler>(
+                                hostSockFd, hostEid, instanceIdDb, path,
+                                handler))
+                        ->processNewResourceDump(vspstring, userchallenge);
+                    break;
+                }
                 }
             });
         vmiCertMatcher = std::make_unique<sdbusplus::bus::match_t>(
