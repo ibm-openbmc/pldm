@@ -157,8 +157,9 @@ Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
 
 namespace oem_ibm
 {
-static constexpr auto dumpObjPath = "/xyz/openbmc_project/dump/resource/entry/";
+static constexpr auto dumpObjPath = "/xyz/openbmc_project/dump/system/entry/";
 static constexpr auto resDumpEntry = "com.ibm.Dump.Entry.Resource";
+static constexpr auto sysDumpEntry = "xyz.openbmc_project.Dump.Entry.System";
 
 static constexpr auto certObjPath = "/xyz/openbmc_project/certs/ca/";
 static constexpr auto certAuthority =
@@ -257,7 +258,7 @@ class Handler : public CmdHandler
             sdbusplus::message::object_path path;
             msg.read(path, interfaces);
             std::string vspstring;
-            std::string password;
+            std::string userchallenge;
 
             for (const auto& interface : interfaces)
             {
@@ -269,9 +270,10 @@ class Handler : public CmdHandler
                         {
                             vspstring = std::get<std::string>(property.second);
                         }
-                        else if (property.first == "Password")
+                        else if (property.first == "UserChallenge")
                         {
-                            password = std::get<std::string>(property.second);
+                            userchallenge =
+                                std::get<std::string>(property.second);
                         }
                     }
                     dbusToFileHandlers
@@ -280,7 +282,34 @@ class Handler : public CmdHandler
                                 pldm::requester::oem_ibm::DbusToFileHandler>(
                                 hostSockFd, hostEid, instanceIdDb, path,
                                 handler))
-                        ->processNewResourceDump(vspstring, password);
+                        ->processNewResourceDump(vspstring, userchallenge);
+                    break;
+                }
+                if (interface.first == sysDumpEntry)
+                {
+                    for (const auto& property : interface.second)
+                    {
+                        if (property.first == "SystemImpact")
+                        {
+                            if (std::get<std::string>(property.second) ==
+                                "xyz.openbmc_project.Dump.Entry.System.SystemImpact.NonDisruptive")
+                            {
+                                vspstring = "system";
+                            }
+                        }
+                        else if (property.first == "UserChallenge")
+                        {
+                            userchallenge =
+                                std::get<std::string>(property.second);
+                        }
+                    }
+                    dbusToFileHandlers
+                        .emplace_back(
+                            std::make_unique<
+                                pldm::requester::oem_ibm::DbusToFileHandler>(
+                                hostSockFd, hostEid, instanceIdDb, path,
+                                handler))
+                        ->processNewResourceDump(vspstring, userchallenge);
                     break;
                 }
             }
