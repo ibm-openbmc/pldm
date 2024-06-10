@@ -20,21 +20,29 @@ class ProgressCodeHandler : public FileHandler
      */
     ProgressCodeHandler(uint32_t fileHandle) : FileHandler(fileHandle) {}
 
-    int writeFromMemory(uint32_t /*offset*/, uint32_t /*length*/,
-                        uint64_t /*address*/,
-                        oem_platform::Handler* /*oemPlatformHandler*/) override
+    void writeFromMemory(uint32_t /*offset*/, uint32_t length,
+                         uint64_t /*address*/,
+                         oem_platform::Handler* /*oemPlatformHandler*/,
+                         SharedAIORespData& sharedAIORespDataobj,
+                         sdeventplus::Event& /*event*/) override
     {
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+        FileHandler::dmaResponseToRemoteTerminus(
+            sharedAIORespDataobj, PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
+        FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
     }
 
     int write(const char* buffer, uint32_t offset, uint32_t& length,
               oem_platform::Handler* oemPlatformHandler) override;
 
-    int readIntoMemory(uint32_t /*offset*/, uint32_t /*length*/,
-                       uint64_t /*address*/,
-                       oem_platform::Handler* /*oemPlatformHandler*/) override
+    void readIntoMemory(uint32_t /*offset*/, uint32_t length,
+                        uint64_t /*address*/,
+                        oem_platform::Handler* /*oemPlatformHandler*/,
+                        SharedAIORespData& sharedAIORespDataobj,
+                        sdeventplus::Event& /*event*/) override
     {
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+        FileHandler::dmaResponseToRemoteTerminus(
+            sharedAIORespDataobj, PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
+        FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
     }
 
     int read(uint32_t /*offset*/, uint32_t& /*length*/, Response& /*response*/,
@@ -78,6 +86,16 @@ class ProgressCodeHandler : public FileHandler
      */
     virtual int setRawBootProperty(
         const std::tuple<uint64_t, std::vector<uint8_t>>& progressCodeBuffer);
+
+    /** @brief Method to do necessary operation according different
+     *         file type and being call when data transfer completed.
+     *
+     *  @param[in] IsWriteToMemOp - type of operation to decide what operation
+     *                              needs to be done after data transfer.
+     */
+    virtual void postDataTransferCallBack(bool /*IsWriteToMemOp*/,
+                                          uint32_t /*length*/)
+    {}
 
     /** @brief ProgressCodeHandler destructor
      */

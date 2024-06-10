@@ -22,9 +22,11 @@ static constexpr auto certFilePath = "/var/lib/ibm/bmcweb/";
 
 CertMap CertHandler::certMap;
 
-int CertHandler::writeFromMemory(uint32_t offset, uint32_t length,
-                                 uint64_t address,
-                                 oem_platform::Handler* /*oemPlatformHandler*/)
+void CertHandler::writeFromMemory(uint32_t offset, uint32_t length,
+                                  uint64_t address,
+                                  oem_platform::Handler* /*oemPlatformHandler*/,
+                                  SharedAIORespData& sharedAIORespDataobj,
+                                  sdeventplus::Event& event)
 {
     auto it = certMap.find(certType);
     if (it == certMap.end())
@@ -32,41 +34,64 @@ int CertHandler::writeFromMemory(uint32_t offset, uint32_t length,
         error(
             "Failed to find file type '{TYPE}' in certificate map. Write from memory during certificate exchange failed",
             "TYPE", certType);
-        return PLDM_ERROR;
+        FileHandler::dmaResponseToRemoteTerminus(sharedAIORespDataobj,
+                                                 PLDM_ERROR, 0);
+        FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
+        return;
     }
-
     auto fd = std::get<0>(it->second);
-    auto& remSize = std::get<1>(it->second);
-    auto rc = transferFileData(fd, false, offset, length, address);
-    if (rc == PLDM_SUCCESS)
+    transferFileData(fd, false, offset, length, address, sharedAIORespDataobj,
+                     event);
+
+    return;
+}
+
+void CertHandler::postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length)
+{
+    if (IsWriteToMemOp)
     {
+        auto it = certMap.find(certType);
+        if (it == certMap.end())
+        {
+            error(
+                "CertHandler::writeFromMemory:file for type {TYPE} doesn't exist",
+                "TYPE", certType);
+            return;
+        }
+        // auto fd = std::get<0>(it->second);
+        auto& remSize = std::get<1>(it->second);
         remSize -= length;
         if (!remSize)
         {
-            close(fd);
+            // close(fd);
             certMap.erase(it);
         }
     }
-    return rc;
+    else
+    {
+        fs::remove(certfilePath);
+    }
+    return;
 }
 
-int CertHandler::readIntoMemory(uint32_t offset, uint32_t length,
-                                uint64_t address,
-                                oem_platform::Handler* /*oemPlatformHandler*/)
+void CertHandler::readIntoMemory(uint32_t offset, uint32_t length,
+                                 uint64_t address,
+                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                 SharedAIORespData& sharedAIORespDataobj,
+                                 sdeventplus::Event& event)
 {
     std::string filePath = certFilePath;
     filePath += "CSR_" + std::to_string(fileHandle);
     if (certType != PLDM_FILE_TYPE_CERT_SIGNING_REQUEST)
     {
-        return PLDM_ERROR_INVALID_DATA;
+        FileHandler::dmaResponseToRemoteTerminus(
+            sharedAIORespDataobj, PLDM_ERROR_INVALID_DATA, length);
+        FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
+        return;
     }
-    auto rc = transferFileData(filePath.c_str(), true, offset, length, address);
-    fs::remove(filePath);
-    if (rc)
-    {
-        return PLDM_ERROR;
-    }
-    return PLDM_SUCCESS;
+    certfilePath = filePath;
+    transferFileData(filePath.c_str(), true, offset, length, address,
+                     sharedAIORespDataobj, event);
 }
 
 int CertHandler::read(uint32_t offset, uint32_t& length, Response& response,

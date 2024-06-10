@@ -19,13 +19,17 @@ class PelHandler : public FileHandler
      */
     PelHandler(uint32_t fileHandle) : FileHandler(fileHandle) {}
 
-    virtual int writeFromMemory(uint32_t offset, uint32_t length,
-                                uint64_t address,
-                                oem_platform::Handler* /*oemPlatformHandler*/);
+    virtual void writeFromMemory(uint32_t offset, uint32_t length,
+                                 uint64_t address,
+                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                 SharedAIORespData& sharedAIORespDataobj,
+                                 sdeventplus::Event& event);
 
-    virtual int readIntoMemory(uint32_t offset, uint32_t length,
-                               uint64_t address,
-                               oem_platform::Handler* /*oemPlatformHandler*/);
+    virtual void readIntoMemory(uint32_t offset, uint32_t length,
+                                uint64_t address,
+                                oem_platform::Handler* /*oemPlatformHandler*/,
+                                SharedAIORespData& sharedAIORespDataobj,
+                                sdeventplus::Event& event);
 
     virtual int read(uint32_t offset, uint32_t& length, Response& response,
                      oem_platform::Handler* /*oemPlatformHandler*/);
@@ -37,7 +41,7 @@ class PelHandler : public FileHandler
     virtual int fileAck(uint8_t fileStatus);
 
     /** @brief method to store a pel file in tempfs and send
-     *  d-bus notification to pel daemon that it is ready for consumption
+     *         d-bus notification to pel daemon that it is ready for consumption
      *
      *  @param[in] pelFileName - the pel file path
      */
@@ -47,6 +51,7 @@ class PelHandler : public FileHandler
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
+    virtual void postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length);
 
     virtual int newFileAvailableWithMetaData(uint64_t /*length*/,
                                              uint32_t /*metaDataValue1*/,
@@ -69,6 +74,10 @@ class PelHandler : public FileHandler
     /** @brief PelHandler destructor
      */
     ~PelHandler() {}
+
+  private:
+    fs::path Pelpath;
+    int fd;
 };
 
 } // namespace responder
