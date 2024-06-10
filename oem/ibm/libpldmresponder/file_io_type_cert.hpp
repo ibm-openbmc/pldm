@@ -28,12 +28,16 @@ class CertHandler : public FileHandler
         FileHandler(fileHandle), certType(fileType)
     {}
 
-    virtual int writeFromMemory(uint32_t offset, uint32_t length,
+    virtual void writeFromMemory(uint32_t offset, uint32_t length,
+                                 uint64_t address,
+                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                 SharedAIORespData& sharedAIORespDataobj,
+                                 sdeventplus::Event& event);
+    virtual void readIntoMemory(uint32_t offset, uint32_t length,
                                 uint64_t address,
-                                oem_platform::Handler* /*oemPlatformHandler*/);
-    virtual int readIntoMemory(uint32_t offset, uint32_t length,
-                               uint64_t address,
-                               oem_platform::Handler* /*oemPlatformHandler*/);
+                                oem_platform::Handler* /*oemPlatformHandler*/,
+                                SharedAIORespData& sharedAIORespDataobj,
+                                sdeventplus::Event& event);
     virtual int read(uint32_t offset, uint32_t& length, Response& response,
                      oem_platform::Handler* /*oemPlatformHandler*/);
 
@@ -56,6 +60,8 @@ class CertHandler : public FileHandler
         uint64_t length, uint32_t metaDataValue1, uint32_t /*metaDataValue2*/,
         uint32_t /*metaDataValue3*/, uint32_t /*metaDataValue4*/);
 
+    virtual void postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length);
+
     /** @brief CertHandler destructor
      */
     ~CertHandler() {}
@@ -64,6 +70,7 @@ class CertHandler : public FileHandler
     uint16_t certType;      //!< type of the certificate
     static CertMap certMap; //!< holds the fd and remaining read/write size for
                             //!< each certificate
+    std::string certfilePath;
     enum SignedCertStatus
     {
         PLDM_INVALID_CERT_DATA = 0X03

@@ -22,6 +22,8 @@ namespace pldm
 {
 namespace responder
 {
+std::mutex lockMutex;
+
 namespace utils
 {
 int setupUnixSocket(const std::string& socketInterface)
@@ -32,6 +34,7 @@ int setupUnixSocket(const std::string& socketInterface)
     addr.sun_family = AF_UNIX;
     size_t interfaceLength =
         strnlen(socketInterface.c_str(), sizeof(addr.sun_path));
+
     if (interfaceLength == sizeof(addr.sun_path))
     {
         error("Setup unix socket path '{PATH}' is too long '{LENGTH}'", "PATH",
@@ -44,7 +47,7 @@ int setupUnixSocket(const std::string& socketInterface)
     if ((sock = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK, 0)) == -1)
     {
         error("Failed to open unix socket");
-        return -1;
+        return -errno;
     }
 
     if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) == -1)
@@ -52,14 +55,14 @@ int setupUnixSocket(const std::string& socketInterface)
         error("Failed to bind unix socket, error number - {ERROR_NUM}",
               "ERROR_NUM", errno);
         close(sock);
-        return -1;
+        return -errno;
     }
 
     if (listen(sock, 1) == -1)
     {
         error("Failed listen() call while setting up unix socket");
         close(sock);
-        return -1;
+        return -errno;
     }
 
     fd_set rfd;
@@ -79,7 +82,7 @@ int setupUnixSocket(const std::string& socketInterface)
             "Failed select() call while setting up unix socket, error number - {ERROR_NUM}",
             "ERROR_NUM", errno);
         close(sock);
-        return -1;
+        return -errno;
     }
 
     if ((retval > 0) && (FD_ISSET(sock, &rfd)))
@@ -91,7 +94,7 @@ int setupUnixSocket(const std::string& socketInterface)
                 "Failed accept() call while setting up unix socket, error number - {ERROR_NUM}",
                 "ERROR_NUM", errno);
             close(sock);
-            return -1;
+            return -errno;
         }
         close(sock);
     }
@@ -100,6 +103,7 @@ int setupUnixSocket(const std::string& socketInterface)
 
 int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
 {
+    const std::lock_guard<std::mutex> lock(lockMutex);
     uint64_t i;
     int nwrite = 0;
 

@@ -141,20 +141,26 @@ class PCIeInfoHandler : public FileHandler
      */
     PCIeInfoHandler(uint32_t fileHandle, uint16_t fileType);
 
-    virtual int writeFromMemory(uint32_t offset, uint32_t length,
-                                uint64_t address,
-                                oem_platform::Handler* /*oemPlatformHandler*/);
+    virtual void writeFromMemory(uint32_t offset, uint32_t length,
+                                 uint64_t address,
+                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                 SharedAIORespData& sharedAIORespDataobj,
+                                 sdeventplus::Event& event);
 
     virtual int write(const char* buffer, uint32_t offset, uint32_t& length,
                       oem_platform::Handler* /*oemPlatformHandler*/);
 
     virtual int fileAck(uint8_t fileStatus);
 
-    virtual int readIntoMemory(uint32_t /*offset*/, uint32_t /*length*/,
-                               uint64_t /*address*/,
-                               oem_platform::Handler* /*oemPlatformHandler*/)
+    virtual void readIntoMemory(uint32_t /*offset*/, uint32_t length,
+                                uint64_t /*address*/,
+                                oem_platform::Handler* /*oemPlatformHandler*/,
+                                SharedAIORespData& sharedAIORespDataobj,
+                                sdeventplus::Event& /*event*/)
     {
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+        FileHandler::dmaResponseToRemoteTerminus(
+            sharedAIORespDataobj, PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
+        FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
     }
 
     virtual int read(uint32_t /*offset*/, uint32_t& /*length*/,
@@ -190,6 +196,10 @@ class PCIeInfoHandler : public FileHandler
 
     /** @brief method to parse the cable information */
     virtual void parseCableInfo();
+
+    virtual void postDataTransferCallBack(bool /*IsWriteToMemOp*/,
+                                          uint32_t /*length*/)
+    {}
 
     /** @brief PCIeInfoHandler destructor
      */

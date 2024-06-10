@@ -20,17 +20,25 @@ class keywordHandler : public FileHandler
     keywordHandler(uint32_t fileHandle, uint16_t /* fileType */) :
         FileHandler(fileHandle)
     {}
-    virtual int writeFromMemory(uint32_t /*offset*/, uint32_t /*length*/,
-                                uint64_t /*address*/,
-                                oem_platform::Handler* /*oemPlatformHandler*/)
+    virtual void writeFromMemory(uint32_t /*offset*/, uint32_t length,
+                                 uint64_t /*address*/,
+                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                 SharedAIORespData& sharedAIORespDataobj,
+                                 sdeventplus::Event& /*event*/)
     {
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+        FileHandler::dmaResponseToRemoteTerminus(
+            sharedAIORespDataobj, PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
+        FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
     }
-    virtual int readIntoMemory(uint32_t /*offset*/, uint32_t /*length*/,
-                               uint64_t /*address*/,
-                               oem_platform::Handler* /*oemPlatformHandler*/)
+    virtual void readIntoMemory(uint32_t /*offset*/, uint32_t length,
+                                uint64_t /*address*/,
+                                oem_platform::Handler* /*oemPlatformHandler*/,
+                                SharedAIORespData& sharedAIORespDataobj,
+                                sdeventplus::Event& /*event*/)
     {
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+        FileHandler::dmaResponseToRemoteTerminus(
+            sharedAIORespDataobj, PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
+        FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
     }
     virtual int read(uint32_t offset, uint32_t& length, Response& response,
                      oem_platform::Handler* /*oemPlatformHandler*/);
@@ -62,6 +70,16 @@ class keywordHandler : public FileHandler
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
+    /** @brief Method to do necessary operation according different
+     *         file type and being call when data transfer completed.
+     *
+     *  @param[in] IsWriteToMemOp - type of operation to decide what operation
+     *                              needs to be done after data transfer.
+     */
+    virtual void postDataTransferCallBack(bool /*IsWriteToMemOp*/,
+                                          uint32_t /*length*/)
+    {}
+
     /** @brief keywordHandler destructor
      */
     ~keywordHandler() {}

@@ -38,7 +38,6 @@ static constexpr auto bmcDumpObjPath = "/xyz/openbmc_project/dump/bmc/entry";
 // Resource dump file path to be deleted once hyperviosr validates the input
 // parameters. Need to re-look in to this name when we support multiple
 // resource dumps.
-static constexpr auto resDumpDirPath = "/var/lib/pldm/resourcedump/1";
 
 int DumpHandler::fd = -1;
 namespace fs = std::filesystem;
@@ -190,7 +189,7 @@ void DumpHandler::resetOffloadUri()
     }
 
     info("DumpHandler::resetOffloadUri path = {PATH} fileHandle = {FILE_HNDLE}",
-         "PATH", path.c_str(), "FILE_HNDL", fileHandle);
+         "PATH", path.c_str(), "FILE_HNDLE", fileHandle);
 
     PropertyValue offloadUriValue{""};
     DBusMapping dbusMapping{path, dumpEntry, "OffloadUri", "string"};
@@ -241,8 +240,29 @@ std::string DumpHandler::getOffloadUri(uint32_t fileHandle)
     return socketInterface;
 }
 
-int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
-                                 oem_platform::Handler* /*oemPlatformHandler*/)
+void DumpHandler::postDataTransferCallBack(bool IsWriteToMemOp,
+                                           uint32_t /*length*/)
+{
+    /// execute when DMA transfer failed.
+    if (IsWriteToMemOp)
+    {
+        error("DumpHandler::writeFromMemory: transferFileDataToSocket failed");
+        if (DumpHandler::fd >= 0)
+        {
+            close(DumpHandler::fd);
+            DumpHandler::fd = -1;
+        }
+        auto socketInterface = getOffloadUri(fileHandle);
+        std::remove(socketInterface.c_str());
+        resetOffloadUri();
+        return;
+    }
+}
+
+void DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
+                                  oem_platform::Handler* /*oemPlatformHandler*/,
+                                  SharedAIORespData& sharedAIORespDataobj,
+                                  sdeventplus::Event& event)
 {
     if (DumpHandler::fd == -1)
     {
@@ -250,18 +270,25 @@ int DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
         int sock = setupUnixSocket(socketInterface);
         if (sock < 0)
         {
-            sock = -errno;
             close(DumpHandler::fd);
             error(
                 "Failed to setup Unix socket while write from memory for interface '{INTERFACE}', response code '{SOCKET_RC}'",
                 "INTERFACE", socketInterface, "SOCKET_RC", sock);
             std::remove(socketInterface.c_str());
-            return PLDM_ERROR;
+            resetOffloadUri();
+
+            FileHandler::dmaResponseToRemoteTerminus(sharedAIORespDataobj,
+                                                     PLDM_ERROR, 0);
+            FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
+
+            return;
         }
 
         DumpHandler::fd = sock;
     }
-    return transferFileDataToSocket(DumpHandler::fd, length, address);
+
+    transferFileDataToSocket(DumpHandler::fd, length, address,
+                             sharedAIORespDataobj, event);
 }
 
 int DumpHandler::write(const char* buffer, uint32_t, uint32_t& length,
@@ -403,9 +430,11 @@ int DumpHandler::fileAck(uint8_t fileStatus)
     return PLDM_ERROR;
 }
 
-int DumpHandler::readIntoMemory(uint32_t offset, uint32_t length,
-                                uint64_t address,
-                                oem_platform::Handler* /*oemPlatformHandler*/)
+void DumpHandler::readIntoMemory(uint32_t offset, uint32_t length,
+                                 uint64_t address,
+                                 oem_platform::Handler* /*oemPlatformHandler*/,
+                                 SharedAIORespData& sharedAIORespDataobj,
+                                 sdeventplus::Event& event)
 {
     auto path = findDumpObjPath(fileHandle);
     static constexpr auto dumpFilepathInterface =
@@ -413,7 +442,10 @@ int DumpHandler::readIntoMemory(uint32_t offset, uint32_t length,
     if ((dumpType == PLDM_FILE_TYPE_DUMP) ||
         (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP))
     {
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+        FileHandler::dmaResponseToRemoteTerminus(
+            sharedAIORespDataobj, PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
+        FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
+        return;
     }
     else if (dumpType != PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
     {
@@ -422,9 +454,9 @@ int DumpHandler::readIntoMemory(uint32_t offset, uint32_t length,
             auto filePath =
                 pldm::utils::DBusHandler().getDbusProperty<std::string>(
                     path.c_str(), "Path", dumpFilepathInterface);
-            auto rc = transferFileData(fs::path(filePath), true, offset, length,
-                                       address);
-            return rc;
+            transferFileData(fs::path(filePath), true, offset, length, address,
+                             sharedAIORespDataobj, event);
+            return;
         }
         catch (const sdbusplus::exception_t& e)
         {
@@ -433,11 +465,14 @@ int DumpHandler::readIntoMemory(uint32_t offset, uint32_t length,
                 "FILE_HNDLE", lg2::hex, fileHandle, "ERROR", e);
             pldm::utils::reportError(
                 "xyz.openbmc_project.PLDM.Error.readIntoMemory.GetFilepathFail");
-            return PLDM_ERROR;
+            FileHandler::dmaResponseToRemoteTerminus(sharedAIORespDataobj,
+                                                     PLDM_ERROR, 0);
+            FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
+            return;
         }
     }
-    return transferFileData(resDumpRequestDirPath, true, offset, length,
-                            address);
+    transferFileData(resDumpRequestDirPath, true, offset, length, address,
+                     sharedAIORespDataobj, event);
 }
 
 int DumpHandler::read(uint32_t offset, uint32_t& length, Response& response,

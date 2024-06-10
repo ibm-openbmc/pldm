@@ -1,6 +1,7 @@
 #pragma once
 
 #include "libpldmresponder/oem_handler.hpp"
+#include <unistd.h>
 
 #include <cstdint>
 #include <string>
@@ -12,6 +13,40 @@ namespace responder
 {
 namespace utils
 {
+
+/** @struct CustomFD
+ *
+ *  CustomFD class is created for special purpose using RAII and it wil be
+ * useful during AIO file transfer operation.
+ */
+struct CustomFD
+{
+    CustomFD(const CustomFD&) = delete;
+    CustomFD& operator=(const CustomFD&) = delete;
+    CustomFD(CustomFD&&) = delete;
+    CustomFD& operator=(CustomFD&&) = delete;
+
+    CustomFD(int fd, bool closeOnOutScope = true) :
+        fd(fd), closeOnOutScope(closeOnOutScope)
+    {}
+
+    ~CustomFD()
+    {
+        if (fd >= 0 && closeOnOutScope)
+        {
+            close(fd);
+        }
+    }
+
+    int operator()() const
+    {
+        return fd;
+    }
+
+  private:
+    int fd = -1;
+    bool closeOnOutScope;
+};
 
 /** @brief Setup UNIX socket
  *  This function creates listening socket in non-blocking mode and allows only

@@ -7,6 +7,7 @@
 #include "fw-update/manager.hpp"
 #include "invoker.hpp"
 #include "platform-mc/manager.hpp"
+#include "pldm_resp_interface.hpp"
 #include "requester/handler.hpp"
 #include "requester/mctp_endpoint_discovery.hpp"
 #include "requester/request.hpp"
@@ -283,10 +284,10 @@ int main(int argc, char** argv)
 
 #ifdef OEM_IBM
     pldm::oem_ibm::OemIBM oemIBM(
-        &dbusHandler, pldmTransport.getEventSource(), hostEID, pdrRepo.get(),
+        &dbusHandler, &pldmTransport, hostEID, pdrRepo.get(),
         instanceIdDb, event, invoker, hostPDRHandler.get(),
         platformHandler.get(), fruHandler.get(), baseHandler.get(),
-        &reqHandler);
+        &reqHandler, TID, verbose);
 #endif
 
     invoker.registerHandler(PLDM_BIOS, std::move(biosHandler));
@@ -337,32 +338,43 @@ int main(int argc, char** argv)
             // process message and send response
             auto response = processRxMsg(requestMsgVec, invoker, reqHandler,
                                          fwManager.get(), TID);
-            if (response.has_value())
+            try
             {
-                FlightRecorder::GetInstance().saveRecord(*response, true);
-                if (verbose)
+                if (!response.value().empty())
                 {
-                    printBuffer(Tx, *response);
-                }
+                    FlightRecorder::GetInstance().saveRecord(*response, true);
+                    if (verbose)
+                    {
+                        printBuffer(Tx, *response);
+                    }
 
-                returnCode = pldmTransport.sendMsg(TID, (*response).data(),
-                                                   (*response).size());
-                if (returnCode != PLDM_REQUESTER_SUCCESS)
-                {
-                    warning(
-                        "Failed to send pldmTransport message for TID '{TID}', response code '{RETURN_CODE}'",
-                        "TID", TID, "RETURN_CODE", returnCode);
+                    returnCode = pldmTransport.sendMsg(TID, (*response).data(),
+                                                       (*response).size());
+                    if (returnCode != PLDM_REQUESTER_SUCCESS)
+                    {
+                        warning(
+                            "Failed to send pldmTransport message for TID '{TID}', response code '{RETURN_CODE}'",
+                            "TID", TID, "RETURN_CODE", returnCode);
+                    }
                 }
+            }
+            catch (const std::bad_optional_access& /*e*/)
+            {
+                //   This is working scenario which represents the file transfer
+                //   between BMC and DMA are happening using 'Eventloop
+                //   mechanism' so as per design File transfer response would be
+                //   not sending from here instead it would be sending via
+                //   'pldm::response_api::AltResponse' class.
             }
         }
         // TODO check that we get here if mctp-demux dies?
         else if (returnCode == PLDM_REQUESTER_RECV_FAIL)
         {
-            // MCTP daemon has closed the socket this daemon is connected to.
-            // This may or may not be an error scenario, in either case the
-            // recovery mechanism for this daemon is to restart, and hence exit
-            // the event loop, that will cause this daemon to exit with a
-            // failure code.
+            // MCTP daemon has closed the socket this daemon is connected
+            // to. This may or may not be an error scenario, in either case
+            // the recovery mechanism for this daemon is to restart, and
+            // hence exit the event loop, that will cause this daemon to
+            // exit with a failure code.
             error(
                 "MCTP daemon closed the socket, IO exiting with response code '{RC}'",
                 "RC", returnCode);

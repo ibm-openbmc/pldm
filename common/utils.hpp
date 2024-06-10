@@ -2,6 +2,7 @@
 
 #include "types.hpp"
 
+#include <fcntl.h>
 #include <libpldm/base.h>
 #include <libpldm/bios.h>
 #include <libpldm/entity.h>
@@ -56,35 +57,6 @@ using inventoryManager =
 constexpr auto dbusProperties = "org.freedesktop.DBus.Properties";
 constexpr auto mapperService = ObjectMapper::default_service;
 constexpr auto inventoryPath = "/xyz/openbmc_project/inventory";
-/** @struct CustomFD
- *
- *  RAII wrapper for file descriptor.
- */
-struct CustomFD
-{
-    CustomFD(const CustomFD&) = delete;
-    CustomFD& operator=(const CustomFD&) = delete;
-    CustomFD(CustomFD&&) = delete;
-    CustomFD& operator=(CustomFD&&) = delete;
-
-    CustomFD(int fd) : fd(fd) {}
-
-    ~CustomFD()
-    {
-        if (fd >= 0)
-        {
-            close(fd);
-        }
-    }
-
-    int operator()() const
-    {
-        return fd;
-    }
-
-  private:
-    int fd = -1;
-};
 
 /** @brief Calculate the pad for PLDM data
  *

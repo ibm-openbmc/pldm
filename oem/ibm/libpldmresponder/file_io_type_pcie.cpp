@@ -1,4 +1,5 @@
 #include "file_io_type_pcie.hpp"
+#include "utils.hpp"
 
 #include <libpldm/base.h>
 #include <libpldm/oem/ibm/file_io.h>
@@ -6,6 +7,7 @@
 #include <phosphor-logging/lg2.hpp>
 
 #include <cstdint>
+#include <sys/stat.h>
 
 PHOSPHOR_LOG2_USING;
 
@@ -89,9 +91,10 @@ PCIeInfoHandler::PCIeInfoHandler(uint32_t fileHandle, uint16_t fileType) :
     receivedFiles.emplace(infoType, false);
 }
 
-int PCIeInfoHandler::writeFromMemory(
+void PCIeInfoHandler::writeFromMemory(
     uint32_t offset, uint32_t length, uint64_t address,
-    oem_platform::Handler* /*oemPlatformHandler*/)
+    oem_platform::Handler* /*oemPlatformHandler*/,
+    SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event)
 {
     if (!fs::exists(pciePath))
     {
@@ -109,20 +112,25 @@ int PCIeInfoHandler::writeFromMemory(
     try
     {
         std::ofstream pcieData(infoFile, std::ios::out | std::ios::binary);
-        auto rc = transferFileData(infoFile, false, offset, length, address);
-        if (rc != PLDM_SUCCESS)
+        if (!pcieData)
         {
-            error("TransferFileData failed in PCIeTopology with error {ERROR}",
-                  "ERROR", rc);
-            return rc;
+            error("PCIe Info file creation error ");
+            FileHandler::dmaResponseToRemoteTerminus(sharedAIORespDataobj,
+                                                     PLDM_ERROR, 0);
+            FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
+            return;
         }
-        return PLDM_SUCCESS;
+        transferFileData(infoFile, false, offset, length, address,
+                         sharedAIORespDataobj, event);
     }
     catch (const std::exception& e)
     {
-        error("Create/Write data to the File type {TYPE}, failed {ERROR}",
-              "TYPE", infoType, "ERROR", e);
-        return PLDM_ERROR;
+        FileHandler::dmaResponseToRemoteTerminus(sharedAIORespDataobj,
+                                                 PLDM_ERROR, 0);
+        FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
+        error("Create/Write data to the File type '{TYPE}' failed with {ERROR}",
+              "TYPE", (int)infoType, "ERROR", e);
+        return;
     }
 }
 
@@ -186,7 +194,7 @@ void PCIeInfoHandler::parseTopologyData()
         perror("Topology file not present");
         return;
     }
-    pldm::utils::CustomFD topologyFd(fd);
+    pldm::responder::utils::CustomFD topologyFd(fd);
     // Reading the statistics of the topology file, to get the size.
     // stat sb is the out parameter provided to fstat
     struct stat sb;
@@ -429,7 +437,7 @@ void PCIeInfoHandler::parseCableInfo()
         perror("CableInfo file not present");
         return;
     }
-    pldm::utils::CustomFD cableInfoFd(fd);
+    pldm::responder::utils::CustomFD cableInfoFd(fd);
     struct stat sb;
 
     if (fstat(fd, &sb) == -1)

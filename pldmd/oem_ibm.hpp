@@ -56,24 +56,27 @@ class OemIBM
      * @param[in] reqHandler - reqHandler handler
      */
     explicit OemIBM(
-        const pldm::utils::DBusHandler* dBusIntf, int mctp_fd, uint8_t mctp_eid,
+        const pldm::utils::DBusHandler* dBusIntf, PldmTransport* pldmTransport, uint8_t mctp_eid,
         pldm_pdr* repo, pldm::InstanceIdDb& instanceIdDb,
         sdeventplus::Event& event, responder::Invoker& invoker,
         HostPDRHandler* hostPDRHandler,
         responder::platform::Handler* platformHandler,
         responder::fru::Handler* fruHandler,
         responder::base::Handler* baseHandler,
-        pldm::requester::Handler<pldm::requester::Request>* reqHandler) :
-        dBusIntf(dBusIntf), mctp_fd(mctp_fd), mctp_eid(mctp_eid), repo(repo),
-        instanceIdDb(instanceIdDb), event(event), invoker(invoker),
+        pldm::requester::Handler<pldm::requester::Request>* reqHandler, pldm_tid_t tid, bool verbose) :
+        dBusIntf(dBusIntf), mctp_eid(mctp_eid), tid(tid), verbose(verbose), repo(repo),
+        pldmTransport(pldmTransport), instanceIdDb(instanceIdDb), event(event), invoker(invoker),
         reqHandler(reqHandler)
     {
+        mctp_fd = pldmTransport->getEventSource();
+
         createOemFruHandler();
         fruHandler->setOemFruHandler(oemFruHandler.get());
 
         createOemIbmFruHandler();
         oemIbmFruHandler->setIBMFruHandler(fruHandler);
 
+        createResponseInterface();
         createCodeUpdate();
         createSlotHandler();
         createOemPlatformHandler();
@@ -156,13 +159,21 @@ class OemIBM
             instanceIdDb, repo, reqHandler);
     }
 
+    /** @brief Method for creating codeUpdate handler */
+    void createResponseInterface()
+    {
+        respInterface.responseObj =
+        std::make_unique<pldm::response_api::AltResponse>(pldmTransport, tid,
+                                                          verbose);
+    }
+
     /** @brief Method for registering PLDM OEM handler */
     void registerHandler()
     {
         invoker.registerHandler(
             PLDM_OEM, std::make_unique<pldm::responder::oem_ibm::Handler>(
                           oemPlatformHandler.get(), mctp_fd, mctp_eid,
-                          &instanceIdDb, reqHandler));
+                          &instanceIdDb, reqHandler, respInterface.responseObj.get()));
     }
 
   private:
@@ -175,8 +186,17 @@ class OemIBM
     /** @brief MCTP EID of remote host firmware */
     uint8_t mctp_eid;
 
+    /** @brief TID of the remote PLDM terminus */
+    pldm_tid_t tid;
+
+    /** @brief Verbose mode */
+    bool verbose;
+
     /** @brief pointer to BMC's primary PDR repo */
     pldm_pdr* repo;
+
+    /** @brief pointer to transport */
+    PldmTransport* pldmTransport;
 
     /** @brief reference to an Instance ID database object, used to obtain PLDM
      * instance IDs
@@ -216,6 +236,9 @@ class OemIBM
 
     /** @brief oem IBM Utils handler*/
     std::unique_ptr<responder::oem_utils::Handler> oemUtilsHandler;
+
+    /** @brief Response interface created to handle return AIO reponses */
+    pldm::response_api::ResponseInterface respInterface;
 };
 
 } // namespace oem_ibm
