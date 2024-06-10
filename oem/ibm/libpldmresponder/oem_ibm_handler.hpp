@@ -10,6 +10,10 @@
 #include <libpldm/oem/ibm/state_set.h>
 #include <libpldm/platform.h>
 
+#include <sdbusplus/bus/match.hpp>
+#include <sdeventplus/event.hpp>
+#include <sdeventplus/utility/timer.hpp>
+
 typedef ibm_oem_pldm_state_set_firmware_update_state_values CodeUpdateState;
 
 namespace pldm
@@ -25,6 +29,10 @@ constexpr uint32_t BMC_PDR_START_RANGE = 0x00000000;
 constexpr uint32_t BMC_PDR_END_RANGE = 0x00FFFFFF;
 constexpr uint32_t HOST_PDR_START_RANGE = 0x01000000;
 constexpr uint32_t HOST_PDR_END_RANGE = 0x01FFFFFF;
+
+const pldm::pdr::TerminusID HYPERVISOR_TID = 208;
+
+static constexpr uint8_t HEARTBEAT_TIMEOUT_DELTA = 10;
 
 enum SetEventReceiverCount
 {
@@ -42,7 +50,10 @@ class Handler : public oem_platform::Handler
         oem_platform::Handler(dBusIntf),
         codeUpdate(codeUpdate), platformHandler(nullptr), mctp_fd(mctp_fd),
         mctp_eid(mctp_eid), instanceIdDb(instanceIdDb), event(event),
-        handler(handler)
+        handler(handler),
+        timer(event, std::bind(std::mem_fn(&Handler::setSurvTimer), this,
+                               HYPERVISOR_TID, false)),
+        hostTransitioningToOff(true)
     {
         codeUpdate->setVersions();
         setEventReceiverCnt = 0;
@@ -66,11 +77,67 @@ class Handler : public oem_platform::Handler
                     hostOff = true;
                     setEventReceiverCnt = 0;
                     disableWatchDogTimer();
+                    startStopTimer(false);
                 }
                 else if (propVal ==
                          "xyz.openbmc_project.State.Host.HostState.Running")
                 {
                     hostOff = false;
+                    hostTransitioningToOff = false;
+                }
+                else if (
+                    propVal ==
+                    "xyz.openbmc_project.State.Host.HostState.TransitioningToOff")
+                {
+                    hostTransitioningToOff = true;
+                }
+            }
+        });
+
+        powerStateOffMatch = std::make_unique<sdbusplus::bus::match::match>(
+            pldm::utils::DBusHandler::getBus(),
+            propertiesChanged("/xyz/openbmc_project/state/chassis0",
+                              "xyz.openbmc_project.State.Chassis"),
+            [this](sdbusplus::message_t& msg) {
+            pldm::utils::DbusChangedProps props{};
+            std::string intf;
+            msg.read(intf, props);
+            const auto itr = props.find("CurrentPowerState");
+            if (itr != props.end())
+            {
+                pldm::utils::PropertyValue value = itr->second;
+                auto propVal = std::get<std::string>(value);
+                if (propVal ==
+                    "xyz.openbmc_project.State.Chassis.PowerState.Off")
+                {
+                    static constexpr auto searchpath =
+                        "/xyz/openbmc_project/inventory/system/chassis/motherboard";
+                    int depth = 0;
+                    std::vector<std::string> powerInterface = {
+                        "xyz.openbmc_project.State.Decorator.PowerState"};
+                    pldm::utils::GetSubTreeResponse response =
+                        pldm::utils::DBusHandler().getSubtree(searchpath, depth,
+                                                              powerInterface);
+                    for (const auto& [objPath, serviceMap] : response)
+                    {
+                        pldm::utils::DBusMapping dbusMapping{
+                            objPath,
+                            "xyz.openbmc_project.State.Decorator.PowerState",
+                            "PowerState", "string"};
+                        value =
+                            "xyz.openbmc_project.State.Decorator.PowerState.State.Off";
+                        try
+                        {
+                            pldm::utils::DBusHandler().setDbusProperty(
+                                dbusMapping, value);
+                        }
+                        catch (const std::exception& e)
+                        {
+                            error(
+                                "Unable to set the slot power state to Off error - {ERROR}",
+                                "ERROR", e);
+                        }
+                    }
                 }
             }
         });
@@ -217,6 +284,16 @@ class Handler : public oem_platform::Handler
         platformHandler->setEventReceiver();
     }
 
+    /** @brief Method to Enable/Disable timer to see if remote terminus sends
+     *  the surveillance ping and logs informational error if remote terminus
+     *  fails to send the surveillance pings
+     *
+     * @param[in] tid - TID of the remote terminus
+     * @param[in] value - true or false, to indicate if the timer is
+     *                    running or not
+     */
+    void setSurvTimer(uint8_t tid, bool value);
+
     ~Handler() = default;
 
     pldm::responder::CodeUpdate* codeUpdate; //!< pointer to CodeUpdate object
@@ -243,6 +320,13 @@ class Handler : public oem_platform::Handler
     sdeventplus::Event& event;
 
   private:
+    /** @brief Method to reset or stop the surveillance timer
+     *
+     * @param[in] value - true or false, to indicate if the timer
+     *                    should be reset or turned off
+     */
+    void startStopTimer(bool value);
+
     /** @brief D-Bus property changed signal match for CurrentPowerState*/
     std::unique_ptr<sdbusplus::bus::match_t> chassisOffMatch;
 
@@ -252,7 +336,15 @@ class Handler : public oem_platform::Handler
     /** @brief D-Bus property changed signal match */
     std::unique_ptr<sdbusplus::bus::match_t> hostOffMatch;
 
+    /** @brief D-Bus property changed signal match */
+    std::unique_ptr<sdbusplus::bus::match_t> powerStateOffMatch;
+
+    /** @brief Timer used for monitoring surveillance pings from host */
+    sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic> timer;
+
     bool hostOff = true;
+
+    bool hostTransitioningToOff;
 
     int setEventReceiverCnt = 0;
 };

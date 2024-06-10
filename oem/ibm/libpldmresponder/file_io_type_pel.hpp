@@ -48,6 +48,24 @@ class PelHandler : public FileHandler
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
 
+    virtual int newFileAvailableWithMetaData(uint64_t /*length*/,
+                                             uint32_t /*metaDataValue1*/,
+                                             uint32_t /*metaDataValue2*/,
+                                             uint32_t /*metaDataValue3*/,
+                                             uint32_t /*metaDataValue4*/)
+    {
+        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+    }
+
+    virtual int fileAckWithMetaData(uint8_t /*fileStatus*/,
+                                    uint32_t /*metaDataValue1*/,
+                                    uint32_t /*metaDataValue2*/,
+                                    uint32_t /*metaDataValue3*/,
+                                    uint32_t /*metaDataValue4*/)
+    {
+        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+    }
+
     /** @brief PelHandler destructor
      */
     ~PelHandler() {}

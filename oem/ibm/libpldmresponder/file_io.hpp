@@ -117,8 +117,7 @@ Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
     int file = open(path.string().c_str(), flags);
     if (file == -1)
     {
-        error("File does not exist, path = {FILE_PATH}", "FILE_PATH",
-              path.string());
+        error("File at path '{PATH}' does not exist", "PATH", path.string());
         encode_rw_file_memory_resp(instanceId, command, PLDM_ERROR, 0,
                                    responsePtr);
         return response;
@@ -158,8 +157,9 @@ Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
 
 namespace oem_ibm
 {
-static constexpr auto dumpObjPath = "/xyz/openbmc_project/dump/resource/entry/";
+static constexpr auto dumpObjPath = "/xyz/openbmc_project/dump/system/entry/";
 static constexpr auto resDumpEntry = "com.ibm.Dump.Entry.Resource";
+static constexpr auto sysDumpEntry = "xyz.openbmc_project.Dump.Entry.System";
 
 static constexpr auto certObjPath = "/xyz/openbmc_project/certs/ca/";
 static constexpr auto certAuthority =
@@ -235,6 +235,17 @@ class Handler : public CmdHandler
             return this->newFileAvailable(request, payloadLength);
         });
 
+        handlers.emplace(
+            PLDM_NEW_FILE_AVAILABLE_WITH_META_DATA,
+            [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
+            return this->newFileAvailableWithMetaData(request, payloadLength);
+        });
+        handlers.emplace(
+            PLDM_FILE_ACK_WITH_META_DATA,
+            [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
+            return this->fileAckWithMetaData(request, payloadLength);
+        });
+
         resDumpMatcher = std::make_unique<sdbusplus::bus::match_t>(
             pldm::utils::DBusHandler::getBus(),
             sdbusplus::bus::match::rules::interfacesAdded() +
@@ -247,7 +258,7 @@ class Handler : public CmdHandler
             sdbusplus::message::object_path path;
             msg.read(path, interfaces);
             std::string vspstring;
-            std::string password;
+            std::string userchallenge;
 
             for (const auto& interface : interfaces)
             {
@@ -259,9 +270,10 @@ class Handler : public CmdHandler
                         {
                             vspstring = std::get<std::string>(property.second);
                         }
-                        else if (property.first == "Password")
+                        else if (property.first == "UserChallenge")
                         {
-                            password = std::get<std::string>(property.second);
+                            userchallenge =
+                                std::get<std::string>(property.second);
                         }
                     }
                     dbusToFileHandlers
@@ -270,7 +282,34 @@ class Handler : public CmdHandler
                                 pldm::requester::oem_ibm::DbusToFileHandler>(
                                 hostSockFd, hostEid, instanceIdDb, path,
                                 handler))
-                        ->processNewResourceDump(vspstring, password);
+                        ->processNewResourceDump(vspstring, userchallenge);
+                    break;
+                }
+                if (interface.first == sysDumpEntry)
+                {
+                    for (const auto& property : interface.second)
+                    {
+                        if (property.first == "SystemImpact")
+                        {
+                            if (std::get<std::string>(property.second) ==
+                                "xyz.openbmc_project.Dump.Entry.System.SystemImpact.NonDisruptive")
+                            {
+                                vspstring = "system";
+                            }
+                        }
+                        else if (property.first == "UserChallenge")
+                        {
+                            userchallenge =
+                                std::get<std::string>(property.second);
+                        }
+                    }
+                    dbusToFileHandlers
+                        .emplace_back(
+                            std::make_unique<
+                                pldm::requester::oem_ibm::DbusToFileHandler>(
+                                hostSockFd, hostEid, instanceIdDb, path,
+                                handler))
+                        ->processNewResourceDump(vspstring, userchallenge);
                     break;
                 }
             }
@@ -413,6 +452,25 @@ class Handler : public CmdHandler
      *  @return PLDM response message
      */
     Response newFileAvailable(const pldm_msg* request, size_t payloadLength);
+
+    /** @brief Handler for newFileAvailableWithMetaData command
+     *
+     *  @param[in] request - PLDM request msg
+     *  @param[in] payloadLength - length of the message payload
+     *
+     *  @return PLDM response messsage
+     */
+    Response newFileAvailableWithMetaData(const pldm_msg* request,
+                                          size_t payloadLength);
+
+    /** @brief Handler for fileAckWithMetaData command
+     *
+     *  @param[in] request - PLDM request msg
+     *  @param[in] payloadLength - length of the message payload
+     *
+     *  @return PLDM response message
+     */
+    Response fileAckWithMetaData(const pldm_msg* request, size_t payloadLength);
 
   private:
     oem_platform::Handler* oemPlatformHandler;

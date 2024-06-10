@@ -69,7 +69,7 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
     {
         rc = -errno;
         error(
-            "transferHostDataToSocket: Failed to open the XDMA device, RC={RC}",
+            "Failed to open the XDMA device for transferring remote terminus data to socket with response code '{RC}'",
             "RC", rc);
         return rc;
     }
@@ -83,7 +83,7 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
     {
         rc = -errno;
         error(
-            "transferHostDataToSocket : Failed to mmap the XDMA device, RC={RC}",
+            "Failed to mmap the XDMA device for transferring remote terminus data to socket with response code '{RC}'",
             "RC", rc);
         return rc;
     }
@@ -100,8 +100,8 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
     {
         rc = -errno;
         error(
-            "transferHostDataToSocket: Failed to execute the DMA operation, RC={RC} ADDRESS={ADDR} LENGTH={LEN}",
-            "RC", rc, "ADDR", address, "LEN", length);
+            "Failed to execute the DMA operation for transfering remote terminus data to socket at address '{ADDRESS}' and length '{LENGTH}' with response code '{RC}'",
+            "RC", rc, "ADDRESS", address, "LENGTH", length);
         return rc;
     }
 
@@ -112,7 +112,7 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
         rc = -errno;
         close(fd);
         error(
-            "transferHostDataToSocket: Closing socket as writeToUnixSocket faile with RC={RC}",
+            "Failed to write to Unix socket, closing socket for transfering remote terminus data to socket with response code '{RC}'",
             "RC", rc);
         return rc;
     }
@@ -140,7 +140,7 @@ int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
         else
         {
             error(
-                "transferDataHost: Received interrupt during DMA transfer. Skipping Unmap.");
+                "Received interrupt during DMA transfer for data between BMC and remote terminus. Skipping Unmap.");
         }
     };
 
@@ -149,8 +149,9 @@ int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
     if (dmaFd < 0)
     {
         rc = -errno;
-        error("transferDataHost : Failed to open the XDMA device, RC={RC}",
-              "RC", rc);
+        error(
+            "Failed to open the XDMA device for data transfer between BMC and remote terminus with response code '{RC}'",
+            "RC", rc);
         return rc;
     }
 
@@ -162,8 +163,9 @@ int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
     if (MAP_FAILED == vgaMem)
     {
         rc = -errno;
-        error("transferDataHost : Failed to mmap the XDMA device, RC={RC}",
-              "RC", rc);
+        error(
+            "Failed to mmap the XDMA device for data transfer between BMC and remote terminus with response code '{RC}'",
+            "RC", rc);
         return rc;
     }
 
@@ -175,8 +177,8 @@ int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
         if (rc == -1)
         {
             error(
-                "transferDataHost upstream : lseek failed, ERROR={ERR}, UPSTREAM={UPSTREAM}, OFFSET={OFFSET}",
-                "ERR", errno, "UPSTREAM", upstream, "OFFSET", offset);
+                "Failed to transfer data between BMC and remote terminus due to lseek failure with upstream '{UPSTREAM}' at offset '{OFFSET}', error number - {ERROR_NUM}",
+                "ERROR_NUM", errno, "UPSTREAM", upstream, "OFFSET", offset);
             return rc;
         }
 
@@ -189,16 +191,16 @@ int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
         if (rc == -1)
         {
             error(
-                "transferDataHost upstream : file read failed, ERROR={ERR}, UPSTREAM={UPSTREAM}, LENGTH={LEN}, OFFSET={OFFSET}",
-                "ERR", errno, "UPSTREAM", upstream, "LEN", length, "OFFSET",
-                offset);
+                "Failed to transfer data between BMC and remote terminus with file read on upstream '{UPSTREAM}' of length '{LENGTH}' at offset '{OFFSET}' failed, error number - {ERROR_NUM}",
+                "ERROR_NUM", errno, "UPSTREAM", upstream, "LENGTH", length,
+                "OFFSET", offset);
             return rc;
         }
         if (rc != static_cast<int>(length))
         {
             error(
-                "transferDataHost upstream : mismatch between number of characters to read and the length read, LENGTH={LEN} COUNT={RC}",
-                "LEN", length, "RC", rc);
+                "Failed to transfer data between BMC and remote terminus mismatched for number of characters to read on upstream '{UPSTREAM}' and the length '{LENGTH}' read  and count '{RC}'",
+                "UPSTREAM", upstream, "LENGTH", length, "RC", rc);
             return -1;
         }
         memcpy(static_cast<char*>(vgaMemPtr.get()), buffer.data(),
@@ -215,8 +217,9 @@ int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
     {
         rc = -errno;
         error(
-            "transferDataHost : Failed to execute the DMA operation, RC={RC} UPSTREAM={UPSTREAM} ADDRESS={ADDR} LENGTH={LEN}",
-            "RC", rc, "UPSTREAM", upstream, "ADDR", address, "LEN", length);
+            "Failed to execute the DMA operation on data between BMC and remote terminus for upstream '{UPSTREAM}' of length '{LENGTH}' at address '{ADDRESS}', response code '{RC}'",
+            "RC", rc, "UPSTREAM", upstream, "ADDRESS", address, "LENGTH",
+            length);
         return rc;
     }
 
@@ -226,17 +229,17 @@ int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
         if (rc == -1)
         {
             error(
-                "transferDataHost downstream : lseek failed, ERROR={ERR}, UPSTREAM={UPSTREAM}, OFFSET={OFFSET}",
-                "ERR", errno, "UPSTREAM", upstream, "OFFSET", offset);
+                "Failed to transfer data between BMC and remote terminus due to lseek failure '{UPSTREAM}' at offset '{OFFSET}' failed, error number - {ERROR_NUM}",
+                "ERROR_NUM", errno, "UPSTREAM", upstream, "OFFSET", offset);
             return rc;
         }
         rc = write(fd, static_cast<const char*>(vgaMemPtr.get()), length);
         if (rc == -1)
         {
             error(
-                "transferDataHost downstream : file write failed, ERROR={ERR}, UPSTREAM={UPSTREAM}, LENGTH={LEN}, OFFSET={OFFSET}",
-                "ERR", errno, "UPSTREAM", upstream, "LEN", length, "OFFSET",
-                offset);
+                "Failed to transfer data between BMC and remote terminus where file write upstream '{UPSTREAM}' of length '{LENGTH}' at offset '{OFFSET}' failed, error number - {ERROR_NUM}",
+                "ERROR_NUM", errno, "UPSTREAM", upstream, "LENGTH", length,
+                "OFFSET", offset);
             return rc;
         }
     }
@@ -248,6 +251,97 @@ int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
 
 namespace oem_ibm
 {
+void encodeRWResponseHandler(uint8_t instance_id, uint8_t command,
+                             uint8_t completion_code, uint32_t length,
+                             struct pldm_msg* msg)
+{
+    int rc = encode_rw_file_memory_resp(instance_id, command, completion_code,
+                                        length, msg);
+    if (rc != PLDM_SUCCESS)
+    {
+        error(
+            "Failed to encode response for command {COMMAND}, response code '{RC}'",
+            "COMMAND", command, "RC", rc);
+    }
+}
+
+void encodeReadResponseHandler(uint8_t instance_id, uint8_t completion_code,
+                               uint32_t length, struct pldm_msg* msg)
+{
+    int rc = encode_read_file_resp(instance_id, completion_code, length, msg);
+    if (rc != PLDM_SUCCESS)
+    {
+        error("Failed to encode read file response, response code '{RC}'", "RC",
+              rc);
+    }
+}
+
+void encodeWriteResponseHandler(uint8_t instance_id, uint8_t completion_code,
+                                uint32_t length, struct pldm_msg* msg)
+{
+    int rc = encode_write_file_resp(instance_id, completion_code, length, msg);
+    if (rc != PLDM_SUCCESS)
+    {
+        error("Failed to encode write file response, response code '{RC}'",
+              "RC", rc);
+    }
+}
+
+void encodeGetFileResponseHandler(uint8_t instance_id, uint8_t completion_code,
+                                  uint32_t next_transfer_handle,
+                                  uint8_t transfer_flag,
+                                  const uint8_t* table_data, size_t table_size,
+                                  struct pldm_msg* msg)
+{
+    int rc = encode_get_file_table_resp(instance_id, completion_code,
+                                        next_transfer_handle, transfer_flag,
+                                        table_data, table_size, msg);
+    if (rc != PLDM_SUCCESS)
+    {
+        error("Failed to encode get file table response, response code '{RC}'",
+              "RC", rc);
+    }
+}
+
+void encodeRWTypeMemoryResponseHandler(uint8_t instance_id, uint8_t command,
+                                       uint8_t completion_code, uint32_t length,
+                                       struct pldm_msg* msg)
+{
+    int rc = encode_rw_file_by_type_memory_resp(instance_id, command,
+                                                completion_code, length, msg);
+    if (rc != PLDM_SUCCESS)
+    {
+        error(
+            "Failed to encode read/write file by type memory response, response code '{RC}'",
+            "RC", rc);
+    }
+}
+
+void encodeRWTypeResponseHandler(uint8_t instance_id, uint8_t command,
+                                 uint8_t completion_code, uint32_t length,
+                                 struct pldm_msg* msg)
+{
+    int rc = encode_rw_file_by_type_resp(instance_id, command, completion_code,
+                                         length, msg);
+    if (rc != PLDM_SUCCESS)
+    {
+        error(
+            "Failed to encode response for command {COMMAND}, response code '{RC}'",
+            "COMMAND", command, "RC", rc);
+    }
+}
+
+void encodeFileAckResponseHandler(uint8_t instance_id, uint8_t completion_code,
+                                  struct pldm_msg* msg)
+{
+    int rc = encode_file_ack_resp(instance_id, completion_code, msg);
+    if (rc != PLDM_SUCCESS)
+    {
+        error("Failed to encode file ack response, response code '{RC}'", "RC",
+              rc);
+    }
+}
+
 Response Handler::readFileIntoMemory(const pldm_msg* request,
                                      size_t payloadLength)
 {
@@ -258,17 +352,25 @@ Response Handler::readFileIntoMemory(const pldm_msg* request,
 
     Response response((sizeof(pldm_msg_hdr) + PLDM_RW_FILE_MEM_RESP_BYTES), 0);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
-
     if (payloadLength != PLDM_RW_FILE_MEM_REQ_BYTES)
     {
-        encode_rw_file_memory_resp(request->hdr.instance_id,
-                                   PLDM_READ_FILE_INTO_MEMORY,
-                                   PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
+        error(
+            "Failed to read file into memory as payload length '{LENGTH}' not equal to '{REQ_LENGTH}'",
+            "LENGTH", payloadLength, "REQ_LENGTH", PLDM_RW_FILE_MEM_REQ_BYTES);
+        encodeRWResponseHandler(request->hdr.instance_id,
+                                PLDM_READ_FILE_INTO_MEMORY,
+                                PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
         return response;
     }
 
-    decode_rw_file_memory_req(request, payloadLength, &fileHandle, &offset,
-                              &length, &address);
+    int responseCode = decode_rw_file_memory_req(
+        request, payloadLength, &fileHandle, &offset, &length, &address);
+    if (responseCode != PLDM_SUCCESS)
+    {
+        error(
+            "Failed to decode read file into memory request, response code '{RC}'",
+            "RC", responseCode);
+    }
 
     using namespace pldm::filetable;
     auto& table = buildFileTable(FILE_TABLE_JSON);
@@ -280,33 +382,44 @@ Response Handler::readFileIntoMemory(const pldm_msg* request,
     }
     catch (const std::exception& e)
     {
-        error("Handle ({HANDLE}) does not exist in the file table: {ERROR}",
-              "HANDLE", fileHandle, "ERROR", e);
-        encode_rw_file_memory_resp(request->hdr.instance_id,
-                                   PLDM_READ_FILE_INTO_MEMORY,
-                                   PLDM_INVALID_FILE_HANDLE, 0, responsePtr);
+        error(
+            "File handle '{HANDLE}' does not exist in the file table, error - {ERROR}",
+            "HANDLE", fileHandle, "ERROR", e);
+        encodeRWResponseHandler(request->hdr.instance_id,
+                                PLDM_READ_FILE_INTO_MEMORY,
+                                PLDM_INVALID_FILE_HANDLE, 0, responsePtr);
         return response;
     }
 
     if (!fs::exists(value.fsPath))
     {
-        error("File does not exist, HANDLE={FILE_HANDLE}", "FILE_HANDLE",
-              fileHandle);
-        encode_rw_file_memory_resp(request->hdr.instance_id,
-                                   PLDM_READ_FILE_INTO_MEMORY,
-                                   PLDM_INVALID_FILE_HANDLE, 0, responsePtr);
+        error("File '{PATH}' and handle '{FILE_HANDLE}' with does not exist",
+              "PATH", value.fsPath, "FILE_HANDLE", fileHandle);
+        encodeRWResponseHandler(request->hdr.instance_id,
+                                PLDM_READ_FILE_INTO_MEMORY,
+                                PLDM_INVALID_FILE_HANDLE, 0, responsePtr);
         return response;
     }
 
     auto fileSize = fs::file_size(value.fsPath);
+    if (!fileSize)
+    {
+        error(
+            "Failed to PLDM_READ_FILE_INTO_MEMORY from file {PATH} with size '{SIZE}'",
+            "PATH", value.fsPath, "SIZE", fileSize);
+        encodeRWResponseHandler(request->hdr.instance_id,
+                                PLDM_READ_FILE_INTO_MEMORY,
+                                PLDM_DATA_OUT_OF_RANGE, 0, responsePtr);
+        return response;
+    }
     if (offset >= fileSize)
     {
         error(
-            "Offset exceeds file size, OFFSET={OFFSTE} FILE_SIZE={FILE_SIZE} FILE_HANDLE{FILE_HANDLE}",
-            "OFFSET", offset, "FILE_SIZE", fileSize, "FILE_HANDLE", fileHandle);
-        encode_rw_file_memory_resp(request->hdr.instance_id,
-                                   PLDM_READ_FILE_INTO_MEMORY,
-                                   PLDM_DATA_OUT_OF_RANGE, 0, responsePtr);
+            "Offset '{OFFSET}' exceeds file size '{SIZE}' and file handle '{FILE_HANDLE}'",
+            "OFFSET", offset, "SIZE", fileSize, "FILE_HANDLE", fileHandle);
+        encodeRWResponseHandler(request->hdr.instance_id,
+                                PLDM_READ_FILE_INTO_MEMORY,
+                                PLDM_DATA_OUT_OF_RANGE, 0, responsePtr);
         return response;
     }
 
@@ -315,13 +428,13 @@ Response Handler::readFileIntoMemory(const pldm_msg* request,
         length = fileSize - offset;
     }
 
-    if (length % dma::minSize)
+    if (!length || length % dma::minSize)
     {
-        error("Read length is not a multiple of DMA minSize, LENGTH={LEN}",
-              "LEN", length);
-        encode_rw_file_memory_resp(request->hdr.instance_id,
-                                   PLDM_READ_FILE_INTO_MEMORY,
-                                   PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
+        error("Packet length '{LENGTH}' is non multiple of minimum DMA size",
+              "LENGTH", length);
+        encodeRWResponseHandler(request->hdr.instance_id,
+                                PLDM_READ_FILE_INTO_MEMORY,
+                                PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
         return response;
     }
 
@@ -345,22 +458,31 @@ Response Handler::writeFileFromMemory(const pldm_msg* request,
 
     if (payloadLength != PLDM_RW_FILE_MEM_REQ_BYTES)
     {
-        encode_rw_file_memory_resp(request->hdr.instance_id,
-                                   PLDM_WRITE_FILE_FROM_MEMORY,
-                                   PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
+        error(
+            "Failed to write file from memory as payload length '{LENGTH}' not equal to '{REQ_LENGTH}'",
+            "LENGTH", payloadLength, "REQ_LENGTH", PLDM_RW_FILE_MEM_REQ_BYTES);
+        encodeRWResponseHandler(request->hdr.instance_id,
+                                PLDM_WRITE_FILE_FROM_MEMORY,
+                                PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
         return response;
     }
 
-    decode_rw_file_memory_req(request, payloadLength, &fileHandle, &offset,
-                              &length, &address);
-
-    if (length % dma::minSize)
+    int responseCode = decode_rw_file_memory_req(
+        request, payloadLength, &fileHandle, &offset, &length, &address);
+    if (responseCode != PLDM_SUCCESS)
     {
-        error("Write length is not a multiple of DMA minSize, LENGTH={LEN}",
-              "LEN", length);
-        encode_rw_file_memory_resp(request->hdr.instance_id,
-                                   PLDM_WRITE_FILE_FROM_MEMORY,
-                                   PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
+        error(
+            "Failed to decode write file from memory request, response code '{RC}'",
+            "RC", responseCode);
+    }
+
+    if (!length || length % dma::minSize)
+    {
+        error("Packet length '{LENGTH}' is non multiple of minimum DMA size",
+              "LENGTH", length);
+        encodeRWResponseHandler(request->hdr.instance_id,
+                                PLDM_WRITE_FILE_FROM_MEMORY,
+                                PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
         return response;
     }
 
@@ -374,33 +496,41 @@ Response Handler::writeFileFromMemory(const pldm_msg* request,
     }
     catch (const std::exception& e)
     {
-        error("Handle ({HANDLE}) does not exist in the file table: {ERROR}",
-              "HANDLE", fileHandle, "ERROR", e);
-        encode_rw_file_memory_resp(request->hdr.instance_id,
-                                   PLDM_WRITE_FILE_FROM_MEMORY,
-                                   PLDM_INVALID_FILE_HANDLE, 0, responsePtr);
+        error(
+            "File handle '{HANDLE}' does not exist in the file table, error - {ERROR}",
+            "HANDLE", fileHandle, "ERROR", e);
+        encodeRWResponseHandler(request->hdr.instance_id,
+                                PLDM_WRITE_FILE_FROM_MEMORY,
+                                PLDM_INVALID_FILE_HANDLE, 0, responsePtr);
         return response;
     }
 
     if (!fs::exists(value.fsPath))
     {
-        error("File does not exist, HANDLE={FILE_HANDLE}", "FILE_HANDLE",
-              fileHandle);
-        encode_rw_file_memory_resp(request->hdr.instance_id,
-                                   PLDM_WRITE_FILE_FROM_MEMORY,
-                                   PLDM_INVALID_FILE_HANDLE, 0, responsePtr);
+        error("File '{PATH}' does not exist for file handle '{FILE_HANDLE}'",
+              "PATH", value.fsPath, "FILE_HANDLE", fileHandle);
+        encodeRWResponseHandler(request->hdr.instance_id,
+                                PLDM_WRITE_FILE_FROM_MEMORY,
+                                PLDM_INVALID_FILE_HANDLE, 0, responsePtr);
         return response;
     }
 
     auto fileSize = fs::file_size(value.fsPath);
+    if (!fileSize)
+    {
+        info(
+            "File '{PATH}' has size '{SIZE}' for command PLDM_WRITE_FILE_FROM_MEMORY",
+            "PATH", value.fsPath, "SIZE", fileSize);
+    }
     if (offset >= fileSize)
     {
         error(
-            "Offset exceeds file size, OFFSET={OFFSET} FILE_SIZE={FILE_SIZE} FILE_HANDLE{FILE_HANDLE}",
-            "OFFSET", offset, "FILE_SIZE", fileSize, "FILE_HANDLE", fileHandle);
-        encode_rw_file_memory_resp(request->hdr.instance_id,
-                                   PLDM_WRITE_FILE_FROM_MEMORY,
-                                   PLDM_DATA_OUT_OF_RANGE, 0, responsePtr);
+            "Offset '{OFFSET}' exceeds file size {SIZE} for file '{PATH} and handle {FILE_HANDLE}",
+            "OFFSET", offset, "SIZE", fileSize, "PATH", value.fsPath,
+            "FILE_HANDLE", fileHandle);
+        encodeRWResponseHandler(request->hdr.instance_id,
+                                PLDM_WRITE_FILE_FROM_MEMORY,
+                                PLDM_DATA_OUT_OF_RANGE, 0, responsePtr);
         return response;
     }
 
@@ -423,9 +553,13 @@ Response Handler::getFileTable(const pldm_msg* request, size_t payloadLength)
 
     if (payloadLength != PLDM_GET_FILE_TABLE_REQ_BYTES)
     {
-        encode_get_file_table_resp(request->hdr.instance_id,
-                                   PLDM_ERROR_INVALID_LENGTH, 0, 0, nullptr, 0,
-                                   responsePtr);
+        error(
+            "Failed to get file table as payload length '{LENGTH}' not equal to required length '{REQ_LENGTH}'",
+            "LENGTH", payloadLength, "REQ_LENGTH",
+            PLDM_GET_FILE_TABLE_REQ_BYTES);
+        encodeGetFileResponseHandler(request->hdr.instance_id,
+                                     PLDM_ERROR_INVALID_LENGTH, 0, 0, nullptr,
+                                     0, responsePtr);
         return response;
     }
 
@@ -433,16 +567,21 @@ Response Handler::getFileTable(const pldm_msg* request, size_t payloadLength)
                                         &transferFlag, &tableType);
     if (rc)
     {
-        encode_get_file_table_resp(request->hdr.instance_id, rc, 0, 0, nullptr,
-                                   0, responsePtr);
+        error("Failed to decode get file table request, response code '{RC}'",
+              "RC", rc);
+        encodeGetFileResponseHandler(request->hdr.instance_id, rc, 0, 0,
+                                     nullptr, 0, responsePtr);
         return response;
     }
 
     if (tableType != PLDM_FILE_ATTRIBUTE_TABLE)
     {
-        encode_get_file_table_resp(request->hdr.instance_id,
-                                   PLDM_INVALID_FILE_TABLE_TYPE, 0, 0, nullptr,
-                                   0, responsePtr);
+        error(
+            "Failed to match table type '{TYPE}' with expected table type '{REQ_TYPE}'",
+            "TYPE", tableType, "REQ_TYPE", PLDM_FILE_ATTRIBUTE_TABLE);
+        encodeGetFileResponseHandler(request->hdr.instance_id,
+                                     PLDM_INVALID_FILE_TABLE_TYPE, 0, 0,
+                                     nullptr, 0, responsePtr);
         return response;
     }
 
@@ -454,15 +593,16 @@ Response Handler::getFileTable(const pldm_msg* request, size_t payloadLength)
 
     if (attrTable.empty())
     {
-        encode_get_file_table_resp(request->hdr.instance_id,
-                                   PLDM_FILE_TABLE_UNAVAILABLE, 0, 0, nullptr,
-                                   0, responsePtr);
+        error("PLDM file attribute table is empty");
+        encodeGetFileResponseHandler(request->hdr.instance_id,
+                                     PLDM_FILE_TABLE_UNAVAILABLE, 0, 0, nullptr,
+                                     0, responsePtr);
         return response;
     }
 
-    encode_get_file_table_resp(request->hdr.instance_id, PLDM_SUCCESS, 0,
-                               PLDM_START_AND_END, attrTable.data(),
-                               attrTable.size(), responsePtr);
+    encodeGetFileResponseHandler(request->hdr.instance_id, PLDM_SUCCESS, 0,
+                                 PLDM_START_AND_END, attrTable.data(),
+                                 attrTable.size(), responsePtr);
     return response;
 }
 
@@ -477,8 +617,12 @@ Response Handler::readFile(const pldm_msg* request, size_t payloadLength)
 
     if (payloadLength != PLDM_READ_FILE_REQ_BYTES)
     {
-        encode_read_file_resp(request->hdr.instance_id,
-                              PLDM_ERROR_INVALID_LENGTH, length, responsePtr);
+        error(
+            "Failed to read file as payload length '{LENGTH}' not equal to '{REQ_LENGTH}'",
+            "LENGTH", payloadLength, "REQ_LENGTH", PLDM_READ_FILE_REQ_BYTES);
+        encodeReadResponseHandler(request->hdr.instance_id,
+                                  PLDM_ERROR_INVALID_LENGTH, length,
+                                  responsePtr);
         return response;
     }
 
@@ -487,7 +631,9 @@ Response Handler::readFile(const pldm_msg* request, size_t payloadLength)
 
     if (rc)
     {
-        encode_read_file_resp(request->hdr.instance_id, rc, 0, responsePtr);
+        error("Failed to decode read file request, response code '{RC}'", "RC",
+              rc);
+        encodeReadResponseHandler(request->hdr.instance_id, rc, 0, responsePtr);
         return response;
     }
 
@@ -501,30 +647,45 @@ Response Handler::readFile(const pldm_msg* request, size_t payloadLength)
     }
     catch (const std::exception& e)
     {
-        error("Handle ({HANDLE}) does not exist in the file table: {ERROR}",
-              "HANDLE", fileHandle, "ERROR", e);
+        error(
+            "File handle '{HANDLE}' does not exist in the file table, error - {ERROR}",
+            "HANDLE", fileHandle, "ERROR", e);
 
-        encode_read_file_resp(request->hdr.instance_id,
-                              PLDM_INVALID_FILE_HANDLE, length, responsePtr);
+        encodeReadResponseHandler(request->hdr.instance_id,
+                                  PLDM_INVALID_FILE_HANDLE, length,
+                                  responsePtr);
         return response;
     }
 
     if (!fs::exists(value.fsPath))
     {
-        error("File does not exist, HANDLE={FILE_HANDLE}", "FILE_HANDLE",
-              fileHandle);
-        encode_read_file_resp(request->hdr.instance_id,
-                              PLDM_INVALID_FILE_HANDLE, length, responsePtr);
+        error("File '{PATH}' and handle {FILE_HANDLE} does not exist", "PATH",
+              value.fsPath, "FILE_HANDLE", fileHandle);
+        encodeReadResponseHandler(request->hdr.instance_id,
+                                  PLDM_INVALID_FILE_HANDLE, length,
+                                  responsePtr);
         return response;
     }
 
     auto fileSize = fs::file_size(value.fsPath);
+    if (!fileSize)
+    {
+        error("Failed to read file {PATH} with size '{SIZE}'", "PATH",
+              value.fsPath, "SIZE", fileSize);
+        encodeRWResponseHandler(request->hdr.instance_id,
+                                PLDM_READ_FILE_INTO_MEMORY,
+                                PLDM_DATA_OUT_OF_RANGE, 0, responsePtr);
+        return response;
+    }
+
     if (offset >= fileSize)
     {
-        error("Offset exceeds file size, OFFSET={OFFSET} FILE_SIZE={FILE_SIZE}",
-              "OFFSET", offset, "FILE_SIZE", fileSize);
-        encode_read_file_resp(request->hdr.instance_id, PLDM_DATA_OUT_OF_RANGE,
-                              length, responsePtr);
+        error(
+            "Offset '{OFFSET}' exceeds file size '{SIZE}' for file '{PATH}' and file handle '{HANDLE}'",
+            "OFFSET", offset, "SIZE", fileSize, "PATH", value.fsPath, "HANDLE",
+            fileHandle);
+        encodeReadResponseHandler(request->hdr.instance_id,
+                                  PLDM_DATA_OUT_OF_RANGE, length, responsePtr);
         return response;
     }
 
@@ -542,8 +703,8 @@ Response Handler::readFile(const pldm_msg* request, size_t payloadLength)
     stream.seekg(offset);
     stream.read(fileDataPos, length);
 
-    encode_read_file_resp(request->hdr.instance_id, PLDM_SUCCESS, length,
-                          responsePtr);
+    encodeReadResponseHandler(request->hdr.instance_id, PLDM_SUCCESS, length,
+                              responsePtr);
 
     return response;
 }
@@ -560,8 +721,11 @@ Response Handler::writeFile(const pldm_msg* request, size_t payloadLength)
 
     if (payloadLength < PLDM_WRITE_FILE_REQ_BYTES)
     {
-        encode_write_file_resp(request->hdr.instance_id,
-                               PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
+        error(
+            "Failed to write file as payload length '{LENGTH}' less than '{REQ_LENGTH}'",
+            "LENGTH", payloadLength, "REQ_LENGTH", PLDM_WRITE_FILE_REQ_BYTES);
+        encodeWriteResponseHandler(request->hdr.instance_id,
+                                   PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
         return response;
     }
 
@@ -570,7 +734,10 @@ Response Handler::writeFile(const pldm_msg* request, size_t payloadLength)
 
     if (rc)
     {
-        encode_write_file_resp(request->hdr.instance_id, rc, 0, responsePtr);
+        error("Failed to decode write file request, response code '{RC}'", "RC",
+              rc);
+        encodeWriteResponseHandler(request->hdr.instance_id, rc, 0,
+                                   responsePtr);
         return response;
     }
 
@@ -584,29 +751,39 @@ Response Handler::writeFile(const pldm_msg* request, size_t payloadLength)
     }
     catch (const std::exception& e)
     {
-        error("Handle ({HANDLE}) does not exist in the file table: {ERROR}",
-              "HANDLE", fileHandle, "ERROR", e);
-        encode_write_file_resp(request->hdr.instance_id,
-                               PLDM_INVALID_FILE_HANDLE, 0, responsePtr);
+        error(
+            "File handle '{HANDLE}' does not exist in the file table, error - {ERROR}",
+            "HANDLE", fileHandle, "ERROR", e);
+        encodeWriteResponseHandler(request->hdr.instance_id,
+                                   PLDM_INVALID_FILE_HANDLE, 0, responsePtr);
         return response;
     }
 
     if (!fs::exists(value.fsPath))
     {
-        error("File does not exist, HANDLE={FILE_HANDLE}", "FILE_HANDLE",
-              fileHandle);
-        encode_write_file_resp(request->hdr.instance_id,
-                               PLDM_INVALID_FILE_HANDLE, 0, responsePtr);
+        error("File '{PATH}' and handle {FILE_HANDLE} does not exist", "PATH",
+              value.fsPath, "FILE_HANDLE", fileHandle);
+        encodeWriteResponseHandler(request->hdr.instance_id,
+                                   PLDM_INVALID_FILE_HANDLE, 0, responsePtr);
         return response;
     }
 
     auto fileSize = fs::file_size(value.fsPath);
+
+    if (!fileSize)
+    {
+        info("File {PATH} has size '{SIZE}' for write file command", "PATH",
+             value.fsPath, "SIZE", fileSize);
+    }
+
     if (offset >= fileSize)
     {
-        error("Offset exceeds file size, OFFSET={OFFSET} FILE_SIZE={FILE_SIZE}",
-              "OFFSET", offset, "FILE_SIZE", fileSize);
-        encode_write_file_resp(request->hdr.instance_id, PLDM_DATA_OUT_OF_RANGE,
-                               0, responsePtr);
+        error(
+            "Offset '{OFFSET}' exceeds file size '{SIZE}' for file '{PATH}' and handle {FILE_HANDLE}",
+            "OFFSET", offset, "SIZE", fileSize, "PATH", value.fsPath,
+            "FILE_HANDLE", fileHandle);
+        encodeWriteResponseHandler(request->hdr.instance_id,
+                                   PLDM_DATA_OUT_OF_RANGE, 0, responsePtr);
         return response;
     }
 
@@ -618,8 +795,8 @@ Response Handler::writeFile(const pldm_msg* request, size_t payloadLength)
     stream.seekp(offset);
     stream.write(fileDataPos, length);
 
-    encode_write_file_resp(request->hdr.instance_id, PLDM_SUCCESS, length,
-                           responsePtr);
+    encodeWriteResponseHandler(request->hdr.instance_id, PLDM_SUCCESS, length,
+                               responsePtr);
 
     return response;
 }
@@ -634,9 +811,13 @@ Response rwFileByTypeIntoMemory(uint8_t cmd, const pldm_msg* request,
 
     if (payloadLength != PLDM_RW_FILE_BY_TYPE_MEM_REQ_BYTES)
     {
-        encode_rw_file_by_type_memory_resp(request->hdr.instance_id, cmd,
-                                           PLDM_ERROR_INVALID_LENGTH, 0,
-                                           responsePtr);
+        error(
+            "Failed to read file into memory as payload length '{LENGTH}' not equal to '{REQ_LENGTH}'",
+            "LENGTH", payloadLength, "REQ_LENGTH",
+            PLDM_RW_FILE_BY_TYPE_MEM_REQ_BYTES);
+        encodeRWTypeMemoryResponseHandler(request->hdr.instance_id, cmd,
+                                          PLDM_ERROR_INVALID_LENGTH, 0,
+                                          responsePtr);
         return response;
     }
 
@@ -650,17 +831,21 @@ Response rwFileByTypeIntoMemory(uint8_t cmd, const pldm_msg* request,
                                                 &length, &address);
     if (rc != PLDM_SUCCESS)
     {
-        encode_rw_file_by_type_memory_resp(request->hdr.instance_id, cmd, rc, 0,
-                                           responsePtr);
+        error(
+            "Failed to decode read/write file by type memory request, response code '{RC}'",
+            "RC", rc);
+        encodeRWTypeMemoryResponseHandler(request->hdr.instance_id, cmd, rc, 0,
+                                          responsePtr);
         return response;
     }
-    if (length % dma::minSize)
+    if (!length || length % dma::minSize)
     {
-        error("Length is not a multiple of DMA minSize, LENGTH={LEN}", "LEN",
-              length);
-        encode_rw_file_by_type_memory_resp(request->hdr.instance_id, cmd,
-                                           PLDM_ERROR_INVALID_LENGTH, 0,
-                                           responsePtr);
+        error(
+            "Packet length '{LENGTH}' is non multiple of minimum DMA size for command {CMD}",
+            "LENGTH", length, "CMD", cmd);
+        encodeRWTypeMemoryResponseHandler(request->hdr.instance_id, cmd,
+                                          PLDM_ERROR_INVALID_LENGTH, 0,
+                                          responsePtr);
         return response;
     }
 
@@ -671,11 +856,11 @@ Response rwFileByTypeIntoMemory(uint8_t cmd, const pldm_msg* request,
     }
     catch (const InternalFailure& e)
     {
-        error("Unknown file type '{FILE_TYPE}': {ERROR} ", "FILE_TYPE",
-              fileType, "ERROR", e);
-        encode_rw_file_by_type_memory_resp(request->hdr.instance_id, cmd,
-                                           PLDM_INVALID_FILE_TYPE, 0,
-                                           responsePtr);
+        error("Unknown file type '{TYPE}', error - {ERROR} ", "TYPE", fileType,
+              "ERROR", e);
+        encodeRWTypeMemoryResponseHandler(request->hdr.instance_id, cmd,
+                                          PLDM_INVALID_FILE_TYPE, 0,
+                                          responsePtr);
         return response;
     }
 
@@ -684,8 +869,8 @@ Response rwFileByTypeIntoMemory(uint8_t cmd, const pldm_msg* request,
                                         oemPlatformHandler)
              : handler->readIntoMemory(offset, length, address,
                                        oemPlatformHandler);
-    encode_rw_file_by_type_memory_resp(request->hdr.instance_id, cmd, rc,
-                                       length, responsePtr);
+    encodeRWTypeMemoryResponseHandler(request->hdr.instance_id, cmd, rc, length,
+                                      responsePtr);
     return response;
 }
 
@@ -710,7 +895,11 @@ Response Handler::writeFileByType(const pldm_msg* request, size_t payloadLength)
 
     if (payloadLength < PLDM_RW_FILE_BY_TYPE_REQ_BYTES)
     {
-        encode_rw_file_by_type_resp(request->hdr.instance_id,
+        error(
+            "Failed to write file by type as payload length '{LENGTH}' less than '{REQ_LENGTH}'",
+            "LENGTH", payloadLength, "REQ_LENGTH",
+            PLDM_RW_FILE_BY_TYPE_REQ_BYTES);
+        encodeRWTypeResponseHandler(request->hdr.instance_id,
                                     PLDM_WRITE_FILE_BY_TYPE,
                                     PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
         return response;
@@ -724,7 +913,9 @@ Response Handler::writeFileByType(const pldm_msg* request, size_t payloadLength)
                                          &fileHandle, &offset, &length);
     if (rc != PLDM_SUCCESS)
     {
-        encode_rw_file_by_type_resp(request->hdr.instance_id,
+        error("Failed decoded write file by type request, response code '{RC}'",
+              "RC", rc);
+        encodeRWTypeResponseHandler(request->hdr.instance_id,
                                     PLDM_WRITE_FILE_BY_TYPE, rc, 0,
                                     responsePtr);
         return response;
@@ -737,9 +928,9 @@ Response Handler::writeFileByType(const pldm_msg* request, size_t payloadLength)
     }
     catch (const InternalFailure& e)
     {
-        error("Unknown file type '{FILE_TYPE}': {ERROR}", "FILE_TYPE", fileType,
+        error("Unknown file type '{TYPE}', error - {ERROR}", "TYPE", fileType,
               "ERROR", e);
-        encode_rw_file_by_type_resp(request->hdr.instance_id,
+        encodeRWTypeResponseHandler(request->hdr.instance_id,
                                     PLDM_WRITE_FILE_BY_TYPE,
                                     PLDM_INVALID_FILE_TYPE, 0, responsePtr);
         return response;
@@ -748,7 +939,7 @@ Response Handler::writeFileByType(const pldm_msg* request, size_t payloadLength)
     rc = handler->write(reinterpret_cast<const char*>(
                             request->payload + PLDM_RW_FILE_BY_TYPE_REQ_BYTES),
                         offset, length, oemPlatformHandler);
-    encode_rw_file_by_type_resp(request->hdr.instance_id,
+    encodeRWTypeResponseHandler(request->hdr.instance_id,
                                 PLDM_WRITE_FILE_BY_TYPE, rc, length,
                                 responsePtr);
     return response;
@@ -761,7 +952,11 @@ Response Handler::readFileByType(const pldm_msg* request, size_t payloadLength)
 
     if (payloadLength != PLDM_RW_FILE_BY_TYPE_REQ_BYTES)
     {
-        encode_rw_file_by_type_resp(request->hdr.instance_id,
+        error(
+            "Failed to read file by type as payload length '{LENGTH}' less than '{REQ_LENGTH}'",
+            "LENGTH", payloadLength, "REQ_LENGTH",
+            PLDM_RW_FILE_BY_TYPE_REQ_BYTES);
+        encodeRWTypeResponseHandler(request->hdr.instance_id,
                                     PLDM_READ_FILE_BY_TYPE,
                                     PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
         return response;
@@ -775,7 +970,10 @@ Response Handler::readFileByType(const pldm_msg* request, size_t payloadLength)
                                          &fileHandle, &offset, &length);
     if (rc != PLDM_SUCCESS)
     {
-        encode_rw_file_by_type_resp(request->hdr.instance_id,
+        error(
+            "Failed to decode read file by type request, response code '{RC}'",
+            "RC", rc);
+        encodeRWTypeResponseHandler(request->hdr.instance_id,
                                     PLDM_READ_FILE_BY_TYPE, rc, 0, responsePtr);
         return response;
     }
@@ -787,9 +985,9 @@ Response Handler::readFileByType(const pldm_msg* request, size_t payloadLength)
     }
     catch (const InternalFailure& e)
     {
-        error("Unknown file type '{FILE_TYPE}': {ERROR}", "FILE_TYPE", fileType,
+        error("Unknown file type '{TYPE}', error - {ERROR}", "TYPE", fileType,
               "ERROR", e);
-        encode_rw_file_by_type_resp(request->hdr.instance_id,
+        encodeRWTypeResponseHandler(request->hdr.instance_id,
                                     PLDM_READ_FILE_BY_TYPE,
                                     PLDM_INVALID_FILE_TYPE, 0, responsePtr);
         return response;
@@ -797,7 +995,7 @@ Response Handler::readFileByType(const pldm_msg* request, size_t payloadLength)
 
     rc = handler->read(offset, length, response, oemPlatformHandler);
     responsePtr = reinterpret_cast<pldm_msg*>(response.data());
-    encode_rw_file_by_type_resp(request->hdr.instance_id,
+    encodeRWTypeResponseHandler(request->hdr.instance_id,
                                 PLDM_READ_FILE_BY_TYPE, rc, length,
                                 responsePtr);
     return response;
@@ -810,8 +1008,11 @@ Response Handler::fileAck(const pldm_msg* request, size_t payloadLength)
 
     if (payloadLength != PLDM_FILE_ACK_REQ_BYTES)
     {
-        encode_file_ack_resp(request->hdr.instance_id,
-                             PLDM_ERROR_INVALID_LENGTH, responsePtr);
+        error(
+            "Failed to do file ack as payload length '{LENGTH}' is less than '{REQ_LENGTH}'",
+            "LENGTH", payloadLength, "REQ_LENGTH", PLDM_FILE_ACK_REQ_BYTES);
+        encodeFileAckResponseHandler(request->hdr.instance_id,
+                                     PLDM_ERROR_INVALID_LENGTH, responsePtr);
         return response;
     }
     uint16_t fileType{};
@@ -822,7 +1023,7 @@ Response Handler::fileAck(const pldm_msg* request, size_t payloadLength)
                                   &fileHandle, &fileStatus);
     if (rc != PLDM_SUCCESS)
     {
-        encode_file_ack_resp(request->hdr.instance_id, rc, responsePtr);
+        encodeFileAckResponseHandler(request->hdr.instance_id, rc, responsePtr);
         return response;
     }
 
@@ -834,15 +1035,15 @@ Response Handler::fileAck(const pldm_msg* request, size_t payloadLength)
 
     catch (const InternalFailure& e)
     {
-        error("Unknown file type '{FILE_TYPE}': {ERROR}", "FILE_TYPE", fileType,
+        error("Unknown file type '{TYPE}', error - {ERROR}", "TYPE", fileType,
               "ERROR", e);
-        encode_file_ack_resp(request->hdr.instance_id, PLDM_INVALID_FILE_TYPE,
-                             responsePtr);
+        encodeFileAckResponseHandler(request->hdr.instance_id,
+                                     PLDM_INVALID_FILE_TYPE, responsePtr);
         return response;
     }
 
     rc = handler->fileAck(fileStatus);
-    encode_file_ack_resp(request->hdr.instance_id, rc, responsePtr);
+    encodeFileAckResponseHandler(request->hdr.instance_id, rc, responsePtr);
     return response;
 }
 
@@ -852,6 +1053,10 @@ Response Handler::getAlertStatus(const pldm_msg* request, size_t payloadLength)
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
     if (payloadLength != PLDM_GET_ALERT_STATUS_REQ_BYTES)
     {
+        error(
+            "Failed to get alert status as payload length '{LENGTH}' is less than '{REQ_LENGTH}'",
+            "LENGTH", payloadLength, "REQ_LENGTH",
+            PLDM_GET_ALERT_STATUS_REQ_BYTES);
         return CmdHandler::ccOnlyResponse(request, PLDM_ERROR_INVALID_LENGTH);
     }
 
@@ -860,11 +1065,16 @@ Response Handler::getAlertStatus(const pldm_msg* request, size_t payloadLength)
     auto rc = decode_get_alert_status_req(request, payloadLength, &versionId);
     if (rc != PLDM_SUCCESS)
     {
+        error("Failed to decode get alert status request, response code '{RC}'",
+              "RC", rc);
         return CmdHandler::ccOnlyResponse(request, rc);
     }
 
     if (versionId != 0)
     {
+        error(
+            "Failed to get alert status due to unsupported version ID '{VERSION}'",
+            "VERSION", versionId);
         return CmdHandler::ccOnlyResponse(request,
                                           PLDM_HOST_UNSUPPORTED_FORMAT_VERSION);
     }
@@ -876,6 +1086,9 @@ Response Handler::getAlertStatus(const pldm_msg* request, size_t payloadLength)
                                       PLDM_GET_ALERT_STATUS_RESP_BYTES);
     if (rc != PLDM_SUCCESS)
     {
+        error(
+            "Failed to encode get alert status response, response code '{RC}'",
+            "RC", rc);
         return CmdHandler::ccOnlyResponse(request, rc);
     }
 
@@ -889,6 +1102,9 @@ Response Handler::newFileAvailable(const pldm_msg* request,
 
     if (payloadLength != PLDM_NEW_FILE_REQ_BYTES)
     {
+        error(
+            "Failed new file available as payload length '{LENGTH}' is less than '{REQ_LENGTH}'",
+            "LENGTH", payloadLength, "REQ_LENGTH", PLDM_NEW_FILE_REQ_BYTES);
         return CmdHandler::ccOnlyResponse(request, PLDM_ERROR_INVALID_LENGTH);
     }
     uint16_t fileType{};
@@ -897,6 +1113,60 @@ Response Handler::newFileAvailable(const pldm_msg* request,
 
     auto rc = decode_new_file_req(request, payloadLength, &fileType,
                                   &fileHandle, &length);
+
+    if (rc != PLDM_SUCCESS)
+    {
+        error("Failed to decode new file request, response code '{RC}'", "RC",
+              rc);
+        return CmdHandler::ccOnlyResponse(request, rc);
+    }
+
+    std::unique_ptr<FileHandler> handler{};
+    try
+    {
+        handler = getHandlerByType(fileType, fileHandle);
+    }
+    catch (const InternalFailure& e)
+    {
+        error("Unknown file type '{TYPE}', error - {ERROR}", "TYPE", fileType,
+              "ERROR", e);
+        return CmdHandler::ccOnlyResponse(request, PLDM_INVALID_FILE_TYPE);
+    }
+
+    rc = handler->newFileAvailable(length);
+    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    int responseCode = encode_new_file_resp(request->hdr.instance_id, rc,
+                                            responsePtr);
+    if (responseCode != PLDM_SUCCESS)
+    {
+        error(
+            "Failed to encode new file available response, response code '{RC}'",
+            "RC", responseCode);
+    }
+    return response;
+}
+
+Response Handler::newFileAvailableWithMetaData(const pldm_msg* request,
+                                               size_t payloadLength)
+{
+    Response response(sizeof(pldm_msg_hdr) +
+                      PLDM_NEW_FILE_AVAILABLE_WITH_META_DATA_RESP_BYTES);
+
+    if (payloadLength != PLDM_NEW_FILE_AVAILABLE_WITH_META_DATA_REQ_BYTES)
+    {
+        return CmdHandler::ccOnlyResponse(request, PLDM_ERROR_INVALID_LENGTH);
+    }
+    uint16_t fileType{};
+    uint32_t fileHandle{};
+    uint64_t length{};
+    uint32_t fileMetaData1{};
+    uint32_t fileMetaData2{};
+    uint32_t fileMetaData3{};
+    uint32_t fileMetaData4{};
+
+    auto rc = decode_new_file_with_metadata_req(
+        request, payloadLength, &fileType, &fileHandle, &length, &fileMetaData1,
+        &fileMetaData2, &fileMetaData3, &fileMetaData4);
 
     if (rc != PLDM_SUCCESS)
     {
@@ -910,14 +1180,66 @@ Response Handler::newFileAvailable(const pldm_msg* request,
     }
     catch (const InternalFailure& e)
     {
-        error("Unknown file type '{FILE_TYPE}': {ERROR}", "FILE_TYPE", fileType,
-              "ERROR", e);
+        error(
+            "Unknown file type, '{TYPE}' in NewFileAvailableMetaData response, error - {ERROR}",
+            "TYPE", fileType, "ERROR", e);
         return CmdHandler::ccOnlyResponse(request, PLDM_INVALID_FILE_TYPE);
     }
 
-    rc = handler->newFileAvailable(length);
+    rc = handler->newFileAvailableWithMetaData(
+        length, fileMetaData1, fileMetaData2, fileMetaData3, fileMetaData4);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
-    encode_new_file_resp(request->hdr.instance_id, rc, responsePtr);
+    encode_new_file_with_metadata_resp(request->hdr.instance_id, rc,
+                                       responsePtr);
+
+    return response;
+}
+
+Response Handler::fileAckWithMetaData(const pldm_msg* request,
+                                      size_t payloadLength)
+{
+    Response response(sizeof(pldm_msg_hdr) +
+                      PLDM_FILE_ACK_WITH_META_DATA_RESP_BYTES);
+
+    if (payloadLength != PLDM_FILE_ACK_WITH_META_DATA_REQ_BYTES)
+    {
+        return CmdHandler::ccOnlyResponse(request, PLDM_ERROR_INVALID_LENGTH);
+    }
+    uint16_t fileType{};
+    uint32_t fileHandle{};
+    uint8_t fileStatus{};
+    uint32_t fileMetaData1{};
+    uint32_t fileMetaData2{};
+    uint32_t fileMetaData3{};
+    uint32_t fileMetaData4{};
+
+    auto rc = decode_file_ack_with_meta_data_req(
+        request, payloadLength, &fileType, &fileHandle, &fileStatus,
+        &fileMetaData1, &fileMetaData2, &fileMetaData3, &fileMetaData4);
+
+    if (rc != PLDM_SUCCESS)
+    {
+        return CmdHandler::ccOnlyResponse(request, rc);
+    }
+
+    std::unique_ptr<FileHandler> handler{};
+    try
+    {
+        handler = getHandlerByType(fileType, fileHandle);
+    }
+    catch (const InternalFailure& e)
+    {
+        error(
+            "Unknown file type, '{TYPE}' in FileAckWithMetaData response and error - {ERROR}",
+            "TYPE", fileType, "ERROR", e);
+        return CmdHandler::ccOnlyResponse(request, PLDM_INVALID_FILE_TYPE);
+    }
+
+    rc = handler->fileAckWithMetaData(fileStatus, fileMetaData1, fileMetaData2,
+                                      fileMetaData3, fileMetaData4);
+    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    encode_file_ack_with_meta_data_resp(request->hdr.instance_id, rc,
+                                        responsePtr);
     return response;
 }
 
