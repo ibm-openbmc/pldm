@@ -415,6 +415,13 @@ class LidHandler : public FileHandler
     virtual void postWriteAction(
         const uint16_t /*fileType*/, const uint32_t /*fileHandle*/,
         const struct fileack_status_metadata& /*metaDataObj*/) {};
+    virtual int newFileAvailableWithMetaData(
+        uint64_t /*length*/, uint32_t /*metaDataValue1*/,
+        uint32_t /*metaDataValue2*/, uint32_t /*metaDataValue3*/,
+        uint32_t /*metaDataValue4*/)
+    {
+        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+    }
 
     /** @brief LidHandler destructor
      */
