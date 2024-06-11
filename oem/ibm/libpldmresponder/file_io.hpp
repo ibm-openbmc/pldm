@@ -735,6 +735,13 @@ class Handler : public CmdHandler
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
                 return this->fileAckWithMetaData(request, payloadLength);
             });
+        handlers.emplace(
+            PLDM_NEW_FILE_AVAILABLE_WITH_META_DATA,
+            [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
+                return this->newFileAvailableWithMetaData(request,
+                                                          payloadLength);
+            });
+
         resDumpMatcher = std::make_unique<sdbusplus::bus::match_t>(
             pldm::utils::DBusHandler::getBus(),
             sdbusplus::bus::match::rules::interfacesAdded() +
@@ -1028,6 +1035,15 @@ class Handler : public CmdHandler
      */
     void postWriteCallBack(const uint16_t& fileType, const uint32_t& fileHandle,
                            const struct fileack_status_metadata& metaDataObj);
+    /** @brief Handler for newFileAvailableWithMetaData command
+     *
+     *  @param[in] request - PLDM request msg
+     *  @param[in] payloadLength - length of the message payload
+     *
+     *  @return PLDM response messsage
+     */
+    Response newFileAvailableWithMetaData(const pldm_msg* request,
+                                          size_t payloadLength);
 
   private:
     oem_platform::Handler* oemPlatformHandler;
