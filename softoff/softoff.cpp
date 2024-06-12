@@ -145,8 +145,8 @@ void SoftPowerOff::hostSoftOffComplete(sdbusplus::message_t& msg)
             auto rc = timer.stop();
             if (rc < 0)
             {
-                std::cerr << "PLDM soft off: Failure to STOP the timer. ERRNO="
-                          << rc << "\n";
+                error("PLDM soft off: Failure to STOP the timer. ERRNO={RC}",
+                      "RC", rc);
             }
         }
 
