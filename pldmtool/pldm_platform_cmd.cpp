@@ -13,8 +13,6 @@
 #include "oem/ibm/oem_ibm_state_set.hpp"
 #endif
 
-PHOSPHOR_LOG2_USING;
-
 using namespace pldm::utils;
 
 namespace pldmtool
@@ -123,7 +121,7 @@ class GetPDR : public CommandInterface
                                                   prevRecordHandle);
                 if (!result.second)
                 {
-                    error(
+                    lg2::error(
                         "Record handle {KEY0} has multiple references: {KEY1}, {KEY2}",
                         "KEY0", recordHandle, "KEY1", result.first->second,
                         "KEY2", prevRecordHandle);
@@ -176,8 +174,8 @@ class GetPDR : public CommandInterface
 
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
-            error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0", rc,
-                  "KEY1", (int)completionCode);
+            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
+                       rc, "KEY1", (int)completionCode);
             return;
         }
 
@@ -734,7 +732,7 @@ class GetPDR : public CommandInterface
             reinterpret_cast<pldm_pdr_fru_record_set*>(data);
         if (!pdr)
         {
-            error("Failed to get the FRU record set PDR");
+            lg2::error("Failed to get the FRU record set PDR");
             return;
         }
 
@@ -762,7 +760,7 @@ class GetPDR : public CommandInterface
             reinterpret_cast<pldm_pdr_entity_association*>(data);
         if (!pdr)
         {
-            error("Failed to get the PDR eneity association");
+            lg2::error("Failed to get the PDR eneity association");
             return;
         }
 
@@ -774,7 +772,7 @@ class GetPDR : public CommandInterface
         }
         else
         {
-            info("Get associationType failed.");
+            lg2::info("Get associationType failed.");
         }
         output["containerEntityType"] =
             getEntityName(pdr->container.entity_type);
@@ -807,7 +805,7 @@ class GetPDR : public CommandInterface
             (struct pldm_numeric_effecter_value_pdr*)data;
         if (!pdr)
         {
-            error("Failed to get numeric effecter PDR");
+            lg2::error("Failed to get numeric effecter PDR");
             return;
         }
 
@@ -1002,7 +1000,7 @@ class GetPDR : public CommandInterface
     {
         if (data == NULL)
         {
-            error("Failed to get PDR message");
+            lg2::error("Failed to get PDR message");
             return;
         }
 
@@ -1022,8 +1020,8 @@ class GetPDR : public CommandInterface
             // is not supported
             if (!strToPdrType.contains(pdrRecType))
             {
-                error("PDR type {KEY0} is not supported or invalid", "KEY0",
-                      pdrRecType);
+                lg2::error("PDR type {KEY0} is not supported or invalid",
+                           "KEY0", pdrRecType);
 
                 // PDR type not supported, setting next record handle to 0
                 // to avoid looping through all PDR records
@@ -1116,16 +1114,18 @@ class SetStateEffecter : public CommandInterface
         if (effecterCount > maxEffecterCount ||
             effecterCount < minEffecterCount)
         {
-            error("Request Message Error: effecterCount size {KEY0} is invalid",
-                  "KEY0", effecterCount);
+            lg2::error(
+                "Request Message Error: effecterCount size {KEY0} is invalid",
+                "KEY0", effecterCount);
             auto rc = PLDM_ERROR_INVALID_DATA;
             return {rc, requestMsg};
         }
 
         if (effecterData.size() > maxEffecterDataSize)
         {
-            error("Request Message Error: effecterData size {KEY0} is invalid",
-                  "KEY0", effecterData.size());
+            lg2::error(
+                "Request Message Error: effecterData size {KEY0} is invalid",
+                "KEY0", effecterData.size());
             auto rc = PLDM_ERROR_INVALID_DATA;
             return {rc, requestMsg};
         }
@@ -1133,8 +1133,9 @@ class SetStateEffecter : public CommandInterface
         auto stateField = parseEffecterData(effecterData, effecterCount);
         if (!stateField)
         {
-            error("Failed to parse effecter data, effecterCount size {KEY0}",
-                  "KEY0", effecterCount);
+            lg2::error(
+                "Failed to parse effecter data, effecterCount size {KEY0}",
+                "KEY0", effecterCount);
             auto rc = PLDM_ERROR_INVALID_DATA;
             return {rc, requestMsg};
         }
@@ -1152,8 +1153,8 @@ class SetStateEffecter : public CommandInterface
 
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
-            error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0", rc,
-                  "KEY1", (int)completionCode);
+            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
+                       rc, "KEY1", (int)completionCode);
 
             return;
         }
@@ -1234,8 +1235,8 @@ class SetNumericEffecterValue : public CommandInterface
 
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
-            error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0", rc,
-                  "KEY1", (int)completionCode);
+            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
+                       rc, "KEY1", (int)completionCode);
 
             return;
         }
@@ -1301,8 +1302,8 @@ class GetStateSensorReadings : public CommandInterface
 
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
-            error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0", rc,
-                  "KEY1", (int)completionCode);
+            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
+                       rc, "KEY1", (int)completionCode);
 
             return;
         }
@@ -1396,8 +1397,8 @@ class GetNumericEffecterValue : public CommandInterface
 
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
-            error("Response Message Error: rc={RC} cc={CC}", "RC", rc, "CC",
-                  static_cast<int>(completionCode));
+            lg2::error("Response Message Error: rc={RC} cc={CC}", "RC", rc,
+                       "CC", static_cast<int>(completionCode));
             return;
         }
 
@@ -1458,8 +1459,8 @@ class GetNumericEffecterValue : public CommandInterface
             }
             default:
             {
-                error("Unknown Effecter data Size :{SIZE}", "SIZE",
-                      effecterDataSize);
+                lg2::error("Unknown Effecter data Size :{SIZE}", "SIZE",
+                           effecterDataSize);
                 break;
             }
         }
@@ -1490,7 +1491,7 @@ class GetNumericEffecterValue : public CommandInterface
         {
             return numericEffecterOpState.at(state);
         }
-        catch (const std::out_of_range& e)
+        catch (const std::out_of_range&)
         {
             return typeString;
         }

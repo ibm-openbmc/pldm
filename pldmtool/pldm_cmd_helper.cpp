@@ -11,8 +11,6 @@
 
 #include <exception>
 
-PHOSPHOR_LOG2_USING;
-
 using namespace pldm::utils;
 
 namespace pldmtool
@@ -34,7 +32,7 @@ int mctpSockSendRecv(const std::vector<uint8_t>& requestMsg,
     if (-1 == sockFd)
     {
         returnCode = -errno;
-        error("Failed to create the socket : RC = {KEY0}", "KEY0", sockFd);
+        lg2::error("Failed to create the socket : RC = {KEY0}", "KEY0", sockFd);
         return returnCode;
     }
     Logger(pldmVerbose, "Success in creating the socket : RC = ", sockFd);
@@ -51,7 +49,8 @@ int mctpSockSendRecv(const std::vector<uint8_t>& requestMsg,
     if (-1 == result)
     {
         returnCode = -errno;
-        error("Failed to connect to socket : RC = {KEY0}", "KEY0", returnCode);
+        lg2::error("Failed to connect to socket : RC = {KEY0}", "KEY0",
+                   returnCode);
 
         return returnCode;
     }
@@ -62,8 +61,8 @@ int mctpSockSendRecv(const std::vector<uint8_t>& requestMsg,
     if (-1 == result)
     {
         returnCode = -errno;
-        error("Failed to send message type as pldm to mctp : RC = {KEY0}",
-              "KEY0", returnCode);
+        lg2::error("Failed to send message type as pldm to mctp : RC = {KEY0}",
+                   "KEY0", returnCode);
         return returnCode;
     }
     Logger(
@@ -74,7 +73,7 @@ int mctpSockSendRecv(const std::vector<uint8_t>& requestMsg,
     if (-1 == result)
     {
         returnCode = -errno;
-        error("Write to socket failure : RC = {KEY0}", "KEY0", returnCode);
+        lg2::error("Write to socket failure : RC = {KEY0}", "KEY0", returnCode);
         return returnCode;
     }
     Logger(pldmVerbose, "Write to socket successful : RC = ", result);
@@ -83,14 +82,16 @@ int mctpSockSendRecv(const std::vector<uint8_t>& requestMsg,
     ssize_t peekedLength = recv(socketFd(), nullptr, 0, MSG_TRUNC | MSG_PEEK);
     if (0 == peekedLength)
     {
-        error("Socket is closed : peekedLength = {KEY0}", "KEY0", peekedLength);
+        lg2::error("Socket is closed : peekedLength = {KEY0}", "KEY0",
+                   peekedLength);
 
         return returnCode;
     }
     else if (peekedLength <= -1)
     {
         returnCode = -errno;
-        error("recv() system call failed : RC = {KEY0}", "KEY0", returnCode);
+        lg2::error("recv() system call failed : RC = {KEY0}", "KEY0",
+                   returnCode);
         return returnCode;
     }
     else
@@ -115,8 +116,9 @@ int mctpSockSendRecv(const std::vector<uint8_t>& requestMsg,
             }
             else if (recvDataLength != peekedLength)
             {
-                error("Failure to read response length packet: length = {KEY0}",
-                      "KEY0", recvDataLength);
+                lg2::error(
+                    "Failure to read response length packet: length = {KEY0}",
+                    "KEY0", recvDataLength);
                 return returnCode;
             }
         } while (1);
@@ -126,7 +128,8 @@ int mctpSockSendRecv(const std::vector<uint8_t>& requestMsg,
     if (-1 == returnCode)
     {
         returnCode = -errno;
-        error("Failed to shutdown the socket : RC ={KEY0}", "KEY0", returnCode);
+        lg2::error("Failed to shutdown the socket : RC ={KEY0}", "KEY0",
+                   returnCode);
         return returnCode;
     }
 
@@ -151,7 +154,7 @@ void CommandInterface::exec()
     }
     catch (const std::exception& e)
     {
-        error(
+        lg2::error(
             "GetInstanceId D-Bus call failed, MCTP id = {KEY0}, error = {KEY1}",
             "KEY0", (unsigned)mctp_eid, "KEY1", e.what());
         return;
@@ -159,7 +162,7 @@ void CommandInterface::exec()
     auto [rc, requestMsg] = createRequestMsg();
     if (rc != PLDM_SUCCESS)
     {
-        error(
+        lg2::error(
             "Failed to encode request message for {KEY0} : {KEY1}, rc = {KEY1}",
             "KEY0", pldmType, "KEY1", commandName, "KEY1", rc);
         return;
@@ -170,7 +173,7 @@ void CommandInterface::exec()
 
     if (rc != PLDM_SUCCESS)
     {
-        error("pldmSendRecv: Failed to receive RC = {KEY0}", "KEY0", rc);
+        lg2::error("pldmSendRecv: Failed to receive RC = {KEY0}", "KEY0", rc);
         return;
     }
 
@@ -205,7 +208,7 @@ int CommandInterface::pldmSendRecv(std::vector<uint8_t>& requestMsg,
         int fd = pldm_open();
         if (-1 == fd)
         {
-            error("failed to init mctp ");
+            lg2::error("failed to init mctp ");
 
             return -1;
         }
