@@ -30,7 +30,7 @@ class SoftPowerOff
      *                         is there is indeed a timeout
      */
     SoftPowerOff(sdbusplus::bus_t& bus, sd_event* event,
-                 InstanceIdDb& instanceIdDb, noTimeOut);
+                 InstanceIdDb& instanceIdDb, bool noTimeOut);
 
     /** @brief Is the pldm-softpoweroff has error.
      * if hasError is true, that means the pldm-softpoweroff failed to

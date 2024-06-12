@@ -146,8 +146,8 @@ void SoftPowerOff::hostSoftOffComplete(sdbusplus::message_t& msg)
             auto rc = timer.stop();
             if (rc < 0)
             {
-                std::cerr << "PLDM soft off: Failure to STOP the timer. ERRNO="
-                          << rc << "\n";
+                error("PLDM soft off: Failure to STOP the timer. ERRNO={RC}",
+                      "RC", rc);
             }
         }
 
@@ -372,7 +372,7 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
         }
 
         info("Got the response for set effecter states command, PLDM RC = {RC}",
-              "RC", lg2::hex, static_cast<uint16_t>(response->payload[0]));
+             "RC", lg2::hex, static_cast<uint16_t>(response->payload[0]));
         std::vector<uint8_t> responseMessage;
         responseMessage.resize(responseMsgSize);
         memcpy(responseMessage.data(), responseMsg, responseMessage.size());
