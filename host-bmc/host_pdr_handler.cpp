@@ -4,7 +4,10 @@
 #ifdef OEM_IBM
 #include <libpldm/oem/ibm/fru.h>
 #endif
-#include "custom_dbus.hpp"
+
+#include "dbus/custom_dbus.hpp"
+#include "dbus/deserialize.hpp"
+#include "dbus/serialize.hpp"
 
 #include <assert.h>
 
@@ -91,12 +94,13 @@ HostPDRHandler::HostPDRHandler(
     pldm_entity_association_tree* bmcEntityTree,
     pldm::InstanceIdDb& instanceIdDb,
     pldm::requester::Handler<pldm::requester::Request>* handler,
-    pldm::responder::oem_platform::Handler* oemPlatformHandler) :
+    pldm::responder::oem_platform::Handler* oemPlatformHandler,
+    pldm::responder::oem_utils::Handler* oemUtilsHandler) :
     mctp_fd(mctp_fd),
     mctp_eid(mctp_eid), event(event), repo(repo),
     stateSensorHandler(eventsJsonsDir), entityTree(entityTree),
     bmcEntityTree(bmcEntityTree), instanceIdDb(instanceIdDb), handler(handler),
-    oemPlatformHandler(oemPlatformHandler),
+    oemPlatformHandler(oemPlatformHandler), oemUtilsHandler(oemUtilsHandler),
     entityMaps(parseEntityMap(ENTITY_MAP_JSON))
 {
     mergedHostParents = false;
@@ -111,7 +115,7 @@ HostPDRHandler::HostPDRHandler(
         const auto itr = props.find("CurrentHostState");
         if (itr != props.end())
         {
-            PropertyValue value = itr->second;
+            pldm::utils::PropertyValue value = itr->second;
             auto propVal = std::get<std::string>(value);
             if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
             {
@@ -127,6 +131,15 @@ HostPDRHandler::HostPDRHandler(
                 this->sensorMap.clear();
                 this->responseReceived = false;
                 this->mergedHostParents = false;
+
+                // After a power off , the remote nodes will be deleted
+                // from the entity association tree, making the nodes point
+                // to junk values, so set them to nullptr
+                for (const auto& element : this->objPathMap)
+                {
+                    pldm_entity obj{};
+                    this->objPathMap[element.first] = obj;
+                }
             }
         }
     });
@@ -632,7 +645,13 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
     {
         updateEntityAssociation(entityAssociations, entityTree, objPathMap,
                                 entityMaps, oemPlatformHandler);
+        pldm::serialize::Serialize::getSerialize().setObjectPathMaps(
+            objPathMap);
 
+        if (oemUtilsHandler)
+        {
+            oemUtilsHandler->setCoreCount(entityAssociations, entityMaps);
+        }
         /*received last record*/
         this->parseStateSensorPDRs(stateSensorPDRs);
         this->createDbusObjects(fruRecordSetPDRs);
@@ -1088,8 +1107,7 @@ void HostPDRHandler::setFRUDataOnDBus(
 #ifdef OEM_IBM
     for (const auto& entity : objPathMap)
     {
-        pldm_entity node = pldm_entity_extract(entity.second);
-        auto fruRSI = getRSI(fruRecordSetPDRs, node);
+        auto fruRSI = getRSI(fruRecordSetPDRs, entity.second);
 
         for (const auto& data : fruRecordData)
         {
@@ -1121,6 +1139,20 @@ void HostPDRHandler::createDbusObjects(const PDRList& fruRecordSetPDRs)
 {
     // TODO: Creating and Refreshing dbus hosted by remote PLDM entity Fru PDRs
 
+    for (const auto& entity : objPathMap)
+    {
+        switch (entity.second.entity_type)
+        {
+            case PLDM_ENTITY_PROC | 0x8000:
+                CustomDBus::getCustomDBus().implementCpuCoreInterface(
+                    entity.first);
+                break;
+            case PLDM_ENTITY_SYS_BOARD:
+                CustomDBus::getCustomDBus().implementMotherboardInterface(
+                    entity.first);
+                break;
+        }
+    }
     getFRURecordTableMetadataByRemote(fruRecordSetPDRs);
 }
 

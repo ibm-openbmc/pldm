@@ -23,7 +23,6 @@
 
 namespace pldm
 {
-using EntityType = uint16_t;
 // vector which would hold the PDR record handle data returned by
 // pldmPDRRepositoryChgEvent event data
 using ChangeEntry = uint32_t;
@@ -96,7 +95,8 @@ class HostPDRHandler
         pldm_entity_association_tree* bmcEntityTree,
         pldm::InstanceIdDb& instanceIdDb,
         pldm::requester::Handler<pldm::requester::Request>* handler,
-        pldm::responder::oem_platform::Handler* oemPlatformHandler);
+        pldm::responder::oem_platform::Handler* oemPlatformHandler,
+        pldm::responder::oem_utils::Handler* oemUtilsHandler);
 
     /** @brief fetch PDRs from host firmware. See @class.
      *  @param[in] recordHandles - list of record handles pointing to host's
@@ -170,6 +170,17 @@ class HostPDRHandler
     /** @brief check whether Host is running when pldmd starts
      */
     bool isHostUp();
+
+    /** @brief Updating the entity object path and entity node in map
+     *
+     * @param[in] path - object path
+     * @param[in] entity - pldm entity node
+     */
+    inline void updateObjectPathMaps(const std::string& path,
+                                     const pldm_entity entity)
+    {
+        objPathMap[path] = entity;
+    }
 
     /** @brief map that captures various terminus information **/
     TLPDRMap tlPDRInfo;
@@ -315,11 +326,11 @@ class HostPDRHandler
     /** @brief maps an object path to pldm_entity from the BMC's entity
      *         association tree
      */
-    ObjectPathMaps objPathMap;
+    pldm::utils::ObjectPathMaps objPathMap;
 
     /** @brief maps an entity name to map, maps to entity name to pldm_entity
      */
-    EntityAssociations entityAssociations;
+    pldm::utils::EntityAssociations entityAssociations;
 
     /** @brief the vector of FRU Record Data Format
      */
@@ -328,9 +339,16 @@ class HostPDRHandler
     /** @OEM platform handler */
     pldm::responder::oem_platform::Handler* oemPlatformHandler;
 
+    /** @brief Object path and entity association and is only loaded once
+     */
+    bool objPathEntityAssociation;
+
+    /** @OEM Utils handler */
+    pldm::responder::oem_utils::Handler* oemUtilsHandler;
+
     /** @brief entityID and entity name is only loaded once
      */
-    EntityMaps entityMaps;
+    pldm::utils::EntityMaps entityMaps;
 };
 
 } // namespace pldm

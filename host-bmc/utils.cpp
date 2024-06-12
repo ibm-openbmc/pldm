@@ -1,11 +1,11 @@
-#include "common/utils.hpp"
+#include "utils.hpp"
 
 #include "libpldm/entity.h"
 
-#include "utils.hpp"
-
 #include <cstdlib>
 #include <iostream>
+
+using namespace pldm::utils;
 
 namespace pldm
 {
@@ -107,7 +107,7 @@ void addObjectPathEntityAssociations(
             // and overwrite the entity if it does not exist.
             if (!objPathMap.contains(entity_path))
             {
-                objPathMap[entity_path] = entity;
+                objPathMap[entity_path] = node_entity;
             }
             else
             {
@@ -118,7 +118,7 @@ void addObjectPathEntityAssociations(
                 }
                 catch (const std::exception& e)
                 {
-                    objPathMap[entity_path] = entity;
+                    objPathMap[entity_path] = node_entity;
                 }
             }
 
@@ -147,7 +147,7 @@ void addObjectPathEntityAssociations(
         }
         catch (const std::exception& e)
         {
-            objPathMap[dbusPath] = entity;
+            objPathMap[dbusPath] = node_entity;
         }
     }
 }
