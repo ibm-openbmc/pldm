@@ -180,6 +180,19 @@ class FileHandler
     virtual int readFile(const std::string& filePath, uint32_t offset,
                          uint32_t& length, Response& response);
 
+    /** @brief method to read an oem file type's content using file descriptor
+     * into PLDM response
+     *
+     *  @param[in] fd - the file descriptor
+     *  @param[in] offset - offset to read
+     *  @param[in/out] length - length to be read
+     *  @param[in] response - PLDM response
+     *
+     *  @return PLDM status code
+     */
+    virtual int readFileByFd(int fd, uint32_t offset, uint32_t& length,
+                             Response& response);
+
     /** @brief Method to do the file content transfer ove DMA between host and
      *         bmc. This method is made virtual to be overridden in test case.
      * And need not be defined in other child classes
