@@ -436,8 +436,6 @@ void DumpHandler::readIntoMemory(uint32_t offset, uint32_t length,
                                  sdeventplus::Event& event)
 {
     auto path = findDumpObjPath(fileHandle);
-    static constexpr auto dumpFilepathInterface =
-        "xyz.openbmc_project.Common.FilePath";
     if ((dumpType == PLDM_FILE_TYPE_DUMP) ||
         (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP))
     {
@@ -448,12 +446,18 @@ void DumpHandler::readIntoMemory(uint32_t offset, uint32_t length,
     }
     else if (dumpType != PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
     {
+        auto& bus = pldm::utils::DBusHandler::getBus();
         try
         {
-            auto filePath =
-                pldm::utils::DBusHandler().getDbusProperty<std::string>(
-                    path.c_str(), "Path", dumpFilepathInterface);
-            transferFileData(fs::path(filePath), true, offset, length, address,
+            auto method = bus.new_method_call(
+                "xyz.openbmc_project.Dump.Manager", path.c_str(),
+                "xyz.openbmc_project.Dump.Entry", "GetFileHandle");
+            auto reply = bus.call(method, dbusTimeout);
+            sdbusplus::message::unix_fd fd{};
+            reply.read(fd);
+            unixFd = dup(fd);
+
+            transferFileData(unixFd, true, offset, length, address,
                              sharedAIORespDataobj, event);
             return;
         }
@@ -478,8 +482,6 @@ int DumpHandler::read(uint32_t offset, uint32_t& length, Response& response,
                       oem_platform::Handler* /*oemPlatformHandler*/)
 {
     auto path = findDumpObjPath(fileHandle);
-    static constexpr auto dumpFilepathInterface =
-        "xyz.openbmc_project.Common.FilePath";
     if ((dumpType == PLDM_FILE_TYPE_DUMP) ||
         (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP))
     {
@@ -487,18 +489,23 @@ int DumpHandler::read(uint32_t offset, uint32_t& length, Response& response,
     }
     else if (dumpType != PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
     {
+        auto& bus = pldm::utils::DBusHandler::getBus();
         try
         {
-            auto filePath =
-                pldm::utils::DBusHandler().getDbusProperty<std::string>(
-                    path.c_str(), "Path", dumpFilepathInterface);
-            auto rc = readFile(filePath.c_str(), offset, length, response);
+            auto method = bus.new_method_call(
+                "xyz.openbmc_project.Dump.Manager", path.c_str(),
+                "xyz.openbmc_project.Dump.Entry", "GetFileHandle");
+            auto reply = bus.call(method, dbusTimeout);
+            sdbusplus::message::unix_fd fd{};
+            reply.read(fd);
+
+            auto rc = readFileByFd(fd, offset, length, response);
             return rc;
         }
         catch (const sdbusplus::exception_t& e)
         {
             error(
-                "Failed to fetch the filepath of the dump entry '{FILE_HNDLE}', error - {ERROR}",
+                "Failed to fetch the filehandle of the dump entry '{FILE_HNDLE}', error - {ERROR}",
                 "FILE_HNDL", lg2::hex, fileHandle, "ERROR", e);
             pldm::utils::reportError(
                 "xyz.openbmc_project.PLDM.Error.read.GetFilepathFail");

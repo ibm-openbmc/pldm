@@ -436,6 +436,10 @@ std::unique_ptr<FileHandler> getHandlerByType(uint16_t fileType,
         case PLDM_FILE_TYPE_DUMP:
         case PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS:
         case PLDM_FILE_TYPE_RESOURCE_DUMP:
+        case PLDM_FILE_TYPE_BMC_DUMP:
+        case PLDM_FILE_TYPE_SBE_DUMP:
+        case PLDM_FILE_TYPE_HOSTBOOT_DUMP:
+        case PLDM_FILE_TYPE_HARDWARE_DUMP:
         {
             return std::make_unique<DumpHandler>(fileHandle, fileType);
         }
@@ -592,5 +596,50 @@ int FileHandler::readFile(const std::string& filePath, uint32_t offset,
     return PLDM_ERROR;
 }
 
+int FileHandler::readFileByFd(int fd, uint32_t offset, uint32_t& length,
+                              Response& response)
+{
+    off_t fileSize = lseek(fd, 0, SEEK_END);
+    if (fileSize == -1)
+    {
+        error("file lseek failed for SEEK_END");
+        return PLDM_ERROR;
+    }
+    if (offset >= fileSize)
+    {
+        error(
+            "FileHandler:readFileByFd:  Offset exceeds file size, OFFSET={OFFSET} FILE_SIZE={FILE_SIZE} FILE_HANDLE={FILE_HANDLE}",
+            "OFFSET", offset, "FILE_SIZE", fileSize, "FILE_HANDLE", fileHandle);
+        return PLDM_DATA_OUT_OF_RANGE;
+    }
+    if (offset + length > fileSize)
+    {
+        length = fileSize - offset;
+    }
+    auto rc = lseek(fd, offset, SEEK_SET);
+    if (rc == -1)
+    {
+        error("file lseek failed for SEEK_SET");
+        return PLDM_ERROR;
+    }
+    size_t currSize = response.size();
+    response.resize(currSize + length);
+    auto filePos = reinterpret_cast<char*>(response.data());
+    filePos += currSize;
+    rc = ::read(fd, filePos, length);
+    if (rc == -1)
+    {
+        error("file read failed for fd={FD}", "FD", fd);
+        return PLDM_ERROR;
+    }
+    if (rc != length)
+    {
+        error(
+            "mismatch between number of characters to read and the length read for FD={FD} LENGTH={LEN} COUNT={COUNT}",
+            "FD", fd, "LEN", length, "COUNT", rc);
+        return PLDM_ERROR;
+    }
+    return PLDM_SUCCESS;
+}
 } // namespace responder
 } // namespace pldm
