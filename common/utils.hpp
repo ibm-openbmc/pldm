@@ -480,5 +480,14 @@ bool checkIfLogicalBitSet(const uint16_t& containerId);
  *  @param[in] present - status to set either true/false
  */
 void setFruPresence(const std::string& fruObjPath, bool present);
+
+/** @brief checks whether the fru is actually present
+ *
+ *  @param[in] objPath - the fru object path
+ *
+ *  @return bool to indicate presence or absence
+ */
+bool checkFruPresence(const char* objPath);
+
 } // namespace utils
 } // namespace pldm

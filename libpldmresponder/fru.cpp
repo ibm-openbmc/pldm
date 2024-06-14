@@ -164,6 +164,12 @@ void FruImpl::buildFRUTable()
 
     for (const auto& object : objects)
     {
+        auto isPresent =
+            pldm::utils::checkFruPresence(object.first.str.c_str());
+        if (!isPresent)
+        {
+            continue;
+        }
         const auto& interfaces = object.second;
         for (const auto& interface : interfaces)
         {
