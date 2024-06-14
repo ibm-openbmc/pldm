@@ -3,6 +3,8 @@
 #include "libpldmresponder/oem_handler.hpp"
 #include <unistd.h>
 
+#include <nlohmann/json.hpp>
+
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -13,6 +15,8 @@ namespace responder
 {
 namespace utils
 {
+namespace fs = std::filesystem;
+using Json = nlohmann::json;
 
 /** @struct CustomFD
  *
@@ -89,6 +93,57 @@ bool checkIfIBMFru(const std::string& objPath);
  *  @return std::vector<std::string> - port object paths
  */
 std::vector<std::string> findPortObjects(const std::string& adapterObjPath);
+
+/** @brief Converts a binary file to json data
+ *  This function converts bson data stored in a binary file to
+ *  nlohmann json data
+ *
+ *  @param[in] path     - binary file path to fetch the bson data
+ *
+ *  @return   on success returns nlohmann::json object
+ */
+Json convertBinFileToJson(const fs::path& path);
+
+/** @brief Converts a json data in to a binary file
+ *  This function converts the json data to a binary json(bson)
+ *  format and copies it to specified destination file.
+ *
+ *  @param[in] jsonData - nlohmann json data
+ *  @param[in] path     - destination path to store the bson data
+ *
+ *  @return   None
+ */
+void convertJsonToBinaryFile(const Json& jsonData, const fs::path& path);
+
+/** @brief Clear License Status
+ *  This function clears all the license status to "Unknown" during
+ *  reset reload operation or when host is coming down to off state.
+ *  During the genesis mode, it skips the license status update.
+ *
+ *  @return   None
+ */
+void clearLicenseStatus();
+
+/** @brief Create or update the d-bus license data
+ *  This function creates or updates the d-bus license details. If the input
+ *  input flag is 1, then new license data will be created and if the the input
+ *  flag is 2 license status will be cleared.
+ *
+ *  @param[in] flag - input flag, 1 : create and 2 : clear
+ *
+ *  @return   on success returns PLDM_SUCCESS
+ *            on failure returns -1
+ */
+int createOrUpdateLicenseDbusPaths(const uint8_t& flag);
+
+/** @brief Create or update the license bjects
+ *  This function creates or updates the license objects as per the data passed
+ *  from host.
+ *
+ *  @return   on success returns PLDM_SUCCESS
+ *            on failure returns -1
+ */
+int createOrUpdateLicenseObjs();
 
 } // namespace utils
 

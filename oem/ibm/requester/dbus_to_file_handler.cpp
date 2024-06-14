@@ -242,8 +242,43 @@ void DbusToFileHandler::newCsrFileAvailable(const std::string& csr,
                                PLDM_FILE_TYPE_CERT_SIGNING_REQUEST);
 }
 
-void DbusToFileHandler::newFileAvailableSendToHost(
-    const uint32_t fileSize, const uint32_t fileHandle, const uint16_t type)
+void DbusToFileHandler::newLicFileAvailable(const std::string& licenseStr)
+{
+    namespace fs = std::filesystem;
+    std::string dirPath = "/var/lib/ibm/cod";
+    const fs::path licDirPath = dirPath;
+
+    if (!fs::exists(licDirPath))
+    {
+        fs::create_directories(licDirPath);
+        fs::permissions(licDirPath,
+                        fs::perms::others_read | fs::perms::owner_write);
+    }
+
+    fs::path licFilePath = licDirPath / "licFile";
+    std::ofstream licFile;
+
+    licFile.open(licFilePath, std::ios::out | std::ofstream::binary);
+
+    if (!licFile)
+    {
+        error("Failed to open license file {LIC_PATH}", "LIC_PATH",
+              licFilePath);
+        return;
+    }
+
+    // Add csr to file
+    licFile << licenseStr << std::endl;
+
+    licFile.close();
+    uint32_t fileSize = fs::file_size(licFilePath);
+
+    newFileAvailableSendToHost(fileSize, 1, PLDM_FILE_TYPE_COD_LICENSE_KEY);
+}
+
+void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
+                                                   const uint32_t fileHandle,
+                                                   const uint16_t type)
 {
     if (instanceIdDb == NULL)
     {

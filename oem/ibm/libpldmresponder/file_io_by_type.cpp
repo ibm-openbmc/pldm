@@ -2,6 +2,7 @@
 #include "file_io.hpp"
 #include "file_io_type_cert.hpp"
 #include "file_io_type_dump.hpp"
+#include "file_io_type_lic.hpp"
 #include "file_io_type_lid.hpp"
 #include "file_io_type_pcie.hpp"
 #include "file_io_type_pel.hpp"
@@ -447,6 +448,11 @@ std::unique_ptr<FileHandler>
         {
             return std::make_unique<ProgressCodeHandler>(fileHandle);
         }
+        case PLDM_FILE_TYPE_COD_LICENSE_KEY:
+        case PLDM_FILE_TYPE_COD_LICENSED_RESOURCES:
+        {
+            return std::make_unique<LicenseHandler>(fileHandle, fileType);
+        }
         case PLDM_FILE_TYPE_LID_RUNNING:
         {
             return std::make_unique<LidHandler>(fileHandle, false,
@@ -516,6 +522,11 @@ std::shared_ptr<FileHandler> getSharedHandlerByType(uint16_t fileType,
         case PLDM_FILE_TYPE_PROGRESS_SRC:
         {
             return std::make_shared<ProgressCodeHandler>(fileHandle);
+        }
+        case PLDM_FILE_TYPE_COD_LICENSE_KEY:
+        case PLDM_FILE_TYPE_COD_LICENSED_RESOURCES:
+        {
+            return std::make_shared<LicenseHandler>(fileHandle, fileType);
         }
         case PLDM_FILE_TYPE_PCIE_TOPOLOGY:
         case PLDM_FILE_TYPE_CABLE_INFO:
