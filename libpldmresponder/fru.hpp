@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/utils.hpp"
 #include "fru_parser.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
 #include "oem_handler.hpp"
@@ -17,6 +18,7 @@
 #include <variant>
 #include <vector>
 
+using namespace pldm::utils;
 using namespace pldm::dbus_api;
 namespace pldm
 {
@@ -35,10 +37,25 @@ using InterfaceMap = std::map<Interface, PropertyMap>;
 using ObjectValueTree = std::map<sdbusplus::message::object_path, InterfaceMap>;
 using ObjectPath = std::string;
 using AssociatedEntityMap = std::map<ObjectPath, pldm_entity>;
+using ObjectPathToRSIMap = std::map<ObjectPath, uint16_t>;
 
 } // namespace dbus
 
 using ChangeEntry = uint32_t;
+
+constexpr uint32_t BMC_PDR_START_RANGE = 0x00000000;
+constexpr uint32_t BMC_PDR_END_RANGE = 0x00FFFFFF;
+
+static constexpr auto inventoryObjPath =
+    "/xyz/openbmc_project/inventory/system/chassis";
+static constexpr auto itemInterface = "xyz.openbmc_project.Inventory.Item";
+static constexpr auto fanInterface = "xyz.openbmc_project.Inventory.Item.Fan";
+static constexpr auto psuInterface =
+    "xyz.openbmc_project.Inventory.Item.PowerSupply";
+static constexpr auto pcieAdapterInterface =
+    "xyz.openbmc_project.Inventory.Item.PCIeDevice";
+static constexpr auto panelInterface =
+    "xyz.openbmc_project.Inventory.Item.Panel";
 
 /** @class FruImpl
  *
@@ -252,6 +269,7 @@ class FruImpl
     sdeventplus::Event& event;
 
     std::map<dbus::ObjectPath, pldm_entity_node*> objToEntityNode{};
+    dbus::ObjectPathToRSIMap objectPathToRSIMap{};
 
     /** @brief populateRecord builds the FRU records for an instance of FRU and
      *         updates the FRU table with the FRU records.
@@ -265,11 +283,70 @@ class FruImpl
      */
     uint32_t populateRecords(const dbus::InterfaceMap& interfaces,
                              const fru_parser::FruRecordInfos& recordInfos,
-                             const pldm_entity& entity);
+                             const pldm_entity& entity,
+                             const dbus::ObjectPath& objectPath,
+                             bool concurrentAdd = false);
+
+    /** @brief subscribeFruPresence subscribes for the "Present" property
+     *         change signal. This enables pldm to know when a fru is
+     *         added or removed.
+     *  @param[in] inventoryObjPath - the inventory object path for chassis
+     *  @param[in] fruInterface - the fru interface to look for
+     *  @param[in] itemInterface - the inventory item interface
+     *  @param[in] fruHotPlugMatch - D-Bus property changed signal match
+     *                               for the fru
+     */
+    void subscribeFruPresence(
+        const std::string& inventoryObjPath, const std::string& fruInterface,
+        const std::string& itemInterface,
+        std::vector<std::unique_ptr<sdbusplus::bus::match::match>>&
+            fruHotPlugMatch);
+
+    /** @brief processFruPresenceChange processes the "Present" property change
+     *         signal for a fru.
+     *  @param[in] chProperties - list of properties which have changed
+     *  @param[in] fruObjPath - fru object path
+     *  @param[in] fruInterface - fru interface
+     */
+
+    void processFruPresenceChange(const DbusChangedProps& chProperties,
+                                  const std::string& fruObjPath,
+                                  const std::string& fruInterface);
+
+    /** @brief Builds a FRU record set PDR and associted PDRs after a
+     *         concurrent add operation.
+     *  @param[in] fruInterface - the FRU interface
+     *  @param[in] fruObjectPath - the FRU object path
+     *
+     *  @return none
+     */
+    void buildIndividualFRU(const std::string& fruInterface,
+                            const std::string& fruObjectPath);
+
+    /** @brief Deletes a FRU record set PDR and it's associted PDRs after
+     *         a concurrent remove operation.
+     *  @param[in] fruObjectPath - the FRU object path
+     *  @return none
+     */
+    void removeIndividualFRU(const std::string& fruObjPath);
+
+    /** @brief Deletes a FRU record from record set table.
+     *  @param[in] rsi - the FRU Record Set Identifier
+     *  @return none
+     */
+    void deleteFruRecord(uint16_t rsi);
 
     /** @brief Associate sensor/effecter to FRU entity
      */
     dbus::AssociatedEntityMap associatedEntityMap;
+
+    /** @brief vectors to catch the D-Bus property change signals for the frus
+     */
+    std::vector<std::unique_ptr<sdbusplus::bus::match::match>> fanHotplugMatch;
+    std::vector<std::unique_ptr<sdbusplus::bus::match::match>> psuHotplugMatch;
+    std::vector<std::unique_ptr<sdbusplus::bus::match::match>> pcieHotplugMatch;
+    std::vector<std::unique_ptr<sdbusplus::bus::match::match>>
+        panelHotplugMatch;
 };
 
 namespace fru

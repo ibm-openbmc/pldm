@@ -2,6 +2,10 @@
 
 #include "common/utils.hpp"
 
+#ifdef OEM_IBM
+#include "oem/ibm/libpldmresponder/utils.hpp"
+#endif
+
 #include <libpldm/entity.h>
 #include <libpldm/utils.h>
 #include <systemd/sd-journal.h>
@@ -144,6 +148,15 @@ void FruImpl::buildFRUTable()
         return;
     }
 
+    subscribeFruPresence(inventoryObjPath, fanInterface, itemInterface,
+                         fanHotplugMatch);
+    subscribeFruPresence(inventoryObjPath, psuInterface, itemInterface,
+                         psuHotplugMatch);
+    subscribeFruPresence(inventoryObjPath, pcieAdapterInterface, itemInterface,
+                         pcieHotplugMatch);
+    subscribeFruPresence(inventoryObjPath, panelInterface, itemInterface,
+                         panelHotplugMatch);
+
     fru_parser::DBusLookupInfo dbusInfo;
 
     try
@@ -191,7 +204,8 @@ void FruImpl::buildFRUTable()
                     }
 
                     auto recordInfos = parser.getRecordInfo(interface.first);
-                    populateRecords(interfaces, recordInfos, entity);
+                    populateRecords(interfaces, recordInfos, entity,
+                                    object.first);
 
                     associatedEntityMap.emplace(object.first, entity);
                     break;
@@ -253,7 +267,8 @@ std::string FruImpl::populatefwVersion()
 }
 uint32_t FruImpl::populateRecords(
     const pldm::responder::dbus::InterfaceMap& interfaces,
-    const fru_parser::FruRecordInfos& recordInfos, const pldm_entity& entity)
+    const fru_parser::FruRecordInfos& recordInfos, const pldm_entity& entity,
+    const dbus::ObjectPath& objectPath, bool concurrentAdd)
 {
     // recordSetIdentifier for the FRU will be set when the first record gets
     // added for the FRU
@@ -274,7 +289,7 @@ uint32_t FruImpl::populateRecords(
 
                 // Assuming that 0 container Id is assigned to the System (as
                 // that should be the top most container as per dbus hierarchy)
-                if (entity.entity_container_id == 0 && prop == "Version")
+                if (entity.entity_type == 11521 && prop == "Version")
                 {
                     propValue = populatefwVersion();
                 }
@@ -321,18 +336,31 @@ uint32_t FruImpl::populateRecords(
         {
             if (numRecs == numRecsCount)
             {
-                recordSetIdentifier = nextRSI();
-                bmc_record_handle = nextRecordHandle();
+                if (concurrentAdd)
+                {
+                    recordSetIdentifier = nextRSI();
+#ifdef OEM_IBM
+                    auto lastLocalRecord = pldm_pdr_find_last_in_range(
+                        pdrRepo, BMC_PDR_START_RANGE, BMC_PDR_END_RANGE);
+                    bmc_record_handle = (lastLocalRecord->record_handle) + 1;
+#endif
+                }
+                else
+                {
+                    bmc_record_handle = nextRecordHandle();
+                }
                 int rc = pldm_pdr_add_fru_record_set_check(
                     pdrRepo, TERMINUS_HANDLE, recordSetIdentifier,
                     entity.entity_type, entity.entity_instance_num,
-                    entity.entity_container_id, &bmc_record_handle);
+                    entity.entity_container_id, &bmc_record_handle,
+                    concurrentAdd);
                 if (rc)
                 {
                     // pldm_pdr_add_fru_record_set() assert()ed on failure
                     throw std::runtime_error(
                         "Failed to add PDR FRU record set");
                 }
+                objectPathToRSIMap[objectPath] = recordSetIdentifier;
                 newRecord = bmc_record_handle;
             }
             auto curSize = table.size();
@@ -344,6 +372,341 @@ uint32_t FruImpl::populateRecords(
         }
     }
     return newRecord;
+}
+
+void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
+{
+    uint16_t rsi = objectPathToRSIMap[fruObjPath];
+    pldm_entity removeEntity;
+    uint16_t terminusHdl{};
+    uint16_t entityType{};
+    uint16_t entityInsNum{};
+    uint16_t containerId{};
+    uint32_t updateRecordHdlBmc;
+    uint32_t updateRecordHdlHost;
+    pldm_pdr_fru_record_set_find_by_rsi(pdrRepo, rsi, &terminusHdl, &entityType,
+                                        &entityInsNum, &containerId, false);
+    removeEntity.entity_type = entityType;
+    removeEntity.entity_instance_num = entityInsNum;
+    removeEntity.entity_container_id = containerId;
+
+    uint8_t bmcEventDataOps = PLDM_INVALID_OP;
+    uint8_t hostEventDataOps = PLDM_INVALID_OP;
+    auto removeBmcEntityRc =
+        pldm_entity_association_pdr_remove_contained_entity(
+            pdrRepo, removeEntity, false, &updateRecordHdlBmc);
+
+    auto removeHostEntityRc =
+        pldm_entity_association_pdr_remove_contained_entity(
+            pdrRepo, removeEntity, true, &updateRecordHdlHost);
+
+    auto deleteRecordHdl = pldm_pdr_remove_fru_record_set_by_rsi(pdrRepo, rsi,
+                                                                 false);
+
+    // sm00
+    /* std::cout << "\nprinting the entityTree before deleting node\n";
+     size_t num{};
+     pldm_entity* out = nullptr;
+     pldm_entity_association_tree_visit(entityTree,&out, &num);
+     free(out);*/
+    // sm00
+    pldm_entity_association_tree_delete_node(entityTree, removeEntity);
+    // sm00
+    /*std::cout << "\nprinting the entityTree after deleting node\n";
+    num = 0;
+    out = nullptr;
+    pldm_entity_association_tree_visit(entityTree,&out, &num);
+    free(out);*/
+    // sm00
+    pldm_entity_association_tree_delete_node(bmcEntityTree, removeEntity);
+
+    objectPathToRSIMap.erase(fruObjPath);
+    objToEntityNode.erase(fruObjPath); // sm00
+    error(
+        "Removing Individual FRU [ {FRU_OBJ_PATH} ] with entityid [ {ENTITY_TYP}, {ENTITY_NUM}, {ENTITY_ID} ]",
+        "FRU_OBJ_PATH", fruObjPath, "ENTITY_TYP",
+        static_cast<unsigned>(removeEntity.entity_type), "ENTITY_NUM",
+        static_cast<unsigned>(removeEntity.entity_instance_num), "ENTITY_ID",
+        static_cast<unsigned>(removeEntity.entity_container_id));
+    associatedEntityMap.erase(fruObjPath); // sm00
+
+    deleteFruRecord(rsi);
+
+    std::vector<ChangeEntry> handlesTobeDeleted;
+    if (deleteRecordHdl != 0)
+    {
+        handlesTobeDeleted.push_back(deleteRecordHdl);
+    }
+
+    std::vector<uint16_t> effecterIDs = findEffecterIds(
+        pdrRepo, 0 /*tid*/, removeEntity.entity_type,
+        removeEntity.entity_instance_num, removeEntity.entity_container_id);
+
+    for (const auto& ids : effecterIDs)
+    {
+        auto delEffecterHdl = pldm_delete_by_effecter_id(pdrRepo, ids, false);
+        effecterDbusObjMaps.erase(ids);
+        if (delEffecterHdl != 0)
+        {
+            handlesTobeDeleted.push_back(delEffecterHdl);
+        }
+    }
+    std::vector<uint16_t> sensorIDs = findSensorIds(
+        pdrRepo, 0 /*tid*/, removeEntity.entity_type,
+        removeEntity.entity_instance_num, removeEntity.entity_container_id);
+
+    for (const auto& ids : sensorIDs)
+    {
+        auto delSensorHdl = pldm_delete_by_sensor_id(pdrRepo, ids, false);
+        sensorDbusObjMaps.erase(ids);
+        if (delSensorHdl != 0)
+        {
+            handlesTobeDeleted.push_back(delSensorHdl);
+        }
+    }
+
+    // need to
+    // send both remote and local records. Phyp keeps track of bmc only records
+    std::vector<ChangeEntry> handlesTobeModified;
+    if (removeBmcEntityRc == 0 && updateRecordHdlBmc != 0)
+    {
+        (bmcEventDataOps == PLDM_RECORDS_DELETED)
+            ? handlesTobeDeleted.push_back(updateRecordHdlBmc)
+            : handlesTobeModified.push_back(updateRecordHdlBmc);
+    }
+    if (removeHostEntityRc == 0 && updateRecordHdlHost != 0)
+    {
+        (hostEventDataOps == PLDM_RECORDS_DELETED)
+            ? handlesTobeDeleted.push_back(updateRecordHdlHost)
+            : handlesTobeModified.push_back(updateRecordHdlHost);
+    } // sm00 this can be RECORDS_DELETED also for adapter pdrs
+    if (!handlesTobeDeleted.empty())
+    {
+        sendPDRRepositoryChgEventbyPDRHandles(
+            std::move(handlesTobeDeleted),
+            std::move(std::vector<uint8_t>(1, PLDM_RECORDS_DELETED)));
+    }
+    if (!handlesTobeModified.empty())
+    {
+        sendPDRRepositoryChgEventbyPDRHandles(
+            std::move(handlesTobeModified),
+            std::move(std::vector<uint8_t>(1, PLDM_RECORDS_MODIFIED)));
+    }
+}
+
+void FruImpl::deleteFruRecord(uint16_t rsi)
+{
+    std::vector<uint8_t> updatedFruTbl;
+    const struct pldm_fru_record_data_format* recordSetSrc =
+        reinterpret_cast<const struct pldm_fru_record_data_format*>(
+            table.data());
+
+    const struct pldm_fru_record_tlv* tlv;
+    size_t pos = 0;
+
+    while ((table.size() > pos) && (recordSetSrc != nullptr))
+    {
+        size_t recordLen = sizeof(struct pldm_fru_record_data_format) -
+                           sizeof(struct pldm_fru_record_tlv);
+
+        tlv = recordSetSrc->tlvs;
+
+        for (uint8_t i = 0; i < recordSetSrc->num_fru_fields; i++)
+        {
+            size_t len = sizeof(*tlv) - 1 + tlv->length;
+            recordLen += len;
+            tlv = reinterpret_cast<const struct pldm_fru_record_tlv*>(
+                (char*)tlv + len);
+        }
+        if ((recordSetSrc->record_set_id != htole16(rsi) && rsi != 0))
+        {
+            std::copy(table.begin() + pos, table.begin() + pos + recordLen,
+                      std::back_inserter(updatedFruTbl));
+        }
+        else
+        {
+            numRecs--;
+        }
+
+        pos += recordLen;
+        recordSetSrc =
+            reinterpret_cast<const struct pldm_fru_record_data_format*>(tlv);
+    }
+
+    table.clear();
+    table = std::move(updatedFruTbl);
+}
+
+void FruImpl::buildIndividualFRU(const std::string& fruInterface,
+                                 const std::string& fruObjectPath)
+{
+    // An exception will be thrown by getRecordInfo, if the item
+    // D-Bus interface name specified in FRU_Master.json does
+    // not have corresponding config jsons
+    pldm_entity parent = {};
+    pldm_entity entity{};
+    pldm_entity parentEntity{};
+    static uint32_t last_bmc_record_handle = 0;
+    uint32_t newRecordHdl{};
+    try
+    {
+        entity.entity_type = parser.getEntityType(fruInterface);
+        auto parentObj = pldm::utils::findParent(fruObjectPath);
+        do
+        {
+            auto iter = objToEntityNode.find(parentObj);
+            if (iter != objToEntityNode.end())
+            {
+                parent = iter->second;
+                break;
+            }
+            parentObj = pldm::utils::findParent(parentObj);
+        } while (parentObj != "/");
+
+        // sm00
+        /* std::cout << "\nprinting the entityTree before adding the node" <<
+         std::endl; size_t num = 0; pldm_entity* out = nullptr;
+         pldm_entity_association_tree_visit(entityTree,&out, &num);
+         free(out);*/
+        // sm00
+
+        pldm_entity_node* parent_node = nullptr;
+        pldm_find_entity_ref_in_tree(entityTree, parent, &parent_node);
+        uint16_t last_container_id = next_container_id(entityTree);
+        auto node = pldm_entity_association_tree_add(
+            entityTree, &entity, 0xFFFF, parent_node,
+            PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true, last_container_id);
+        pldm_entity node_entity = pldm_entity_extract(node);
+        objToEntityNode[fruObjectPath] = node_entity;
+        error(
+            "Building Individual FRU [{FRU_OBJ_PATH}] with entityid [ {ENTITY_TYP}, {ENTITY_NUM}, {ENTITY_ID} ] Parent :[ {P_ENTITY_TYP}, {P_ENTITY_NUM}, {P_ENTITY_ID} ]",
+            "FRU_OBJ_PATH", fruObjectPath, "ENTITY_TYP",
+            static_cast<unsigned>(node_entity.entity_type), "ENTITY_NUM",
+            static_cast<unsigned>(node_entity.entity_instance_num), "ENTITY_ID",
+            static_cast<unsigned>(node_entity.entity_container_id),
+            "P_ENTITY_TYP", static_cast<unsigned>(parent.entity_type),
+            "P_ENTITY_NUM", static_cast<unsigned>(parent.entity_instance_num),
+            "P_ENTITY_ID", static_cast<unsigned>(parent.entity_container_id));
+        auto recordInfos = parser.getRecordInfo(fruInterface);
+
+        // sm00
+        /* std::cout << "\nprinting the entityTree after adding the node" <<
+         std::endl; num = 0; out = nullptr;
+         pldm_entity_association_tree_visit(entityTree,&out, &num);
+         free(out);*/
+        // sm00
+
+        memcpy(reinterpret_cast<void*>(&parentEntity),
+               reinterpret_cast<void*>(parent_node), sizeof(pldm_entity));
+        pldm_entity_node* bmcTreeParentNode = nullptr;
+        pldm_find_entity_ref_in_tree(bmcEntityTree, parentEntity,
+                                     &bmcTreeParentNode);
+
+        pldm_entity_association_tree_add(
+            bmcEntityTree, &entity, 0xFFFF, bmcTreeParentNode,
+            PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true, last_container_id);
+
+        for (const auto& object : objects)
+        {
+            if (object.first.str == fruObjectPath)
+            {
+                const auto& interfaces = object.second;
+                newRecordHdl = populateRecords(interfaces, recordInfos, entity,
+                                               fruObjectPath, true);
+                associatedEntityMap.emplace(fruObjectPath, entity);
+                break;
+            }
+        }
+    }
+    catch (const std::exception& e)
+    {
+        error(
+            "Config JSONs missing for the item in concurrent add path interface type, interface = {FRU_INTF}",
+            "FRU_INTF", fruInterface);
+    }
+#ifdef OEM_IBM
+    auto lastLocalRecord = pldm_pdr_find_last_local_record(pdrRepo);
+    last_bmc_record_handle = lastLocalRecord->record_handle;
+#endif
+
+    uint8_t bmcEventDataOps;
+    uint32_t updatedRecordHdlBmc = 0;
+    bool found = pldm_entity_association_find_parent_entity(
+        pdrRepo, parentEntity, false, &updatedRecordHdlBmc);
+    if (found)
+    {
+        pldm_entity_association_pdr_add_contained_entity_to_remote_pdr(
+            pdrRepo, entity, updatedRecordHdlBmc);
+        bmcEventDataOps = PLDM_RECORDS_MODIFIED;
+    }
+    else
+    {
+        pldm_entity_association_pdr_create_new(pdrRepo, last_bmc_record_handle,
+                                               parent, entity,
+                                               &updatedRecordHdlBmc);
+        bmcEventDataOps = PLDM_RECORDS_ADDED;
+    }
+
+#ifdef OEM_IBM
+    auto lastBMCRecord = pldm_pdr_find_last_local_record(pdrRepo);
+    last_bmc_record_handle = lastBMCRecord->record_handle;
+#endif
+
+    uint8_t hostEventDataOps;
+    uint32_t updatedRecordHdlHost = 0;
+    found = pldm_entity_association_find_parent_entity(
+        pdrRepo, parentEntity, true, &updatedRecordHdlHost);
+    if (found)
+    {
+        pldm_entity_association_pdr_add_contained_entity_to_remote_pdr(
+            pdrRepo, entity, updatedRecordHdlHost);
+        hostEventDataOps = PLDM_RECORDS_MODIFIED;
+    }
+    else
+    {
+        pldm_entity_association_pdr_create_new(pdrRepo, last_bmc_record_handle,
+                                               parent, entity,
+                                               &updatedRecordHdlHost);
+        hostEventDataOps = PLDM_RECORDS_ADDED;
+    }
+
+    // create the relevant state effecter and sensor PDRs for the new fru record
+    std::vector<uint32_t> recordHdlList;
+    // reGenerateStatePDR(fruObjectPath, recordHdlList);
+
+    std::vector<ChangeEntry> handlesTobeAdded;
+    std::vector<ChangeEntry> handlesTobeModified;
+
+    handlesTobeAdded.push_back(newRecordHdl);
+
+    for (auto& ids : recordHdlList)
+    {
+        handlesTobeAdded.push_back(ids);
+    }
+    if (updatedRecordHdlBmc != 0)
+    {
+        (bmcEventDataOps == PLDM_RECORDS_MODIFIED)
+            ? handlesTobeModified.push_back(updatedRecordHdlBmc)
+            : handlesTobeAdded.push_back(updatedRecordHdlBmc);
+    }
+    if (updatedRecordHdlHost != 0)
+    {
+        (hostEventDataOps == PLDM_RECORDS_MODIFIED)
+            ? handlesTobeModified.push_back(updatedRecordHdlHost)
+            : handlesTobeAdded.push_back(updatedRecordHdlHost);
+    }
+    if (!handlesTobeAdded.empty())
+    {
+        sendPDRRepositoryChgEventbyPDRHandles(
+            std::move(handlesTobeAdded),
+            std::move(std::vector<uint8_t>(1, PLDM_RECORDS_ADDED)));
+    }
+    if (!handlesTobeModified.empty())
+    {
+        sendPDRRepositoryChgEventbyPDRHandles(
+            std::move(handlesTobeModified),
+            std::move(std::vector<uint8_t>(1, PLDM_RECORDS_MODIFIED)));
+    }
 }
 
 std::vector<uint8_t> FruImpl::tableResize()
@@ -442,6 +805,95 @@ int FruImpl::setFRUTable(const std::vector<uint8_t>& fruData)
         }
     }
     return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+}
+
+void FruImpl::subscribeFruPresence(
+    const std::string& inventoryObjPath, const std::string& fruInterface,
+    const std::string& itemInterface,
+    std::vector<std::unique_ptr<sdbusplus::bus::match::match>>& fruHotPlugMatch)
+{
+    static constexpr auto MAPPER_BUSNAME = "xyz.openbmc_project.ObjectMapper";
+    static constexpr auto MAPPER_PATH = "/xyz/openbmc_project/object_mapper";
+    static constexpr auto MAPPER_INTERFACE = "xyz.openbmc_project.ObjectMapper";
+
+    auto& bus = pldm::utils::DBusHandler::getBus();
+    try
+    {
+        std::vector<std::string> fruObjPaths;
+        auto method = bus.new_method_call(MAPPER_BUSNAME, MAPPER_PATH,
+                                          MAPPER_INTERFACE, "GetSubTreePaths");
+        method.append(inventoryObjPath);
+        method.append(0);
+        method.append(std::vector<std::string>({fruInterface}));
+        auto reply = bus.call(method, dbusTimeout);
+        reply.read(fruObjPaths);
+
+        for (const auto& fruObjPath : fruObjPaths)
+        {
+            using namespace sdbusplus::bus::match::rules;
+            fruHotPlugMatch.push_back(
+                std::make_unique<sdbusplus::bus::match::match>(
+                    bus, propertiesChanged(fruObjPath, itemInterface),
+                    [this, fruObjPath,
+                     fruInterface](sdbusplus::message::message& msg) {
+                DbusChangedProps props;
+                std::string iface;
+                msg.read(iface, props);
+                processFruPresenceChange(props, fruObjPath, fruInterface);
+            }));
+        }
+    }
+    catch (const std::exception& e)
+    {
+        error(
+            "could not subscribe for concurrent maintenance of fru: {FRU_INTF} error {ERR_EXCEP}",
+            "FRU_INTF", fruInterface, "ERR_EXCEP", e.what());
+    }
+}
+
+void FruImpl::processFruPresenceChange(const DbusChangedProps& chProperties,
+                                       const std::string& fruObjPath,
+                                       const std::string& fruInterface)
+{
+    /*   std::cout << "enter processFruPresenceChange for " << fruObjPath << "
+       and "
+                 << fruInterface << std::endl;*/
+    static constexpr auto propertyName = "Present";
+    const auto it = chProperties.find(propertyName);
+
+    if (it == chProperties.end())
+    {
+        return;
+    }
+    auto newPropVal = std::get<bool>(it->second);
+    if (!isBuilt)
+    {
+        return;
+    }
+
+    std::vector<std::string> portObjects;
+    static constexpr auto portInterface =
+        "xyz.openbmc_project.Inventory.Item.Connector";
+
+    // if(fruInterface != "xyz.openbmc_project.Inventory.Item.PCIeDevice")
+    {
+        if (newPropVal)
+        {
+            buildIndividualFRU(fruInterface, fruObjPath);
+            for (auto portObject : portObjects)
+            {
+                buildIndividualFRU(portInterface, portObject);
+            }
+        }
+        else
+        {
+            for (auto portObject : portObjects)
+            {
+                removeIndividualFRU(portObject);
+            }
+            removeIndividualFRU(fruObjPath);
+        }
+    }
 }
 
 void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
