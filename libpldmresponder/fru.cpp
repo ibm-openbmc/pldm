@@ -251,7 +251,7 @@ std::string FruImpl::populatefwVersion()
     }
     return currentBmcVersion;
 }
-void FruImpl::populateRecords(
+uint32_t FruImpl::populateRecords(
     const pldm::responder::dbus::InterfaceMap& interfaces,
     const fru_parser::FruRecordInfos& recordInfos, const pldm_entity& entity)
 {
@@ -260,6 +260,7 @@ void FruImpl::populateRecords(
     uint16_t recordSetIdentifier = 0;
     auto numRecsCount = numRecs;
     static uint32_t bmc_record_handle = 0;
+    uint32_t newRecord{};
 
     for (const auto& [recType, encType, fieldInfos] : recordInfos)
     {
@@ -332,6 +333,7 @@ void FruImpl::populateRecords(
                     throw std::runtime_error(
                         "Failed to add PDR FRU record set");
                 }
+                newRecord = bmc_record_handle;
             }
             auto curSize = table.size();
             table.resize(curSize + recHeaderSize + tlvs.size());
@@ -341,6 +343,7 @@ void FruImpl::populateRecords(
             numRecs++;
         }
     }
+    return newRecord;
 }
 
 std::vector<uint8_t> FruImpl::tableResize()
@@ -439,6 +442,90 @@ int FruImpl::setFRUTable(const std::vector<uint8_t>& fruData)
         }
     }
     return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+}
+
+void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
+    std::vector<ChangeEntry>&& pdrRecordHandles,
+    std::vector<uint8_t>&& eventDataOps)
+{
+    uint8_t eventDataFormat = FORMAT_IS_PDR_HANDLES;
+    std::vector<uint8_t> numsOfChangeEntries(1);
+    std::vector<std::vector<ChangeEntry>> changeEntries(
+        numsOfChangeEntries.size());
+    for (auto pdrRecordHandle : pdrRecordHandles)
+    {
+        changeEntries[0].push_back(pdrRecordHandle);
+    }
+    if (changeEntries.empty())
+    {
+        return;
+    }
+    numsOfChangeEntries[0] = changeEntries[0].size();
+    size_t maxSize = PLDM_PDR_REPOSITORY_CHG_EVENT_MIN_LENGTH +
+                     PLDM_PDR_REPOSITORY_CHANGE_RECORD_MIN_LENGTH +
+                     changeEntries[0].size() * sizeof(uint32_t);
+    std::vector<uint8_t> eventDataVec{};
+    eventDataVec.resize(maxSize);
+    auto eventData =
+        reinterpret_cast<struct pldm_pdr_repository_chg_event_data*>(
+            eventDataVec.data());
+    size_t actualSize{};
+    auto firstEntry = changeEntries[0].data();
+    auto rc = encode_pldm_pdr_repository_chg_event_data(
+        eventDataFormat, 1, eventDataOps.data(), numsOfChangeEntries.data(),
+        &firstEntry, eventData, &actualSize, maxSize);
+
+    if (rc != PLDM_SUCCESS)
+    {
+        error("Failed to encode_pldm_pdr_repository_chg_event_data, rc = {RC}",
+              "RC", static_cast<int>(rc));
+        return;
+    }
+    auto instanceId = requester.getInstanceId(mctp_eid);
+    std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
+                                    PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES +
+                                    actualSize);
+    auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+    rc = encode_platform_event_message_req(
+        instanceId, 1, TERMINUS_ID, PLDM_PDR_REPOSITORY_CHG_EVENT,
+        eventDataVec.data(), actualSize, request,
+        actualSize + PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES);
+    if (rc != PLDM_SUCCESS)
+    {
+        requester.markFree(mctp_eid, instanceId);
+        error("Failed to encode_platform_event_message_req, rc = {RC}", "RC",
+              static_cast<unsigned>(rc));
+        return;
+    }
+    auto platformEventMessageResponseHandler =
+        [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
+        if (response == nullptr || !respMsgLen)
+        {
+            error(
+                "Failed to receive response for the PDR repository changed event");
+            return;
+        }
+        uint8_t completionCode{};
+        uint8_t status{};
+        auto responsePtr = reinterpret_cast<const struct pldm_msg*>(response);
+        auto rc = decode_platform_event_message_resp(responsePtr, respMsgLen,
+                                                     &completionCode, &status);
+        if (rc || completionCode)
+        {
+            error(
+                "Failed to decode_platform_event_message_resp: rc={RC}, cc={CC}",
+                "RC", static_cast<int>(rc), "CC",
+                static_cast<unsigned>(completionCode));
+        }
+    };
+    rc = handler->registerRequest(
+        mctp_eid, instanceId, PLDM_PLATFORM, PLDM_PLATFORM_EVENT_MESSAGE,
+        std::move(requestMsg), std::move(platformEventMessageResponseHandler));
+    if (rc)
+    {
+        error(
+            "Failed to send the PDR repository changed event request after CM");
+    }
 }
 
 namespace fru

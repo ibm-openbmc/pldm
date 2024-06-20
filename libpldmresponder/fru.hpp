@@ -3,7 +3,9 @@
 #include "fru_parser.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
 #include "oem_handler.hpp"
+#include "pldmd/dbus_impl_requester.hpp"
 #include "pldmd/handler.hpp"
+#include "requester/handler.hpp"
 
 #include <libpldm/fru.h>
 #include <libpldm/pdr.h>
@@ -15,6 +17,7 @@
 #include <variant>
 #include <vector>
 
+using namespace pldm::dbus_api;
 namespace pldm
 {
 
@@ -34,6 +37,8 @@ using ObjectPath = std::string;
 using AssociatedEntityMap = std::map<ObjectPath, pldm_entity>;
 
 } // namespace dbus
+
+using ChangeEntry = uint32_t;
 
 /** @class FruImpl
  *
@@ -67,10 +72,14 @@ class FruImpl
             const std::filesystem::path& fruMasterJsonPath, pldm_pdr* pdrRepo,
             pldm_entity_association_tree* entityTree,
             pldm_entity_association_tree* bmcEntityTree,
-            pldm::responder::oem_fru::Handler* oemFruHandler) :
+            pldm::responder::oem_fru::Handler* oemFruHandler,
+            Requester& requester,
+            pldm::requester::Handler<pldm::requester::Request>* handler,
+            uint8_t mctp_eid, sdeventplus::Event& event) :
         parser(configPath, fruMasterJsonPath),
         pdrRepo(pdrRepo), entityTree(entityTree), bmcEntityTree(bmcEntityTree),
-        oemFruHandler(oemFruHandler)
+        oemFruHandler(oemFruHandler), requester(requester), handler(handler),
+        mctp_eid(mctp_eid), event(event)
     {}
 
     /** @brief Total length of the FRU table in bytes, this includes the pad
@@ -201,6 +210,17 @@ class FruImpl
      */
     int setFRUTable(const std::vector<uint8_t>& fruData);
 
+    /* @brief Send a PLDM event to host firmware containing a list of record
+     *        handles of PDRs that the host firmware has to fetch.
+     *
+     * @param[in] pdrRecordHandles - list of PDR record handles
+     * @param[in] eventDataOps - event data operation for PDRRepositoryChgEvent
+     *                           in DSP0248
+     */
+    void sendPDRRepositoryChgEventbyPDRHandles(
+        std::vector<uint32_t>&& pdrRecordHandles,
+        std::vector<uint8_t>&& eventDataOps);
+
   private:
     uint16_t nextRSI()
     {
@@ -226,6 +246,10 @@ class FruImpl
     pldm_entity_association_tree* bmcEntityTree;
     pldm::responder::oem_fru::Handler* oemFruHandler;
     dbus::ObjectValueTree objects;
+    Requester& requester;
+    pldm::requester::Handler<pldm::requester::Request>* handler;
+    uint8_t mctp_eid;
+    sdeventplus::Event& event;
 
     std::map<dbus::ObjectPath, pldm_entity_node*> objToEntityNode{};
 
@@ -236,10 +260,12 @@ class FruImpl
      *                          values for the FRU
      *  @param[in] recordInfos - FRU record info to build the FRU records
      *  @param[in/out] entity - PLDM entity corresponding to FRU instance
+     *
+     *  @return uint32_t the newly added PDR record handle
      */
-    void populateRecords(const dbus::InterfaceMap& interfaces,
-                         const fru_parser::FruRecordInfos& recordInfos,
-                         const pldm_entity& entity);
+    uint32_t populateRecords(const dbus::InterfaceMap& interfaces,
+                             const fru_parser::FruRecordInfos& recordInfos,
+                             const pldm_entity& entity);
 
     /** @brief Associate sensor/effecter to FRU entity
      */
@@ -256,9 +282,12 @@ class Handler : public CmdHandler
             const std::filesystem::path& fruMasterJsonPath, pldm_pdr* pdrRepo,
             pldm_entity_association_tree* entityTree,
             pldm_entity_association_tree* bmcEntityTree,
-            pldm::responder::oem_fru::Handler* oemFruHandler) :
+            pldm::responder::oem_fru::Handler* oemFruHandler,
+            Requester& requester,
+            pldm::requester::Handler<pldm::requester::Request>* handler,
+            uint8_t mctp_eid, sdeventplus::Event& event) :
         impl(configPath, fruMasterJsonPath, pdrRepo, entityTree, bmcEntityTree,
-             oemFruHandler)
+             oemFruHandler, requester, handler, mctp_eid, event)
     {
         handlers.emplace(
             PLDM_GET_FRU_RECORD_TABLE_METADATA,
