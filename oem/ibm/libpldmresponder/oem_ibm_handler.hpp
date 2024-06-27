@@ -226,8 +226,8 @@ class Handler : public oem_platform::Handler
     int getOemStateSensorReadingsHandler(
         pldm::pdr::EntityType entityType,
         pldm::pdr::EntityInstance entityInstance,
-        pldm::pdr::StateSetId stateSetId,
-        pldm::pdr::CompositeCount compSensorCnt,
+        pldm::pdr::ContainerID containerId, pldm::pdr::StateSetId stateSetId,
+        pldm::pdr::CompositeCount compSensorCnt, uint16_t sensorId,
         std::vector<get_sensor_state_field>& stateField);
 
     int oemSetStateEffecterStatesHandler(

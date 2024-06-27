@@ -68,8 +68,10 @@ TEST(OemSetStateEffecterStatesHandler, testGoodRequest)
     uint16_t entityID_ = PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE;
     uint16_t stateSetId_ = PLDM_OEM_IBM_BOOT_STATE;
     uint16_t entityInstance_ = 0;
+    uint16_t containerId_ = 0;
     uint8_t compSensorCnt_ = 1;
     uint16_t effecterId = 0xA;
+    uint16_t sensorId = 0x1;
     TestInstanceIdDb instanceIdDb;
 
     sdbusplus::bus_t bus(sdbusplus::bus::new_default());
@@ -86,7 +88,8 @@ TEST(OemSetStateEffecterStatesHandler, testGoodRequest)
         event, nullptr, nullptr, nullptr);
 
     auto rc = oemPlatformHandler->getOemStateSensorReadingsHandler(
-        entityID_, entityInstance_, stateSetId_, compSensorCnt_, stateField);
+        entityID_, entityInstance_, containerId_, stateSetId_, compSensorCnt_,
+        sensorId, stateField);
 
     ASSERT_EQ(rc, PLDM_SUCCESS);
     ASSERT_EQ(stateField.size(), 1);
@@ -99,21 +102,24 @@ TEST(OemSetStateEffecterStatesHandler, testGoodRequest)
 
     std::vector<get_sensor_state_field> stateField1;
     rc = oemPlatformHandler->getOemStateSensorReadingsHandler(
-        entityID_, entityInstance_, stateSetId_, compSensorCnt_, stateField1);
+        entityID_, entityInstance_, containerId_, stateSetId_, compSensorCnt_,
+        sensorId, stateField1);
     ASSERT_EQ(rc, PLDM_SUCCESS);
     ASSERT_EQ(stateField1.size(), 1);
     ASSERT_EQ(stateField1[0].event_state, tSideNum);
 
     entityInstance_ = 2;
     rc = oemPlatformHandler->getOemStateSensorReadingsHandler(
-        entityID_, entityInstance_, stateSetId_, compSensorCnt_, stateField1);
+        entityID_, entityInstance_, containerId_, stateSetId_, compSensorCnt_,
+        sensorId, stateField1);
     ASSERT_EQ(rc, PLDM_SUCCESS);
     ASSERT_EQ(stateField1[0].event_state, PLDM_SENSOR_UNKNOWN);
 
     entityID_ = 40;
     stateSetId_ = 50;
     rc = oemPlatformHandler->getOemStateSensorReadingsHandler(
-        entityID_, entityInstance_, stateSetId_, compSensorCnt_, stateField1);
+        entityID_, entityInstance_, containerId_, stateSetId_, compSensorCnt_,
+        sensorId, stateField1);
     ASSERT_EQ(rc, PLDM_PLATFORM_INVALID_STATE_VALUE);
 
     entityID_ = PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE;
