@@ -66,7 +66,8 @@ const std::tuple<pdr_utils::DbusMappings, pdr_utils::DbusValMaps>&
 }
 
 void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
-                       const std::vector<fs::path>& dir, Repo& repo)
+                       const std::vector<fs::path>& dir, Repo& repo,
+                       pldm_entity_association_tree* bmcEntityTree)
 {
     for (const auto& directory : dir)
     {
@@ -86,22 +87,27 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
     const std::map<Type, generatePDR> generateHandlers = {
         {PLDM_STATE_EFFECTER_PDR,
          [this](const DBusHandler& dBusIntf, const auto& json,
-                RepoInterface& repo) {
+                RepoInterface& repo,
+                pldm_entity_association_tree* bmcEntityTree) {
         pdr_state_effecter::generateStateEffecterPDR<pldm::utils::DBusHandler,
-                                                     Handler>(dBusIntf, json,
-                                                              *this, repo);
+                                                     Handler>(
+            dBusIntf, json, *this, repo, bmcEntityTree);
     }},
         {PLDM_NUMERIC_EFFECTER_PDR,
          [this](const DBusHandler& dBusIntf, const auto& json,
-                RepoInterface& repo) {
+                RepoInterface& repo,
+                pldm_entity_association_tree* bmcEntityTree) {
         pdr_numeric_effecter::generateNumericEffecterPDR<
-            pldm::utils::DBusHandler, Handler>(dBusIntf, json, *this, repo);
+            pldm::utils::DBusHandler, Handler>(dBusIntf, json, *this, repo,
+                                               bmcEntityTree);
     }},
-        {PLDM_STATE_SENSOR_PDR, [this](const DBusHandler& dBusIntf,
-                                       const auto& json, RepoInterface& repo) {
+        {PLDM_STATE_SENSOR_PDR,
+         [this](const DBusHandler& dBusIntf, const auto& json,
+                RepoInterface& repo,
+                pldm_entity_association_tree* bmcEntityTree) {
         pdr_state_sensor::generateStateSensorPDR<pldm::utils::DBusHandler,
                                                  Handler>(dBusIntf, json, *this,
-                                                          repo);
+                                                          repo, bmcEntityTree);
     }}};
 
     Type pdrType{};
@@ -121,15 +127,15 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
                         {
                             pdrType = effecter.value("pdrType", 0);
                             generateHandlers.at(pdrType)(dBusIntf, effecter,
-                                                         repo);
+                                                         repo, bmcEntityTree);
                         }
 
                         auto sensorPDRs = json.value("sensorPDRs", empty);
                         for (const auto& sensor : sensorPDRs)
                         {
                             pdrType = sensor.value("pdrType", 0);
-                            generateHandlers.at(pdrType)(dBusIntf, sensor,
-                                                         repo);
+                            generateHandlers.at(pdrType)(dBusIntf, sensor, repo,
+                                                         bmcEntityTree);
                         }
                     }
                 }
@@ -157,6 +163,12 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
                     "xyz.openbmc_project.PLDM.Error.Generate.PDRJsonFileParseFail");
             }
         }
+    }
+    if (fruHandler)
+    {
+        fruHandler->setStatePDRParams(pdrJsonsDir, getNextSensorId(),
+                                      getNextEffecterId(), sensorDbusObjMaps,
+                                      effecterDbusObjMaps, false);
     }
 }
 
@@ -199,7 +211,7 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
         {
             oemPlatformHandler->buildOEMPDR(pdrRepo);
         }
-        generate(*dBusIntf, pdrJsonsDir, pdrRepo);
+        generate(*dBusIntf, pdrJsonsDir, pdrRepo, bmcEntityTree);
 
         pdrCreated = true;
 
