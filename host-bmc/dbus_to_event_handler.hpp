@@ -72,12 +72,13 @@ class DbusToPLDMEvent
         sensorCacheMap[sensorId][sensorRearm] = previousState;
     }
 
-  private:
     /** @brief Send state sensor event msg when a D-Bus property changes
      *  @param[in] sensorId - sensor id
+     *  @param[in] dbusMaps - The map of D-Bus mapping and value
      */
     void sendStateSensorEvent(SensorId sensorId, const DbusObjMaps& dbusMaps);
 
+  private:
     /** @brief Send all of sensor event
      *  @param[in] eventType - PLDM Event types
      *  @param[in] eventDataVec - std::vector, contains send event data

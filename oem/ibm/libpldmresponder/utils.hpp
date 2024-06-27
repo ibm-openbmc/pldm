@@ -86,14 +86,6 @@ int writeToUnixSocket(const int sock, const char* buf,
  */
 bool checkIfIBMFru(const std::string& objPath);
 
-/** @brief finds the ports under an adapter
- *
- *  @param[in] adapterObjPath - D-Bus object path for the adapter
- *
- *  @return std::vector<std::string> - port object paths
- */
-std::vector<std::string> findPortObjects(const std::string& adapterObjPath);
-
 /** @brief Converts a binary file to json data
  *  This function converts bson data stored in a binary file to
  *  nlohmann json data
@@ -173,6 +165,29 @@ class Handler : public oem_utils::Handler
     virtual int
         setCoreCount(const pldm::utils::EntityAssociations& associations,
                      const pldm::utils::EntityMaps entityMaps);
+
+    /** @brief checks if a pcie adapter is IBM specific
+     *         cable card
+     *  @param[in] objPath - FRU object path
+     *
+     *  @return bool - true if IBM specific card
+     */
+    virtual bool checkModelPresence(const std::string& objPath);
+
+    /** @brief checks whether the fru is actually present
+     *  @param[in] objPath - the fru object path
+     *
+     *  @return bool to indicate presence or absence
+     */
+    virtual bool checkFruPresence(const char* objPath);
+
+    /** @brief finds the ports under an adapter
+     *
+     *  @param[in] adapterObjPath - D-Bus object path for the adapter
+     *
+     *  @return std::vector<std::string> - port object paths
+     */
+    std::vector<std::string> findPortObjects(const std::string& adapterObjPath);
 
     virtual ~Handler() = default;
 
