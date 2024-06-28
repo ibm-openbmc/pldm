@@ -37,8 +37,6 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
     {
         error(
             "Failed to send resource dump parameters as instance ID DB is not set");
-        pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.pldm.InternalFailure");
         return;
     }
     auto instanceId = instanceIdDb->next(mctp_eid);
@@ -91,8 +89,6 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
 
 void DbusToFileHandler::reportResourceDumpFailure()
 {
-    pldm::utils::reportError("xyz.openbmc_project.bmc.pldm.InternalFailure");
-
     PropertyValue value{resDumpStatus};
     DBusMapping dbusMapping{resDumpCurrentObjPath, resDumpProgressIntf,
                             "Status", "string"};
@@ -281,8 +277,6 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
     if (instanceIdDb == NULL)
     {
         error("Failed to send csr to remote terminus.");
-        pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.pldm.InternalFailure");
         return;
     }
     auto instanceId = instanceIdDb->next(mctp_eid);
@@ -314,8 +308,6 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
             error(
                 "Failed to decode new file available response for vmi or remote terminus returned error, response code '{RC}' and completion code '{CC}'",
                 "RC", rc, "CC", static_cast<unsigned>(completionCode));
-            pldm::utils::reportError(
-                "xyz.openbmc_project.bmc.pldm.InternalFailure");
         }
     };
     rc = handler->registerRequest(
@@ -326,8 +318,6 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
         error(
             "Failed to send NewFileAvailable Request to Host for vmi, response code '{RC}'",
             "RC", rc);
-        pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.pldm.InternalFailure");
     }
 }
 

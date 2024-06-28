@@ -755,8 +755,6 @@ void HostPDRHandler::setHostSensorState(const PDRList& stateSensorPDRs)
         if (!pdr)
         {
             error("Failed to get state sensor PDR");
-            pldm::utils::reportError(
-                "xyz.openbmc_project.bmc.pldm.InternalFailure");
             return;
         }
 
@@ -790,8 +788,6 @@ void HostPDRHandler::setHostSensorState(const PDRList& stateSensorPDRs)
                         "Failed to encode get state sensor readings request for sensorID '{SENSOR_ID}' and  instanceID '{INSTANCE}', response code '{RC}'",
                         "SENSOR_ID", sensorId, "INSTANCE", instanceId, "RC",
                         rc);
-                    pldm::utils::reportError(
-                        "xyz.openbmc_project.bmc.pldm.InternalFailure");
                     return;
                 }
 
@@ -819,8 +815,6 @@ void HostPDRHandler::setHostSensorState(const PDRList& stateSensorPDRs)
                             "Failed to decode get state sensor readings response for sensorID '{SENSOR_ID}' and  instanceID '{INSTANCE}', response code'{RC}' and completion code '{CC}'",
                             "SENSOR_ID", sensorId, "INSTANCE", instanceId, "RC",
                             rc, "CC", completionCode);
-                        pldm::utils::reportError(
-                            "xyz.openbmc_project.bmc.pldm.InternalFailure");
                     }
 
                     uint8_t eventState;
