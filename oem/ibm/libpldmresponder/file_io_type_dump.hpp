@@ -74,11 +74,12 @@ class DumpHandler : public FileHandler
                                //!< dump request parameter file is stored
     enum DumpRequestStatus
     {
-        Success = 0x0,
-        AcfFileInvalid = 0x1,
-        PasswordInvalid = 0x2,
-        PermissionDenied = 0x3,
-        ResourceSelectorInvalid = 0x4,
+        Requested = 0x0,
+        Success = 0x1,
+        AcfFileInvalid = 0x2,
+        UserChallengeInvalid = 0x3,
+        PermissionDenied = 0x4,
+        ResourceSelectorInvalid = 0x5,
     };
 };
 
