@@ -519,9 +519,11 @@ int Handler::pldmPDRRepositoryChgEvent(
     const pldm_msg* request, size_t payloadLength, uint8_t /*formatVersion*/,
     uint8_t tid, size_t eventDataOffset)
 {
+    info("Got a repo change event from tid: {TID}", "TID", tid);
     uint8_t eventDataFormat{};
     uint8_t numberOfChangeRecords{};
     size_t dataOffset{};
+    uint8_t eventDataOperation{};
 
     auto eventData =
         reinterpret_cast<const uint8_t*>(request->payload) + eventDataOffset;
@@ -544,7 +546,6 @@ int Handler::pldmPDRRepositoryChgEvent(
 
     if (eventDataFormat == FORMAT_IS_PDR_HANDLES)
     {
-        uint8_t eventDataOperation{};
         uint8_t numberOfChangeEntries{};
 
         auto changeRecordData = eventData + dataOffset;
@@ -566,6 +567,7 @@ int Handler::pldmPDRRepositoryChgEvent(
             {
                 if (eventDataOperation == PLDM_RECORDS_MODIFIED)
                 {
+                    info("Got a modified event from tid: {TID}", "TID", tid);
                     hostPDRHandler->isHostPdrModified = true;
                 }
 
@@ -595,25 +597,33 @@ int Handler::pldmPDRRepositoryChgEvent(
         // have the matched Terminus handle
         if (eventDataFormat == REFRESH_ENTIRE_REPOSITORY)
         {
+            info("Got a refresh entire repo event from {TID}", "TID", tid);
             // We cannot get the Repo change event from the Terminus
             // that is not already added to the BMC repository
-
-            for (auto it = hostPDRHandler->tlPDRInfo.cbegin();
-                 it != hostPDRHandler->tlPDRInfo.cend();)
+            for (const auto& [terminusHandle, terminusInfo] :
+                 hostPDRHandler->tlPDRInfo)
             {
-                if (std::get<0>(it->second) == tid)
+                if (std::get<0>(terminusInfo) == tid)
                 {
                     pldm_pdr_remove_pdrs_by_terminus_handle(pdrRepo.getPdr(),
-                                                            it->first);
-                    hostPDRHandler->tlPDRInfo.erase(it++);
-                }
-                else
-                {
-                    ++it;
+                                                            terminusHandle);
                 }
             }
         }
-        hostPDRHandler->fetchPDR(std::move(pdrRecordHandles));
+        if (eventDataOperation == PLDM_RECORDS_DELETED ||
+            eventDataOperation == PLDM_RECORDS_MODIFIED)
+        {
+            info(
+                "Got a records deleted /modified event, '{TID}' and eventDataOperation is {ED}",
+                "TID", tid, "ED", eventDataOperation);
+        }
+        else
+        {
+            info(
+                "Got a records added event from tid '{TID}' eventDataOperation is {ED}",
+                "TID", tid, "ED", eventDataOperation);
+            hostPDRHandler->fetchPDR(std::move(pdrRecordHandles), tid);
+        }
     }
 
     return PLDM_SUCCESS;
@@ -631,6 +641,7 @@ int Handler::getPDRRecordHandles(
     {
         pdrRecordHandles.push_back(changeEntryData[i]);
     }
+
     return PLDM_SUCCESS;
 }
 
