@@ -852,8 +852,9 @@ void HostPDRHandler::_setHostSensorState()
                 {
                     instanceIdDb.free(mctp_eid, instanceId);
                     error(
-                        "Failed to encode_get_state_sensor_readings_req, rc = {RC}, SensorId = {SENSOR_ID}",
-                        "RC", rc, "SENSOR_ID", sensorId);
+                        "Failed to encode get state sensor readings request for sensorID '{SENSOR_ID}' and  instanceID '{INSTANCE}', response code '{RC}'",
+                        "SENSOR_ID", sensorId, "INSTANCE", instanceId, "RC",
+                        rc);
                     pldm::utils::reportError(
                         "xyz.openbmc_project.PLDM.Error.SetHostSensorState.EncodeStateSensorFail");
                     return;
@@ -891,9 +892,9 @@ void HostPDRHandler::_setHostSensorState()
                     if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
                     {
                         error(
-                            "Failed to decode_get_state_sensor_readings_resp, rc = {RC} cc = {CC} SensorId = {SENSOR_ID}",
-                            "RC", rc, "CC", (unsigned)completionCode,
-                            "SENSOR_ID", sensorId);
+                            "Failed to decode get state sensor readings response for sensorID '{SENSOR_ID}' and  instanceID '{INSTANCE}', response code'{RC}' and completion code '{CC}'",
+                            "SENSOR_ID", sensorId, "INSTANCE", instanceId, "RC",
+                            rc, "CC", completionCode);
                         if (sensorIndex == stateSensorPDRs.end())
                         {
                             return;

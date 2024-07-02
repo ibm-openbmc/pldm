@@ -36,8 +36,6 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
     {
         error(
             "Failed to send resource dump parameters as instance ID DB is not set");
-        pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.pldm.InternalFailure");
         return;
     }
     auto instanceId = instanceIdDb->next(mctp_eid);
@@ -276,15 +274,12 @@ void DbusToFileHandler::newLicFileAvailable(const std::string& licenseStr)
     newFileAvailableSendToHost(fileSize, 1, PLDM_FILE_TYPE_COD_LICENSE_KEY);
 }
 
-void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
-                                                   const uint32_t fileHandle,
-                                                   const uint16_t type)
+void DbusToFileHandler::newFileAvailableSendToHost(
+    const uint32_t fileSize, const uint32_t fileHandle, const uint16_t type)
 {
     if (instanceIdDb == NULL)
     {
         error("Failed to send csr to remote terminus.");
-        pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.pldm.InternalFailure");
         return;
     }
     auto instanceId = instanceIdDb->next(mctp_eid);
