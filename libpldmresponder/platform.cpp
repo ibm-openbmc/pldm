@@ -1022,8 +1022,6 @@ void Handler::setEventReceiver()
             error(
                 "Failed to decode setEventReceiver command, response code '{RC}' and completion code '{CC}'",
                 "RC", rc, "CC", (unsigned)completionCode);
-            pldm::utils::reportError(
-                "xyz.openbmc_project.bmc.pldm.InternalFailure");
         }
     };
     rc = handler->registerRequest(
