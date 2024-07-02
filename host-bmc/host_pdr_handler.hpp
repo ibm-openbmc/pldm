@@ -103,7 +103,7 @@ class HostPDRHandler
      *             PDRs that need to be fetched.
      */
 
-    void fetchPDR(PDRRecordHandles&& recordHandles);
+    void fetchPDR(PDRRecordHandles&& recordHandles, uint8_t tid);
 
     /** @brief Send a PLDM event to host firmware containing a list of record
      *  handles of PDRs that the host firmware has to fetch.
@@ -143,7 +143,7 @@ class HostPDRHandler
      *  @param[in] stateSensorPDRs - host state sensor PDRs
      *
      */
-    void parseStateSensorPDRs(const PDRList& stateSensorPDRs);
+    void parseStateSensorPDRs();
 
     /** @brief this function sends a GetPDR request to Host firmware.
      *  And processes the PDRs based on type
@@ -160,7 +160,9 @@ class HostPDRHandler
      *  and updates the D-Bus property
      *  @param[in] stateSensorPDRs - host state sensor PDRs
      */
-    void setHostSensorState(const PDRList& stateSensorPDRs);
+    void setHostSensorState();
+
+    void _setHostSensorState();
 
     /** @brief whether we received PLDM_RECORDS_MODIFIED event data operation
      *  from host
@@ -217,7 +219,7 @@ class HostPDRHandler
      *
      *  @param[out] uint16_t    - total table records
      */
-    void getFRURecordTableMetadataByRemote(const PDRList& fruRecordSetPDRs);
+    void getFRURecordTableMetadataByRemote();
 
     /** @brief Set Location Code in the dbus objects
      *
@@ -226,7 +228,6 @@ class HostPDRHandler
      */
 
     void setFRUDataOnDBus(
-        const PDRList& fruRecordSetPDRs,
         const std::vector<responder::pdr_utils::FruRecordDataFormat>&
             fruRecordData);
 
@@ -236,8 +237,7 @@ class HostPDRHandler
      *  @param[in] totalTableRecords - the Number of total table records
      *  @return
      */
-    void getFRURecordTableByRemote(const PDRList& fruRecordSetPDRs,
-                                   uint16_t totalTableRecords);
+    void getFRURecordTableByRemote(uint16_t& totalTableRecords);
 
     /** @brief Create Dbus objects by remote PLDM entity Fru PDRs
      *
@@ -245,15 +245,14 @@ class HostPDRHandler
      *
      * @ return
      */
-    void createDbusObjects(const PDRList& fruRecordSetPDRs);
+    void createDbusObjects();
 
     /** @brief Get FRU Record Set Identifier from FRU Record data Format
      *  @param[in] fruRecordSetPDRs - fru record set pdr
      *  @param[in] entity           - PLDM entity information
      *  @return
      */
-    std::optional<uint16_t> getRSI(const PDRList& fruRecordSetPDRs,
-                                   const pldm_entity& entity);
+    std::optional<uint16_t> getRSI(const pldm_entity& entity);
 
     /** @brief fd of MCTP communications socket */
     int mctp_fd;
@@ -304,6 +303,8 @@ class HostPDRHandler
      */
     HostStateSensorMap sensorMap;
 
+    PDRList::const_iterator sensorIndex;
+
     /** @brief whether response received from Host */
     bool responseReceived;
 
@@ -331,6 +332,13 @@ class HostPDRHandler
     /** @brief entityID and entity name is only loaded once
      */
     EntityMaps entityMaps;
+
+    PDRList stateSensorPDRs;
+    PDRList fruRecordSetPDRs{};
+
+    uint16_t terminusID = 0;
+
+    bool isHostOff;
 };
 
 } // namespace pldm
