@@ -43,6 +43,7 @@ void Handler::systemCompatibleCallback(sdbusplus::message_t& msg)
     {
         std::optional<std::string> sysType =
             getSysSpecificJsonDir(sysDirPath, names);
+
         if (sysType.has_value())
         {
             systemType = sysType.value();
