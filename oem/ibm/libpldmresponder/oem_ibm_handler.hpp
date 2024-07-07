@@ -16,8 +16,17 @@
 #include "requester/handler.hpp"
 #include "utils.hpp"
 
-typedef ibm_oem_pldm_state_set_firmware_update_state_values CodeUpdateState;
+enum ibm_oem_pldm_state_set_dimm_dump_state_values
+{
+    RETRY = 0,
+    SUCCESS = 0x1,
+    UNAVAILABLE = 0x2
+};
 
+typedef ibm_oem_pldm_state_set_firmware_update_state_values CodeUpdateState;
+typedef ibm_oem_pldm_state_set_dimm_dump_state_values DimmDumpState;
+
+static std::map<uint16_t, int> dumpStatusMap;
 namespace pldm
 {
 namespace responder
@@ -78,6 +87,7 @@ using BaseBIOSTable = std::map<AttributeName, BIOSTableObj>;
 using PendingObj = std::tuple<AttributeType, CurrentValue>;
 using PendingAttributes = std::map<AttributeName, PendingObj>;
 static constexpr auto PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE = 24577;
+static constexpr auto PLDM_OEM_IBM_SBE_DUMP_UPDATE = 24578;
 static constexpr auto PLDM_OEM_IBM_FRONT_PANEL_TRIGGER = 32837;
 static constexpr auto PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER = 24580;
 
@@ -334,7 +344,6 @@ class Handler : public oem_platform::Handler
     {
         return platformHandler->getNextEffecterId();
     }
-
     /** @brief Method to fetch the sensor ID of the code update PDRs
      *
      * @return platformHandler->getNextSensorId() - returns the
@@ -349,7 +358,6 @@ class Handler : public oem_platform::Handler
     {
         return platformHandler->getAssociateEntityMap();
     }
-
     /** @brief Method to Generate the OEM PDRs
      *
      * @param[in] repo - instance of concrete implementation of Repo
@@ -449,6 +457,10 @@ class Handler : public oem_platform::Handler
     void upadteOemDbusPaths(std::string& dbusPath);
     /** @brief update the conatiner ID */
     void updateContainerID();
+
+    int fetchDimmStateSensor(uint16_t entityInstance);
+
+    void setDimmStateSensor(bool status, uint16_t entityInstance);
 
     /** @brief Method to set the host effecter state
      *  @param status - the status of dump creation

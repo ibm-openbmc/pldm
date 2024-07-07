@@ -146,6 +146,9 @@ int pldm::responder::oem_ibm_platform::Handler::
                     value.entity_container_id == containerId)
                 {
                     sensorOpState = slotHandler->fetchSlotSensorState(key);
+                    stateField.push_back({PLDM_SENSOR_ENABLED,
+                                          PLDM_SENSOR_UNKNOWN,
+                                          PLDM_SENSOR_UNKNOWN, sensorOpState});
                     break;
                 }
             }
@@ -157,9 +160,19 @@ int pldm::responder::oem_ibm_platform::Handler::
             stateField.push_back({PLDM_SENSOR_ENABLED, PLDM_SENSOR_NORMAL,
                                   PLDM_SENSOR_UNKNOWN, realSAIState});
         }
+        else if ((entityType == PLDM_ENTITY_MEMORY_MODULE) &&
+                 (stateSetId == PLDM_OEM_IBM_SBE_DUMP_UPDATE_STATE))
+        {
+            sensorOpState = fetchDimmStateSensor(entityInstance);
+            stateField.push_back({PLDM_SENSOR_ENABLED, PLDM_SENSOR_UNKNOWN,
+                                  PLDM_SENSOR_UNKNOWN, sensorOpState});
+            break;
+        }
         else
         {
             rc = PLDM_PLATFORM_INVALID_STATE_VALUE;
+            stateField.push_back({PLDM_SENSOR_ENABLED, PLDM_SENSOR_UNKNOWN,
+                                  PLDM_SENSOR_UNKNOWN, sensorOpState});
             break;
         }
         stateField.push_back({PLDM_SENSOR_ENABLED, PLDM_SENSOR_UNKNOWN,
@@ -699,6 +712,59 @@ void buildAllNumericEffecterDimmPDR(oem_ibm_platform::Handler* platformHandler,
     }
 }
 
+void buildAllDimmSensorPDR(oem_ibm_platform::Handler* platformHandler,
+                           uint16_t entityType, uint16_t entityInstance,
+                           uint16_t stateSetID, pdr_utils::Repo& repo)
+{
+    size_t pdrSize = 0;
+    pdrSize = sizeof(pldm_state_sensor_pdr) +
+              sizeof(state_sensor_possible_states);
+    std::vector<uint8_t> entry{};
+    entry.resize(pdrSize);
+    pldm_state_sensor_pdr* pdr =
+        reinterpret_cast<pldm_state_sensor_pdr*>(entry.data());
+    if (!pdr)
+    {
+        error("Failed to get record by PDR type, ERROR:{ERR}", "ERR", lg2::hex,
+              static_cast<unsigned>(PLDM_PLATFORM_INVALID_SENSOR_ID));
+        return;
+    }
+    std::vector<uint16_t> dimm_info;
+    dimm_info = generateDimmIds();
+    for (auto dimm : dimm_info)
+    {
+        pdr->hdr.record_handle = 0;
+        pdr->hdr.version = 1;
+        pdr->hdr.type = PLDM_STATE_SENSOR_PDR;
+        pdr->hdr.record_change_num = 0;
+        pdr->hdr.length = sizeof(pldm_state_sensor_pdr) - sizeof(pldm_pdr_hdr);
+        pdr->terminus_handle = TERMINUS_HANDLE;
+        pdr->sensor_id = platformHandler->getNextSensorId();
+        pdr->entity_type = entityType;
+        entityInstance = dimm;
+        dumpStatusMap[entityInstance] = 2;
+        pdr->entity_instance = entityInstance;
+        pdr->container_id = 1;
+        pdr->sensor_init = PLDM_NO_INIT;
+        pdr->sensor_auxiliary_names_pdr = false;
+        pdr->composite_sensor_count = 1;
+
+        auto* possibleStatesPtr = pdr->possible_states;
+        auto possibleStates =
+            reinterpret_cast<state_sensor_possible_states*>(possibleStatesPtr);
+        possibleStates->state_set_id = stateSetID;
+        possibleStates->possible_states_size = 1;
+        auto state =
+            reinterpret_cast<state_sensor_possible_states*>(possibleStates);
+        if (stateSetID == PLDM_OEM_IBM_SBE_DUMP_UPDATE_STATE)
+            state->states[0].byte = 7;
+        pldm::responder::pdr_utils::PdrEntry pdrEntry{};
+        pdrEntry.data = entry.data();
+        pdrEntry.size = pdrSize;
+        repo.addRecord(pdrEntry);
+    }
+}
+
 void buildAllSystemPowerStateEffecterPDR(
     oem_ibm_platform::Handler* platformHandler, uint16_t entityType,
     uint16_t entityInstance, uint16_t stateSetID, pdr_utils::Repo& repo)
@@ -972,6 +1038,8 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     buildAllNumericEffecterDimmPDR(
         this, PLDM_ENTITY_MEMORY_MODULE, ENTITY_INSTANCE_0,
         PLDM_OEM_IBM_SBE_SEMANTIC_ID, repo, instanceDimmMap);
+    buildAllDimmSensorPDR(this, PLDM_ENTITY_MEMORY_MODULE, ENTITY_INSTANCE_0,
+                          PLDM_OEM_IBM_SBE_DUMP_UPDATE_STATE, repo);
     buildAllSystemPowerStateEffecterPDR(
         this, PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER, ENTITY_INSTANCE_0,
         PLDM_STATE_SET_SYSTEM_POWER_STATE, repo);
@@ -1063,15 +1131,52 @@ int encodeEventMsg(uint8_t eventType, const std::vector<uint8_t>& eventDataVec,
 
     return rc;
 }
+
+void pldm::responder::oem_ibm_platform::Handler::setDimmStateSensor(
+    bool status, uint16_t entityInstance)
+{
+    pldm::pdr::EntityType entityType = PLDM_ENTITY_MEMORY_MODULE;
+    pldm::pdr::StateSetId stateSetId = PLDM_OEM_IBM_SBE_DUMP_UPDATE_STATE;
+    uint8_t tid = TERMINUS_ID;
+
+    auto pdrs = findStateSensorPDR(tid, entityType, stateSetId, pdrRepo);
+    for (auto& pdr : pdrs)
+    {
+        auto stateSensorPDR =
+            reinterpret_cast<pldm_state_sensor_pdr*>(pdr.data());
+        if (entityInstance == stateSensorPDR->entity_instance)
+        {
+            if (status == true)
+            {
+                dumpStatusMap[entityInstance] = DimmDumpState::SUCCESS;
+                sendStateSensorEvent(stateSensorPDR->sensor_id,
+                                     PLDM_STATE_SENSOR_STATE, 0,
+                                     uint8_t(DimmDumpState::SUCCESS),
+                                     uint8_t(DimmDumpState::UNAVAILABLE));
+            }
+            else
+            {
+                dumpStatusMap[entityInstance] = DimmDumpState::RETRY;
+                sendStateSensorEvent(stateSensorPDR->sensor_id,
+                                     PLDM_STATE_SENSOR_STATE, 0,
+                                     uint8_t(DimmDumpState::RETRY),
+                                     uint8_t(DimmDumpState::UNAVAILABLE));
+            }
+        }
+    }
+}
+
+int pldm::responder::oem_ibm_platform::Handler::fetchDimmStateSensor(
+    uint16_t entityInstance)
+{
+    return dumpStatusMap[entityInstance];
+}
+
 void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
     bool status, uint16_t entityTypeReceived, uint16_t entityInstance)
 {
     pldm::pdr::EntityType entityType;
-    if (entityTypeReceived == PLDM_ENTITY_MEMORY_MODULE)
-    {
-        entityType = PLDM_ENTITY_MEMORY_MODULE;
-    }
-    else if (entityTypeReceived == PLDM_ENTITY_PROC)
+    if (entityTypeReceived == PLDM_ENTITY_PROC)
     {
         entityType = PLDM_ENTITY_PROC;
     }
@@ -1202,7 +1307,14 @@ void pldm::responder::oem_ibm_platform::Handler::monitorDump(
             if (propVal ==
                 "xyz.openbmc_project.Common.Progress.OperationStatus.Completed")
             {
-                setHostEffecterState(true, entityType, entityInstance);
+                if (entityType == PLDM_ENTITY_MEMORY_MODULE)
+                {
+                    setDimmStateSensor(true, entityInstance);
+                }
+                else
+                {
+                    setHostEffecterState(true, entityType, entityInstance);
+                }
             }
             else if (
                 propVal ==
@@ -1210,7 +1322,14 @@ void pldm::responder::oem_ibm_platform::Handler::monitorDump(
                 propVal ==
                     "xyz.openbmc_project.Common.Progress.OperationStatus.Aborted")
             {
-                setHostEffecterState(false, entityType, entityInstance);
+                if (entityType == PLDM_ENTITY_MEMORY_MODULE)
+                {
+                    setDimmStateSensor(false, entityInstance);
+                }
+                else
+                {
+                    setHostEffecterState(false, entityType, entityInstance);
+                }
             }
         }
         sbeDumpMatch = nullptr;
@@ -1649,6 +1768,11 @@ void pldm::responder::oem_ibm_platform::Handler::updateContainerID()
         uint16_t newDimmContainerID =
             pldm_find_container_id(pdrRepo, PLDM_ENTITY_MEMORY_BOARD, value);
         pldm_change_container_id_of_effecter(pdrRepo, key, newDimmContainerID);
+        auto sensorID = findStateSensorId(pdrRepo, 0, PLDM_ENTITY_MEMORY_MODULE,
+                                          value, 1,
+                                          PLDM_OEM_IBM_SBE_DUMP_UPDATE_STATE);
+        pldm_change_container_id_of_sensor(pdrRepo, sensorID,
+                                           newDimmContainerID);
     }
 }
 
