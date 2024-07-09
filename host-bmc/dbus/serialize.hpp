@@ -2,6 +2,7 @@
 
 #include "../common/utils.hpp"
 #include "../utils.hpp"
+#include "type.hpp"
 
 #include <libpldm/pdr.h>
 
@@ -65,7 +66,8 @@ class Serialize
      *  @param[in] value - Property Value over interface
      */
     void serialize(const std::string& path, const std::string& intf,
-                   const std::string& name = "", PropertyValue value = {});
+                   const std::string& name = "",
+                   pldm::dbus::PropertyValue value = {});
 
     /** @brief This function is to Read all values from binary file.
      *  @return true is success else false.
@@ -75,7 +77,7 @@ class Serialize
     /** @brief This function is to get stored structured data object.
      *  @return returning structured data object.
      */
-    SavedObjs getSavedObjs()
+    dbus::SavedObjs getSavedObjs()
     {
         return savedObjs;
     }
@@ -97,7 +99,7 @@ class Serialize
     void setObjectPathMaps(const ObjectPathMaps& maps);
 
   private:
-    SavedObjs savedObjs;
+    dbus::SavedObjs savedObjs;
     fs::path filePath;
     std::set<uint16_t> storeEntityTypes;
     ObjectPathMaps entityPathMaps;

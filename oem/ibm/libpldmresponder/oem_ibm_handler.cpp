@@ -11,6 +11,8 @@
 #include <phosphor-logging/lg2.hpp>
 #include <xyz/openbmc_project/State/BMC/client.hpp>
 
+#include <regex>
+
 PHOSPHOR_LOG2_USING;
 
 using namespace pldm::pdr;
@@ -684,14 +686,10 @@ void pldm::responder::oem_ibm_platform::Handler::updateOemDbusPaths(
        'motherboard/chassis' or 'motherboard/socket123/chassis' to
        'motherboard/chassis' */
     toFind = "socket";
-    size_t pos1 = dbusPath.find(toFind);
-    // while loop to detect multiple substring 'socket' in the path
-    while (pos1 != std::string::npos)
+    if (dbusPath.find(toFind) != std::string::npos)
     {
-        size_t pos2 = dbusPath.substr(pos1 + 1).find('/') + 1;
-        // Replacing starting from substring to next occurence of char '/'
-        dbusPath.replace(pos1, pos2 + 1, "");
-        pos1 = dbusPath.find(toFind);
+        std::regex reg(R"(\/motherboard\/socket[0-9]+)");
+        dbusPath = regex_replace(dbusPath, reg, "/motherboard");
     }
 }
 

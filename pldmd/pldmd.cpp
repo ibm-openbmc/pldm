@@ -50,6 +50,7 @@ PHOSPHOR_LOG2_USING;
 #include "dbus_impl_pdr.hpp"
 #include "host-bmc/dbus_to_event_handler.hpp"
 #include "host-bmc/dbus_to_host_effecters.hpp"
+#include "host-bmc/host_associations_parser.hpp"
 #include "host-bmc/host_condition.hpp"
 #include "host-bmc/host_pdr_handler.hpp"
 #include "libpldmresponder/base.hpp"
@@ -199,7 +200,8 @@ int main(int argc, char** argv)
         bus, "/xyz/openbmc_project/inventory");
     sdbusplus::server::manager::manager licObjManager(
         bus, "/xyz/openbmc_project/license");
-
+    sdbusplus::server::manager::manager ledManager(
+        bus, "/xyz/openbmc_project/led/groups");
     Invoker invoker{};
     requester::Handler<requester::Request> reqHandler(&pldmTransport, event,
                                                       instanceIdDb, verbose);
@@ -234,6 +236,8 @@ int main(int argc, char** argv)
     std::shared_ptr<HostPDRHandler> hostPDRHandler;
     std::unique_ptr<pldm::host_effecters::HostEffecterParser>
         hostEffecterParser;
+    std::unique_ptr<pldm::host_associations::HostAssociationsParser>
+        associationsParser;
     std::unique_ptr<DbusToPLDMEvent> dbusToPLDMEventHandler;
     DBusHandler dbusHandler;
     std::unique_ptr<oem_platform::Handler> oemPlatformHandler{};
@@ -265,17 +269,22 @@ int main(int argc, char** argv)
 #endif
     if (hostEID)
     {
+        associationsParser =
+            std::make_unique<pldm::host_associations::HostAssociationsParser>(
+                HOST_JSONS_DIR);
         hostPDRHandler = std::make_shared<HostPDRHandler>(
             pldmTransport.getEventSource(), hostEID, event, pdrRepo.get(),
-            EVENTS_JSONS_DIR, entityTree.get(), bmcEntityTree.get(),
-            instanceIdDb, &reqHandler, oemPlatformHandler.get());
+            EVENTS_JSONS_DIR, entityTree.get(), bmcEntityTree.get(), hostEffecterParser.get(),
+            instanceIdDb, &reqHandler, oemPlatformHandler.get(),
+            oemUtilsHandler.get(), associationsParser.get());
+
         // HostFirmware interface needs access to hostPDR to know if host
         // is running
         dbusImplHost.setHostPdrObj(hostPDRHandler);
         hostPDRHandler->setOemUtilsHandler(oemUtilsHandler.get());
         hostEffecterParser =
             std::make_unique<pldm::host_effecters::HostEffecterParser>(
-                &instanceIdDb, pldmTransport.getEventSource(), pdrRepo.get(),
+                &dbusImplReq, pldmTransport.getEventSource(), pdrRepo.get(),
                 &dbusHandler, HOST_JSONS_DIR, &reqHandler);
         dbusToPLDMEventHandler = std::make_unique<DbusToPLDMEvent>(
             pldmTransport.getEventSource(), hostEID, instanceIdDb, &reqHandler);

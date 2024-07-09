@@ -4,6 +4,7 @@
 #include "common/types.hpp"
 #include "common/utils.hpp"
 #include "requester/handler.hpp"
+#include "pldmd/dbus_impl_requester.hpp"
 
 #include <phosphor-logging/lg2.hpp>
 
@@ -82,11 +83,11 @@ class HostEffecterParser
      *  @param[in] handler - PLDM request handler
      */
     explicit HostEffecterParser(
-        pldm::InstanceIdDb* instanceIdDb, int fd, const pldm_pdr* repo,
+        pldm::dbus_api::Requester* requester, int fd, const pldm_pdr* repo,
         pldm::utils::DBusHandler* const dbusHandler,
         const std::string& jsonPath,
         pldm::requester::Handler<pldm::requester::Request>* handler) :
-        instanceIdDb(instanceIdDb),
+        requester(requester),
         sockFd(fd), pdrRepo(repo), dbusHandler(dbusHandler), handler(handler)
     {
         try
@@ -172,9 +173,26 @@ class HostEffecterParser
                                          size_t dbusInfoIndex,
                                          uint16_t effecterId);
 
+    /* @brief Returns the PDR repository */ 
+    const pldm_pdr* getPldmPDR();
+
+    /* @brief Sends the SetStateEffecterStates request
+     * object
+     *
+     * @param[in] mctpEid - host mctp eid
+     * @param[in] effecterId - effecter id
+     * @param[in] compEffCnt - Number of composite commands 
+     * @param[in] stateField - vector containing state sets
+     * @param[in] callback - Callback to handle the response
+     */
+    int sendSetStateEffecterStates(
+        uint8_t mctpEid, uint16_t effecterId, uint8_t compEffCnt,
+        std::vector<set_effecter_state_field>& stateField,
+        std::function<bool(bool)> callBack = nullptr, bool value = false);
+
   protected:
-    pldm::InstanceIdDb* instanceIdDb; //!< Reference to the InstanceIdDb object
-                                      //!< to obtain instance id
+    pldm::dbus_api::Requester*
+        requester;           //!< Reference to Requester to obtain instance id
     int sockFd;                       //!< Socket fd to send message to host
     const pldm_pdr* pdrRepo;          //!< Reference to PDR repo
     std::vector<EffecterInfo> hostEffecterInfo; //!< Parsed effecter information
