@@ -51,6 +51,7 @@ PHOSPHOR_LOG2_USING;
 #include "dbus_impl_pdr.hpp"
 #include "host-bmc/dbus_to_event_handler.hpp"
 #include "host-bmc/dbus_to_terminus_effecters.hpp"
+#include "host-bmc/host_associations_parser.hpp"
 #include "host-bmc/host_condition.hpp"
 #include "host-bmc/host_pdr_handler.hpp"
 #include "libpldmresponder/base.hpp"
@@ -208,7 +209,8 @@ int main(int argc, char** argv)
         bus, "/xyz/openbmc_project/inventory");
     sdbusplus::server::manager::manager licObjManager(
         bus, "/xyz/openbmc_project/license");
-
+    sdbusplus::server::manager::manager ledManager(
+        bus, "/xyz/openbmc_project/led/groups");
     Invoker invoker{};
     requester::Handler<requester::Request> reqHandler(&pldmTransport, event,
                                                       instanceIdDb, verbose);
@@ -220,11 +222,6 @@ int main(int argc, char** argv)
         throw std::runtime_error("Failed to instantiate PDR repository");
     }
     DBusHandler dbusHandler;
-    std::unique_ptr<pldm::host_effecters::HostEffecterParser>
-        hostEffecterParser =
-            std::make_unique<pldm::host_effecters::HostEffecterParser>(
-                &instanceIdDb, pldmTransport.getEventSource(), pdrRepo.get(),
-                &dbusHandler, HOST_JSONS_DIR, &reqHandler);
 #ifdef LIBPLDMRESPONDER
     using namespace pldm::state_sensor;
     dbus_api::Host dbusImplHost(bus, "/xyz/openbmc_project/pldm");
@@ -247,6 +244,10 @@ int main(int argc, char** argv)
             "Failed to instantiate BMC PDR entity association tree");
     }
     std::shared_ptr<HostPDRHandler> hostPDRHandler;
+    std::unique_ptr<pldm::host_effecters::HostEffecterParser>
+        hostEffecterParser;
+    std::unique_ptr<pldm::host_associations::HostAssociationsParser>
+        associationsParser;
     std::unique_ptr<DbusToPLDMEvent> dbusToPLDMEventHandler;
     std::unique_ptr<platform_config::Handler> platformConfigHandler{};
     platformConfigHandler =
@@ -256,10 +257,17 @@ int main(int argc, char** argv)
 
     if (hostEID)
     {
+        associationsParser =
+            std::make_unique<pldm::host_associations::HostAssociationsParser>(
+                HOST_JSONS_DIR);
+        hostEffecterParser =
+            std::make_unique<pldm::host_effecters::HostEffecterParser>(
+                &instanceIdDb, pldmTransport.getEventSource(), pdrRepo.get(),
+                &dbusHandler, HOST_JSONS_DIR, &reqHandler);
         hostPDRHandler = std::make_shared<HostPDRHandler>(
             pldmTransport.getEventSource(), hostEID, event, pdrRepo.get(),
-            EVENTS_JSONS_DIR, entityTree.get(), bmcEntityTree.get(),
-            instanceIdDb, &reqHandler);
+            EVENTS_JSONS_DIR, entityTree.get(), bmcEntityTree.get(), hostEffecterParser.get(),
+            instanceIdDb, &reqHandler, associationsParser.get());
 
         // HostFirmware interface needs access to hostPDR to know if host
         // is running

@@ -4,16 +4,24 @@ host_bmc_test_src = declare_dependency(
 )
 
 test_sources = [
-    '../../common/utils.cpp',
-    '../utils.cpp',
-    '../dbus/custom_dbus.cpp',
-    '../dbus/cable.cpp',
-    '../dbus/cpu_core.cpp',
-    '../dbus/enable.cpp',
-    '../dbus/pcie_device.cpp',
-    '../dbus/pcie_slot.cpp',
-    '../dbus/serialize.cpp',
-    '../dbus/chapdata.cpp',
+  '../utils.cpp',
+  '../dbus/associations.cpp',
+  '../dbus/availability.cpp',
+  '../dbus/chassis.cpp',
+  '../dbus/cpu_core.cpp',
+  '../dbus/enable.cpp',
+  '../dbus/inventory_item.cpp',
+  '../dbus/operational_status.cpp',
+  '../dbus/pcie_slot.cpp',
+  '../dbus/license_entry.cpp',
+  '../dbus/location_code.cpp',
+  '../dbus/led_group.cpp',
+  '../dbus/serialize.cpp',
+  '../dbus/custom_dbus.cpp',
+  '../dbus/chapdata.cpp',
+  '../dbus/cable.cpp',
+  '../dbus/asset.cpp',
+  '../dbus/pcie_device.cpp',
 ]
 
 tests = [

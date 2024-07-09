@@ -444,6 +444,76 @@ uint8_t HostEffecterParser::findNewStateValue(
     return newState;
 }
 
+int HostEffecterParser::sendSetStateEffecterStates(
+    uint8_t mctpEid, uint16_t effecterId, uint8_t compEffCnt,
+    std::vector<set_effecter_state_field>& stateField,
+    std::function<bool(bool)> callBack, bool value)
+{
+    auto instanceId = instanceIdDb->next(mctpEid);
+
+    std::vector<uint8_t> requestMsg(
+        sizeof(pldm_msg_hdr) + sizeof(effecterId) + sizeof(compEffCnt) +
+            sizeof(set_effecter_state_field) * compEffCnt,
+        0);
+    auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+    auto rc = encode_set_state_effecter_states_req(
+        instanceId, effecterId, compEffCnt, stateField.data(), request);
+
+    if (rc != PLDM_SUCCESS)
+    {
+        error(
+            "Message encode SetStateEffecterStates failure. PLDM error code = {RC}",
+            "RC", lg2::hex, rc);
+        instanceIdDb->free(mctpEid, instanceId);
+        return rc;
+    }
+
+    auto setStateEffecterStatesRespHandler =
+        [=](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
+        if (response == nullptr || !respMsgLen)
+        {
+            error(
+                "Failed to receive response for setStateEffecterStates command");
+            return;
+        }
+        uint8_t completionCode{};
+        auto rc = decode_set_state_effecter_states_resp(response, respMsgLen,
+                                                        &completionCode);
+        if (rc)
+        {
+            error(
+                "Failed to decode setStateEffecterStates response, effecter Id : {EFFECTER_ID}, rc = {RC}",
+                "EFFECTER_ID", effecterId, "RC", rc);
+            pldm::utils::reportError(
+                "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed");
+        }
+        if (completionCode)
+        {
+            error(
+                "Failed to set a Host effecter, effecter Id : {EFFECTER_ID}, cc = {CC}",
+                "EFFECTER_ID", effecterId, "CC",
+                static_cast<unsigned>(completionCode));
+            pldm::utils::reportError(
+                "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed");
+        }
+        else
+        {
+            if (callBack)
+            {
+                callBack(value);
+            }
+        }
+    };
+
+    rc = handler->registerRequest(
+        mctpEid, instanceId, PLDM_PLATFORM, PLDM_SET_STATE_EFFECTER_STATES,
+        std::move(requestMsg), std::move(setStateEffecterStatesRespHandler));
+    if (rc)
+    {
+        error("Failed to send request to set an effecter on Host");
+    }
+    return rc;
+}
 size_t getEffecterDataSize(uint8_t effecterDataSize)
 {
     switch (effecterDataSize)
@@ -599,68 +669,10 @@ int HostEffecterParser::setHostStateEffecter(
 {
     uint8_t& mctpEid = hostEffecterInfo[effecterInfoIndex].mctpEid;
     uint8_t& compEffCnt = hostEffecterInfo[effecterInfoIndex].compEffecterCnt;
-    auto instanceId = instanceIdDb->next(mctpEid);
 
-    std::vector<uint8_t> requestMsg(
-        sizeof(pldm_msg_hdr) + sizeof(effecterId) + sizeof(compEffCnt) +
-            sizeof(set_effecter_state_field) * compEffCnt,
-        0);
-    auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
-    auto rc = encode_set_state_effecter_states_req(
-        instanceId, effecterId, compEffCnt, stateField.data(), request);
-
-    if (rc != PLDM_SUCCESS)
-    {
-        error(
-            "Failed to encode set state effecter states message for effecter ID '{EFFECTERID}' and instanceID '{INSTANCE}' with response code '{RC}'",
-            "EFFECTERID", effecterId, "INSTANCE", instanceId, "RC", lg2::hex,
-            rc);
-        instanceIdDb->free(mctpEid, instanceId);
-        return rc;
-    }
-
-    auto setStateEffecterStatesRespHandler = [](mctp_eid_t /*eid*/,
-                                                const pldm_msg* response,
-                                                size_t respMsgLen) {
-        if (response == nullptr || !respMsgLen)
-        {
-            error(
-                "Failed to receive response for setting state effecter states.");
-            return;
-        }
-        uint8_t completionCode{};
-        auto rc = decode_set_state_effecter_states_resp(response, respMsgLen,
-                                                        &completionCode);
-        if (rc)
-        {
-            error(
-                "Failed to decode response of set state effecter states, response code '{RC}'",
-                "RC", rc);
-            pldm::utils::reportError(
-                "xyz.openbmc_project.bmc.pldm.SetHostEffecterFailed");
-        }
-        if (completionCode)
-        {
-            error(
-                "Failed to set a remote terminus effecter, completion code '{CC}'",
-                "CC", completionCode);
-            pldm::utils::reportError(
-                "xyz.openbmc_project.bmc.pldm.SetHostEffecterFailed");
-        }
-    };
-
-    rc = handler->registerRequest(
-        mctpEid, instanceId, PLDM_PLATFORM, PLDM_SET_STATE_EFFECTER_STATES,
-        std::move(requestMsg), std::move(setStateEffecterStatesRespHandler));
-    if (rc)
-    {
-        error(
-            "Failed to send request to set an effecter on remote terminus for effecter ID '{EFFECTERID}', response code '{RC}'",
-            "EFFECTERID", effecterId, "RC", rc);
-    }
-    return rc;
+    return sendSetStateEffecterStates(mctpEid, effecterId, compEffCnt,
+                                      stateField);
 }
-
 void HostEffecterParser::createHostEffecterMatch(
     const std::string& objectPath, const std::string& interface,
     size_t effecterInfoIndex, size_t dbusInfoIndex, uint16_t effecterId)
@@ -677,6 +689,11 @@ void HostEffecterParser::createHostEffecterMatch(
             processHostEffecterChangeNotification(props, effecterInfoIndex,
                                                   dbusInfoIndex, effecterId);
         }));
+}
+
+const pldm_pdr* HostEffecterParser::getPldmPDR()
+{
+    return pdrRepo;
 }
 
 } // namespace host_effecters

@@ -159,6 +159,12 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
             }
         }
     }
+    /*if (fruHandler)
+    {
+        fruHandler->setStatePDRParams(pdrJsonsDir, getNextSensorId(),
+                                      getNextEffecterId(), sensorDbusObjMaps,
+                                      effecterDbusObjMaps, false);
+    }*/
 }
 
 Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
@@ -504,7 +510,7 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
             sensorOffset,
             stateSetIds[sensorOffset],
             false};
-        return hostPDRHandler->handleStateSensorEvent(stateSensorEntry,
+        return hostPDRHandler->handleStateSensorEvent(stateSetIds, stateSensorEntry,
                                                       eventState);
     }
     else

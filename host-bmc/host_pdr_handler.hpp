@@ -8,6 +8,8 @@
 #include "libpldmresponder/pdr_utils.hpp"
 #include "requester/handler.hpp"
 #include "utils.hpp"
+#include "dbus_to_terminus_effecters.hpp"
+#include "host_associations_parser.hpp"
 
 #include <libpldm/base.h>
 #include <libpldm/platform.h>
@@ -94,8 +96,10 @@ class HostPDRHandler
         pldm_pdr* repo, const std::string& eventsJsonsDir,
         pldm_entity_association_tree* entityTree,
         pldm_entity_association_tree* bmcEntityTree,
+        pldm::host_effecters::HostEffecterParser* hostEffecterParser,
         pldm::InstanceIdDb& instanceIdDb,
-        pldm::requester::Handler<pldm::requester::Request>* handler);
+        pldm::requester::Handler<pldm::requester::Request>* handler,
+        pldm::host_associations::HostAssociationsParser* associationsParser);
 
     /** @brief fetch PDRs from host firmware. See @class.
      *  @param[in] recordHandles - list of record handles pointing to host's
@@ -103,6 +107,8 @@ class HostPDRHandler
      */
 
     void fetchPDR(PDRRecordHandles&& recordHandles, uint8_t tid);
+
+    void deletePDRFromRepo(PDRRecordHandles&& recordHandles);
 
     /** @brief Send a PLDM event to host firmware containing a list of record
      *  handles of PDRs that the host firmware has to fetch.
@@ -127,12 +133,14 @@ class HostPDRHandler
 
     /** @brief Handles state sensor event
      *
+     *  @param[in] stateSetId - state set Id
      *  @param[in] entry - state sensor entry
      *  @param[in] state - event state
      *
      *  @return PLDM completion code
      */
     int handleStateSensorEvent(
+        const std::vector<pldm::pdr::StateSetId>& stateSetId,
         const pldm::responder::events::StateSensorEntry& entry,
         pdr::EventState state);
 
@@ -279,6 +287,60 @@ class HostPDRHandler
      */
     void createDbusObjects();
 
+    /* @brief get the Parent chassis object path for a fru
+     */
+    std::string getParentChassis(const std::string& fruPath);
+
+    /** @brief Obtain the mctp_eid for a particular sensor
+     *  @param[in] tid        -  terminus id of the sensor
+     *  @param[out] uint8_t   -  mctp_eid
+     */
+    pdr::EID getMctpEID(const pldm::pdr::TerminusID& tid);
+
+    /** @brief Get present state from state sensor readings
+     *  @param[in] tid          - terminus id
+     *  @param[in] sensorId     - state sensor Id
+     *  @param[in] type         - entity type
+     *  @param[in] instance     - entity instance num
+     *  @param[in] containerId  - entity container id
+     *
+     *  @param[in] path       - object path
+     *  @param[in] stateSetId - state set Id
+     */
+    void getPresentStateBySensorReadigs(const pldm::pdr::TerminusID& tid,
+                                        uint16_t sensorId, uint16_t type,
+                                        uint16_t instance, uint16_t containerId,
+                                        const std::string& path,
+                                        pldm::pdr::StateSetId stateSetId);
+
+    /** @brief Set the OperationalStatus interface
+     *  @return
+     */
+    void setOperationStatus();
+    /** @brief Get the Validity of a Terminus ID
+     *
+     *  @param[out] bool - true if valid, false otherwise
+     */
+    bool getValidity(const pldm::pdr::TerminusID& tid);
+
+    /** @brief Set the Present dbus Property
+     *  @param[in] path     - object path
+     *  @return
+     */
+    void setPresentPropertyStatus(const std::string& path);
+
+    /** @brief Set the availabilty dbus Property
+     *  @param[in] path     - object path
+     *  @return
+     */
+    void setAvailabilityState(const std::string& path);
+    /** @brief Update the Led Group path
+     *  @param[in] path     - object path
+     *  @return
+     */
+    std::string updateLedGroupPath(const std::string& path);
+
+
     /** @brief Get FRU Record Set Identifier from FRU Record data Format
      *  @param[in] fruRecordSetPDRs - fru record set pdr
      *  @param[in] entity           - PLDM entity information
@@ -292,12 +354,24 @@ class HostPDRHandler
      *  work.
      */
     sdeventplus::Event& event;
+
+    /** @brief iterator to track the entries in the objPathMap */
+    ObjectPathMaps::iterator objMapIndex;
+
+    HostStateSensorMap::iterator sensorMapIndex;
+
     /** @brief pointer to BMC's primary PDR repo, host PDRs are added here */
     pldm_pdr* repo;
 
     pldm::responder::events::StateSensorHandler stateSensorHandler;
     /** @brief Pointer to BMC's and Host's entity association tree */
     pldm_entity_association_tree* entityTree;
+
+    /** @brief Pointer to BMC's entity association tree */
+    // pldm_entity_association_tree* bmcEntityTree;
+
+     /** @brief Pointer to host effecter parser */
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser;
 
     /** @brief reference to Instance ID database object, used to obtain PLDM
      * instance IDs
@@ -306,6 +380,8 @@ class HostPDRHandler
 
     /** @brief PLDM request handler */
     pldm::requester::Handler<pldm::requester::Request>* handler;
+
+    //pldm::host_associations::HostAssociationsParser* associationsParser;
 
     /** @brief sdeventplus event source */
     std::unique_ptr<sdeventplus::source::Defer> pdrFetchEvent;

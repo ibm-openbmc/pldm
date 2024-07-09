@@ -28,6 +28,7 @@ sources = [
     '../host-bmc/utils.cpp',
     '../host-bmc/dbus_to_event_handler.cpp',
     '../host-bmc/dbus_to_terminus_effecters.cpp',
+    '../host-bmc/host_associations_parser.cpp',
     '../host-bmc/host_condition.cpp',
     '../host-bmc/dbus/custom_dbus.cpp',
     '../host-bmc/dbus/cable.cpp',
@@ -39,6 +40,15 @@ sources = [
     '../host-bmc/dbus/pcie_slot.cpp',
     '../host-bmc/dbus/serialize.cpp',
     '../host-bmc/dbus/deserialize.cpp',
+    '../host-bmc/dbus/associations.cpp',
+    '../host-bmc/dbus/availability.cpp',
+    '../host-bmc/dbus/chassis.cpp',
+    '../host-bmc/dbus/inventory_item.cpp',
+    '../host-bmc/dbus/led_group.cpp',
+    '../host-bmc/dbus/license_entry.cpp',
+    '../host-bmc/dbus/operational_status.cpp',
+    '../host-bmc/dbus/asset.cpp',
+    '../host-bmc/dbus/location_code.cpp',
     'event_parser.cpp',
 ]
 

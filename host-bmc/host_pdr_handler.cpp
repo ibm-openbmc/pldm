@@ -1,6 +1,8 @@
 #include "host_pdr_handler.hpp"
 
 #include <libpldm/fru.h>
+#include <libpldm/pdr.h>
+
 #ifdef OEM_IBM
 #include <libpldm/oem/ibm/fru.h>
 #endif
@@ -31,6 +33,9 @@ using namespace pldm::hostbmc::utils;
 using Json = nlohmann::json;
 namespace fs = std::filesystem;
 using namespace pldm::dbus;
+
+constexpr auto ledFwdAssociation = "identifying";
+constexpr auto ledReverseAssociation = "identified_by";
 const Json emptyJson{};
 
 template <typename T>
@@ -89,11 +94,13 @@ HostPDRHandler::HostPDRHandler(
     pldm_pdr* repo, const std::string& eventsJsonsDir,
     pldm_entity_association_tree* entityTree,
     pldm_entity_association_tree* bmcEntityTree,
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser,
     pldm::InstanceIdDb& instanceIdDb,
-    pldm::requester::Handler<pldm::requester::Request>* handler) :
+    pldm::requester::Handler<pldm::requester::Request>* handler,
+    pldm::host_associations::HostAssociationsParser* /*associationsParser*/) :
     mctp_eid(mctp_eid), event(event), repo(repo),
     stateSensorHandler(eventsJsonsDir), entityTree(entityTree),
-    instanceIdDb(instanceIdDb), handler(handler),
+    hostEffecterParser(hostEffecterParser), instanceIdDb(instanceIdDb), handler(handler),
     entityMaps(parseEntityMap(ENTITY_MAP_JSON))
 {
     isHostOff = false;
@@ -153,6 +160,7 @@ HostPDRHandler::HostPDRHandler(
                      "xyz.openbmc_project.State.Host.HostState.Running")
             {
                 isHostTransitioningToOff = false;
+                isHostOff = false;
             }
         }
     });
@@ -235,16 +243,81 @@ void HostPDRHandler::getHostPDR(uint32_t nextRecordHandle)
     }
 }
 
-int HostPDRHandler::handleStateSensorEvent(const StateSensorEntry& entry,
-                                           pdr::EventState state)
+int HostPDRHandler::handleStateSensorEvent(
+    const std::vector<pldm::pdr::StateSetId>& stateSetId,
+    const StateSensorEntry& entry, pdr::EventState state)
 {
+    for (auto& entity : objPathMap)
+    {
+        pldm_entity node_entity = entity.second;
+
+        if (node_entity.entity_type != entry.entityType ||
+            node_entity.entity_instance_num != entry.entityInstance ||
+            node_entity.entity_container_id != entry.containerId)
+        {
+            continue;
+        }
+
+        for (const auto& setId : stateSetId)
+        {
+            if (setId == PLDM_STATE_SET_IDENTIFY_STATE)
+            {
+                auto ledGroupPath = updateLedGroupPath(entity.first);
+                if (!ledGroupPath.empty())
+                {
+                    auto currVal =
+                        CustomDBus::getCustomDBus().getAsserted(ledGroupPath)
+                            ? "true"
+                            : "false";
+                    auto newVal =
+                        bool(state == PLDM_STATE_SET_IDENTIFY_STATE_ASSERTED);
+                    info(
+                        "led state event for [ {LED_GRP_PATH} ], [ {ENTITY_TYP}, {ENTITY_NUM}, {ENTITY_ID}] , current value : [ {CURR_VAL} ] new value : [ {NEW_VAL} ]",
+                        "LED_GRP_PATH", ledGroupPath, "ENTITY_TYP",
+                        (unsigned)node_entity.entity_type, "ENTITY_NUM",
+                        (unsigned)node_entity.entity_instance_num, "ENTITY_ID",
+                        (unsigned)node_entity.entity_container_id, "CURR_VAL",
+                        currVal, "NEW_VAL", (unsigned)newVal);
+                    CustomDBus::getCustomDBus().setAsserted(
+                        ledGroupPath, node_entity,
+                        state == PLDM_STATE_SET_IDENTIFY_STATE_ASSERTED,
+                        hostEffecterParser, mctp_eid);
+                }
+            }
+        }
+
+        if ((stateSetId[0] == PLDM_STATE_SET_HEALTH_STATE ||
+             stateSetId[0] == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS))
+        {
+            if (!(state == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS_NORMAL) &&
+                stateSetId[0] == PLDM_STATE_SET_HEALTH_STATE &&
+                strstr(entity.first.c_str(), "core"))
+            {
+                error("Guard event on CORE : [{ENTITY_FIRST}]", "ENTITY_FIRST",
+                      entity.first.c_str());
+            }
+            CustomDBus::getCustomDBus().setOperationalStatus(
+                entity.first, state == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS_NORMAL,
+                getParentChassis(entity.first));
+
+            break;
+        }
+        else if (stateSetId[0] == PLDM_STATE_SET_VERSION)
+        {
+            // There is a version changed on any of the dbus objects
+            info("Got a signal from Host about a possible change in Version");
+            createDbusObjects();
+            return PLDM_SUCCESS;
+        }
+    }
+
     auto rc = stateSensorHandler.eventAction(entry, state);
     if (rc != PLDM_SUCCESS)
     {
-        error("Failed to fetch and update D-bus property, response code '{RC}'",
-              "RC", rc);
+        error("Failed to fetch and update D-bus property, rc = {RC}", "RC", rc);
         return rc;
     }
+
     return PLDM_SUCCESS;
 }
 
@@ -504,6 +577,7 @@ void HostPDRHandler::parseStateSensorPDRs()
         const auto& [terminusHandle, sensorID, sensorInfo] =
             responder::pdr_utils::parseStateSensorPDR(pdr);
         sensorEntry.sensorID = sensorID;
+        error("Parse State sensor Id {ID}", "ID", sensorID);
         try
         {
             sensorEntry.terminusID = std::get<0>(tlPDRInfo.at(terminusHandle));
@@ -512,6 +586,7 @@ void HostPDRHandler::parseStateSensorPDRs()
         // value of 0xFF to indicate that.
         catch (const std::out_of_range&)
         {
+            error("Terminus handle out of range {HAN}", "HAN", terminusHandle);
             sensorEntry.terminusID = PLDM_TID_RESERVED;
         }
         sensorMap.emplace(sensorEntry, std::move(sensorInfo));
@@ -785,6 +860,7 @@ void HostPDRHandler::processHostPDRs(
         this->createDbusObjects();
         if (isHostUp())
         {
+            info("Host is UP & Completed the PDR Exchange with host");
             this->setHostSensorState();
         }
         entityAssociations.clear();
@@ -1065,7 +1141,7 @@ void HostPDRHandler::_setHostSensorState()
                             stateSensorEntry{containerId,    entityType,
                                              entityInstance, sensorOffset,
                                              stateSetId,     false};
-                        handleStateSensorEvent(stateSensorEntry, eventState);
+                        handleStateSensorEvent(stateSetIds,stateSensorEntry, eventState);
                     }
 
                     if (sensorIndex == stateSensorPDRs.end())
@@ -1140,7 +1216,7 @@ void HostPDRHandler::getFRURecordTableMetadataByRemote()
                 "RC", lg2::hex, rc, "CC", cc);
             return;
         }
-
+        info("Fru RecordTable length {LEN}", "LEN", total);
         // pass total to getFRURecordTableByRemote
         this->getFRURecordTableByRemote(total);
     };
@@ -1238,6 +1314,149 @@ void HostPDRHandler::getFRURecordTableByRemote(uint16_t& totalTableRecords)
     }
 }
 
+pdr::EID HostPDRHandler::getMctpEID(const pldm::pdr::TerminusID& tid)
+{
+    for (const auto& [terminusHandle, terminusInfo] : tlPDRInfo)
+    {
+        if (std::get<0>(terminusInfo) == tid)
+        {
+            return std::get<1>(terminusInfo);
+        }
+    }
+    return pldm::utils::readHostEID();
+}
+
+void HostPDRHandler::getPresentStateBySensorReadigs(
+    const pldm::pdr::TerminusID& tid, uint16_t sensorId, uint16_t type,
+    uint16_t instance, uint16_t containerId, const std::string& path,
+    pldm::pdr::StateSetId stateSetId)
+{
+    auto mctpEid = getMctpEID(tid);
+    auto instanceId = instanceIdDb.next(mctpEid);
+    std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
+                                    PLDM_GET_STATE_SENSOR_READINGS_REQ_BYTES);
+
+    auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+    bitfield8_t bf;
+    bf.byte = 0;
+    auto rc = encode_get_state_sensor_readings_req(instanceId, sensorId, bf, 0,
+                                                   request);
+    if (rc != PLDM_SUCCESS)
+    {
+        instanceIdDb.free(mctpEid, instanceId);
+        error("Failed to encode_get_state_sensor_readings_req, rc = {RC}", "RC",
+              rc);
+        return;
+    }
+
+    auto getStateSensorReadingsResponseHandler =
+        [this, path, type, instance, containerId, stateSetId, mctpEid,
+         sensorId](mctp_eid_t /*eid*/, const pldm_msg* response,
+                   size_t respMsgLen) {
+        if (response == nullptr || !respMsgLen)
+        {
+            error(
+                "Failed to receive response for get_state_sensor_readings command, sensor id : {SENSOR_ID}",
+                "SENSOR_ID", sensorId);
+            // even when for some reason , if we fail to get a response
+            // to one sensor, try all the dbus objects
+
+            if (this->isHostOff)
+            {
+                error("Host is off, stopped sending sensor states command");
+                return;
+            }
+
+            ++sensorMapIndex;
+            if (sensorMapIndex == sensorMap.end())
+            {
+                // error("sensor map completed");
+                ++objMapIndex;
+                sensorMapIndex = sensorMap.begin();
+            }
+            setOperationStatus();
+            return;
+        }
+
+        uint8_t cc = 0;
+        uint8_t sensorCnt = 0;
+        uint8_t state = PLDM_SENSOR_UNKNOWN;
+        std::array<get_sensor_state_field, 8> stateField{};
+        auto responsePtr = reinterpret_cast<const struct pldm_msg*>(response);
+        auto rc = decode_get_state_sensor_readings_resp(
+            responsePtr, respMsgLen, &cc, &sensorCnt, stateField.data());
+        if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
+        {
+            error(
+                "Failed to decode get state sensor readings resp, Message Error: rc = {RC}, cc = {CC}",
+                "RC", rc, "CC", (int)cc);
+            ++sensorMapIndex;
+            if (sensorMapIndex == sensorMap.end())
+            {
+                ++objMapIndex;
+                sensorMapIndex = sensorMap.begin();
+            }
+
+            setOperationStatus();
+            return;
+        }
+
+        for (const auto& filed : stateField)
+        {
+            state = filed.present_state;
+            break;
+        }
+
+        if (stateSetId == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS ||
+            stateSetId == PLDM_STATE_SET_HEALTH_STATE)
+        {
+            // set the dbus property only when its not a composite sensor
+            // and the state set it PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS
+            // Get sensorOpState property by the getStateSensorReadings
+            // command.
+
+            CustomDBus::getCustomDBus().setOperationalStatus(
+                path, state == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS_NORMAL, getParentChassis(path));
+        }
+        else if (stateSetId == PLDM_STATE_SET_IDENTIFY_STATE)
+        {
+            auto ledGroupPath = updateLedGroupPath(path);
+            if (!ledGroupPath.empty())
+            {
+                pldm_entity entity{type, instance, containerId};
+                CustomDBus::getCustomDBus().setAsserted(
+                    ledGroupPath, entity,
+                    state == PLDM_STATE_SET_IDENTIFY_STATE_ASSERTED,
+                    hostEffecterParser, mctpEid);
+                std::vector<std::tuple<std::string, std::string, std::string>>
+                    associations{{ledFwdAssociation, ledReverseAssociation,
+                                  ledGroupPath}};
+                CustomDBus::getCustomDBus().setAssociations(path, associations);
+            }
+        }
+
+        ++sensorMapIndex;
+        if (sensorMapIndex == sensorMap.end())
+        {
+            // error("sensor map completed");
+            ++objMapIndex;
+            sensorMapIndex = sensorMap.begin();
+        }
+        setOperationStatus();
+    };
+
+    rc = handler->registerRequest(
+        mctpEid, instanceId, PLDM_PLATFORM, PLDM_GET_STATE_SENSOR_READINGS,
+        std::move(requestMsg),
+        std::move(getStateSensorReadingsResponseHandler));
+    if (rc != PLDM_SUCCESS)
+    {
+        error("Failed to get the State Sensor Readings request");
+    }
+
+    return;
+}
+
 std::optional<uint16_t> HostPDRHandler::getRSI(const pldm_entity& entity)
 {
     for (const auto& pdr : fruRecordSetPDRs)
@@ -1291,11 +1510,50 @@ void HostPDRHandler::setFRUDataOnDBus(
     }
 #endif
 }
+
+bool HostPDRHandler::getValidity(const pldm::pdr::TerminusID& tid)
+{
+    for (const auto& [terminusHandle, terminusInfo] : tlPDRInfo)
+    {
+        if (std::get<0>(terminusInfo) == tid)
+        {
+            if (std::get<2>(terminusInfo) == PLDM_TL_PDR_NOT_VALID)
+            {
+                return false;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+void HostPDRHandler::setPresentPropertyStatus(const std::string& path)
+{
+    CustomDBus::getCustomDBus().updateItemPresentStatus(path, true);
+}
+
+void HostPDRHandler::setAvailabilityState(const std::string& path)
+{
+    CustomDBus::getCustomDBus().setAvailabilityState(path, true);
+}
+
 void HostPDRHandler::createDbusObjects()
 {
     // Creating and Refreshing dbus hosted by remote PLDM entity Fru PDRs
+    error("Refreshing dbus hosted by pldm Started");
+
+    objMapIndex = objPathMap.begin();
+
+    sensorMapIndex = sensorMap.begin();
+
     for (const auto& entity : objPathMap)
     {
+        // update the Present Property
+        setPresentPropertyStatus(entity.first);
+
+        // Implement & update the Availability to true
+        setAvailabilityState(entity.first);
+
         switch (entity.second.entity_type)
         {
             case PLDM_ENTITY_PROC | 0x8000:
@@ -1304,24 +1562,205 @@ void HostPDRHandler::createDbusObjects()
                 CustomDBus::getCustomDBus().implementObjectEnableIface(
                     entity.first, false);
                 break;
-            case PLDM_ENTITY_SLOT:
-                CustomDBus::getCustomDBus().implementPCIeSlotInterface(
+            case PLDM_ENTITY_SYSTEM_CHASSIS:
+                CustomDBus::getCustomDBus().implementChassisInterface(
+                    entity.first);
+                CustomDBus::getCustomDBus().implementGlobalInterface(
                     entity.first);
                 break;
-            case PLDM_ENTITY_CARD:
-                CustomDBus::getCustomDBus().implementPCIeDeviceInterface(
+            case PLDM_ENTITY_POWER_SUPPLY:
+                CustomDBus::getCustomDBus().implementPowerSupplyInterface(
                     entity.first);
+                break;
+            case PLDM_ENTITY_CHASSIS_FRONT_PANEL_BOARD:
+              //  CustomDBus::getCustomDBus().implementPanelInterface(
+                //    entity.first);
+                break;
+            case PLDM_ENTITY_FAN:
+                CustomDBus::getCustomDBus().implementFanInterface(entity.first);
                 break;
             case PLDM_ENTITY_SYS_BOARD:
                 CustomDBus::getCustomDBus().implementMotherboardInterface(
                     entity.first);
                 break;
+            case PLDM_ENTITY_POWER_CONVERTER:
+                CustomDBus::getCustomDBus().implementVRMInterface(entity.first);
+                break;
+            case PLDM_ENTITY_SLOT:
+                CustomDBus::getCustomDBus().implementPCIeSlotInterface(
+                    entity.first);
+                //CustomDBus::getCustomDBus().setLinkReset(
+                  //  entity.first, false, hostEffecterParser, mctp_eid);
+                break;
+            case PLDM_ENTITY_CONNECTOR:
+                CustomDBus::getCustomDBus().implementConnecterInterface(
+                    entity.first);
+                break;
+            case PLDM_ENTITY_COOLING_DEVICE:
+            case PLDM_ENTITY_EXTERNAL_ENVIRONMENT:
+            case PLDM_ENTITY_BOARD:
+            case PLDM_ENTITY_MODULE:
+                CustomDBus::getCustomDBus().implementBoard(entity.first);
+                break;
+            case PLDM_ENTITY_CARD:
+                CustomDBus::getCustomDBus().implementPCIeDeviceInterface(
+                    entity.first);
+                break;
+            case PLDM_ENTITY_IO_MODULE:
+                CustomDBus::getCustomDBus().implementFabricAdapter(
+                    entity.first);
+                CustomDBus::getCustomDBus().implementPCIeDeviceInterface(
+                    entity.first);
+                break;
+            case 32954:
+                CustomDBus::getCustomDBus().implementPCIeSlotInterface(
+                    entity.first);
+                CustomDBus::getCustomDBus().setSlotType(
+                    entity.first,
+                    "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.OEM");
+          //      CustomDBus::getCustomDBus().setLinkReset(
+            //        entity.first, false, hostEffecterParser, mctp_eid);
+                break;
             default:
                 break;
         }
     }
-    // getFRURecordTableMetadataByRemote(fruRecordSetPDRs);
-    // getFRURecordTableMetadataByRemote();
+    getFRURecordTableMetadataByRemote();
+    //this->setFRUDynamicAssociations();
+
+    // update xyz.openbmc_project.State.Decorator.OperationalStatus
+    setOperationStatus();
+    error("Refreshing dbus hosted by pldm Completed");
+}
+
+void HostPDRHandler::setOperationStatus()
+{
+    if (isHostOff)
+    {
+        // If host is off, then no need to
+        // proceed further
+        return;
+    }
+    if (objMapIndex != objPathMap.end())
+    {
+        pldm_entity node = objMapIndex->second;
+
+        bool valid = getValidity(sensorMapIndex->first.terminusID);
+ 
+        if (valid)
+        {
+            pldm::pdr::EntityInfo entityInfo{};
+            pldm::pdr::CompositeSensorStates compositeSensorStates{};
+            std::vector<pldm::pdr::StateSetId> stateSetIds{};
+            std::tie(entityInfo, compositeSensorStates,
+                     stateSetIds) = sensorMapIndex->second;
+            const auto& [containerId, entityType, entityInstance] = entityInfo;
+
+            if (node.entity_type == entityType &&
+                node.entity_instance_num == entityInstance &&
+                node.entity_container_id == containerId)
+            {
+                if ((stateSetIds[0] == PLDM_STATE_SET_HEALTH_STATE ||
+                     stateSetIds[0] == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS))
+                {
+                    // set the dbus property only when its not a
+                    // composite sensor and the state set it
+                    // PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS Get
+                    // sensorOpState property by the
+                    // getStateSensorReadings command.
+
+                    getPresentStateBySensorReadigs(
+                        sensorMapIndex->first.terminusID,
+                        sensorMapIndex->first.sensorID, entityType,
+                        entityInstance, containerId, objMapIndex->first,
+                        stateSetIds[0]);
+                    return;
+                }
+                if (stateSetIds[0] == PLDM_STATE_SET_IDENTIFY_STATE)
+                {
+                    getPresentStateBySensorReadigs(
+                        sensorMapIndex->first.terminusID,
+                        sensorMapIndex->first.sensorID, entityType,
+                        entityInstance, containerId, objMapIndex->first,
+                        stateSetIds[0]);
+                    return;
+                }
+                ++sensorMapIndex;
+                if (sensorMapIndex == sensorMap.end())
+                {
+                    ++objMapIndex;
+                    sensorMapIndex = sensorMap.begin();
+                }
+                setOperationStatus();
+            }
+            else
+            {
+                ++sensorMapIndex;
+                if (sensorMapIndex == sensorMap.end())
+                {
+                    ++objMapIndex;
+                    sensorMapIndex = sensorMap.begin();
+                }
+                setOperationStatus();
+            }
+        }
+        else
+        {
+            ++sensorMapIndex;
+            if (sensorMapIndex == sensorMap.end())
+            {
+                ++objMapIndex;
+                sensorMapIndex = sensorMap.begin();
+            }
+            setOperationStatus();
+        }
+    }
+}
+
+std::string HostPDRHandler::getParentChassis(const std::string& frupath)
+{
+    if (objPathMap.contains(frupath))
+    {
+        pldm_entity fruentity = objPathMap[frupath];
+        if (fruentity.entity_type == PLDM_ENTITY_SYSTEM_CHASSIS)
+        {
+            return "";
+        }
+    }
+    for (const auto& [objpath, nodeentity] : objPathMap)
+    {
+        pldm_entity entity = nodeentity;
+        if (frupath.find(objpath) != std::string::npos &&
+            entity.entity_type == PLDM_ENTITY_SYSTEM_CHASSIS)
+        {
+            return objpath;
+        }
+    }
+    return "";
+}
+
+std::string HostPDRHandler::updateLedGroupPath(const std::string& path)
+{
+    std::string ledGroupPath{};
+    std::string inventoryPath = "/xyz/openbmc_project/inventory/";
+    if (path.find(inventoryPath) != std::string::npos)
+    {
+        ledGroupPath = "/xyz/openbmc_project/led/groups/" +
+                       path.substr(inventoryPath.length());
+    }
+
+    return ledGroupPath;
+}
+
+void HostPDRHandler::deletePDRFromRepo(PDRRecordHandles&& recordHandles)
+{
+    for (auto& recordHandle : recordHandles)
+    {
+        error("Record handle deleted: {REC_HANDLE}", "REC_HANDLE",
+              recordHandle);
+        //this->setRecordPresent(recordHandle);
+        //pldm_delete_by_record_handle(repo, recordHandle, true);
+    }
 }
 
 } // namespace pldm

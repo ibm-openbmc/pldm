@@ -16,10 +16,6 @@ namespace dbus
 using CoreIntf = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Inventory::Item::server::CpuCore>;
 
-/** @class CPUCore
- *  @brief This class is mapped to CPUCore properties in D-Bus interface path
- *         and update/retrieved the corresponding properties value.
- */
 class CPUCore : public CoreIntf
 {
   public:

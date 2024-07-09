@@ -1,5 +1,6 @@
 #pragma once
 
+#include "serialize.hpp"
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server.hpp>
 #include <sdbusplus/server/object.hpp>
@@ -32,7 +33,10 @@ class PCIeDevice : public ItemDevice
 
     PCIeDevice(sdbusplus::bus_t& bus, const std::string& objPath) :
         ItemDevice(bus, objPath.c_str())
-    {}
+    {
+        pldm::serialize::Serialize::getSerialize().serialize(objPath,
+                                                             "PCIeDevice");
+    }
 
     /** Get lanes in use */
     size_t lanesInUse() const override;

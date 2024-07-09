@@ -4,6 +4,7 @@
 #include "common/types.hpp"
 #include "common/utils.hpp"
 #include "requester/handler.hpp"
+#include "pldmd/dbus_impl_requester.hpp"
 
 #include <phosphor-logging/lg2.hpp>
 
@@ -103,8 +104,8 @@ class HostEffecterParser
         pldm::utils::DBusHandler* const dbusHandler,
         const std::string& jsonPath,
         pldm::requester::Handler<pldm::requester::Request>* handler) :
-        instanceIdDb(instanceIdDb), sockFd(fd), pdrRepo(repo),
-        dbusHandler(dbusHandler), handler(handler)
+        instanceIdDb(instanceIdDb),
+        sockFd(fd), pdrRepo(repo), dbusHandler(dbusHandler), handler(handler)
     {
         try
         {
@@ -225,6 +226,24 @@ class HostEffecterParser
      */
     double adjustValue(double value, double offset, double resolution,
                        int8_t modify);
+
+    /* @brief Returns the PDR repository */ 
+    const pldm_pdr* getPldmPDR();
+
+    /* @brief Sends the SetStateEffecterStates request
+     * object
+     *
+     * @param[in] mctpEid - host mctp eid
+     * @param[in] effecterId - effecter id
+     * @param[in] compEffCnt - Number of composite commands 
+     * @param[in] stateField - vector containing state sets
+     * @param[in] callback - Callback to handle the response
+     */
+    int sendSetStateEffecterStates(
+        uint8_t mctpEid, uint16_t effecterId, uint8_t compEffCnt,
+        std::vector<set_effecter_state_field>& stateField,
+        std::function<bool(bool)> callBack = nullptr, bool value = false);
+
 
   private:
     /* @brief Verify host On state before configure the host effecters
