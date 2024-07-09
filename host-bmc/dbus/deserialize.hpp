@@ -2,6 +2,7 @@
 
 #include "../common/utils.hpp"
 #include "host-bmc/host_pdr_handler.hpp"
+#include "type.hpp"
 
 #include <filesystem>
 #include <fstream>

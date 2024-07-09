@@ -192,7 +192,6 @@ std::tuple<TerminusHandle, SensorID, SensorInfo>
 
         sensors.emplace_back(std::move(possibleStates));
         stateSetIds.emplace_back(state->state_set_id);
-
         if (compositeSensorCount)
         {
             statesPtr += sizeof(state_sensor_possible_states) +
