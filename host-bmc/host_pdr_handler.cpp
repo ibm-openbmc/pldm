@@ -97,10 +97,10 @@ HostPDRHandler::HostPDRHandler(
     pldm::host_effecters::HostEffecterParser* hostEffecterParser,
     pldm::InstanceIdDb& instanceIdDb,
     pldm::requester::Handler<pldm::requester::Request>* handler,
-    pldm::host_associations::HostAssociationsParser* /*associationsParser*/) :
+    pldm::host_associations::HostAssociationsParser* associationsParser) :
     mctp_eid(mctp_eid), event(event), repo(repo),
     stateSensorHandler(eventsJsonsDir), entityTree(entityTree),
-    hostEffecterParser(hostEffecterParser), instanceIdDb(instanceIdDb), handler(handler),
+    hostEffecterParser(hostEffecterParser), instanceIdDb(instanceIdDb), handler(handler), associationsParser(associationsParser),
     entityMaps(parseEntityMap(ENTITY_MAP_JSON))
 {
     isHostOff = false;
@@ -122,24 +122,27 @@ HostPDRHandler::HostPDRHandler(
             if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
             {
                 // Delete all the remote terminus information
-                    std::erase_if(tlPDRInfo, [](const auto& item) {
-                            auto const& [key, value] = item;
-                            return key != TERMINUS_HANDLE;
-                            });
-                    pldm_pdr_remove_remote_pdrs(repo);
-                    pldm_entity_association_tree_destroy_root(entityTree);
-                    pldm_entity_association_tree_copy_root(bmcEntityTree,
-                            entityTree);
-                    this->sensorMap.clear();
-                    this->isHostPdrModified = false;
-                    this->responseReceived = false;
-                    this->mergedHostParents = false;
-                    this->stateSensorPDRs.clear();
-                    fruRecordSetPDRs.clear();
-                    isHostOff = true;
-                    isHostTransitioningToOff = false;
-                    this->sensorIndex = stateSensorPDRs.begin();
-                    this->modifiedCounter = 0;
+                std::erase_if(tlPDRInfo, [](const auto& item) {
+                    auto const& [key, value] = item;
+                    return key != TERMINUS_HANDLE;
+                });
+                // when the host is powered off, set the availability
+                // state of all the dbus objects to false
+                this->setPresenceFrus();
+                pldm_pdr_remove_remote_pdrs(repo);
+                pldm_entity_association_tree_destroy_root(entityTree);
+                pldm_entity_association_tree_copy_root(bmcEntityTree,
+                                                       entityTree);
+                this->sensorMap.clear();
+                this->isHostPdrModified = false;
+                this->responseReceived = false;
+                this->mergedHostParents = false;
+                this->stateSensorPDRs.clear();
+                fruRecordSetPDRs.clear();
+                isHostOff = true;
+                isHostTransitioningToOff = false;
+                this->sensorIndex = stateSensorPDRs.begin();
+                this->modifiedCounter = 0;
 
                     // After a power off , the remote nodes will be deleted
                     // from the entity association tree, making the nodes point
@@ -164,6 +167,15 @@ HostPDRHandler::HostPDRHandler(
             }
         }
     });
+}
+
+void HostPDRHandler::setPresenceFrus()
+{
+    // iterate over all dbus objects
+    for (const auto& [path, entityId] : objPathMap)
+    {
+        CustomDBus::getCustomDBus().setAvailabilityState(path, false);
+    }
 }
 
 void HostPDRHandler::fetchPDR(PDRRecordHandles&& recordHandles, uint8_t tid)
@@ -1626,11 +1638,52 @@ void HostPDRHandler::createDbusObjects()
         }
     }
     getFRURecordTableMetadataByRemote();
-    //this->setFRUDynamicAssociations();
+    this->setFRUDynamicAssociations();
 
     // update xyz.openbmc_project.State.Decorator.OperationalStatus
     setOperationStatus();
     error("Refreshing dbus hosted by pldm Completed");
+}
+
+void HostPDRHandler::setFRUDynamicAssociations()
+{
+    for (const auto& [leftPath, leftEntity] : objPathMap)
+    {
+        // for each path, compare it with rest of the paths in the
+        // map
+        uint16_t leftEntityType = leftEntity.entity_type;
+        for (const auto& [rightPath, rightEntity] : objPathMap)
+        {
+            uint16_t rightEntityType = rightEntity.entity_type;
+            // if leftpath is same as rightPath
+            // then both dbus objects are same, so
+            // no need to create any associations
+            if (leftPath == rightPath)
+            {
+                continue;
+            }
+            else if ((rightPath.string().find(leftPath) != std::string::npos) ||
+                     (leftPath.string().find(rightPath) != std::string::npos))
+            {
+                // this means left path dbus object is parent of the
+                // right path dbus object, something like this
+                // leftpath = /xyz/openbmc_project/system/chassis15363
+                // rightpath = /xyz/openbmc_project/system/chassis15363/fan1
+                auto key = std::make_pair(leftEntityType, rightEntityType);
+                if (associationsParser->associationsInfoMap.contains(key))
+                {
+                    auto value = associationsParser->associationsInfoMap[key];
+                    // we have some associations defined for this parent type &
+                    // child type
+                    std::vector<
+                        std::tuple<std::string, std::string, std::string>>
+                        associations{{value.first, value.second, rightPath}};
+                    CustomDBus::getCustomDBus().setAssociations(leftPath,
+                                                                associations);
+                }
+            }
+        }
+    }
 }
 
 void HostPDRHandler::setOperationStatus()
@@ -1739,6 +1792,35 @@ std::string HostPDRHandler::getParentChassis(const std::string& frupath)
     return "";
 }
 
+void HostPDRHandler::setRecordPresent(uint32_t recordHandle)
+{
+    pldm_entity recordEntity = pldm_get_entity_from_record_handle(repo,
+                                                                  recordHandle);
+    for (const auto& [path, dbusEntity] : objPathMap)
+    {
+        if (dbusEntity.entity_type == recordEntity.entity_type &&
+            dbusEntity.entity_instance_num ==
+                recordEntity.entity_instance_num &&
+            dbusEntity.entity_container_id == recordEntity.entity_container_id)
+        {
+            error(
+                "Removing Host FRU [ {PATH} ] with entityid [ {ENTITY_TYP}, {ENTITY_NUM}, {ENTITY_ID} ]",
+                "PATH", path, "ENTITY_TYP", (unsigned)recordEntity.entity_type,
+                "ENTITY_NUM", (unsigned)recordEntity.entity_instance_num,
+                "ENTITY_ID", (unsigned)recordEntity.entity_container_id);
+            // if the record has the same entity id, mark that dbus object as
+            // not present
+            CustomDBus::getCustomDBus().updateItemPresentStatus(path, false);
+            CustomDBus::getCustomDBus().setOperationalStatus(
+                path, false, getParentChassis(path));
+            // Delete the LED object path
+            auto ledGroupPath = updateLedGroupPath(path);
+            pldm::dbus::CustomDBus::getCustomDBus().deleteObject(ledGroupPath);
+            return;
+        }
+    }
+}
+
 std::string HostPDRHandler::updateLedGroupPath(const std::string& path)
 {
     std::string ledGroupPath{};
@@ -1758,8 +1840,8 @@ void HostPDRHandler::deletePDRFromRepo(PDRRecordHandles&& recordHandles)
     {
         error("Record handle deleted: {REC_HANDLE}", "REC_HANDLE",
               recordHandle);
-        //this->setRecordPresent(recordHandle);
-        //pldm_delete_by_record_handle(repo, recordHandle, true);
+        this->setRecordPresent(recordHandle);
+        pldm_delete_by_record_handle(repo, recordHandle, true);
     }
 }
 
