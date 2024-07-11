@@ -448,21 +448,28 @@ Response Handler::readFileIntoMemory(const pldm_msg* request,
                                 PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
         return response;
     }
-
-    using namespace dma;
-    sharedAIORespDataobj.instance_id = request->hdr.instance_id;
-    sharedAIORespDataobj.command = PLDM_READ_FILE_INTO_MEMORY;
-    sharedAIORespDataobj.functionPtr = nullptr;
-    sdeventplus::Event event = sdeventplus::Event::get_default();
-    std::shared_ptr<dma::DMA> intf = std::make_shared<dma::DMA>(length);
-    int fd = -1;
-    if (intf)
+    if (!value.fsPath.string().contains("PHYP-NVRAM"))
     {
-        fd = intf->openSourcefile(value.fsPath, O_NONBLOCK | O_RDONLY);
+        using namespace dma;
+        sharedAIORespDataobj.instance_id = request->hdr.instance_id;
+        sharedAIORespDataobj.command = PLDM_READ_FILE_INTO_MEMORY;
+        sharedAIORespDataobj.functionPtr = nullptr;
+        sdeventplus::Event event = sdeventplus::Event::get_default();
+        std::shared_ptr<dma::DMA> intf = std::make_shared<dma::DMA>(length);
+        int fd = -1;
+        if (intf)
+        {
+            fd = intf->openSourcefile(value.fsPath, O_NONBLOCK | O_RDONLY);
+        }
+        transferAllbyAsync(std::move(intf), fd, offset, length, address, true,
+                           sharedAIORespDataobj, event);
+        return {};
     }
-    transferAll(std::move(intf), fd, offset, length, address, true,
-                sharedAIORespDataobj, event);
-    return {};
+
+    dma::DMA intf(length);
+    return transferAll<dma::DMA>(&intf, PLDM_READ_FILE_INTO_MEMORY,
+                                 value.fsPath, offset, length, address, true,
+                                 request->hdr.instance_id);
 }
 
 Response Handler::writeFileFromMemory(const pldm_msg* request,
@@ -563,20 +570,28 @@ Response Handler::writeFileFromMemory(const pldm_msg* request,
     {
         flags = O_WRONLY;
     }
-    using namespace dma;
-    sharedAIORespDataobj.instance_id = request->hdr.instance_id;
-    sharedAIORespDataobj.command = PLDM_WRITE_FILE_FROM_MEMORY;
-    sharedAIORespDataobj.functionPtr = nullptr;
-    sdeventplus::Event event = sdeventplus::Event::get_default();
-    std::shared_ptr<dma::DMA> intf = std::make_shared<dma::DMA>(length);
-    int fd = -1;
-    if (intf)
+
+    if (!value.fsPath.string().contains("PHYP-NVRAM"))
     {
-        fd = intf->openSourcefile(value.fsPath, O_NONBLOCK | flags);
+        using namespace dma;
+        sharedAIORespDataobj.instance_id = request->hdr.instance_id;
+        sharedAIORespDataobj.command = PLDM_WRITE_FILE_FROM_MEMORY;
+        sharedAIORespDataobj.functionPtr = nullptr;
+        sdeventplus::Event event = sdeventplus::Event::get_default();
+        std::shared_ptr<dma::DMA> intf = std::make_shared<dma::DMA>(length);
+        int fd = -1;
+        if (intf)
+        {
+            fd = intf->openSourcefile(value.fsPath, O_NONBLOCK | flags);
+        }
+        transferAllbyAsync(std::move(intf), fd, offset, length, address, false,
+                           sharedAIORespDataobj, event);
+        return {};
     }
-    transferAll(std::move(intf), fd, offset, length, address, false,
-                sharedAIORespDataobj, event);
-    return {};
+    dma::DMA intf(length);
+    return transferAll<dma::DMA>(&intf, PLDM_WRITE_FILE_FROM_MEMORY,
+                                 value.fsPath, offset, length, address, false,
+                                 request->hdr.instance_id);
 }
 
 Response Handler::getFileTable(const pldm_msg* request, size_t payloadLength)

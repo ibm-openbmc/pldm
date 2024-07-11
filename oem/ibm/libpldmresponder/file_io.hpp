@@ -122,13 +122,23 @@ class DMA
     /** @brief Method to fetch the shared memory file descriptor for data
      * transfer
      *
+     * @param[in] isNonBlckSocket - Varible to decide socket should be blocking
+     * / non blocking mode while opening
+     *
      *  @return returns shared memory file descriptor
      */
-    int getNewXdmaFd()
+    int getNewXdmaFd(bool isNonBlckSocket = true)
     {
         try
         {
-            xdmaFd = open(xdmaDev, O_RDWR | O_NONBLOCK);
+            if (isNonBlckSocket)
+            {
+                xdmaFd = open(xdmaDev, O_RDWR | O_NONBLOCK);
+            }
+            else
+            {
+                xdmaFd = open(xdmaDev, O_RDWR);
+            }
         }
         catch (...)
         {
@@ -146,7 +156,7 @@ class DMA
         {
             return xdmaFd;
         }
-        return getNewXdmaFd();
+        return -1;
     }
 
     /** @brief function will keep one copy of fd for exception case so it
@@ -345,11 +355,11 @@ class DMA
     FileMetaData fileMetaData;
 };
 
-/** @brief Transfer the data between BMC and host using DMA.
+/** @brief Transfer the data between BMC and host by DMA using async manner.
  *
- *  There is a max size for each DMA operation, transferAll API abstracts this
- *  and the requested length is broken down into multiple DMA operations if the
- *  length exceed max size.
+ *  There is a max size for each DMA operation, transferAllbyAsync API abstracts
+ * this and the requested length is broken down into multiple DMA operations if
+ * the length exceed max size.
  *
  * @tparam[in] T - DMA interface type
  * @param[in] intf - interface passed to invoke DMA transfer
@@ -365,10 +375,10 @@ class DMA
  */
 
 template <class DMAInterface>
-void transferAll(std::shared_ptr<DMAInterface> intf, int32_t fd,
-                 uint32_t offset, uint32_t length, uint64_t address,
-                 bool upstream, SharedAIORespData& sharedAIORespDataobj,
-                 sdeventplus::Event& event)
+void transferAllbyAsync(std::shared_ptr<DMAInterface> intf, int32_t fd,
+                        uint32_t offset, uint32_t length, uint64_t address,
+                        bool upstream, SharedAIORespData& sharedAIORespDataobj,
+                        sdeventplus::Event& event)
 {
     uint8_t command = sharedAIORespDataobj.command;
     uint8_t instance_id = sharedAIORespDataobj.instance_id;
@@ -542,6 +552,90 @@ void transferAll(std::shared_ptr<DMAInterface> intf, int32_t fd,
         (static_cast<std::shared_ptr<dma::DMA>>(intf)).reset();
     }
     return;
+}
+
+/** @brief Transfer the data between BMC and host using DMA.
+ *
+ *  There is a max size for each DMA operation, transferAll API abstracts this
+ *  and the requested length is broken down into multiple DMA operations if the
+ *  length exceed max size.
+ *
+ * @tparam[in] T - DMA interface type
+ * @param[in] intf - interface passed to invoke DMA transfer
+ * @param[in] command  - PLDM command
+ * @param[in] path     - pathname of the file to transfer data from or to
+ * @param[in] offset   - offset in the file
+ * @param[in] length   - length of the data to transfer
+ * @param[in] address  - DMA address on the host
+ * @param[in] upstream - indicates direction of the transfer; true indicates
+ *                       transfer to the host
+ * @param[in] instanceId - Message's instance id
+ * @return PLDM response message
+ */
+
+template <class DMAInterface>
+Response transferAll(DMAInterface* intf, uint8_t command, fs::path& path,
+                     uint32_t offset, uint32_t length, uint64_t address,
+                     bool upstream, uint8_t instanceId)
+{
+    uint32_t origLength = length;
+    Response response(sizeof(pldm_msg_hdr) + PLDM_RW_FILE_MEM_RESP_BYTES, 0);
+    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+
+    int flags{};
+    if (upstream)
+    {
+        flags = O_RDONLY;
+    }
+    else if (fs::exists(path))
+    {
+        flags = O_RDWR;
+    }
+    else
+    {
+        flags = O_WRONLY;
+    }
+    int file = open(path.string().c_str(), flags);
+    if (file == -1)
+    {
+        error("File does not exist, path = {FILE_PATH}", "FILE_PATH",
+              path.string());
+        encode_rw_file_memory_resp(instanceId, command, PLDM_ERROR, 0,
+                                   responsePtr);
+        return response;
+    }
+
+    pldm::responder::utils::CustomFD fd(file);
+    // To open socket in non blocking mode
+    intf->getNewXdmaFd(false);
+
+    while (length > dma::maxSize)
+    {
+        auto rc = intf->transferDataHost(fd(), offset, dma::maxSize, address,
+                                         upstream);
+        if (rc < 0)
+        {
+            encode_rw_file_memory_resp(instanceId, command, PLDM_ERROR, 0,
+                                       responsePtr);
+            return response;
+        }
+
+        offset += dma::maxSize;
+        length -= dma::maxSize;
+        address += dma::maxSize;
+    }
+
+    auto rc = intf->transferDataHost(fd(), offset, length, address, upstream);
+    if (rc < 0)
+    {
+        encode_rw_file_memory_resp(instanceId, command, PLDM_ERROR, 0,
+                                   responsePtr);
+        return response;
+    }
+
+    encode_rw_file_memory_resp(instanceId, command, PLDM_SUCCESS, origLength,
+                               responsePtr);
+    return response;
 }
 
 } // namespace dma
