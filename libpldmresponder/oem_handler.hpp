@@ -22,6 +22,7 @@ class Handler : public CmdHandler
      *
      *  @param[in] entityType - entity type corresponding to the sensor
      *  @param[in] entityInstance - entity instance number
+     *  @param[in] entityContainerID - container id
      *  @param[in] stateSetId - state set id
      *  @param[in] compSensorCnt - composite sensor count
      *  @param[out] stateField - The state field data for each of the states,

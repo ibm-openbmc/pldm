@@ -37,7 +37,7 @@ class MockOemPlatformHandler : public oem_ibm_platform::Handler
                            uint8_t mctp_eid, pldm::InstanceIdDb& instanceIdDb,
                            sdeventplus::Event& event) :
         oem_ibm_platform::Handler(dBusIntf, codeUpdate, mctp_fd, mctp_eid,
-                                  instanceIdDb, event, nullptr)
+                                  instanceIdDb, event, nullptr, nullptr)
     {}
     MOCK_METHOD(uint16_t, getNextEffecterId, ());
     MOCK_METHOD(uint16_t, getNextSensorId, ());
