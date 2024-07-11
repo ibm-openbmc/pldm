@@ -254,12 +254,13 @@ class HostPDRHandler
      */
     void getFRURecordTableMetadataByRemote();
 
+    void setFRUDynamicAssociations();
+
     /** @brief Set Location Code in the dbus objects
      *
      *  @param[in] fruRecordSetPDRs - the Fru Record set PDR's
      *  @param[in] fruRecordData - the Fru Record Data
      */
-
     void setFRUDataOnDBus(
         const std::vector<responder::pdr_utils::FruRecordDataFormat>&
             fruRecordData);
@@ -279,6 +280,10 @@ class HostPDRHandler
      * @ return
      */
     void createDbusObjects();
+
+    /** @brief set the FRU presence based on the host off signal
+     */
+    void setPresenceFrus();
 
     /* @brief get the Parent chassis object path for a fru
      */
@@ -332,6 +337,12 @@ class HostPDRHandler
      *  @return
      */
     std::string updateLedGroupPath(const std::string& path);
+
+
+    /** @brief set the presence of the fru from record handle
+     *  @param[in] recorHandle - record handle of the PDR
+     */
+    void setRecordPresent(uint32_t recorHandle);
 
 
     /** @brief Get FRU Record Set Identifier from FRU Record data Format
