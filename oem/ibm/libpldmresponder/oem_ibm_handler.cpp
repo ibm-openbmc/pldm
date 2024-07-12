@@ -6,6 +6,7 @@
 
 #include <libpldm/entity.h>
 #include <libpldm/oem/ibm/entity.h>
+#include <libpldm/state_set.h>
 
 #include <phosphor-logging/lg2.hpp>
 #include <xyz/openbmc_project/State/BMC/client.hpp>
@@ -141,6 +142,25 @@ int pldm::responder::oem_ibm_platform::Handler::
                                       this, std::placeholders::_1));
                 }
             }
+            else if (entityType == PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER &&
+                     stateSetId == PLDM_STATE_SET_SYSTEM_POWER_STATE)
+            {
+                if (stateField[currState].effecter_state ==
+                    PLDM_STATE_SET_SYS_POWER_CYCLE_OFF_SOFT_GRACEFUL)
+                {
+                    processPowerCycleOffSoftGraceful();
+                }
+                else if (stateField[currState].effecter_state ==
+                         PLDM_STATE_SET_SYS_POWER_STATE_OFF_SOFT_GRACEFUL)
+                {
+                    processPowerOffSoftGraceful();
+                }
+                else if (stateField[currState].effecter_state ==
+                         PLDM_STATE_SET_SYS_POWER_STATE_OFF_HARD_GRACEFUL)
+                {
+                    processPowerOffHardGraceful();
+                }
+            }
             else
             {
                 rc = PLDM_PLATFORM_SET_EFFECTER_UNSUPPORTED_SENSORSTATE;
@@ -152,6 +172,100 @@ int pldm::responder::oem_ibm_platform::Handler::
         }
     }
     return rc;
+}
+
+void buildAllSystemPowerStateEffecterPDR(
+    oem_ibm_platform::Handler* platformHandler, uint16_t entityType,
+    uint16_t entityInstance, uint16_t stateSetID, pdr_utils::Repo& repo)
+{
+    size_t pdrSize = 0;
+    pdrSize = sizeof(pldm_state_effecter_pdr) +
+              sizeof(state_effecter_possible_states);
+    std::vector<uint8_t> entry{};
+    entry.resize(pdrSize);
+    pldm_state_effecter_pdr* pdr =
+        reinterpret_cast<pldm_state_effecter_pdr*>(entry.data());
+    if (!pdr)
+    {
+        error("Failed to get record by PDR type, ERROR:{ERR}", "ERR", lg2::hex,
+              static_cast<unsigned>(PLDM_PLATFORM_INVALID_EFFECTER_ID));
+        return;
+    }
+    pdr->hdr.record_handle = 0;
+    pdr->hdr.version = 1;
+    pdr->hdr.type = PLDM_STATE_EFFECTER_PDR;
+    pdr->hdr.record_change_num = 0;
+    pdr->hdr.length = sizeof(pldm_state_effecter_pdr) - sizeof(pldm_pdr_hdr);
+    pdr->terminus_handle = TERMINUS_HANDLE;
+    pdr->effecter_id = platformHandler->getNextEffecterId();
+    pdr->entity_type = entityType;
+    pdr->entity_instance = entityInstance;
+    pdr->container_id = 1;
+    pdr->effecter_semantic_id = 0;
+    pdr->effecter_init = PLDM_NO_INIT;
+    pdr->has_description_pdr = false;
+    pdr->composite_effecter_count = 1;
+
+    auto* possibleStatesPtr = pdr->possible_states;
+    auto possibleStates =
+        reinterpret_cast<state_effecter_possible_states*>(possibleStatesPtr);
+    possibleStates->state_set_id = stateSetID;
+    possibleStates->possible_states_size = 2;
+    auto state =
+        reinterpret_cast<state_effecter_possible_states*>(possibleStates);
+    state->states[0].byte = 128;
+    state->states[1].byte = 6;
+    pldm::responder::pdr_utils::PdrEntry pdrEntry{};
+    pdrEntry.data = entry.data();
+    pdrEntry.size = pdrSize;
+    repo.addRecord(pdrEntry);
+}
+
+void attachOemEntityToEntityAssociationPDR(
+    oem_ibm_platform::Handler* platformHandler,
+    pldm_entity_association_tree* bmcEntityTree,
+    const std::string& parentEntityPath, pdr_utils::Repo& repo,
+    pldm_entity childEntity)
+{
+    auto& associatedEntityMap = platformHandler->getAssociateEntityMap();
+    if (associatedEntityMap.contains(parentEntityPath))
+    {
+        // Parent is present in the entity association PDR
+        pldm_entity parent_entity = associatedEntityMap.at(parentEntityPath);
+        auto parent_node = pldm_entity_association_tree_find_with_locality(
+            bmcEntityTree, &parent_entity, false);
+        if (!parent_node)
+        {
+            // parent node not found in the entity association tree,
+            // this should not be possible
+            error(
+                "Parent Entity of type {ENTITY_TYP} not found in the BMC Entity Association tree ",
+                "ENTITY_TYP", static_cast<unsigned>(parent_entity.entity_type));
+            return;
+        }
+
+        uint32_t bmc_record_handle = 0;
+
+        auto lastLocalRecord = pldm_pdr_find_last_in_range(
+            repo.getPdr(), BMC_PDR_START_RANGE, BMC_PDR_END_RANGE);
+        bmc_record_handle = pldm_pdr_get_record_handle(repo.getPdr(),
+                                                       lastLocalRecord);
+        uint32_t updatedRecordHdlBmc = 0;
+        bool found = false;
+        pldm_entity_association_find_parent_entity(
+            repo.getPdr(), &parent_entity, false, &updatedRecordHdlBmc, &found);
+        if (found)
+        {
+            pldm_entity_association_pdr_add_contained_entity_to_remote_pdr(
+                repo.getPdr(), &childEntity, updatedRecordHdlBmc);
+        }
+        else
+        {
+            pldm_entity_association_pdr_create_new(
+                repo.getPdr(), bmc_record_handle, &parent_entity, &childEntity,
+                &updatedRecordHdlBmc);
+        }
+    }
 }
 
 void buildAllCodeUpdateEffecterPDR(oem_ibm_platform::Handler* platformHandler,
@@ -283,6 +397,17 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     buildAllCodeUpdateSensorPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
                                 ENTITY_INSTANCE_0,
                                 PLDM_OEM_IBM_VERIFICATION_STATE, repo);
+
+    buildAllSystemPowerStateEffecterPDR(
+        this, PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER, ENTITY_INSTANCE_0,
+        PLDM_STATE_SET_SYSTEM_POWER_STATE, repo);
+
+    pldm_entity powerStateEntity = {PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER, 0,
+                                    1};
+    attachOemEntityToEntityAssociationPDR(
+        this, bmcEntityTree, "/xyz/openbmc_project/inventory/system", repo,
+        powerStateEntity);
+
     auto sensorId = findStateSensorId(
         repo.getPdr(), 0, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
         ENTITY_INSTANCE_0, 1, PLDM_OEM_IBM_VERIFICATION_STATE);
@@ -687,6 +812,78 @@ void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
         pldm::utils::reportError(
             "xyz.openbmc_project.PLDM.Error.setSurvTimer.RecvSurveillancePingFail");
     }
+}
+
+void pldm::responder::oem_ibm_platform::Handler::
+    processPowerCycleOffSoftGraceful()
+{
+    error("Received soft graceful power cycle request");
+    pldm::utils::PropertyValue value =
+        "xyz.openbmc_project.State.Host.Transition.ForceWarmReboot";
+    pldm::utils::DBusMapping dbusMapping{"/xyz/openbmc_project/state/host0",
+                                         "xyz.openbmc_project.State.Host",
+                                         "RequestedHostTransition", "string"};
+    try
+    {
+        dBusIntf->setDbusProperty(dbusMapping, value);
+    }
+    catch (const std::exception& e)
+    {
+        error(
+            "Error to do a ForceWarmReboot, chassis power remains on, and boot the host back up. Unable to set property RequestedHostTransition. ERROR={ERR_EXCEP}",
+            "ERR_EXCEP", e);
+    }
+}
+
+void pldm::responder::oem_ibm_platform::Handler::processPowerOffSoftGraceful()
+{
+    error("Received soft power off graceful request");
+    pldm::utils::PropertyValue value =
+        "xyz.openbmc_project.State.Chassis.Transition.Off";
+    pldm::utils::DBusMapping dbusMapping{"/xyz/openbmc_project/state/chassis0",
+                                         "xyz.openbmc_project.State.Chassis",
+                                         "RequestedPowerTransition", "string"};
+    try
+    {
+        dBusIntf->setDbusProperty(dbusMapping, value);
+    }
+    catch (const std::exception& e)
+    {
+        error(
+            "Error in powering down the host. Unable to set property RequestedPowerTransition. ERROR={ERR_EXCEP}",
+            "ERR_EXCEP", e);
+    }
+}
+
+void pldm::responder::oem_ibm_platform::Handler::processPowerOffHardGraceful()
+{
+    error("Received hard power off graceful request");
+    pldm::utils::PropertyValue value =
+        "xyz.openbmc_project.Control.Power.RestorePolicy.Policy.AlwaysOn";
+    pldm::utils::DBusMapping dbusMapping{
+        "/xyz/openbmc_project/control/host0/power_restore_policy/one_time",
+        "xyz.openbmc_project.Control.Power.RestorePolicy", "PowerRestorePolicy",
+        "string"};
+    try
+    {
+        auto customerPolicy =
+            pldm::utils::DBusHandler().getDbusProperty<std::string>(
+                "/xyz/openbmc_project/control/host0/power_restore_policy",
+                "PowerRestorePolicy",
+                "xyz.openbmc_project.Control.Power.RestorePolicy");
+        if (customerPolicy !=
+            "xyz.openbmc_project.Control.Power.RestorePolicy.Policy.AlwaysOff")
+        {
+            dBusIntf->setDbusProperty(dbusMapping, value);
+        }
+    }
+    catch (const std::exception& e)
+    {
+        error(
+            "Setting one-time restore policy failed, Unable to set property PowerRestorePolicy. ERROR={ERR_EXCEP}",
+            "ERR_EXCEP", e);
+    }
+    processPowerOffSoftGraceful();
 }
 
 } // namespace oem_ibm_platform
