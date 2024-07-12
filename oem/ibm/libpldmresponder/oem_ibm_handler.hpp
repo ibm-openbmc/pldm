@@ -52,11 +52,12 @@ class Handler : public oem_platform::Handler
             pldm::responder::SlotHandler* slotHandler, int mctp_fd,
             uint8_t mctp_eid, pldm::InstanceIdDb& instanceIdDb,
             sdeventplus::Event& event,
-            pldm::requester::Handler<pldm::requester::Request>* handler) :
-        oem_platform::Handler(dBusIntf), codeUpdate(codeUpdate),
-        slotHandler(slotHandler), platformHandler(nullptr), mctp_fd(mctp_fd),
+            pldm::requester::Handler<pldm::requester::Request>* handler,
+            pldm_entity_association_tree* bmcEntityTree) :
+        oem_platform::Handler(dBusIntf),
+        codeUpdate(codeUpdate), slotHandler(slotHandler), platformHandler(nullptr), mctp_fd(mctp_fd),
         mctp_eid(mctp_eid), instanceIdDb(instanceIdDb), event(event),
-        handler(handler),
+        handler(handler), bmcEntityTree(bmcEntityTree),
         timer(event, std::bind(std::mem_fn(&Handler::setSurvTimer), this,
                                HYPERVISOR_TID, false)),
         hostTransitioningToOff(true)
@@ -305,6 +306,16 @@ class Handler : public oem_platform::Handler
         platformHandler->setEventReceiver();
     }
 
+    /** @brief To process the graceful shutdown, cycle chassis power, and boot
+     *  the host back up*/
+    void processPowerCycleOffSoftGraceful();
+
+    /** @brief To process powering down the host*/
+    void processPowerOffSoftGraceful();
+
+    /** @brief To process auto power restore policy*/
+    void processPowerOffHardGraceful();
+
     /** @brief Method to Enable/Disable timer to see if remote terminus sends
      *  the surveillance ping and logs informational error if remote terminus
      *  fails to send the surveillance pings
@@ -361,6 +372,9 @@ class Handler : public oem_platform::Handler
 
     /** @brief PLDM request handler */
     pldm::requester::Handler<pldm::requester::Request>* handler;
+
+    /** @brief Pointer to BMC's entity association tree */
+    pldm_entity_association_tree* bmcEntityTree;
 
     /** @brief D-Bus property changed signal match */
     std::unique_ptr<sdbusplus::bus::match_t> hostOffMatch;

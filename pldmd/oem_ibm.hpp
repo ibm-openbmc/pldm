@@ -63,7 +63,7 @@ class OemIBM
         responder::platform::Handler* platformHandler,
         responder::fru::Handler* fruHandler,
         responder::base::Handler* baseHandler,
-        pldm::requester::Handler<pldm::requester::Request>* reqHandler, pldm_tid_t tid, bool verbose) :
+        pldm::requester::Handler<pldm::requester::Request>* reqHandler, pldm_entity_association_tree* bmcEntityTree, pldm_tid_t tid, bool verbose) :
         dBusIntf(dBusIntf), mctp_eid(mctp_eid), tid(tid), verbose(verbose), repo(repo),
         pldmTransport(pldmTransport), instanceIdDb(instanceIdDb), event(event), invoker(invoker),
         reqHandler(reqHandler)
@@ -79,7 +79,7 @@ class OemIBM
         createResponseInterface();
         createCodeUpdate();
         createSlotHandler();
-        createOemPlatformHandler();
+        createOemPlatformHandler(bmcEntityTree);
         createOemIbmUtilsHandler();
         codeUpdate->setOemPlatformHandler(oemPlatformHandler.get());
         hostPDRHandler->setOemPlatformHandler(oemPlatformHandler.get());
@@ -116,11 +116,11 @@ class OemIBM
      *  This method also assigns the oemPlatformHandler to the below
      *  different handlers.
      */
-    void createOemPlatformHandler()
+    void createOemPlatformHandler(pldm_entity_association_tree* bmcEntityTree)
     {
         oemPlatformHandler = std::make_unique<oem_ibm_platform::Handler>(
             dBusIntf, codeUpdate.get(), slotHandler.get(), mctp_fd, mctp_eid,
-            instanceIdDb, event, reqHandler);
+            instanceIdDb, event, reqHandler, bmcEntityTree);
     }
 
     /** @brief Method for creating oemIbmPlatformHandler */
