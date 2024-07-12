@@ -18,6 +18,8 @@ using namespace pldm::responder;
 using namespace pldm::responder::pdr;
 using namespace pldm::responder::pdr_utils;
 using namespace pldm::responder::oem_ibm_platform;
+using ::testing::Return;
+using ::testing::ReturnRef;
 
 class MockCodeUpdate : public CodeUpdate
 {
@@ -37,10 +39,11 @@ class MockOemPlatformHandler : public oem_ibm_platform::Handler
                            uint8_t mctp_eid, pldm::InstanceIdDb& instanceIdDb,
                            sdeventplus::Event& event) :
         oem_ibm_platform::Handler(dBusIntf, codeUpdate, mctp_fd, mctp_eid,
-                                  instanceIdDb, event, nullptr)
+                                  instanceIdDb, event, nullptr, nullptr)
     {}
     MOCK_METHOD(uint16_t, getNextEffecterId, ());
     MOCK_METHOD(uint16_t, getNextSensorId, ());
+    MOCK_METHOD((const AssociatedEntityMap&), getAssociateEntityMap, ());
 };
 
 TEST(OemSetStateEffecterStatesHandler, testGoodRequest)
@@ -63,7 +66,7 @@ TEST(OemSetStateEffecterStatesHandler, testGoodRequest)
 
     oemPlatformHandler = std::make_unique<oem_ibm_platform::Handler>(
         mockDbusHandler.get(), mockCodeUpdate.get(), 0x1, 0x9, instanceIdDb,
-        event, nullptr);
+        event, nullptr, nullptr);
 
     auto rc = oemPlatformHandler->getOemStateSensorReadingsHandler(
         entityID_, entityInstance_, stateSetId_, compSensorCnt_, stateField);
@@ -185,6 +188,7 @@ TEST(clearDirPath, testClearDirPath)
 
 TEST(generateStateEffecterOEMPDR, testGoodRequest)
 {
+    const AssociatedEntityMap associateMap = {};
     auto inPDRRepo = pldm_pdr_init();
     sdbusplus::bus_t bus(sdbusplus::bus::new_default());
     TestInstanceIdDb instanceIdDb;
@@ -192,11 +196,14 @@ TEST(generateStateEffecterOEMPDR, testGoodRequest)
     auto event = sdeventplus::Event::get_default();
     std::unique_ptr<CodeUpdate> mockCodeUpdate =
         std::make_unique<MockCodeUpdate>(mockDbusHandler.get());
-    std::unique_ptr<oem_ibm_platform::Handler> mockoemPlatformHandler =
+    std::unique_ptr<MockOemPlatformHandler> mockoemPlatformHandler =
         std::make_unique<MockOemPlatformHandler>(mockDbusHandler.get(),
                                                  mockCodeUpdate.get(), 0x1, 0x9,
                                                  instanceIdDb, event);
     Repo inRepo(inPDRRepo);
+
+    EXPECT_CALL(*mockoemPlatformHandler, getAssociateEntityMap())
+        .WillRepeatedly(ReturnRef(associateMap));
 
     mockoemPlatformHandler->buildOEMPDR(inRepo);
     ASSERT_EQ(inRepo.empty(), false);
@@ -290,6 +297,7 @@ TEST(generateStateEffecterOEMPDR, testGoodRequest)
 
 TEST(generateStateSensorOEMPDR, testGoodRequest)
 {
+    const AssociatedEntityMap associateMap = {};
     auto inPDRRepo = pldm_pdr_init();
     sdbusplus::bus_t bus(sdbusplus::bus::new_default());
     TestInstanceIdDb instanceIdDb;
@@ -298,10 +306,12 @@ TEST(generateStateSensorOEMPDR, testGoodRequest)
     auto event = sdeventplus::Event::get_default();
     std::unique_ptr<CodeUpdate> mockCodeUpdate =
         std::make_unique<MockCodeUpdate>(mockDbusHandler.get());
-    std::unique_ptr<oem_ibm_platform::Handler> mockoemPlatformHandler =
+    std::unique_ptr<MockOemPlatformHandler> mockoemPlatformHandler =
         std::make_unique<MockOemPlatformHandler>(mockDbusHandler.get(),
                                                  mockCodeUpdate.get(), 0x1, 0x9,
                                                  instanceIdDb, event);
+    EXPECT_CALL(*mockoemPlatformHandler, getAssociateEntityMap())
+        .WillRepeatedly(ReturnRef(associateMap));
     Repo inRepo(inPDRRepo);
     mockoemPlatformHandler->buildOEMPDR(inRepo);
     ASSERT_EQ(inRepo.empty(), false);

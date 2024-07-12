@@ -54,6 +54,7 @@ class Handler : public CmdHandler
             pldm_pdr* repo, HostPDRHandler* hostPDRHandler,
             pldm::state_sensor::DbusToPLDMEvent* dbusToPLDMEventHandler,
             fru::Handler* fruHandler,
+            pldm_entity_association_tree* bmcEntityTree,
             pldm::responder::oem_platform::Handler* oemPlatformHandler,
             pldm::responder::platform_config::Handler* platformConfigHandler,
             pldm::requester::Handler<pldm::requester::Request>* handler,
@@ -63,7 +64,8 @@ class Handler : public CmdHandler
         instanceIdDb(instanceIdDb), pdrRepo(repo),
         hostPDRHandler(hostPDRHandler),
         dbusToPLDMEventHandler(dbusToPLDMEventHandler), fruHandler(fruHandler),
-        dBusIntf(dBusIntf), oemPlatformHandler(oemPlatformHandler),
+        bmcEntityTree(bmcEntityTree), dBusIntf(dBusIntf),
+        oemPlatformHandler(oemPlatformHandler),
         platformConfigHandler(platformConfigHandler), handler(handler),
         event(event), pdrJsonDir(pdrJsonDir), pdrCreated(false),
         pdrJsonsDir({pdrJsonDir})
@@ -499,6 +501,7 @@ class Handler : public CmdHandler
     HostPDRHandler* hostPDRHandler;
     pldm::state_sensor::DbusToPLDMEvent* dbusToPLDMEventHandler;
     fru::Handler* fruHandler;
+    pldm_entity_association_tree* bmcEntityTree;
     const pldm::utils::DBusHandler* dBusIntf;
     pldm::responder::oem_platform::Handler* oemPlatformHandler;
     pldm::responder::platform_config::Handler* platformConfigHandler;
