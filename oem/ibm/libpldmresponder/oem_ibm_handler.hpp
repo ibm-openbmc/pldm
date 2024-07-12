@@ -1,5 +1,8 @@
 #pragma once
 
+#include "libpldm/oem/ibm/entity.h"
+
+#include "common/utils.hpp"
 #include "inband_code_update.hpp"
 #include "libpldmresponder/oem_handler.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
@@ -21,6 +24,8 @@ namespace pldm
 {
 namespace responder
 {
+using ObjectPath = std::string;
+using AssociatedEntityMap = std::map<ObjectPath, pldm_entity>;
 namespace oem_ibm_platform
 {
 constexpr uint16_t ENTITY_INSTANCE_0 = 0;
@@ -47,11 +52,12 @@ class Handler : public oem_platform::Handler
             pldm::responder::CodeUpdate* codeUpdate, int mctp_fd,
             uint8_t mctp_eid, pldm::InstanceIdDb& instanceIdDb,
             sdeventplus::Event& event,
-            pldm::requester::Handler<pldm::requester::Request>* handler) :
+            pldm::requester::Handler<pldm::requester::Request>* handler,
+            pldm_entity_association_tree* bmcEntityTree) :
         oem_platform::Handler(dBusIntf),
         codeUpdate(codeUpdate), platformHandler(nullptr), mctp_fd(mctp_fd),
         mctp_eid(mctp_eid), instanceIdDb(instanceIdDb), event(event),
-        handler(handler),
+        handler(handler), bmcEntityTree(bmcEntityTree),
         timer(event, std::bind(std::mem_fn(&Handler::setSurvTimer), this,
                                HYPERVISOR_TID, false)),
         hostTransitioningToOff(true)
@@ -147,7 +153,8 @@ class Handler : public oem_platform::Handler
     }
 
     int getOemStateSensorReadingsHandler(
-        EntityType entityType, pldm::pdr::EntityInstance entityInstance,
+        pldm::pdr::EntityType entityType,
+        pldm::pdr::EntityInstance entityInstance,
         pldm::pdr::StateSetId stateSetId,
         pldm::pdr::CompositeCount compSensorCnt,
         std::vector<get_sensor_state_field>& stateField);
@@ -181,6 +188,11 @@ class Handler : public oem_platform::Handler
     virtual uint16_t getNextSensorId()
     {
         return platformHandler->getNextSensorId();
+    }
+
+    virtual const AssociatedEntityMap& getAssociateEntityMap()
+    {
+        return platformHandler->getAssociateEntityMap();
     }
 
     /** @brief Method to Generate the OEM PDRs
@@ -287,6 +299,16 @@ class Handler : public oem_platform::Handler
         platformHandler->setEventReceiver();
     }
 
+    /** @brief To process the graceful shutdown, cycle chassis power, and boot
+     *  the host back up*/
+    void processPowerCycleOffSoftGraceful();
+
+    /** @brief To process powering down the host*/
+    void processPowerOffSoftGraceful();
+
+    /** @brief To process auto power restore policy*/
+    void processPowerOffHardGraceful();
+
     /** @brief Method to Enable/Disable timer to see if remote terminus sends
      *  the surveillance ping and logs informational error if remote terminus
      *  fails to send the surveillance pings
@@ -335,6 +357,9 @@ class Handler : public oem_platform::Handler
 
     /** @brief PLDM request handler */
     pldm::requester::Handler<pldm::requester::Request>* handler;
+
+    /** @brief Pointer to BMC's entity association tree */
+    pldm_entity_association_tree* bmcEntityTree;
 
     /** @brief D-Bus property changed signal match */
     std::unique_ptr<sdbusplus::bus::match_t> hostOffMatch;
