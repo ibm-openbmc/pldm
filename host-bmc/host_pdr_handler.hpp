@@ -23,7 +23,6 @@
 
 namespace pldm
 {
-using EntityType = uint16_t;
 // vector which would hold the PDR record handle data returned by
 // pldmPDRRepositoryChgEvent event data
 using ChangeEntry = uint32_t;
@@ -88,6 +87,7 @@ class HostPDRHandler
      *  @param[in] bmcEntityTree - pointer to BMC's entity association tree
      *  @param[in] instanceIdDb - reference to an InstanceIdDb object
      *  @param[in] handler - PLDM request handler
+     *  @param[in] oemUtilsHandler - pointer oem utils handler
      */
     explicit HostPDRHandler(
         int mctp_fd, uint8_t mctp_eid, sdeventplus::Event& event,
@@ -172,6 +172,26 @@ class HostPDRHandler
     /** @brief check whether Host is running when pldmd starts
      */
     bool isHostUp();
+
+    /** @brief Updating the entity object path and entity node in map
+     *
+     * @param[in] path - object path
+     * @param[in] entity - pldm entity node
+     */
+    inline void updateObjectPathMaps(const std::string& path,
+                                     const pldm_entity entity)
+    {
+        objPathMap[path] = entity;
+    }
+
+    /* @brief Method to set the oem utils handler in host pdr handler class
+     *
+     * @param[in] handler - oem utils handler
+     */
+    inline void setOemUtilsHandler(pldm::responder::oem_utils::Handler* handler)
+    {
+        oemUtilsHandler = handler;
+    }
 
     /** @brief map that captures various terminus information **/
     TLPDRMap tlPDRInfo;
@@ -316,11 +336,11 @@ class HostPDRHandler
     /** @brief maps an object path to pldm_entity from the BMC's entity
      *         association tree
      */
-    ObjectPathMaps objPathMap;
+    pldm::utils::ObjectPathMaps objPathMap;
 
     /** @brief maps an entity name to map, maps to entity name to pldm_entity
      */
-    EntityAssociations entityAssociations;
+    pldm::utils::EntityAssociations entityAssociations;
 
     /** @brief the vector of FRU Record Data Format
      */
@@ -331,7 +351,10 @@ class HostPDRHandler
 
     /** @brief entityID and entity name is only loaded once
      */
-    EntityMaps entityMaps;
+    pldm::utils::EntityMaps entityMaps;
+
+    /** @OEM Utils handler */
+    pldm::responder::oem_utils::Handler* oemUtilsHandler;
 
     PDRList stateSensorPDRs;
     PDRList fruRecordSetPDRs{};

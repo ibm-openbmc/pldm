@@ -91,5 +91,42 @@ void CustomDBus::setAvailabilityState(const std::string& path,
     availabilityState.at(path)->available(state);
 }
 
+void CustomDBus::implementCpuCoreInterface(const std::string& path)
+{
+    if (!cpuCore.contains(path))
+    {
+        cpuCore.emplace(path, std::make_unique<CPUCore>(
+                                  pldm::utils::DBusHandler::getBus(), path));
+    }
+}
+
+void CustomDBus::setMicroCode(const std::string& path, uint32_t value)
+{
+    if (!cpuCore.contains(path))
+    {
+        cpuCore.emplace(path, std::make_unique<CPUCore>(
+                                  pldm::utils::DBusHandler::getBus(), path));
+    }
+    cpuCore.at(path)->microcode(value);
+}
+
+std::optional<uint32_t> CustomDBus::getMicroCode(const std::string& path) const
+{
+    if (cpuCore.contains(path))
+    {
+        return cpuCore.at(path)->microcode();
+    }
+    return std::nullopt;
+}
+
+void CustomDBus::implementMotherboardInterface(const std::string& path)
+{
+    if (motherboard.find(path) == motherboard.end())
+    {
+        motherboard.emplace(path,
+                            std::make_unique<Motherboard>(
+                                pldm::utils::DBusHandler::getBus(), path));
+    }
+}
 } // namespace dbus
 } // namespace pldm
