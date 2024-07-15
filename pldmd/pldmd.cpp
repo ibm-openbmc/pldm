@@ -246,6 +246,8 @@ int main(int argc, char** argv)
     respInterface.responseObj =
         std::make_unique<pldm::response_api::AltResponse>(&pldmTransport, TID,
                                                           verbose);
+    std::unique_ptr<oem_utils::Handler> oemUtilsHandler =
+        std::make_unique<oem_ibm_utils::Handler>(&dbusHandler);
     std::unique_ptr<pldm::responder::CodeUpdate> codeUpdate =
         std::make_unique<pldm::responder::CodeUpdate>(&dbusHandler);
     codeUpdate->clearDirPath(LID_STAGING_DIR);
@@ -269,7 +271,7 @@ int main(int argc, char** argv)
         // HostFirmware interface needs access to hostPDR to know if host
         // is running
         dbusImplHost.setHostPdrObj(hostPDRHandler);
-
+        hostPDRHandler->setOemUtilsHandler(oemUtilsHandler.get());
         hostEffecterParser =
             std::make_unique<pldm::host_effecters::HostEffecterParser>(
                 &instanceIdDb, pldmTransport.getEventSource(), pdrRepo.get(),
