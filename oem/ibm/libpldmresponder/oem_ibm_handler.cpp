@@ -38,6 +38,7 @@ int pldm::responder::oem_ibm_platform::Handler::
     for (size_t i = 0; i < compSensorCnt; i++)
     {
         uint8_t sensorOpState{};
+        uint8_t presentState = PLDM_SENSOR_UNKNOWN;
         if (entityType == PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE &&
             stateSetId == PLDM_OEM_IBM_BOOT_STATE)
         {
@@ -57,12 +58,18 @@ int pldm::responder::oem_ibm_platform::Handler::
                 }
             }
         }
+        else if (entityType == PLDM_OEM_IBM_ENTITY_REAL_SAI &&
+                 stateSetId == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS)
+        {
+            sensorOpState = fetchRealSAIStatus();
+            presentState = PLDM_SENSOR_NORMAL;
+        }
         else
         {
             rc = PLDM_PLATFORM_INVALID_STATE_VALUE;
             break;
         }
-        stateField.push_back({PLDM_SENSOR_ENABLED, PLDM_SENSOR_UNKNOWN,
+        stateField.push_back({PLDM_SENSOR_ENABLED, presentState,
                               PLDM_SENSOR_UNKNOWN, sensorOpState});
     }
     return rc;
@@ -183,6 +190,11 @@ int pldm::responder::oem_ibm_platform::Handler::
                 {
                     processPowerOffHardGraceful();
                 }
+            }
+            else if (entityType == PLDM_OEM_IBM_ENTITY_REAL_SAI &&
+                     stateSetId == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS)
+            {
+                turnOffRealSAIEffecter();
             }
             else
             {
@@ -484,7 +496,8 @@ void buildAllSlotEnableSensorPDR(oem_ibm_platform::Handler* platformHandler,
         pdr->hdr.length = sizeof(pldm_state_sensor_pdr) - sizeof(pldm_pdr_hdr);
         pdr->terminus_handle = TERMINUS_HANDLE;
         pdr->sensor_id = platformHandler->getNextSensorId();
-        if (entity_path != "" && associatedEntityMap.contains(entity_path))
+        if (entity_path != "" &&
+            associatedEntityMap.find(entity_path) != associatedEntityMap.end())
         {
             pdr->entity_type = associatedEntityMap.at(entity_path).entity_type;
             pdr->entity_instance =
@@ -505,7 +518,7 @@ void buildAllSlotEnableSensorPDR(oem_ibm_platform::Handler* platformHandler,
         auto* possibleStatesPtr = pdr->possible_states;
         auto possibleStates =
             reinterpret_cast<state_sensor_possible_states*>(possibleStatesPtr);
-        possibleStates->state_set_id = PLDM_OEM_IBM_PCIE_SLOT_SENSOR_STATE;
+        possibleStates->state_set_id =  PLDM_OEM_IBM_PCIE_SLOT_SENSOR_STATE;
         possibleStates->possible_states_size = 1;
         auto state =
             reinterpret_cast<state_sensor_possible_states*>(possibleStates);
@@ -515,6 +528,101 @@ void buildAllSlotEnableSensorPDR(oem_ibm_platform::Handler* platformHandler,
         pdrEntry.size = pdrSize;
         repo.addRecord(pdrEntry);
     }
+}
+
+void buildAllRealSAIEffecterPDR(oem_ibm_platform::Handler* platformHandler,
+                                uint16_t entityType, uint16_t entityInstance,
+                                pdr_utils::Repo& repo)
+{
+    size_t pdrSize = 0;
+    pdrSize = sizeof(pldm_state_effecter_pdr) +
+              sizeof(state_effecter_possible_states);
+    std::vector<uint8_t> entry{};
+    entry.resize(pdrSize);
+    pldm_state_effecter_pdr* pdr =
+        reinterpret_cast<pldm_state_effecter_pdr*>(entry.data());
+    if (!pdr)
+    {
+        error("Failed to get Real SAI effecter PDR record due to the "
+              "error {ERR_CODE}",
+              "ERR_CODE", lg2::hex,
+              static_cast<unsigned>(PLDM_PLATFORM_INVALID_EFFECTER_ID));
+        return;
+    }
+    pdr->hdr.record_handle = 0;
+    pdr->hdr.version = 1;
+    pdr->hdr.type = PLDM_STATE_EFFECTER_PDR;
+    pdr->hdr.record_change_num = 0;
+    pdr->hdr.length = sizeof(pldm_state_effecter_pdr) - sizeof(pldm_pdr_hdr);
+    pdr->terminus_handle = TERMINUS_HANDLE;
+    pdr->effecter_id = platformHandler->getNextEffecterId();
+    pdr->entity_type = entityType;
+    pdr->entity_instance = entityInstance;
+    pdr->container_id = 1;
+    pdr->effecter_semantic_id = 0;
+    pdr->effecter_init = PLDM_NO_INIT;
+    pdr->has_description_pdr = false;
+    pdr->composite_effecter_count = 1;
+
+    auto* possibleStatesPtr = pdr->possible_states;
+    auto possibleStates =
+        reinterpret_cast<state_effecter_possible_states*>(possibleStatesPtr);
+    possibleStates->state_set_id = PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS;
+    possibleStates->possible_states_size = 1;
+    auto state =
+        reinterpret_cast<state_effecter_possible_states*>(possibleStates);
+    state->states[0].byte = 2;
+    pldm::responder::pdr_utils::PdrEntry pdrEntry{};
+    pdrEntry.data = entry.data();
+    pdrEntry.size = pdrSize;
+    repo.addRecord(pdrEntry);
+}
+
+void buildAllRealSAISensorPDR(oem_ibm_platform::Handler* platformHandler,
+                              uint16_t entityType, uint16_t entityInstance,
+                              pdr_utils::Repo& repo)
+{
+    size_t pdrSize = 0;
+    pdrSize = sizeof(pldm_state_sensor_pdr) +
+              sizeof(state_sensor_possible_states);
+    std::vector<uint8_t> entry{};
+    entry.resize(pdrSize);
+    pldm_state_sensor_pdr* pdr =
+        reinterpret_cast<pldm_state_sensor_pdr*>(entry.data());
+    if (!pdr)
+    {
+        error("Failed to get Real SAI sensor PDR record due to the "
+              "error {ERR_CODE}",
+              "ERR_CODE", lg2::hex,
+              static_cast<unsigned>(PLDM_PLATFORM_INVALID_SENSOR_ID));
+        return;
+    }
+    pdr->hdr.record_handle = 0;
+    pdr->hdr.version = 1;
+    pdr->hdr.type = PLDM_STATE_SENSOR_PDR;
+    pdr->hdr.record_change_num = 0;
+    pdr->hdr.length = sizeof(pldm_state_sensor_pdr) - sizeof(pldm_pdr_hdr);
+    pdr->terminus_handle = TERMINUS_HANDLE;
+    pdr->sensor_id = platformHandler->getNextSensorId();
+    pdr->entity_type = entityType;
+    pdr->entity_instance = entityInstance;
+    pdr->container_id = 1;
+    pdr->sensor_init = PLDM_NO_INIT;
+    pdr->sensor_auxiliary_names_pdr = false;
+    pdr->composite_sensor_count = 1;
+
+    auto* possibleStatesPtr = pdr->possible_states;
+    auto possibleStates =
+        reinterpret_cast<state_sensor_possible_states*>(possibleStatesPtr);
+    possibleStates->state_set_id = PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS;
+    possibleStates->possible_states_size = 2;
+    auto state =
+        reinterpret_cast<state_sensor_possible_states*>(possibleStates);
+    state->states[0].byte = 6;
+    pldm::responder::pdr_utils::PdrEntry pdrEntry{};
+    pdrEntry.data = entry.data();
+    pdrEntry.size = pdrSize;
+    repo.addRecord(pdrEntry);
 }
 
 void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
@@ -532,6 +640,8 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     buildAllCodeUpdateEffecterPDR(this, PLDM_ENTITY_SYSTEM_CHASSIS,
                                   ENTITY_INSTANCE_1,
                                   PLDM_OEM_IBM_SYSTEM_POWER_STATE, repo);
+    buildAllRealSAIEffecterPDR(this, PLDM_OEM_IBM_ENTITY_REAL_SAI,
+                               ENTITY_INSTANCE_1, repo);
 
     static constexpr auto objectPath = "/xyz/openbmc_project/inventory/system";
     const std::vector<std::string> slotInterface = {
@@ -552,17 +662,26 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     buildAllCodeUpdateSensorPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
                                 ENTITY_INSTANCE_0,
                                 PLDM_OEM_IBM_VERIFICATION_STATE, repo);
+    buildAllRealSAISensorPDR(this, PLDM_OEM_IBM_ENTITY_REAL_SAI,
+                             ENTITY_INSTANCE_1, repo);
 
     buildAllSystemPowerStateEffecterPDR(
         this, PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER, ENTITY_INSTANCE_0,
         PLDM_STATE_SET_SYSTEM_POWER_STATE, repo);
 
+    pldm_entity saiEntity = {PLDM_OEM_IBM_ENTITY_REAL_SAI, 1, 1};
+    attachOemEntityToEntityAssociationPDR(
+        this, bmcEntityTree, "/xyz/openbmc_project/inventory/system", repo,
+        saiEntity);
     pldm_entity powerStateEntity = {PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER, 0,
                                     1};
     attachOemEntityToEntityAssociationPDR(
         this, bmcEntityTree, "/xyz/openbmc_project/inventory/system", repo,
         powerStateEntity);
 
+    realSAISensorId = findStateSensorId(
+        repo.getPdr(), 0, PLDM_OEM_IBM_ENTITY_REAL_SAI, ENTITY_INSTANCE_1, 1,
+        PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS);
     auto sensorId = findStateSensorId(
         repo.getPdr(), 0, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
         ENTITY_INSTANCE_0, 1, PLDM_OEM_IBM_VERIFICATION_STATE);
@@ -1041,6 +1160,68 @@ void pldm::responder::oem_ibm_platform::Handler::processPowerOffHardGraceful()
             "ERR_EXCEP", e);
     }
     processPowerOffSoftGraceful();
+}
+
+void pldm::responder::oem_ibm_platform::Handler::turnOffRealSAIEffecter()
+{
+    try
+    {
+        pldm::utils::DBusMapping dbusPartitionMapping{
+            "/xyz/openbmc_project/led/groups/partition_system_attention_indicator",
+            "xyz.openbmc_project.Led.Group", "Asserted", "bool"};
+        pldm::utils::DBusHandler().setDbusProperty(dbusPartitionMapping, false);
+    }
+    catch (const std::exception& e)
+    {
+        error("Turn off of partition SAI effecter failed with "
+              "error:{ERR_EXCEP}",
+              "ERR_EXCEP", e);
+    }
+    try
+    {
+        pldm::utils::DBusMapping dbusPlatformMapping{
+            "/xyz/openbmc_project/led/groups/platform_system_attention_indicator",
+            "xyz.openbmc_project.Led.Group", "Asserted", "bool"};
+        pldm::utils::DBusHandler().setDbusProperty(dbusPlatformMapping, false);
+    }
+    catch (const std::exception& e)
+    {
+        error("Turn off of platform SAI effecter failed with "
+              "error:{ERR_EXCEP}",
+              "ERR_EXCEP", e);
+    }
+}
+
+uint8_t pldm::responder::oem_ibm_platform::Handler::fetchRealSAIStatus()
+{
+    try
+    {
+        auto isPartitionSAIOn = pldm::utils::DBusHandler().getDbusProperty<bool>(
+            "/xyz/openbmc_project/led/groups/partition_system_attention_indicator",
+            "Asserted", "xyz.openbmc_project.Led.Group");
+        auto isPlatformSAIOn = pldm::utils::DBusHandler().getDbusProperty<bool>(
+            "/xyz/openbmc_project/led/groups/platform_system_attention_indicator",
+            "Asserted", "xyz.openbmc_project.Led.Group");
+
+        if (isPartitionSAIOn || isPlatformSAIOn)
+        {
+            return PLDM_SENSOR_WARNING;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        error("Fetching of Real SAI sensor status failed with "
+              "error:{ERR_EXCEP}",
+              "ERR_EXCEP", e);
+    }
+    return PLDM_SENSOR_NORMAL;
+}
+
+void pldm::responder::oem_ibm_platform::Handler::processSAIUpdate()
+{
+    auto realSAIState = fetchRealSAIStatus();
+    sendStateSensorEvent(realSAISensorId, PLDM_STATE_SENSOR_STATE, 0,
+                         uint8_t(realSAIState), uint8_t(PLDM_SENSOR_UNKNOWN));
 }
 
 } // namespace oem_ibm_platform
