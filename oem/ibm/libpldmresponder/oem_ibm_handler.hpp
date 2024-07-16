@@ -4,6 +4,7 @@
 #include "libpldmresponder/oem_handler.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
 #include "libpldmresponder/platform.hpp"
+#include "oem/ibm/requester/dbus_to_file_handler.hpp"
 #include "requester/handler.hpp"
 #include "utils.hpp"
 
@@ -22,8 +23,41 @@ namespace pldm
 {
 namespace responder
 {
+
 using ObjectPath = std::string;
 using AssociatedEntityMap = std::map<ObjectPath, pldm_entity>;
+
+namespace oem_ibm_fileio
+{
+
+class Handler : public oem_fileio::Handler
+{
+  public:
+    Handler(int mctp_fd, uint8_t mctp_eid, pldm::InstanceIdDb* instanceIdDb,
+            sdbusplus::message::object_path path,
+            pldm::requester::Handler<pldm::requester::Request>* handler)
+    {
+        dbusToFileHandler =
+            std::make_unique<pldm::requester::oem_ibm::DbusToFileHandler>(
+                mctp_fd, mctp_eid, instanceIdDb, path, handler);
+    }
+    virtual void newChapDataFileAvailable(const std::string& chapNameStr,
+                                          const std::string& userChallengeStr)
+    {
+        if (dbusToFileHandler != nullptr)
+        {
+            dbusToFileHandler->newChapDataFileAvailable(chapNameStr,
+                                                        userChallengeStr);
+        }
+    }
+    virtual ~Handler() = default;
+
+  private:
+    std::unique_ptr<pldm::requester::oem_ibm::DbusToFileHandler>
+        dbusToFileHandler;
+};
+} // namespace oem_ibm_fileio
+
 namespace oem_ibm_platform
 {
 constexpr uint16_t ENTITY_INSTANCE_0 = 0;
@@ -63,6 +97,11 @@ class Handler : public oem_platform::Handler
         codeUpdate->setVersions();
         pldm::responder::utils::clearLicenseStatus();
         setEventReceiverCnt = 0;
+        sdbusplus::message::object_path path;
+        dbusToFileioIntf =
+            std::make_unique<pldm::responder::oem_ibm_fileio::Handler>(
+                mctp_fd, mctp_eid, &instanceIdDb, path, handler);
+        pldm::responder::utils::hostChapDataIntf(dbusToFileioIntf.get());
 
         using namespace sdbusplus::bus::match::rules;
         hostOffMatch = std::make_unique<sdbusplus::bus::match_t>(
@@ -433,6 +472,8 @@ class Handler : public oem_platform::Handler
 
     /** @brief Real SAI sensor id*/
     uint16_t realSAISensorId;
+
+    std::unique_ptr<pldm::responder::oem_fileio::Handler> dbusToFileioIntf;
 };
 
 /** @brief Method to encode code update event msg

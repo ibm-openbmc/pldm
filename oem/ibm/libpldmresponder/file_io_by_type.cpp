@@ -1,6 +1,7 @@
 #include "common/utils.hpp"
 #include "file_io.hpp"
 #include "file_io_type_cert.hpp"
+#include "file_io_type_chap.hpp"
 #include "file_io_type_dump.hpp"
 #include "file_io_type_lic.hpp"
 #include "file_io_type_lid.hpp"
@@ -466,6 +467,10 @@ std::unique_ptr<FileHandler> getHandlerByType(uint16_t fileType,
         case PLDM_FILE_TYPE_CABLE_INFO:
         {
             return std::make_unique<PCIeInfoHandler>(fileHandle, fileType);
+        }
+        case PLDM_FILE_TYPE_CHAP_DATA:
+        {
+            return std::make_unique<ChapHandler>(fileHandle, fileType);
         }
         default:
         {

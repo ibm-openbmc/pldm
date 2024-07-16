@@ -56,6 +56,17 @@ bool CustomDBus::getOperationalStatus(const std::string& path) const
     return false;
 }
 
+void CustomDBus::implementChapDataInterface(
+    const std::string& path,
+    pldm::responder::oem_fileio::Handler* dbusToFilehandlerObj)
+{
+    if (chapdata.find(path) == chapdata.end())
+    {
+        chapdata.emplace(path, std::make_unique<ChapDatas>(
+                                   pldm::utils::DBusHandler::getBus(),
+                                   path.c_str(), dbusToFilehandlerObj));
+    }
+}
 void CustomDBus::implementLicInterfaces(
     const std::string& path, const uint32_t& authdevno, const std::string& name,
     const std::string& serialno, const uint64_t& exptime,

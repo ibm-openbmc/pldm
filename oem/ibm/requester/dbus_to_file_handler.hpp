@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/instance_id.hpp"
+#include "pldmd/dbus_impl_requester.hpp"
 #include "requester/handler.hpp"
 
 #include <libpldm/platform.h>
@@ -56,6 +57,13 @@ class DbusToFileHandler
      */
     void newCsrFileAvailable(const std::string& csr,
                              const std::string fileHandle);
+
+    /** @brief Process the new chapdata file available
+     *  @param[in] chapNameStr - chap data string
+     *  @param[in] userChallengeStr - encrypted chap secret string
+     */
+    void newChapDataFileAvailable(const std::string& chapNameStr,
+                                  const std::string& userChallengeStr);
 
     /** @brief Process the new license file available
      *  @param[in] licenseStr - License string
