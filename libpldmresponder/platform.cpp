@@ -582,6 +582,7 @@ int Handler::pldmPDRRepositoryChgEvent(
                 {
                     return rc;
                 }
+                hostPDRHandler->modifiedCounter += pdrRecordHandles.size();
             }
 
             changeRecordData +=
@@ -622,8 +623,8 @@ int Handler::pldmPDRRepositoryChgEvent(
             info(
                 "Got a records added event from tid '{TID}' eventDataOperation is {ED}",
                 "TID", tid, "ED", eventDataOperation);
-            hostPDRHandler->fetchPDR(std::move(pdrRecordHandles), tid);
         }
+        hostPDRHandler->fetchPDR(std::move(pdrRecordHandles), tid);
     }
 
     return PLDM_SUCCESS;

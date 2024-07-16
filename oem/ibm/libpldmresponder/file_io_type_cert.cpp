@@ -98,9 +98,6 @@ void CertHandler::readIntoMemory(uint32_t offset, uint32_t length,
 int CertHandler::read(uint32_t offset, uint32_t& length, Response& response,
                       oem_platform::Handler* /*oemPlatformHandler*/)
 {
-    info(
-        "Read file response for Sign CSR failed and file handle '{FILE_HANDLE}'",
-        "FILE_HANDLE", fileHandle);
     std::string filePath = certFilePath;
     filePath += "CSR_" + std::to_string(fileHandle);
     if (certType != PLDM_FILE_TYPE_CERT_SIGNING_REQUEST)

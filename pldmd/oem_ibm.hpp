@@ -120,7 +120,7 @@ class OemIBM
     {
         oemPlatformHandler = std::make_unique<oem_ibm_platform::Handler>(
             dBusIntf, codeUpdate.get(), slotHandler.get(), mctp_fd, mctp_eid,
-            instanceIdDb, event, reqHandler, bmcEntityTree);
+            instanceIdDb, event, repo, reqHandler, bmcEntityTree);
     }
 
     /** @brief Method for creating oemIbmPlatformHandler */
