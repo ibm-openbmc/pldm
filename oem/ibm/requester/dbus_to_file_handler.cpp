@@ -43,11 +43,19 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
         sizeof(pldm_msg_hdr) + PLDM_NEW_FILE_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
     // Need to revisit this logic at the time of multiple resource dump support
-    uint32_t fileHandle = 1;
 
-    auto rc =
-        encode_new_file_req(instanceId, PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS,
-                            fileHandle, fileSize, request);
+    std::string pathString = static_cast<std::string>(resDumpCurrentObjPath);
+    std::string filename = fs::path(pathString).filename().string();
+
+    char* end;
+    uint32_t fileHandle = std::strtoul(filename.c_str(), &end, hexaDecimalBase);
+
+    info(
+        "File name in sendNewFileAvailableCmd that we encode new_file_req is {FILENAME}",
+        "FILENAME", filename);
+    auto rc = encode_new_file_req(instanceId,
+                                  PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS,
+                                  fileHandle, fileSize, request);
     if (rc != PLDM_SUCCESS)
     {
         instanceIdDb->free(mctp_eid, instanceId);
@@ -141,12 +149,18 @@ void DbusToFileHandler::processNewResourceDump(
 
     // Need to reconsider this logic to set the value as "1" when we have the
     // support to handle multiple resource dumps
-    fs::path resDumpFilePath = resDumpDirPath / "1";
 
-    std::ofstream fileHandle;
-    fileHandle.open(resDumpFilePath, std::ios::out | std::ofstream::binary);
+    std::string pathString = static_cast<std::string>(resDumpCurrentObjPath);
+    std::string filename = fs::path(pathString).filename().string();
 
-    if (!fileHandle)
+    info("In processNewResourceDump fileHandle is {FILENAME}", "FILENAME",
+         filename);
+    fs::path resDumpFilePath = resDumpDirPath / filename;
+
+    std::ofstream fileHandleFd;
+    fileHandleFd.open(resDumpFilePath, std::ios::out | std::ofstream::binary);
+
+    if (!fileHandleFd)
     {
         error("Failed to open resource dump file '{PATH}'", "PATH",
               resDumpFilePath);
@@ -167,10 +181,10 @@ void DbusToFileHandler::processNewResourceDump(
     }
 
     // Fill up the file with resource dump parameters and respective sizes
-    auto fileFunc = [&fileHandle](auto& paramBuf) {
+    auto fileFunc = [&fileHandleFd](auto& paramBuf) {
         uint32_t paramSize = paramBuf.size();
-        fileHandle.write((char*)&paramSize, sizeof(paramSize));
-        fileHandle << paramBuf;
+        fileHandleFd.write((char*)&paramSize, sizeof(paramSize));
+        fileHandleFd << paramBuf;
     };
     fileFunc(vspString);
     fileFunc(resDumpReqPass);
@@ -183,7 +197,7 @@ void DbusToFileHandler::processNewResourceDump(
 
     fileFunc(str);
 
-    fileHandle.close();
+    fileHandleFd.close();
     size_t fileSize = fs::file_size(resDumpFilePath);
 
     sendNewFileAvailableCmd(fileSize);

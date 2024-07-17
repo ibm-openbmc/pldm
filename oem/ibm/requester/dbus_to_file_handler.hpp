@@ -17,6 +17,7 @@ namespace requester
 namespace oem_ibm
 {
 using ResDumpStatus = std::string;
+static constexpr auto hexaDecimalBase = 16;
 
 /** @class DbusToFileHandler
  *  @brief This class can process resource dump parameters and send PLDM
