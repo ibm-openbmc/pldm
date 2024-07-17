@@ -59,6 +59,7 @@ class DumpHandler : public FileHandler
     std::string findDumpObjPath(uint32_t fileHandle);
     std::string getOffloadUri(uint32_t fileHandle);
     void resetOffloadUri();
+    uint32_t getDumpIdPrefix(uint16_t dumpType);
     virtual void postDataTransferCallBack(bool IsWriteToMemOp,
                                           uint32_t /*length*/);
 
@@ -78,9 +79,13 @@ class DumpHandler : public FileHandler
     {
         Success = 0x0,
         AcfFileInvalid = 0x1,
-        PasswordInvalid = 0x2,
+        UserChallengeInvalid = 0x2,
         PermissionDenied = 0x3,
         ResourceSelectorInvalid = 0x4,
+    };
+    enum DumpIdPrefix
+    {
+        INVALID_DUMP_ID_PREFIX = 0xFF
     };
 };
 

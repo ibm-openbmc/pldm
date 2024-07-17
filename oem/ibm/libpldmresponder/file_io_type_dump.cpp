@@ -32,19 +32,38 @@ static constexpr auto dumpObjPath = "/xyz/openbmc_project/dump/system";
 static constexpr auto systemDumpEntry = "xyz.openbmc_project.Dump.Entry.System";
 static constexpr auto resDumpEntry = "com.ibm.Dump.Entry.Resource";
 static constexpr auto dumpEntryObjPath =
-    "/xyz/openbmc_project/dump/system/entry/";
+    "/xyz/openbmc_project/dump/system/entry";
 static constexpr auto bmcDumpObjPath = "/xyz/openbmc_project/dump/bmc/entry";
 
 // Resource dump file path to be deleted once hyperviosr validates the input
 // parameters. Need to re-look in to this name when we support multiple
 // resource dumps.
-static constexpr auto resDumpDirPath = "/var/lib/pldm/resourcedump/1";
 
 int DumpHandler::fd = -1;
 namespace fs = std::filesystem;
 
+uint32_t DumpHandler::getDumpIdPrefix(uint16_t dumpType)
+{
+    switch (dumpType)
+    {
+        case PLDM_FILE_TYPE_HARDWARE_DUMP:
+            return 0x00000000;
+        case PLDM_FILE_TYPE_HOSTBOOT_DUMP:
+            return 0x20000000;
+        case PLDM_FILE_TYPE_SBE_DUMP:
+            return 0x30000000;
+        case PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS:
+            return 0xB0000000;
+        default:
+            error("unsupported {TYPE}", "TYPE", dumpType);
+    }
+    return DumpIdPrefix::INVALID_DUMP_ID_PREFIX;
+}
+
 std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
 {
+    info("FileHandle in findDumpObjPath is {FILEHANDLE}", "FILEHANDLE",
+         fileHandle);
     static constexpr auto DUMP_MANAGER_BUSNAME =
         "xyz.openbmc_project.Dump.Manager";
     static constexpr auto DUMP_MANAGER_PATH = "/xyz/openbmc_project/dump";
@@ -55,8 +74,14 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
 
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
     {
-        resDumpRequestDirPath = "/var/lib/pldm/resourcedump/" +
-                                std::to_string(fileHandle);
+        uint32_t dumpIdPrefix =
+            getDumpIdPrefix(PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS);
+        fileHandle |= dumpIdPrefix;
+        std::string idStr = std::format("{:08X}", fileHandle);
+
+        resDumpRequestDirPath = "/var/lib/pldm/resourcedump/" + idStr;
+        info("resource dump request dir path is {PATH}", "PATH",
+             resDumpRequestDirPath);
     }
 
     std::string curDumpEntryPath{};
@@ -66,12 +91,35 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
         curDumpEntryPath = (std::string)bmcDumpObjPath + "/" +
                            std::to_string(fileHandle);
     }
-    else if (dumpType == PLDM_FILE_TYPE_SBE_DUMP ||
-             dumpType == PLDM_FILE_TYPE_HOSTBOOT_DUMP ||
-             dumpType == PLDM_FILE_TYPE_HARDWARE_DUMP)
+    else if (dumpType == PLDM_FILE_TYPE_SBE_DUMP)
     {
-        curDumpEntryPath = (std::string)dumpObjPath + "/" +
-                           std::to_string(fileHandle);
+        uint32_t dumpIdPrefix = getDumpIdPrefix(PLDM_FILE_TYPE_SBE_DUMP);
+        fileHandle |= dumpIdPrefix;
+        std::string idStr = std::format("{:08X}", fileHandle);
+
+        curDumpEntryPath = (std::string)dumpEntryObjPath + "/" + idStr;
+        info("SBE dump entry path is {DUMPENTRY}", "DUMPENTRY",
+             curDumpEntryPath);
+    }
+    else if (dumpType == PLDM_FILE_TYPE_HOSTBOOT_DUMP)
+    {
+        uint32_t dumpIdPrefix = getDumpIdPrefix(PLDM_FILE_TYPE_HOSTBOOT_DUMP);
+        fileHandle |= dumpIdPrefix;
+        std::string idStr = std::format("{:08X}", fileHandle);
+
+        curDumpEntryPath = (std::string)dumpEntryObjPath + "/" + idStr;
+        info("HostBoot dump entry path is {DUMPENTRY}", "DUMPENTRY",
+             curDumpEntryPath);
+    }
+    else if (dumpType == PLDM_FILE_TYPE_HARDWARE_DUMP)
+    {
+        uint32_t dumpIdPrefix = getDumpIdPrefix(PLDM_FILE_TYPE_HARDWARE_DUMP);
+        fileHandle |= dumpIdPrefix;
+        std::string idStr = std::format("{:08X}", fileHandle);
+
+        curDumpEntryPath = (std::string)dumpEntryObjPath + "/" + idStr;
+        info("Hardware dump entry path is {DUMPENTRY}", "DUMPENTRY",
+             curDumpEntryPath);
     }
 
     std::string dumpEntryIntf{};
@@ -521,6 +569,8 @@ int DumpHandler::newFileAvailableWithMetaData(uint64_t length,
                                               uint32_t /*metaDataValue3*/,
                                               uint32_t /*metaDataValue4*/)
 {
+    info("File handle in newFileAvailableWithMetaData is {FILEHANDLE}",
+         "FILEHANDLE", fileHandle);
     static constexpr auto dumpInterface = "com.ibm.Dump.Notify";
     auto& bus = pldm::utils::DBusHandler::getBus();
 
@@ -561,13 +611,20 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
                                      uint32_t /*metaDataValue3*/,
                                      uint32_t /*metaDataValue4*/)
 {
+    info("File Handle in fileAckWithMetaData is {FILEHANDLE}", "FILEHANDLE",
+         fileHandle);
+
     auto path = findDumpObjPath(fileHandle);
     uint8_t statusCode = (uint8_t)metaDataValue2;
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
     {
         DBusMapping dbusMapping;
-        std::string idString = std::format("{:08X}", fileHandle);
-        dbusMapping.objectPath = dumpEntryObjPath + idString;
+        uint32_t dumpIdPrefix =
+            getDumpIdPrefix(PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS);
+        fileHandle |= dumpIdPrefix;
+        std::string idStr = std::format("{:08X}", fileHandle);
+
+        dbusMapping.objectPath = dumpEntryObjPath + idStr;
         dbusMapping.interface = resDumpEntry;
         dbusMapping.propertyName = "DumpRequestStatus";
         dbusMapping.propertyType = "string";
@@ -587,9 +644,10 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         {
             value = "com.ibm.Dump.Entry.Resource.HostResponse.AcfFileInvalid";
         }
-        else if (statusCode == DumpRequestStatus::PasswordInvalid)
+        else if (statusCode == DumpRequestStatus::UserChallengeInvalid)
         {
-            value = "com.ibm.Dump.Entry.Resource.HostResponse.PasswordInvalid";
+            value =
+                "com.ibm.Dump.Entry.Resource.HostResponse.UserChallengeInvalid";
         }
         else if (statusCode == DumpRequestStatus::PermissionDenied)
         {
@@ -598,7 +656,12 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         else if (statusCode == DumpRequestStatus::Success)
         {
             DBusMapping dbusMapping;
+
+            uint32_t dumpIdPrefix =
+                getDumpIdPrefix(PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS);
+            fileHandle |= dumpIdPrefix;
             std::string idStr = std::format("{:08X}", fileHandle);
+
             dbusMapping.objectPath = "/xyz/openbmc_project/dump/system/entry/" +
                                      idStr;
             dbusMapping.interface = "com.ibm.Dump.Entry.Resource";
@@ -640,9 +703,14 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
 
             PropertyValue value{
                 "xyz.openbmc_project.Common.Progress.OperationStatus.Failed"};
-            DBusMapping dbusMapping{
-                dumpEntryObjPath + std::to_string(fileHandle),
-                "xyz.openbmc_project.Common.Progress", "Status", "string"};
+            uint32_t dumpIdPrefix =
+                getDumpIdPrefix(PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS);
+            fileHandle |= dumpIdPrefix;
+            std::string idStr = std::format("{:08X}", fileHandle);
+
+            DBusMapping dbusMapping{dumpEntryObjPath + idStr,
+                                    "xyz.openbmc_project.Common.Progress",
+                                    "Status", "string"};
             try
             {
                 pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
