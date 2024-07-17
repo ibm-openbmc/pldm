@@ -72,6 +72,8 @@ class DumpHandler : public FileHandler
     std::string
         resDumpRequestDirPath; //!< directory where the resource
                                //!< dump request parameter file is stored
+    int unixFd;                //!< fd to temporarily hold the fd created.
+
     enum DumpRequestStatus
     {
         Success = 0x0,
