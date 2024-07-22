@@ -22,6 +22,7 @@ test_sources = [
   '../dbus/cable.cpp',
   '../dbus/asset.cpp',
   '../dbus/pcie_device.cpp',
+  '../dbus/software_version.cpp',
 ]
 
 tests = [

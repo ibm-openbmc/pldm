@@ -30,6 +30,7 @@ sources = [
     '../host-bmc/dbus_to_terminus_effecters.cpp',
     '../host-bmc/host_associations_parser.cpp',
     '../host-bmc/host_condition.cpp',
+    '../host-bmc/dbus/chassis.cpp',
     '../host-bmc/dbus/custom_dbus.cpp',
     '../host-bmc/dbus/cable.cpp',
     '../host-bmc/dbus/cpu_core.cpp',
@@ -49,6 +50,7 @@ sources = [
     '../host-bmc/dbus/operational_status.cpp',
     '../host-bmc/dbus/asset.cpp',
     '../host-bmc/dbus/location_code.cpp',
+    '../host-bmc/dbus/software_version.cpp',
     'event_parser.cpp',
 ]
 

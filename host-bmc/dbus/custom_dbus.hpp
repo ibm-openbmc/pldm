@@ -25,6 +25,7 @@
 #include "pcie_device.hpp"
 #include "pcie_slot.hpp"
 #include "power_supply.hpp"
+#include "software_version.hpp"
 #include "vrm.hpp"
 #include "com/ibm/License/Entry/LicenseEntry/server.hpp"
 
@@ -105,27 +106,6 @@ class CustomDBus
      *          property
      */
     std::optional<std::string> getLocationCode(const std::string& path) const;
-    /** @brief Implement CpuCore Interface
-     *
-     *  @param[in] path - The object path
-     *
-     */
-    void implementCpuCoreInterface(const std::string& path);
-    /** @brief Set the microcode property
-     *
-     *  @param[in] path   - The object path
-     *
-     *  @param[in] value  - microcode value
-     */
-    void setMicroCode(const std::string& path, uint32_t value);
-
-    /** @brief Get the microcode property
-     *
-     *  @param[in] path   - The object path
-     *
-     *  @return std::optional<uint32_t> - The value of the microcode value
-     */
-    std::optional<uint32_t> getMicroCode(const std::string& path) const;
 
     /** @brief Implement PCIeSlot Interface
      *
@@ -169,12 +149,6 @@ class CustomDBus
      */
     void setCableAttributes(const std::string& path, double length,
                             const std::string& cableDescription);
-    /** @brief Implement interface for motherboard property
-     *
-     *  @param[in] path  - The object path
-     *
-     */
-    void implementMotherboardInterface(const std::string& path);
 
     /** @brief Set the Functional property
      *
@@ -318,6 +292,44 @@ class CustomDBus
      */
     void setAvailabilityState(const std::string& path, const bool& state);
 
+    /** @brief Set the version property
+     *
+     *  @param[in] path   - The object path
+     *
+     *  @param[in] value  - version value
+     */
+    void setSoftwareVersion(const std::string& path, std::string value);
+
+    /** @brief Implement CpuCore Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
+    void implementCpuCoreInterface(const std::string& path);
+
+    /** @brief Set the setMicroCode property
+     *
+     *  @param[in] path   - The object path
+     *
+     *  @param[in] value  - microcode value
+     */
+    void setMicroCode(const std::string& path, uint32_t value);
+
+    /** @brief Get the microcode property
+     *
+     *  @param[in] path   - The object path
+     *
+     *  @return std::optional<uint32_t> - The value of the microcode value
+     */
+    std::optional<uint32_t> getMicroCode(const std::string& path) const;
+
+    /** @brief Implement interface for motherboard property
+     *
+     *  @param[in] path  - The object path
+     *
+     */
+    void implementMotherboardInterface(const std::string& path);
+
     /** @brief Implement Enable interface
      *
      *  @param[in] path  - The object path
@@ -378,7 +390,9 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<ChapDatas>> chapdata;
     std::unordered_map<ObjectPath, std::unique_ptr<Associations>> associations;
     std::unordered_map<ObjectPath, std::unique_ptr<LEDGroup>> ledGroup;
-    std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
+    std::unordered_map<ObjectPath, std::unique_ptr<SoftWareVersion>>
+        softWareVersion;
+     std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
 };
 
 } // namespace dbus

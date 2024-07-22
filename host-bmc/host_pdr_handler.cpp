@@ -1491,7 +1491,6 @@ void HostPDRHandler::setFRUDataOnDBus(
     [[maybe_unused]] const std::vector<
         responder::pdr_utils::FruRecordDataFormat>& fruRecordData)
 {
-#ifdef OEM_IBM
     for (const auto& entity : objPathMap)
     {
         auto fruRSI = getRSI(entity.second);
@@ -1503,6 +1502,7 @@ void HostPDRHandler::setFRUDataOnDBus(
                 continue;
             }
 
+#ifdef OEM_IBM
             if (data.fruRecType == PLDM_FRU_RECORD_TYPE_OEM)
             {
                 for (const auto& tlv : data.fruTLV)
@@ -1518,9 +1518,30 @@ void HostPDRHandler::setFRUDataOnDBus(
                     }
                 }
             }
+            else
+#endif
+            {
+                for (auto& tlv : data.fruTLV)
+                {
+                    if (tlv.fruFieldType == PLDM_FRU_FIELD_TYPE_VERSION &&
+                        entity.second.entity_type == PLDM_ENTITY_SYSTEM_CHASSIS)
+                    {
+                        auto mex_vers =
+                            std::string(reinterpret_cast<const char*>(
+                                            tlv.fruFieldValue.data()),
+                                        tlv.fruFieldLen);
+                        info("Refreshing the mex firmware version : {MEX_VERS}",
+                             "MEX_VERS", mex_vers);
+                        CustomDBus::getCustomDBus().setSoftwareVersion(
+                            entity.first,
+                            std::string(reinterpret_cast<const char*>(
+                                            tlv.fruFieldValue.data()),
+                                        tlv.fruFieldLen));
+                    }
+                }
+            }
         }
     }
-#endif
 }
 
 bool HostPDRHandler::getValidity(const pldm::pdr::TerminusID& tid)
