@@ -186,6 +186,9 @@ class HostPDRHandler
      */
     uint8_t modifiedCounter = 0;
 
+    /** @brief map that captures various terminus information **/
+    TLPDRMap tlPDRInfo;
+
     /** @brief Updating the entity object path and entity node in map
      *
      * @param[in] path - object path
@@ -206,8 +209,11 @@ class HostPDRHandler
         oemUtilsHandler = handler;
     }
 
-    /** @brief map that captures various terminus information **/
-    TLPDRMap tlPDRInfo;
+    /** @brief Delete DBUS objects
+     *
+     *  @param[in] types  - entity type
+     */
+    void deleteDbusObjects(const std::vector<uint16_t> types);
 
   private:
     /** @brief deferred function to fetch PDR from Host, scheduled to work on
