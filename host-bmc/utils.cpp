@@ -168,8 +168,21 @@ void updateEntityAssociation(
         fs::path path{"/xyz/openbmc_project/inventory"};
         std::deque<std::string> paths{};
         pldm_entity node_entity = pldm_entity_extract(entity);
+        uint16_t remoteContainerId =
+            pldm_entity_node_get_remote_container_id(entity);
+        /* If the logical bit is set in the host containerId, cosider this as
+         * host entity and find in host node by setting the is_remote to true)
+         */
+        info(
+            "Update Entity Association , type = {ENTITY_TYP}, num = {ENTITY_NUM}, container = {CONT}, Remote Container ID = {RID}, is remote = {REMOTE}",
+            "ENTITY_TYP", static_cast<int>(node_entity.entity_type),
+            "ENTITY_NUM", static_cast<int>(node_entity.entity_instance_num),
+            "CONT", static_cast<int>(node_entity.entity_container_id), "RID",
+            remoteContainerId, "REMOTE", (bool)(remoteContainerId & 0x8000));
+
         auto node = pldm_entity_association_tree_find_with_locality(
-            entityTree, &node_entity, false);
+            entityTree, &node_entity, (remoteContainerId & 0x8000));
+
         if (!node)
         {
             continue;
