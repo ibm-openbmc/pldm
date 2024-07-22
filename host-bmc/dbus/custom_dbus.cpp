@@ -27,6 +27,21 @@ std::optional<std::string>
     return std::nullopt;
 }
 
+void CustomDBus::setSoftwareVersion(const std::string& path, std::string value)
+{
+    if (softWareVersion.find(path) == softWareVersion.end())
+    {
+        softWareVersion.emplace(
+            path, std::make_unique<SoftWareVersion>(
+                      pldm::utils::DBusHandler::getBus(), path.c_str()));
+        softWareVersion.at(path)->purpose(
+            sdbusplus::xyz::openbmc_project::Software::server::Version::
+                VersionPurpose::Other);
+    }
+
+    softWareVersion.at(path)->version(value);
+}
+
 void CustomDBus::setOperationalStatus(const std::string& path, bool status,
                                       const std::string& parentChassis)
 {
@@ -535,6 +550,12 @@ void CustomDBus::deleteObject(const std::string& path)
     {
         cable.erase(cable.find(path));
     }
+
+    if (softWareVersion.contains(path))
+    {
+        softWareVersion.erase(softWareVersion.find(path));
+    }
+
     if (asset.contains(path))
     {
         asset.erase(asset.find(path));

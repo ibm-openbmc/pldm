@@ -25,6 +25,7 @@
 #include "pcie_device.hpp"
 #include "pcie_slot.hpp"
 #include "power_supply.hpp"
+#include "software_version.hpp"
 #include "vrm.hpp"
 
 #include <sdbusplus/bus.hpp>
@@ -234,6 +235,14 @@ class CustomDBus
      */
     void setAvailabilityState(const std::string& path, const bool& state);
 
+    /** @brief Set the version property
+     *
+     *  @param[in] path   - The object path
+     *
+     *  @param[in] value  - version value
+     */
+    void setSoftwareVersion(const std::string& path, std::string value);
+
     /** @brief Implement CpuCore Interface
      *
      *  @param[in] path - The object path
@@ -327,6 +336,8 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<LicenseEntry>> codLic;
     std::unordered_map<ObjectPath, std::unique_ptr<Associations>> associations;
     std::unordered_map<ObjectPath, std::unique_ptr<LEDGroup>> ledGroup;
+    std::unordered_map<ObjectPath, std::unique_ptr<SoftWareVersion>>
+        softWareVersion;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIeDevice>> pcieDevice;
     std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
     std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
