@@ -217,6 +217,12 @@ class HostPDRHandler
     /** @brief map that captures various terminus information **/
     TLPDRMap tlPDRInfo;
 
+    /** @brief Delete DBUS objects
+     *
+     *  @param[in] types  - entity type
+     */
+    void deleteDbusObjects(const std::vector<uint16_t> types);
+
   private:
     /** @brief deferred function to fetch PDR from Host, scheduled to work on
      *  the event loop. The PDR exchg with the host is async.

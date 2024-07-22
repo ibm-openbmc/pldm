@@ -14,6 +14,8 @@
 #include "pldmd/dbus_impl_requester.hpp"
 #include "pldmd/handler.hpp"
 #include "requester/handler.hpp"
+#include "host-bmc/dbus/custom_dbus.hpp"
+#include "host-bmc/dbus/serialize.hpp"
 
 #include <libpldm/entity.h>
 #include <libpldm/state_set.h>
@@ -225,6 +227,41 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
     if (payloadLength != PLDM_GET_PDR_REQ_BYTES)
     {
         return CmdHandler::ccOnlyResponse(request, PLDM_ERROR_INVALID_LENGTH);
+    }
+
+    if (isFirstGetPDR && hostPDRHandler && !hostPDRHandler->isHostUp())
+    {
+        isFirstGetPDR = false;
+        // Since the Host is off, remove all cores in the persist file
+        std::vector<uint16_t> types = {32903};
+        pldm::dbus::CustomDBus::getCustomDBus().removeDBus(types);
+        pldm::serialize::Serialize::getSerialize().reSerialize(types);
+    }
+
+    if (clearMexObj && hostPDRHandler)
+    {
+        clearMexObj = false;
+
+        // Deleting Fru Dbus Objects and persisted details
+        std::vector<uint16_t> types = {
+            PLDM_ENTITY_POWER_SUPPLY,
+            PLDM_ENTITY_FAN,
+            PLDM_ENTITY_POWER_CONVERTER,
+            PLDM_ENTITY_CONNECTOR,
+            PLDM_ENTITY_MODULE,
+            PLDM_ENTITY_CARD,
+            PLDM_ENTITY_SLOT,
+            PLDM_ENTITY_IO_MODULE,
+            PLDM_ENTITY_SLOT | 0x8000,
+            PLDM_ENTITY_SYS_BOARD,
+            PLDM_ENTITY_BOARD,
+            PLDM_ENTITY_CHASSIS_FRONT_PANEL_BOARD,
+            PLDM_ENTITY_COOLING_DEVICE,
+            PLDM_ENTITY_EXTERNAL_ENVIRONMENT,
+            PLDM_ENTITY_SYSTEM_CHASSIS,
+        };
+        hostPDRHandler->deleteDbusObjects(types);
+        pldm::serialize::Serialize::getSerialize().reSerialize(types);
     }
 
     uint32_t recordHandle{};

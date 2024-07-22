@@ -1645,6 +1645,41 @@ void HostPDRHandler::createDbusObjects()
     error("Refreshing dbus hosted by pldm Completed");
 }
 
+void HostPDRHandler::deleteDbusObjects(const std::vector<uint16_t> types)
+{
+    if (types.empty())
+    {
+        return;
+    }
+
+    auto savedObjs = pldm::serialize::Serialize::getSerialize().getSavedObjs();
+    for (const auto& type : types)
+    {
+        if (!savedObjs.contains(type))
+        {
+            continue;
+        }
+
+        error("Deleting the dbus objects of type : {OBJ_TYP} ", "OBJ_TYP",
+              (unsigned)type);
+        for (const auto& [path, entites] : savedObjs.at(type))
+        {
+            if (type !=
+                (PLDM_ENTITY_PROC | 0x8000)) // other than CPU core object
+            {
+                info("Erasing Dbus Path from ObjectMap {DBUS_PATH}",
+                     "DBUS_PATH", path.c_str());
+                objPathMap.erase(path);
+                // Delete the Mex Led Dbus Object paths
+                auto ledGroupPath = updateLedGroupPath(path);
+                pldm::dbus::CustomDBus::getCustomDBus().deleteObject(
+                    ledGroupPath);
+            }
+            pldm::dbus::CustomDBus::getCustomDBus().deleteObject(path);
+        }
+    }
+}
+
 void HostPDRHandler::setFRUDynamicAssociations()
 {
     for (const auto& [leftPath, leftEntity] : objPathMap)
