@@ -12,16 +12,19 @@ namespace dbus
 {
 bool LEDGroup::asserted() const
 {
+    info("inside Asserted");
     return sdbusplus::xyz::openbmc_project::Led::server::Group::asserted();
 }
 
 bool LEDGroup::updateAsserted(bool value)
 {
+    info("inside updateAsserted");
     return sdbusplus::xyz::openbmc_project::Led::server::Group::asserted(value);
 }
 
 bool LEDGroup::asserted(bool value)
 {
+    info("Asserted with value {VAL}", "VAL", (int)value);
     std::vector<set_effecter_state_field> stateField;
 
     if (value ==
@@ -36,7 +39,7 @@ bool LEDGroup::asserted(bool value)
 
         stateField.push_back({PLDM_REQUEST_SET, state});
     }
-
+    info("TriggetStateEffecter {EFF}", "EFF", (int)isTriggerStateEffecterStates);
     if (isTriggerStateEffecterStates)
     {
         if (hostEffecterParser)
