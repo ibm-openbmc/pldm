@@ -263,6 +263,7 @@ int HostPDRHandler::handleStateSensorEvent(
     const std::vector<pldm::pdr::StateSetId>& stateSetId,
     const StateSensorEntry& entry, pdr::EventState state)
 {
+    info("handleStateSensorEvent...................");
     for (auto& entity : objPathMap)
     {
         pldm_entity node_entity = entity.second;
@@ -271,9 +272,11 @@ int HostPDRHandler::handleStateSensorEvent(
             node_entity.entity_instance_num != entry.entityInstance ||
             node_entity.entity_container_id != entry.containerId)
         {
+            info("Entity did not match with ObjePath....");
             continue;
         }
 
+        info("Entity match with ObjePath....");
         for (const auto& setId : stateSetId)
         {
             if (setId == PLDM_STATE_SET_IDENTIFY_STATE)
@@ -723,6 +726,7 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                 }
                 else if (pdrHdr->type == PLDM_STATE_SENSOR_PDR)
                 {
+                    info("Add State Sensor PDR.......");
                     pdrTerminusHandle =
                         extractTerminusHandle<pldm_state_sensor_pdr>(pdr);
                     updateContainerId<pldm_state_sensor_pdr>(entityTree, pdr);
@@ -982,11 +986,13 @@ bool HostPDRHandler::isHostUp()
 void HostPDRHandler::setHostSensorState()
 {
     sensorIndex = stateSensorPDRs.begin();
+    error("Inside setHostSensorState");
     _setHostSensorState();
 }
 
 void HostPDRHandler::_setHostSensorState()
 {
+    error("Inside ___setHostSensorState");
     if (isHostOff)
     {
         error(
@@ -1008,21 +1014,25 @@ void HostPDRHandler::_setHostSensorState()
             return;
         }
         uint16_t sensorId = pdr->sensor_id;
+        info("_setHostSensorState Sensir Id {I}", "I", sensorId);
 
         for (const auto& [terminusHandle, terminusInfo] : tlPDRInfo)
         {
+            info("Terminus Handle {THAND} and PDR THandle {H}", "THAND", terminusHandle, "H", pdr->terminus_handle);
             if (terminusHandle == pdr->terminus_handle)
             {
                 if (std::get<2>(terminusInfo) == PLDM_TL_PDR_VALID)
                 {
                     mctpEid = std::get<1>(terminusInfo);
+                    info("MCTP Id {I}", "I", mctpEid);
                 }
 
                 bitfield8_t sensorRearm;
                 sensorRearm.byte = 0;
                 uint8_t tid = std::get<0>(terminusInfo);
 
-                auto instanceId = instanceIdDb.next(mctp_eid);
+                auto instanceId = instanceIdDb.next(mctpEid);
+                info("Instance Id is {I}", "I", instanceId);
                 std::vector<uint8_t> requestMsg(
                     sizeof(pldm_msg_hdr) +
                     PLDM_GET_STATE_SENSOR_READINGS_REQ_BYTES);
@@ -1044,6 +1054,7 @@ void HostPDRHandler::_setHostSensorState()
                 auto getStateSensorReadingRespHandler =
                     [=, this](mctp_eid_t /*eid*/, const pldm_msg* response,
                               size_t respMsgLen) {
+                    info("getStateSensorReadingRespHandler .....");
                     if (response == nullptr || !respMsgLen)
                     {
                         error(
@@ -1065,8 +1076,8 @@ void HostPDRHandler::_setHostSensorState()
                     }
                     std::array<get_sensor_state_field, 8> stateField{};
                     uint8_t completionCode = 0;
-                    uint8_t comp_sensor_count = 0;
-
+                    uint8_t comp_sensor_count = 0;      
+                    error("decode response");
                     auto rc = decode_get_state_sensor_readings_resp(
                         response, respMsgLen, &completionCode,
                         &comp_sensor_count, stateField.data());
@@ -1090,6 +1101,7 @@ void HostPDRHandler::_setHostSensorState()
                     uint8_t previousEventState;
                     uint8_t sensorOffset = comp_sensor_count - 1;
 
+                    error("Composite Sensor Count {C}", "C", comp_sensor_count);
                     for (size_t i = 0; i < comp_sensor_count; i++)
                     {
                         eventState = stateField[i].present_state;
@@ -1158,12 +1170,13 @@ void HostPDRHandler::_setHostSensorState()
 
                     if (sensorIndex == stateSensorPDRs.end())
                     {
+                        error("Sensor End");
                         return;
                     }
                     ++sensorIndex;
                     _setHostSensorState();
                 };
-
+info("Register the request for ");
                 rc = handler->registerRequest(
                     mctpEid, instanceId, PLDM_PLATFORM,
                     PLDM_GET_STATE_SENSOR_READINGS, std::move(requestMsg),
@@ -1177,6 +1190,10 @@ void HostPDRHandler::_setHostSensorState()
                 }
             }
         }
+    }
+    else
+    {
+        error("SensorId empty................");
     }
 }
 
@@ -1436,6 +1453,7 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
             if (!ledGroupPath.empty())
             {
                 pldm_entity entity{type, instance, containerId};
+                info("Asserting the led in GetPresetState............path {PATH}", "PATH", path);
                 CustomDBus::getCustomDBus().setAsserted(
                     ledGroupPath, entity,
                     state == PLDM_STATE_SET_IDENTIFY_STATE_ASSERTED,
@@ -1493,11 +1511,12 @@ void HostPDRHandler::setFRUDataOnDBus(
 {
     for (const auto& entity : objPathMap)
     {
+        info("Entiy name is {NAME}", "NAME", entity.first);
         auto fruRSI = getRSI(entity.second);
 
         for (const auto& data : fruRecordData)
         {
-            if (fruRSI.has_value() && (*fruRSI != data.fruRSI))
+            if (!fruRSI.has_value() || (*fruRSI != data.fruRSI))
             {
                 continue;
             }
