@@ -298,18 +298,14 @@ void CustomDBus::setAsserted(
     pldm::host_effecters::HostEffecterParser* hostEffecterParser,
     uint8_t mctpEid, bool isTriggerStateEffecterStates)
 {
-    info("SetAsserted called.......");
     if (!ledGroup.contains(path))
     {
-        info("Createded group object {OBJ}", "OBJ", path);
         ledGroup.emplace(
             path, std::make_unique<LEDGroup>(pldm::utils::DBusHandler::getBus(),
                                              path.c_str(), hostEffecterParser,
                                              entity, mctpEid));
     }
 
-        info("Effecter Value {OBJ}", "OBJ", (int)isTriggerStateEffecterStates);
-        info("Asserted Value {OBJ}", "OBJ", (int)value);
     ledGroup.at(path)->setStateEffecterStatesFlag(isTriggerStateEffecterStates);
     ledGroup.at(path)->asserted(value);
 }
