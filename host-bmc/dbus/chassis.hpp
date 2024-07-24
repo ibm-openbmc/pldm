@@ -36,7 +36,6 @@ class ItemChassis : public ItemChassisIntf
 
     /** Set value of Type */
     ChassisType type(ChassisType value) override;
-
 };
 
 } // namespace dbus

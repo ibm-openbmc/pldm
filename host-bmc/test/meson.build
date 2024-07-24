@@ -18,11 +18,11 @@ test_sources = [
   '../dbus/led_group.cpp',
   '../dbus/serialize.cpp',
   '../dbus/custom_dbus.cpp',
+  '../dbus/software_version.cpp',
   '../dbus/chapdata.cpp',
   '../dbus/cable.cpp',
   '../dbus/asset.cpp',
   '../dbus/pcie_device.cpp',
-  '../dbus/software_version.cpp',
 ]
 
 tests = [

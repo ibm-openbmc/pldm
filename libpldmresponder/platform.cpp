@@ -3,6 +3,8 @@
 #include "common/types.hpp"
 #include "common/utils.hpp"
 #include "event_parser.hpp"
+#include "host-bmc/dbus/custom_dbus.hpp"
+#include "host-bmc/dbus/serialize.hpp"
 #include "pdr.hpp"
 #include "pdr_numeric_effecter.hpp"
 #include "pdr_state_effecter.hpp"
@@ -14,8 +16,6 @@
 #include "pldmd/dbus_impl_requester.hpp"
 #include "pldmd/handler.hpp"
 #include "requester/handler.hpp"
-#include "host-bmc/dbus/custom_dbus.hpp"
-#include "host-bmc/dbus/serialize.hpp"
 
 #include <libpldm/entity.h>
 #include <libpldm/state_set.h>
@@ -161,12 +161,6 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
             }
         }
     }
-    /*if (fruHandler)
-    {
-        fruHandler->setStatePDRParams(pdrJsonsDir, getNextSensorId(),
-                                      getNextEffecterId(), sensorDbusObjMaps,
-                                      effecterDbusObjMaps, false);
-    }*/
 }
 
 Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
@@ -654,20 +648,20 @@ int Handler::pldmPDRRepositoryChgEvent(
                 }
             }
         }
-        if (eventDataOperation == PLDM_RECORDS_DELETED ||
-            eventDataOperation == PLDM_RECORDS_MODIFIED)
+        if (eventDataOperation == PLDM_RECORDS_DELETED)
         {
             info(
-                "Got a records deleted /modified event, '{TID}' and eventDataOperation is {ED}",
+                "Got a records deleted event, '{TID}' and eventDataOperation is {ED}",
                 "TID", tid, "ED", eventDataOperation);
+            hostPDRHandler->deletePDRFromRepo(std::move(pdrRecordHandles));
         }
         else
         {
             info(
-                "Got a records added event from tid '{TID}' eventDataOperation is {ED}",
+                "Got a records added/modified event from tid '{TID}' eventDataOperation is {ED}",
                 "TID", tid, "ED", eventDataOperation);
+            hostPDRHandler->fetchPDR(std::move(pdrRecordHandles), tid);
         }
-        hostPDRHandler->fetchPDR(std::move(pdrRecordHandles), tid);
     }
 
     return PLDM_SUCCESS;

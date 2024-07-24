@@ -27,9 +27,9 @@ class Connector : public ItemConnector
     Connector(sdbusplus::bus_t& bus, const std::string& objPath) :
         ItemConnector(bus, objPath.c_str())
     {
-        pldm::serialize::Serialize::getSerialize().serialize(objPath, "Connector");
+        pldm::serialize::Serialize::getSerialize().serialize(objPath,
+                                                             "Connector");
     }
-
 };
 
 } // namespace dbus

@@ -40,7 +40,6 @@ class SoftWareVersion : public SoftWareVersionIntf
 
   private:
     std::string path;
-
 };
 
 } // namespace dbus

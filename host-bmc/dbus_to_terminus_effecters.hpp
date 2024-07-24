@@ -3,8 +3,8 @@
 #include "common/instance_id.hpp"
 #include "common/types.hpp"
 #include "common/utils.hpp"
-#include "requester/handler.hpp"
 #include "pldmd/dbus_impl_requester.hpp"
+#include "requester/handler.hpp"
 
 #include <phosphor-logging/lg2.hpp>
 
@@ -227,7 +227,7 @@ class HostEffecterParser
     double adjustValue(double value, double offset, double resolution,
                        int8_t modify);
 
-    /* @brief Returns the PDR repository */ 
+    /* @brief Returns the PDR repository */
     const pldm_pdr* getPldmPDR();
 
     /* @brief Sends the SetStateEffecterStates request
@@ -235,7 +235,7 @@ class HostEffecterParser
      *
      * @param[in] mctpEid - host mctp eid
      * @param[in] effecterId - effecter id
-     * @param[in] compEffCnt - Number of composite commands 
+     * @param[in] compEffCnt - Number of composite commands
      * @param[in] stateField - vector containing state sets
      * @param[in] callback - Callback to handle the response
      */

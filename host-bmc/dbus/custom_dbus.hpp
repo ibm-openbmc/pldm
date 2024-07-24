@@ -7,8 +7,9 @@
 #include "availability.hpp"
 #include "board.hpp"
 #include "cable.hpp"
-#include "chassis.hpp"
 #include "chapdata.hpp"
+#include "chassis.hpp"
+#include "com/ibm/License/Entry/LicenseEntry/server.hpp"
 #include "common/utils.hpp"
 #include "connector.hpp"
 #include "cpu_core.hpp"
@@ -40,6 +41,8 @@
 #include <string>
 #include <unordered_map>
 
+#include <libpldm/state_set.h>
+
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server.hpp>
 #include <sdbusplus/server/object.hpp>
@@ -47,8 +50,6 @@
 #include <map>
 #include <memory>
 #include <string>
-
-#include <libpldm/state_set.h>
 
 namespace pldm
 {
@@ -195,22 +196,67 @@ class CustomDBus
      */
     void implementChassisInterface(const std::string& path);
 
+    /** @brief Implement PowerSupply Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementPowerSupplyInterface(const std::string& path);
 
+    /** @brief Implement Fan Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementFanInterface(const std::string& path);
 
+    /** @brief Implement Connector Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementConnecterInterface(const std::string& path);
 
+    /** @brief Implement Voltage Regulator Module Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementVRMInterface(const std::string& path);
 
+    /** @brief Implement Fabric Adapter Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementFabricAdapter(const std::string& path);
 
+    /** @brief Implement Board Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementBoard(const std::string& path);
 
+    /** @brief Implement Global Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementGlobalInterface(const std::string& path);
 
+    /** @brief Implement Asset Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementAssetInterface(const std::string& path);
 
+    /** @brief Implement Panel Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementPanelInterface(const std::string& path);
 
     /** @brief Set the Asserted property

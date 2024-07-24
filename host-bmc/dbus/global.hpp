@@ -29,7 +29,6 @@ class Global : public ItemGlobal
     {
         pldm::serialize::Serialize::getSerialize().serialize(objPath, "Global");
     }
-
 };
 
 } // namespace dbus

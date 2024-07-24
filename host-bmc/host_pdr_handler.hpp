@@ -3,13 +3,13 @@
 #include "common/instance_id.hpp"
 #include "common/types.hpp"
 #include "common/utils.hpp"
+#include "dbus_to_terminus_effecters.hpp"
+#include "host_associations_parser.hpp"
 #include "libpldmresponder/event_parser.hpp"
 #include "libpldmresponder/oem_handler.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
 #include "requester/handler.hpp"
 #include "utils.hpp"
-#include "dbus_to_terminus_effecters.hpp"
-#include "host_associations_parser.hpp"
 
 #include <libpldm/base.h>
 #include <libpldm/platform.h>
@@ -351,12 +351,10 @@ class HostPDRHandler
      */
     std::string updateLedGroupPath(const std::string& path);
 
-
     /** @brief set the presence of the fru from record handle
      *  @param[in] recorHandle - record handle of the PDR
      */
     void setRecordPresent(uint32_t recorHandle);
-
 
     /** @brief Get FRU Record Set Identifier from FRU Record data Format
      *  @param[in] fruRecordSetPDRs - fru record set pdr
@@ -387,7 +385,7 @@ class HostPDRHandler
     /** @brief Pointer to BMC's entity association tree */
     // pldm_entity_association_tree* bmcEntityTree;
 
-     /** @brief Pointer to host effecter parser */
+    /** @brief Pointer to host effecter parser */
     pldm::host_effecters::HostEffecterParser* hostEffecterParser;
 
     /** @brief reference to Instance ID database object, used to obtain PLDM
