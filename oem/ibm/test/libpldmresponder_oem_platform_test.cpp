@@ -485,7 +485,7 @@ TEST(updateOemDbusPath, testgoodpath)
     mockoemPlatformHandler->updateOemDbusPaths(dbuspath);
     EXPECT_EQ(dbuspath, "/inventory/system/chassis/motherboard/dcm0");
 
-    dbuspath = "/inventory/system/chassis/socket1/motherboard/dcm0";
+    dbuspath = "/inventory/system/chassis/motherboard/socket1/dcm0";
     mockoemPlatformHandler->updateOemDbusPaths(dbuspath);
     EXPECT_EQ(dbuspath, "/inventory/system/chassis/motherboard/dcm0");
 }

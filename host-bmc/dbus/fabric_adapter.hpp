@@ -32,7 +32,6 @@ class FabricAdapter : public ItemFabricAdapter
         pldm::serialize::Serialize::getSerialize().serialize(objPath,
                                                              "FabricAdapter");
     }
-
 };
 
 } // namespace dbus

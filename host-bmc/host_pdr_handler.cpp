@@ -99,14 +99,18 @@ HostPDRHandler::HostPDRHandler(
     pldm::host_effecters::HostEffecterParser* hostEffecterParser,
     pldm::InstanceIdDb& instanceIdDb,
     pldm::requester::Handler<pldm::requester::Request>* handler,
-    pldm::responder::oem_platform::Handler* oemPlatformHandler, 
+    pldm::responder::oem_platform::Handler* oemPlatformHandler,
     pldm::responder::oem_utils::Handler* oemUtilsHandler,
     pldm::host_associations::HostAssociationsParser* associationsParser) :
     mctp_fd(mctp_fd),
     mctp_eid(mctp_eid), event(event), repo(repo),
     stateSensorHandler(eventsJsonsDir), entityTree(entityTree),
-    bmcEntityTree(bmcEntityTree), hostEffecterParser(hostEffecterParser), instanceIdDb(instanceIdDb), handler(handler), associationsParser(associationsParser),
-    oemPlatformHandler(oemPlatformHandler), entityMaps(parseEntityMap(ENTITY_MAP_JSON)), oemUtilsHandler(oemUtilsHandler)
+    bmcEntityTree(bmcEntityTree), hostEffecterParser(hostEffecterParser),
+    instanceIdDb(instanceIdDb), handler(handler),
+    associationsParser(associationsParser),
+    oemPlatformHandler(oemPlatformHandler),
+    entityMaps(parseEntityMap(ENTITY_MAP_JSON)),
+    oemUtilsHandler(oemUtilsHandler)
 {
     isHostOff = false;
     isHostTransitioningToOff = false;
@@ -314,7 +318,8 @@ int HostPDRHandler::handleStateSensorEvent(
                       entity.first.c_str());
             }
             CustomDBus::getCustomDBus().setOperationalStatus(
-                entity.first, state == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS_NORMAL,
+                entity.first,
+                state == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS_NORMAL,
                 getParentChassis(entity.first));
 
             break;
@@ -592,7 +597,6 @@ void HostPDRHandler::parseStateSensorPDRs()
         const auto& [terminusHandle, sensorID, sensorInfo] =
             responder::pdr_utils::parseStateSensorPDR(pdr);
         sensorEntry.sensorID = sensorID;
-        error("Parse State sensor Id {ID}", "ID", sensorID);
         try
         {
             sensorEntry.terminusID = std::get<0>(tlPDRInfo.at(terminusHandle));
@@ -1153,7 +1157,8 @@ void HostPDRHandler::_setHostSensorState()
                             stateSensorEntry{containerId,    entityType,
                                              entityInstance, sensorOffset,
                                              stateSetId,     false};
-                        handleStateSensorEvent(stateSetIds,stateSensorEntry, eventState);
+                        handleStateSensorEvent(stateSetIds, stateSensorEntry,
+                                               eventState);
                     }
 
                     if (sensorIndex == stateSensorPDRs.end())
@@ -1428,7 +1433,8 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
             // command.
 
             CustomDBus::getCustomDBus().setOperationalStatus(
-                path, state == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS_NORMAL, getParentChassis(path));
+                path, state == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS_NORMAL,
+                getParentChassis(path));
         }
         else if (stateSetId == PLDM_STATE_SET_IDENTIFY_STATE)
         {
@@ -1586,7 +1592,6 @@ void HostPDRHandler::createDbusObjects()
         // Implement & update the Availability to true
         setAvailabilityState(entity.first);
 
-        error("CreateDbusObj for {TYPE}", "TYPE", static_cast<int>(entity.second.entity_type));
         switch (entity.second.entity_type)
         {
             case PLDM_ENTITY_PROC | 0x8000:
@@ -1606,7 +1611,7 @@ void HostPDRHandler::createDbusObjects()
                     entity.first);
                 break;
             case PLDM_ENTITY_CHASSIS_FRONT_PANEL_BOARD:
-              //  CustomDBus::getCustomDBus().implementPanelInterface(
+                //  CustomDBus::getCustomDBus().implementPanelInterface(
                 //    entity.first);
                 break;
             case PLDM_ENTITY_FAN:
@@ -1622,8 +1627,8 @@ void HostPDRHandler::createDbusObjects()
             case PLDM_ENTITY_SLOT:
                 CustomDBus::getCustomDBus().implementPCIeSlotInterface(
                     entity.first);
-                //CustomDBus::getCustomDBus().setLinkReset(
-                  //  entity.first, false, hostEffecterParser, mctp_eid);
+                // CustomDBus::getCustomDBus().setLinkReset(
+                //   entity.first, false, hostEffecterParser, mctp_eid);
                 break;
             case PLDM_ENTITY_CONNECTOR:
                 CustomDBus::getCustomDBus().implementConnecterInterface(
@@ -1645,14 +1650,12 @@ void HostPDRHandler::createDbusObjects()
                 CustomDBus::getCustomDBus().implementPCIeDeviceInterface(
                     entity.first);
                 break;
-            case 32954:
+            case PLDM_ENTITY_SLOT | 0x8000:
                 CustomDBus::getCustomDBus().implementPCIeSlotInterface(
                     entity.first);
                 CustomDBus::getCustomDBus().setSlotType(
                     entity.first,
                     "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.OEM");
-          //      CustomDBus::getCustomDBus().setLinkReset(
-            //        entity.first, false, hostEffecterParser, mctp_eid);
                 break;
             default:
                 break;
@@ -1726,6 +1729,7 @@ void HostPDRHandler::setFRUDynamicAssociations()
                 // leftpath = /xyz/openbmc_project/system/chassis15363
                 // rightpath = /xyz/openbmc_project/system/chassis15363/fan1
                 auto key = std::make_pair(leftEntityType, rightEntityType);
+
                 if (associationsParser->associationsInfoMap.contains(key))
                 {
                     auto value = associationsParser->associationsInfoMap[key];
@@ -1755,7 +1759,7 @@ void HostPDRHandler::setOperationStatus()
         pldm_entity node = objMapIndex->second;
 
         bool valid = getValidity(sensorMapIndex->first.terminusID);
- 
+
         if (valid)
         {
             pldm::pdr::EntityInfo entityInfo{};

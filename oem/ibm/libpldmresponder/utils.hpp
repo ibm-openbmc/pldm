@@ -1,10 +1,9 @@
 #pragma once
 
+#include "host-bmc/dbus/type.hpp"
 #include "host-bmc/dbus_to_host_effecters.hpp"
 #include "libpldmresponder/oem_handler.hpp"
 #include "oem/ibm/requester/dbus_to_file_handler.hpp"
-#include "host-bmc/dbus_to_host_effecters.hpp"
-#include "host-bmc/dbus/type.hpp"
 
 #include <unistd.h>
 

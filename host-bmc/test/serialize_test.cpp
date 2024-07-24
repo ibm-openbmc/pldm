@@ -43,7 +43,7 @@ TEST(Serialize, SerializeGoodPath)
     pldm::serialize::Serialize::getSerialize(filepath).serialize(
         path, interface, propertyname, propValue);
 
-    pldm::utils::SavedObjs savedObjs;
+    pldm::dbus::SavedObjs savedObjs;
 
     // Reading data as from file to verify
     std::ifstream is(filepath.c_str(), std::ios::in | std::ios::binary);
@@ -51,10 +51,10 @@ TEST(Serialize, SerializeGoodPath)
     iarchive(savedObjs);
 
     uint16_t type = entities.entity_type, instancenum, cid;
-    std::map<std::string, std::map<std::string, pldm::utils::PropertyValue>>
+    std::map<std::string, std::map<std::string, pldm::dbus::PropertyValue>>
         maps;
     std::string intf, name;
-    pldm::utils::PropertyValue value;
+    pldm::dbus::PropertyValue value;
 
     // Verifying data from original data
     EXPECT_EQ(true, savedObjs.contains(type));

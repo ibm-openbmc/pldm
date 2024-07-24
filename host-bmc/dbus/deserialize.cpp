@@ -132,7 +132,8 @@ std::unordered_map<std::string, callback> dBusInterfaceHandler{
      [](const std::string& path, Properties /* values */) {
     pldm::dbus::CustomDBus::getCustomDBus().implementGlobalInterface(path);
 }},
-    {"SoftWareVersion", [](const std::string& path, Properties values) {
+    {"SoftWareVersion",
+     [](const std::string& path, Properties values) {
     std::string version{};
 
     if (values.contains("version"))

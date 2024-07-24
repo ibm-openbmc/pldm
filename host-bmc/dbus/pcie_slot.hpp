@@ -31,7 +31,8 @@ class PCIeSlot : public ItemSlot
     PCIeSlot(sdbusplus::bus_t& bus, const std::string& objPath) :
         ItemSlot(bus, objPath.c_str())
     {
-        pldm::serialize::Serialize::getSerialize().serialize(objPath, "PCIeSlot");
+        pldm::serialize::Serialize::getSerialize().serialize(objPath,
+                                                             "PCIeSlot");
     }
 
     /** Get value of Generation */
@@ -57,7 +58,6 @@ class PCIeSlot : public ItemSlot
 
     /** Set value of HotPluggable */
     bool hotPluggable(bool value) override;
-
 };
 
 } // namespace dbus

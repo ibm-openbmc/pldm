@@ -31,7 +31,6 @@ class Board : public ItemBoard
     {
         pldm::serialize::Serialize::getSerialize().serialize(objPath, "Board");
     }
-
 };
 
 } // namespace dbus

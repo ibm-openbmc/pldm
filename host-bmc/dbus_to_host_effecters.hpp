@@ -3,8 +3,8 @@
 #include "common/instance_id.hpp"
 #include "common/types.hpp"
 #include "common/utils.hpp"
-#include "requester/handler.hpp"
 #include "pldmd/dbus_impl_requester.hpp"
+#include "requester/handler.hpp"
 
 #include <phosphor-logging/lg2.hpp>
 
@@ -173,7 +173,7 @@ class HostEffecterParser
                                          size_t dbusInfoIndex,
                                          uint16_t effecterId);
 
-    /* @brief Returns the PDR repository */ 
+    /* @brief Returns the PDR repository */
     const pldm_pdr* getPldmPDR();
 
     /* @brief Sends the SetStateEffecterStates request
@@ -181,7 +181,7 @@ class HostEffecterParser
      *
      * @param[in] mctpEid - host mctp eid
      * @param[in] effecterId - effecter id
-     * @param[in] compEffCnt - Number of composite commands 
+     * @param[in] compEffCnt - Number of composite commands
      * @param[in] stateField - vector containing state sets
      * @param[in] callback - Callback to handle the response
      */
@@ -193,8 +193,8 @@ class HostEffecterParser
   protected:
     pldm::dbus_api::Requester*
         requester;           //!< Reference to Requester to obtain instance id
-    int sockFd;                       //!< Socket fd to send message to host
-    const pldm_pdr* pdrRepo;          //!< Reference to PDR repo
+    int sockFd;              //!< Socket fd to send message to host
+    const pldm_pdr* pdrRepo; //!< Reference to PDR repo
     std::vector<EffecterInfo> hostEffecterInfo; //!< Parsed effecter information
     std::vector<std::unique_ptr<sdbusplus::bus::match_t>>
         effecterInfoMatch; //!< vector to catch the D-Bus property change

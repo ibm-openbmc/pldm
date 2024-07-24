@@ -278,9 +278,10 @@ int main(int argc, char** argv)
                 &dbusHandler, HOST_JSONS_DIR, &reqHandler);
         hostPDRHandler = std::make_shared<HostPDRHandler>(
             pldmTransport.getEventSource(), hostEID, event, pdrRepo.get(),
-            EVENTS_JSONS_DIR, entityTree.get(), bmcEntityTree.get(), hostEffecterParser.get(),
-            instanceIdDb, &reqHandler, oemPlatformHandler.get(),
-            oemUtilsHandler.get(), associationsParser.get());
+            EVENTS_JSONS_DIR, entityTree.get(), bmcEntityTree.get(),
+            hostEffecterParser.get(), instanceIdDb, &reqHandler,
+            oemPlatformHandler.get(), oemUtilsHandler.get(),
+            associationsParser.get());
 
         // HostFirmware interface needs access to hostPDR to know if host
         // is running

@@ -29,7 +29,7 @@ std::optional<std::string>
 
 void CustomDBus::setSoftwareVersion(const std::string& path, std::string value)
 {
-    if (softWareVersion.find(path) == softWareVersion.end())
+    if (!softWareVersion.contains(path))
     {
         softWareVersion.emplace(
             path, std::make_unique<SoftWareVersion>(
@@ -144,11 +144,12 @@ void CustomDBus::setSlotProperties(const std::string& path,
                                    const uint32_t& /*value*/,
                                    const std::string& /*linkState*/)
 {
-    //auto linkStatus = pldm::dbus::PCIeSlot::convertStatusFromString(linkState);
+    // auto linkStatus =
+    // pldm::dbus::PCIeSlot::convertStatusFromString(linkState);
     if (pcieSlot.contains(path))
     {
         // pcieSlot.at(path)->busId(value);
-      //  pcieSlot.at(path)->linkStatus(linkStatus);
+        //  pcieSlot.at(path)->linkStatus(linkStatus);
     }
 }
 
@@ -189,13 +190,13 @@ void CustomDBus::setCableAttributes(const std::string& path, double length,
                                     const std::string& cableDescription,
                                     const std::string& /*status*/)
 {
-    //pldm::dbus::ItemCable::Status cableStatus =
-      //  pldm::dbus::Cable::convertStatusFromString(status);
+    // pldm::dbus::ItemCable::Status cableStatus =
+    //   pldm::dbus::Cable::convertStatusFromString(status);
     if (cable.contains(path))
     {
         cable.at(path)->length(length);
         cable.at(path)->cableTypeDescription(cableDescription);
-        //cable.at(path)->cableStatus(cableStatus);
+        // cable.at(path)->cableStatus(cableStatus);
     }
 }
 
@@ -267,9 +268,9 @@ void CustomDBus::implementLicInterfaces(
 {
     if (!codLic.contains(path))
     {
-        codLic.emplace(
-            path, std::make_unique<LicenseEntry>(pldm::utils::DBusHandler::getBus(),
-                                            path.c_str()));
+        codLic.emplace(path,
+                       std::make_unique<LicenseEntry>(
+                           pldm::utils::DBusHandler::getBus(), path.c_str()));
     }
 
     codLic.at(path)->authDeviceNumber(authdevno);
@@ -399,7 +400,7 @@ std::optional<uint32_t> CustomDBus::getMicroCode(const std::string& path) const
 
 void CustomDBus::implementMotherboardInterface(const std::string& path)
 {
-    if (motherboard.find(path) == motherboard.end())
+    if (!motherboard.contains(path))
     {
         motherboard.emplace(path,
                             std::make_unique<Motherboard>(
@@ -420,7 +421,7 @@ void CustomDBus::implementObjectEnableIface(const std::string& path, bool value)
 
 void CustomDBus::implementFabricAdapter(const std::string& path)
 {
-    if (fabricAdapter.find(path) == fabricAdapter.end())
+    if (!fabricAdapter.contains(path))
     {
         fabricAdapter.emplace(
             path, std::make_unique<FabricAdapter>(
@@ -430,7 +431,7 @@ void CustomDBus::implementFabricAdapter(const std::string& path)
 
 void CustomDBus::implementBoard(const std::string& path)
 {
-    if (board.find(path) == board.end())
+    if (!board.contains(path))
     {
         board.emplace(
             path, std::make_unique<Board>(pldm::utils::DBusHandler::getBus(),
@@ -440,14 +441,13 @@ void CustomDBus::implementBoard(const std::string& path)
 
 void CustomDBus::implementGlobalInterface(const std::string& path)
 {
-    if (global.find(path) == global.end())
+    if (!global.contains(path))
     {
         global.emplace(
             path, std::make_unique<Global>(pldm::utils::DBusHandler::getBus(),
                                            path.c_str()));
     }
 }
-
 
 void CustomDBus::deleteObject(const std::string& path)
 {
@@ -565,7 +565,6 @@ void CustomDBus::deleteObject(const std::string& path)
     {
         pcieDevice.erase(pcieDevice.find(path));
     }
-
 }
 
 void CustomDBus::removeDBus(const std::vector<uint16_t> types)
@@ -590,7 +589,6 @@ void CustomDBus::removeDBus(const std::vector<uint16_t> types)
             deleteObject(path);
         }
     }
->>>>>>> cebfd7b (pldm: MexFru Support)
 }
 
 } // namespace dbus

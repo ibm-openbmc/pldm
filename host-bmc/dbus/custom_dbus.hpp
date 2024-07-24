@@ -1,14 +1,14 @@
 #pragma once
 
-#include "com/ibm/License/Entry/LicenseEntry/server.hpp"
 #include "../dbus_to_host_effecters.hpp"
 #include "asset.hpp"
 #include "associations.hpp"
 #include "availability.hpp"
 #include "board.hpp"
 #include "cable.hpp"
-#include "chassis.hpp"
 #include "chapdata.hpp"
+#include "chassis.hpp"
+#include "com/ibm/License/Entry/LicenseEntry/server.hpp"
 #include "common/utils.hpp"
 #include "connector.hpp"
 #include "cpu_core.hpp"
@@ -28,6 +28,8 @@
 #include "software_version.hpp"
 #include "vrm.hpp"
 
+#include <libpldm/state_set.h>
+
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server.hpp>
 #include <sdbusplus/server/object.hpp>
@@ -35,9 +37,6 @@
 #include <map>
 #include <memory>
 #include <string>
-
-#include <libpldm/state_set.h>
-
 
 namespace pldm
 {
@@ -131,29 +130,88 @@ class CustomDBus
      */
     void implementChassisInterface(const std::string& path);
 
+    /** @brief Implement PCIeSlot Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementPCIeSlotInterface(const std::string& path);
 
+    /** @brief Implement PowerSupply Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementPowerSupplyInterface(const std::string& path);
 
+    /** @brief Implement Fan Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementFanInterface(const std::string& path);
 
+    /** @brief Implement Connector Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementConnecterInterface(const std::string& path);
 
+    /** @brief Implement Voltage Regulator Module Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementVRMInterface(const std::string& path);
 
-
+    /** @brief Implement Fabric Adapter Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementFabricAdapter(const std::string& path);
 
+    /** @brief Implement Board Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementBoard(const std::string& path);
 
+    /** @brief Implement PCIeDevice Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementPCIeDeviceInterface(const std::string& path);
 
+    /** @brief Implement Global Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementGlobalInterface(const std::string& path);
 
+    /** @brief Implement Cable Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementCableInterface(const std::string& path);
 
+    /** @brief Implement Asset Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementAssetInterface(const std::string& path);
 
+    /** @brief Implement Panel Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
     void implementPanelInterface(const std::string& path);
 
     /** @brief Set the Asserted property
@@ -308,8 +366,8 @@ class CustomDBus
     /* @brief set partNumber */
     void setPartNumber(const std::string& path, const std::string& partNumber);
 
+    /* @brief set slot type */
     void setSlotType(const std::string& path, const std::string& slotType);
-
 
   private:
     std::unordered_map<ObjectPath, std::unique_ptr<LocationCode>> location;
@@ -332,6 +390,7 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<ChapDatas>> chapdata;
     std::unordered_map<ObjectPath, std::unique_ptr<Availability>>
         availabilityState;
+    std::unordered_map<ObjectPath, std::unique_ptr<Enable>> enabledStatus;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIeSlot>> pcieSlot;
     std::unordered_map<ObjectPath, std::unique_ptr<LicenseEntry>> codLic;
     std::unordered_map<ObjectPath, std::unique_ptr<Associations>> associations;
