@@ -1022,7 +1022,7 @@ void HostPDRHandler::_setHostSensorState()
                 sensorRearm.byte = 0;
                 uint8_t tid = std::get<0>(terminusInfo);
 
-                auto instanceId = instanceIdDb.next(mctp_eid);
+                auto instanceId = instanceIdDb.next(mctpEid);
                 std::vector<uint8_t> requestMsg(
                     sizeof(pldm_msg_hdr) +
                     PLDM_GET_STATE_SENSOR_READINGS_REQ_BYTES);
@@ -1497,7 +1497,7 @@ void HostPDRHandler::setFRUDataOnDBus(
 
         for (const auto& data : fruRecordData)
         {
-            if (fruRSI.has_value() && (*fruRSI != data.fruRSI))
+            if (!fruRSI.has_value() || (*fruRSI != data.fruRSI))
             {
                 continue;
             }

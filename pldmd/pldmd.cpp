@@ -272,6 +272,10 @@ int main(int argc, char** argv)
         associationsParser =
             std::make_unique<pldm::host_associations::HostAssociationsParser>(
                 HOST_JSONS_DIR);
+        hostEffecterParser =
+            std::make_unique<pldm::host_effecters::HostEffecterParser>(
+                &dbusImplReq, pldmTransport.getEventSource(), pdrRepo.get(),
+                &dbusHandler, HOST_JSONS_DIR, &reqHandler);
         hostPDRHandler = std::make_shared<HostPDRHandler>(
             pldmTransport.getEventSource(), hostEID, event, pdrRepo.get(),
             EVENTS_JSONS_DIR, entityTree.get(), bmcEntityTree.get(), hostEffecterParser.get(),
@@ -282,10 +286,6 @@ int main(int argc, char** argv)
         // is running
         dbusImplHost.setHostPdrObj(hostPDRHandler);
         hostPDRHandler->setOemUtilsHandler(oemUtilsHandler.get());
-        hostEffecterParser =
-            std::make_unique<pldm::host_effecters::HostEffecterParser>(
-                &dbusImplReq, pldmTransport.getEventSource(), pdrRepo.get(),
-                &dbusHandler, HOST_JSONS_DIR, &reqHandler);
         dbusToPLDMEventHandler = std::make_unique<DbusToPLDMEvent>(
             pldmTransport.getEventSource(), hostEID, instanceIdDb, &reqHandler);
     }
