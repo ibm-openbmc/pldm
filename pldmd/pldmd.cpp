@@ -272,6 +272,7 @@ int main(int argc, char** argv)
         // HostFirmware interface needs access to hostPDR to know if host
         // is running
         dbusImplHost.setHostPdrObj(hostPDRHandler);
+        hostPDRHandler->setOemUtilsHandler(oemUtilsHandler.get());
         dbusToPLDMEventHandler = std::make_unique<DbusToPLDMEvent>(
             pldmTransport.getEventSource(), hostEID, instanceIdDb, &reqHandler);
     }

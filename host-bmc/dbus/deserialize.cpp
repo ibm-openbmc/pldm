@@ -132,6 +132,16 @@ std::unordered_map<std::string, callback> dBusInterfaceHandler{
     {"Global",
      [](const std::string& path, Properties /* values */) {
     pldm::dbus::CustomDBus::getCustomDBus().implementGlobalInterface(path);
+}},
+    {"SoftWareVersion", [](const std::string& path, Properties values) {
+    std::string version{};
+
+    if (values.contains("version"))
+    {
+        version = std::get<std::string>(values.at("version"));
+    }
+
+    pldm::dbus::CustomDBus::getCustomDBus().setSoftwareVersion(path, version);
 }}
 
 };
