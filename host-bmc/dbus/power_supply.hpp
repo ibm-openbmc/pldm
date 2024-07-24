@@ -30,7 +30,6 @@ class PowerSupply : public ItemPowerSupply
         pldm::serialize::Serialize::getSerialize().serialize(objPath,
                                                              "PowerSupply");
     }
-
 };
 
 } // namespace dbus

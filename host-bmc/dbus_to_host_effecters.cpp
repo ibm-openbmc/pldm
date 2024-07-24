@@ -277,8 +277,9 @@ int HostEffecterParser::sendSetStateEffecterStates(
     if (rc != PLDM_SUCCESS)
     {
         error(
-            "Message encode SetStateEffecterStates failure. PLDM error code = {RC}",
-            "RC", lg2::hex, rc);
+            "Failed to encode set state effecter states message for effecter ID '{EFFECTERID}' and instanceID '{INSTANCE}' with response code '{RC}'",
+            "EFFECTERID", effecterId, "INSTANCE", instanceId, "RC", lg2::hex,
+            rc);
         requester->markFree(mctpEid, instanceId);
         return rc;
     }
@@ -288,7 +289,7 @@ int HostEffecterParser::sendSetStateEffecterStates(
         if (response == nullptr || !respMsgLen)
         {
             error(
-                "Failed to receive response for setStateEffecterStates command");
+                "Failed to receive response for setting state effecter states.");
             return;
         }
         uint8_t completionCode{};
@@ -325,7 +326,9 @@ int HostEffecterParser::sendSetStateEffecterStates(
         std::move(requestMsg), std::move(setStateEffecterStatesRespHandler));
     if (rc)
     {
-        error("Failed to send request to set an effecter on Host");
+        error(
+            "Failed to send request to set an effecter on remote terminus for effecter ID '{EFFECTERID}', response code '{RC}'",
+            "EFFECTERID", effecterId, "RC", rc);
     }
     return rc;
 }
