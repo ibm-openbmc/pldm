@@ -4,6 +4,7 @@
 #include "com/ibm/License/Entry/LicenseEntry/server.hpp"
 #include "common/utils.hpp"
 #include "cpu_core.hpp"
+#include "enable.hpp"
 #include "motherboard.hpp"
 
 #include <libpldm/state_set.h>
@@ -168,6 +169,13 @@ class CustomDBus
      */
     void implementMotherboardInterface(const std::string& path);
 
+    /** @brief Implement Enable interface
+     *
+     *  @param[in] path  - The object path
+     *
+     */
+    void implementObjectEnableIface(const std::string& path, bool value);
+
   private:
     std::unordered_map<ObjectPath, std::unique_ptr<LocationIntf>> location;
     std::map<ObjectPath, std::unique_ptr<OperationalStatusIntf>>
@@ -175,6 +183,7 @@ class CustomDBus
     std::map<ObjectPath, std::unique_ptr<AvailabilityIntf>> availabilityState;
     std::unordered_map<ObjectPath, std::unique_ptr<LicIntf>> codLic;
     std::unordered_map<ObjectPath, std::unique_ptr<CPUCore>> cpuCore;
+    std::unordered_map<ObjectPath, std::unique_ptr<Enable>> enabledStatus;
     std::unordered_map<ObjectPath, std::unique_ptr<Motherboard>> motherboard;
     std::unordered_map<ObjectPath, std::unique_ptr<ChapDatas>> chapdata;
 };

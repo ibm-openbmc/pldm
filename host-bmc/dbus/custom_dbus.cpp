@@ -139,5 +139,17 @@ void CustomDBus::implementMotherboardInterface(const std::string& path)
                                 pldm::utils::DBusHandler::getBus(), path));
     }
 }
+
+void CustomDBus::implementObjectEnableIface(const std::string& path, bool value)
+{
+    if (!enabledStatus.contains(path))
+    {
+        enabledStatus.emplace(
+            path, std::make_unique<Enable>(pldm::utils::DBusHandler::getBus(),
+                                           path.c_str()));
+    }
+    enabledStatus.at(path)->enabled(value);
+}
+
 } // namespace dbus
 } // namespace pldm
