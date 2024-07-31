@@ -18,7 +18,7 @@ test_sources = [
   '../dbus/led_group.cpp',
   '../dbus/serialize.cpp',
   '../dbus/custom_dbus.cpp',
-  '../dbus/software_version.cpp',
+  '../dbus/decorator_revision.cpp',
   '../dbus/chapdata.cpp',
   '../dbus/cable.cpp',
   '../dbus/asset.cpp',

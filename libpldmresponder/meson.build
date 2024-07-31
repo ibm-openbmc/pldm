@@ -50,7 +50,7 @@ sources = [
     '../host-bmc/dbus/operational_status.cpp',
     '../host-bmc/dbus/asset.cpp',
     '../host-bmc/dbus/location_code.cpp',
-    '../host-bmc/dbus/software_version.cpp',
+    '../host-bmc/dbus/decorator_revision.cpp',
     'event_parser.cpp',
 ]
 
