@@ -38,6 +38,7 @@ sources = [
   '../host-bmc/dbus/availability.cpp',
   '../host-bmc/dbus/chassis.cpp',
   '../host-bmc/dbus/cpu_core.cpp',
+  '../host-bmc/dbus/decorator_revision.cpp',
   '../host-bmc/dbus/chapdata.cpp',
   '../host-bmc/dbus/enable.cpp',
   '../host-bmc/dbus/inventory_item.cpp',
