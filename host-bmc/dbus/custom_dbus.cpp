@@ -32,13 +32,9 @@ void CustomDBus::setSoftwareVersion(const std::string& path, std::string value)
     if (!softWareVersion.contains(path))
     {
         softWareVersion.emplace(
-            path, std::make_unique<SoftWareVersion>(
+            path, std::make_unique<DecoratorRevision>(
                       pldm::utils::DBusHandler::getBus(), path.c_str()));
-        softWareVersion.at(path)->purpose(
-            sdbusplus::xyz::openbmc_project::Software::server::Version::
-                VersionPurpose::Other);
     }
-
     softWareVersion.at(path)->version(value);
 }
 

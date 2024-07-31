@@ -12,6 +12,7 @@
 #include "common/utils.hpp"
 #include "connector.hpp"
 #include "cpu_core.hpp"
+#include "decorator_revision.hpp"
 #include "enable.hpp"
 #include "fabric_adapter.hpp"
 #include "fan.hpp"
@@ -25,7 +26,6 @@
 #include "pcie_device.hpp"
 #include "pcie_slot.hpp"
 #include "power_supply.hpp"
-#include "software_version.hpp"
 #include "vrm.hpp"
 
 #include <libpldm/state_set.h>
@@ -395,7 +395,7 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<LicenseEntry>> codLic;
     std::unordered_map<ObjectPath, std::unique_ptr<Associations>> associations;
     std::unordered_map<ObjectPath, std::unique_ptr<LEDGroup>> ledGroup;
-    std::unordered_map<ObjectPath, std::unique_ptr<SoftWareVersion>>
+    std::unordered_map<ObjectPath, std::unique_ptr<DecoratorRevision>>
         softWareVersion;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIeDevice>> pcieDevice;
     std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
