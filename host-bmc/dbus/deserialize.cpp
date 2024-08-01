@@ -35,6 +35,14 @@ std::unordered_map<std::string, callback> dBusInterfaceHandler{
         pldm::dbus::CustomDBus::getCustomDBus().implementCpuCoreInterface(path);
     }
 }},
+    {"Enable",
+     [](const std::string& path, PropertyMap values) {
+    if (values.contains("enabled"))
+    {
+        pldm::dbus::CustomDBus::getCustomDBus().implementObjectEnableIface(
+            path, std::get<bool>(values.at("enabled")));
+    }
+}},
     {"Motherboard", [](const std::string& path, PropertyMap /* values */) {
     pldm::dbus::CustomDBus::getCustomDBus().implementMotherboardInterface(path);
 }}};

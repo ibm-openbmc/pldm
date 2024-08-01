@@ -33,6 +33,7 @@ sources = [
     '../host-bmc/dbus/cable.cpp',
     '../host-bmc/dbus/cpu_core.cpp',
     '../host-bmc/dbus/chapdata.cpp',
+    '../host-bmc/dbus/enable.cpp',
     '../host-bmc/utils.cpp',
     '../host-bmc/dbus/pcie_device.cpp',
     '../host-bmc/dbus/pcie_slot.cpp',

@@ -202,5 +202,16 @@ void CustomDBus::setAvailabilityState(const std::string& path,
     availabilityState.at(path)->available(state);
 }
 
+void CustomDBus::implementObjectEnableIface(const std::string& path, bool value)
+{
+    if (!enabledStatus.contains(path))
+    {
+        enabledStatus.emplace(
+            path, std::make_unique<Enable>(pldm::utils::DBusHandler::getBus(),
+                                           path.c_str()));
+    }
+    enabledStatus.at(path)->enabled(value);
+}
+
 } // namespace dbus
 } // namespace pldm
