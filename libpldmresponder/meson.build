@@ -50,7 +50,6 @@ sources = [
   '../host-bmc/dbus/cable.cpp',
   '../host-bmc/dbus/asset.cpp',
   '../host-bmc/dbus/serialize.cpp',
-  '../host-bmc/dbus/software_version.cpp',
   '../host-bmc/dbus/location_code.cpp',
   '../host-bmc/dbus/deserialize.cpp',
   'event_parser.cpp'
