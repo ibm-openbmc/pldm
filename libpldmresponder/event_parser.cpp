@@ -119,9 +119,21 @@ StateToDBusValue StateSensorHandler::mapStateToDBusVal(
     return eventStateMap;
 }
 
-int StateSensorHandler::eventAction(const StateSensorEntry& entry,
+int StateSensorHandler::eventAction(StateSensorEntry entry,
                                     pdr::EventState state)
 {
+    for (const auto& kv : eventMap)
+    {
+        if (kv.first.skipContainerId &&
+            kv.first.entityType == entry.entityType &&
+            kv.first.entityInstance == entry.entityInstance &&
+            kv.first.stateSetid == entry.stateSetid &&
+            kv.first.sensorOffset == entry.sensorOffset)
+        {
+            entry.skipContainerId = true;
+            break;
+        }
+    }
     try
     {
         const auto& [dbusMapping, eventStateMap] = eventMap.at(entry);
