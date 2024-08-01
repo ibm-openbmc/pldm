@@ -106,7 +106,7 @@ class StateSensorHandler
      *
      *  @return PLDM completion code
      */
-    int eventAction(const StateSensorEntry& entry, pdr::EventState state);
+    int eventAction(StateSensorEntry entry, pdr::EventState state);
 
     /** @brief Helper API to get D-Bus information for a StateSensorEntry
      *
