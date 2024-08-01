@@ -1285,6 +1285,8 @@ void HostPDRHandler::createDbusObjects()
             case PLDM_ENTITY_PROC | 0x8000:
                 CustomDBus::getCustomDBus().implementCpuCoreInterface(
                     entity.first);
+                CustomDBus::getCustomDBus().implementObjectEnableIface(
+                    entity.first, false);
                 break;
             case PLDM_ENTITY_SYS_BOARD:
                 CustomDBus::getCustomDBus().implementMotherboardInterface(

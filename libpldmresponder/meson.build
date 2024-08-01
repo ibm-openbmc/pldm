@@ -30,6 +30,7 @@ sources = [
   '../host-bmc/dbus_to_host_effecters.cpp',
   '../host-bmc/host_condition.cpp',
   '../host-bmc/dbus/custom_dbus.cpp',
+  '../host-bmc/dbus/enable.cpp',
   '../host-bmc/dbus/serialize.cpp',
   '../host-bmc/dbus/deserialize.cpp',
   '../host-bmc/dbus/cpu_core.cpp',
