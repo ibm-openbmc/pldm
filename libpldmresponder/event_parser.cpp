@@ -62,7 +62,6 @@ StateSensorHandler::StateSensorHandler(const std::string& dirPath)
             // container id is not found in the json
             stateSensorEntry.skipContainerId =
                 (stateSensorEntry.containerId == 0xFFFF) ? true : false;
-
             pldm::utils::DBusMapping dbusInfo{};
 
             auto dbus = entry.value("dbus", emptyJson);
