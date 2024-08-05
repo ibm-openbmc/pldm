@@ -67,6 +67,18 @@
             "reverse_association": "containing"
         },
         {
+            "from_entity_type": 61,
+            "to_entity_type": 186,
+            "forward_association": "contained_by",
+            "reverse_association": "containing"
+        },
+        {
+            "from_entity_type": 61,
+            "to_entity_type": 32954,
+            "forward_association": "contained_by",
+            "reverse_association": "containing"
+        },
+        {
             "from_entity_type": 32954,
             "to_entity_type": 45,
             "forward_association": "contained_by",
