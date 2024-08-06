@@ -642,7 +642,7 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
         }
         else if (statusCode == DumpRequestStatus::AcfFileInvalid)
         {
-            value = "com.ibm.Dump.Entry.Resource.HostResponse.AcfFileInvalid";
+            value = "com.ibm.Dump.Entry.Resource.HostResponse.ACFFileInvalid";
         }
         else if (statusCode == DumpRequestStatus::UserChallengeInvalid)
         {
