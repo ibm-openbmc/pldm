@@ -11,9 +11,9 @@ namespace pldm
 {
 namespace dbus
 {
-using LocationIntf = sdbusplus::server::object::object<
-    sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::
-        LocationCode>;
+using LocationIntf =
+    sdbusplus::server::object_t<sdbusplus::xyz::openbmc_project::Inventory::
+                                    Decorator::server::LocationCode>;
 
 class LocationCode : public LocationIntf
 {
@@ -25,7 +25,7 @@ class LocationCode : public LocationIntf
     LocationCode(LocationCode&&) = delete;
     LocationCode& operator=(LocationCode&&) = delete;
 
-    LocationCode(sdbusplus::bus::bus& bus, const std::string& objPath) :
+    LocationCode(sdbusplus::bus_t& bus, const std::string& objPath) :
         LocationIntf(bus, objPath.c_str()), path(objPath)
     {}
 

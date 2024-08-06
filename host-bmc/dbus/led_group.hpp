@@ -16,7 +16,7 @@ namespace pldm
 {
 namespace dbus
 {
-using AssertedIntf = sdbusplus::server::object::object<
+using AssertedIntf = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Led::server::Group>;
 
 class LEDGroup : public AssertedIntf

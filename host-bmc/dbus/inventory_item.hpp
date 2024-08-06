@@ -11,7 +11,7 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemIntf = sdbusplus::server::object::object<
+using ItemIntf = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Inventory::server::Item>;
 
 class InventoryItem : public ItemIntf
@@ -22,7 +22,7 @@ class InventoryItem : public ItemIntf
     InventoryItem(const InventoryItem&) = delete;
     InventoryItem& operator=(const InventoryItem&) = delete;
 
-    InventoryItem(sdbusplus::bus::bus& bus, const std::string& objPath) :
+    InventoryItem(sdbusplus::bus_t& bus, const std::string& objPath) :
         ItemIntf(bus, objPath.c_str()), path(objPath)
     {}
 

@@ -11,7 +11,7 @@ namespace pldm
 {
 namespace dbus
 {
-using LicIntf = sdbusplus::server::object::object<
+using LicIntf = sdbusplus::server::object_t<
     sdbusplus::com::ibm::License::Entry::server::LicenseEntry>;
 
 class LicenseEntry : public LicIntf
@@ -24,7 +24,7 @@ class LicenseEntry : public LicIntf
     LicenseEntry(LicenseEntry&&) = delete;
     LicenseEntry& operator=(LicenseEntry&&) = delete;
 
-    LicenseEntry(sdbusplus::bus::bus& bus, const std::string& objPath) :
+    LicenseEntry(sdbusplus::bus_t& bus, const std::string& objPath) :
         LicIntf(bus, objPath.c_str()), path(objPath)
     {}
 

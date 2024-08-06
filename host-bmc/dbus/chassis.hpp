@@ -13,7 +13,7 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemChassisIntf = sdbusplus::server::object::object<
+using ItemChassisIntf = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Inventory::Item::server::Chassis>;
 
 class ItemChassis : public ItemChassisIntf

@@ -13,7 +13,7 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemVRM = sdbusplus::server::object::object<
+using ItemVRM = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Inventory::Item::server::Vrm>;
 
 class VRM : public ItemVRM

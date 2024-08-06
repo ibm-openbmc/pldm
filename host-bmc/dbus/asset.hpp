@@ -14,7 +14,7 @@ namespace pldm
 namespace dbus
 {
 
-using ItemAsset = sdbusplus::server::object::object<
+using ItemAsset = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Asset>;
 
 class Asset : public ItemAsset

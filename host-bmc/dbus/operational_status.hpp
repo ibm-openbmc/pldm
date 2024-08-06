@@ -12,8 +12,8 @@ namespace pldm
 namespace dbus
 {
 using OperationalStatusIntf =
-    sdbusplus::server::object::object<sdbusplus::xyz::openbmc_project::State::
-                                          Decorator::server::OperationalStatus>;
+    sdbusplus::server::object_t<sdbusplus::xyz::openbmc_project::State::
+                                    Decorator::server::OperationalStatus>;
 
 class OperationalStatus : public OperationalStatusIntf
 {
@@ -25,7 +25,7 @@ class OperationalStatus : public OperationalStatusIntf
     OperationalStatus(OperationalStatus&&) = delete;
     OperationalStatus& operator=(OperationalStatus&&) = delete;
 
-    OperationalStatus(sdbusplus::bus::bus& bus, const std::string& objPath) :
+    OperationalStatus(sdbusplus::bus_t& bus, const std::string& objPath) :
         OperationalStatusIntf(bus, objPath.c_str()), path(objPath)
     {}
 

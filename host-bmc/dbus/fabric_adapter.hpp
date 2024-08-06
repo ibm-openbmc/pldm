@@ -13,7 +13,7 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemFabricAdapter = sdbusplus::server::object::object<
+using ItemFabricAdapter = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Inventory::Item::server::FabricAdapter>;
 
 class FabricAdapter : public ItemFabricAdapter
