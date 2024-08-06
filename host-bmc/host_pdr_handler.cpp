@@ -97,6 +97,7 @@ HostPDRHandler::HostPDRHandler(
     entityMaps(parseEntityMap(ENTITY_MAP_JSON))
 {
     isHostOff = false;
+    isHostTransitioningToOff = false;
     mergedHostParents = false;
     hostOffMatch = std::make_unique<sdbusplus::bus::match_t>(
         pldm::utils::DBusHandler::getBus(),
@@ -113,22 +114,23 @@ HostPDRHandler::HostPDRHandler(
             auto propVal = std::get<std::string>(value);
             if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
             {
-                    // Delete all the remote terminus information
+                // Delete all the remote terminus information
                     std::erase_if(tlPDRInfo, [](const auto& item) {
-                        const auto& [key, value] = item;
-                        return key != TERMINUS_HANDLE;
-                    });
+                            auto const& [key, value] = item;
+                            return key != TERMINUS_HANDLE;
+                            });
                     pldm_pdr_remove_remote_pdrs(repo);
                     pldm_entity_association_tree_destroy_root(entityTree);
                     pldm_entity_association_tree_copy_root(bmcEntityTree,
-                                                           entityTree);
+                            entityTree);
                     this->sensorMap.clear();
+                    this->isHostPdrModified = false;
                     this->responseReceived = false;
                     this->mergedHostParents = false;
-                    this->isHostPdrModified = false;
                     this->stateSensorPDRs.clear();
                     fruRecordSetPDRs.clear();
                     isHostOff = true;
+                    isHostTransitioningToOff = false;
                     this->sensorIndex = stateSensorPDRs.begin();
 
                     // After a power off , the remote nodes will be deleted
@@ -139,9 +141,20 @@ HostPDRHandler::HostPDRHandler(
                         pldm_entity obj{};
                         this->objPathMap[element.first] = obj;
                     }
-                }
             }
-        });
+            else if (
+                propVal ==
+                "xyz.openbmc_project.State.Host.HostState.TransitioningToOff")
+            {
+                isHostTransitioningToOff = true;
+            }
+            else if (propVal ==
+                     "xyz.openbmc_project.State.Host.HostState.Running")
+            {
+                isHostTransitioningToOff = false;
+            }
+        }
+    });
 }
 
 void HostPDRHandler::fetchPDR(PDRRecordHandles&& recordHandles, uint8_t tid)
@@ -524,8 +537,11 @@ void HostPDRHandler::processHostPDRs(
     if (response == nullptr || !respMsgLen)
     {
         error("Failed to receive response for the GetPDR command");
-        pldm::utils::reportError(
-            "xyz.openbmc_project.PLDM.Error.GetPDR.PDRExchangeFailure");
+        if (!isHostTransitioningToOff)
+        {
+            pldm::utils::reportError(
+                "xyz.openbmc_project.PLDM.Error.GetPDR.PDRExchangeFailure");
+        }
         return;
     }
 
