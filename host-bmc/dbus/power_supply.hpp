@@ -11,7 +11,7 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemPowerSupply = sdbusplus::server::object::object<
+using ItemPowerSupply = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Inventory::Item::server::PowerSupply>;
 
 class PowerSupply : public ItemPowerSupply

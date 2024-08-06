@@ -67,16 +67,28 @@
             "reverse_association": "containing"
         },
         {
-            "from_entity_type": 61,
-            "to_entity_type": 186,
-            "forward_association": "contained_by",
-            "reverse_association": "containing"
+            "from_entity_type": 186,
+            "to_entity_type": 61,
+            "forward_association": "containing",
+            "reverse_association": "contained_by"
         },
         {
-            "from_entity_type": 61,
-            "to_entity_type": 32954,
-            "forward_association": "contained_by",
-            "reverse_association": "containing"
+            "from_entity_type": 32954,
+            "to_entity_type": 80,
+            "forward_association": "containing",
+            "reverse_association": "contained_by"
+        },
+        {
+            "from_entity_type": 80,
+            "to_entity_type": 185,
+            "forward_association": "connecting",
+            "reverse_association": "connected_to"
+        },
+        {
+            "from_entity_type": 80,
+            "to_entity_type": 186,
+            "forward_association": "containing",
+            "reverse_association": "contained_by"
         },
         {
             "from_entity_type": 32954,

@@ -9,8 +9,8 @@ namespace dbus
 
 std::string DecoratorRevision::version() const
 {
-    return sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Revision::
-        version();
+    return sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::
+        Revision::version();
 }
 
 std::string DecoratorRevision::version(std::string value)
@@ -18,8 +18,8 @@ std::string DecoratorRevision::version(std::string value)
     pldm::serialize::Serialize::getSerialize().serialize(
         path, "DecoratorRevision", "version", value);
 
-    return sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Revision::version(
-        value);
+    return sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::
+        Revision::version(value);
 }
 
 } // namespace dbus

@@ -13,7 +13,7 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemConnector = sdbusplus::server::object::object<
+using ItemConnector = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Inventory::Item::server::Connector>;
 
 class Connector : public ItemConnector

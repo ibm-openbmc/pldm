@@ -390,7 +390,6 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<ChapDatas>> chapdata;
     std::unordered_map<ObjectPath, std::unique_ptr<Availability>>
         availabilityState;
-    std::unordered_map<ObjectPath, std::unique_ptr<Enable>> enabledStatus;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIeSlot>> pcieSlot;
     std::unordered_map<ObjectPath, std::unique_ptr<LicenseEntry>> codLic;
     std::unordered_map<ObjectPath, std::unique_ptr<Associations>> associations;

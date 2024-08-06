@@ -13,7 +13,7 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemFan = sdbusplus::server::object::object<
+using ItemFan = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Inventory::Item::server::Fan>;
 
 class Fan : public ItemFan

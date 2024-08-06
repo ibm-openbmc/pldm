@@ -11,7 +11,7 @@ namespace pldm
 {
 namespace dbus
 {
-using DecoratorRevisionIntf = sdbusplus::server::object::object<
+using DecoratorRevisionIntf = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Revision>;
 
 class DecoratorRevision : public DecoratorRevisionIntf

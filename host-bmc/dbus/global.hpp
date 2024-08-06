@@ -13,7 +13,7 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemGlobal = sdbusplus::server::object::object<
+using ItemGlobal = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Inventory::Item::server::Global>;
 
 class Global : public ItemGlobal
