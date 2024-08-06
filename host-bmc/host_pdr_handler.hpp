@@ -366,6 +366,9 @@ class HostPDRHandler
     uint16_t terminusID = 0;
 
     bool isHostOff;
+
+    /** @brief true/false based on the host transitioning value */
+    bool isHostTransitioningToOff;
 };
 
 } // namespace pldm
