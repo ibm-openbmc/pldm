@@ -241,13 +241,13 @@ int main(int argc, char** argv)
     platformConfigHandler =
         std::make_unique<platform_config::Handler>(PDR_JSONS_DIR);
     std::unique_ptr<oem_fru::Handler> oemFruHandler{};
+    std::unique_ptr<oem_utils::Handler> oemUtilsHandler{};
 
 #ifdef OEM_IBM
     respInterface.responseObj =
         std::make_unique<pldm::response_api::AltResponse>(&pldmTransport, TID,
                                                           verbose);
-    std::unique_ptr<oem_utils::Handler> oemUtilsHandler =
-        std::make_unique<oem_ibm_utils::Handler>(&dbusHandler);
+    oemUtilsHandler = std::make_unique<oem_ibm_utils::Handler>(&dbusHandler);
     std::unique_ptr<pldm::responder::CodeUpdate> codeUpdate =
         std::make_unique<pldm::responder::CodeUpdate>(&dbusHandler);
     codeUpdate->clearDirPath(LID_STAGING_DIR);
