@@ -93,7 +93,7 @@ std::unordered_map<std::string, callback> dBusInterfaceHandler{
     }
 }},
     {"Enable",
-     [](const std::string& path, PropertyMap values) {
+     [](const std::string& path, Properties values) {
     if (values.contains("enabled"))
     {
         pldm::dbus::CustomDBus::getCustomDBus().implementObjectEnableIface(
