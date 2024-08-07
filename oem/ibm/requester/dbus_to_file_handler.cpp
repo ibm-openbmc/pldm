@@ -1,6 +1,7 @@
 #include "dbus_to_file_handler.hpp"
 
 #include "common/utils.hpp"
+#include "pfw-sms-utils/pfw_sms_menu.hpp"
 
 #include <libpldm/oem/ibm/file_io.h>
 
@@ -16,6 +17,7 @@ namespace oem_ibm
 {
 using namespace pldm::utils;
 using namespace sdbusplus::bus::match::rules;
+using namespace ibm_pfw_sms;
 
 static constexpr auto resDumpProgressIntf =
     "xyz.openbmc_project.Common.Progress";
@@ -374,6 +376,71 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
         error(
             "Failed to send NewFileAvailable Request to Host for vmi, response code '{RC}'",
             "RC", rc);
+    }
+}
+
+void DbusToFileHandler::sendFileAckWithMetaDataToHost(
+    uint16_t fileType, uint32_t fileHandle, uint8_t fileStatus,
+    uint32_t fileMetaData1, uint32_t fileMetaData2, uint32_t fileMetaData3,
+    uint32_t fileMetaData4)
+{
+    info(
+        "sending acknowledgement with metadata to host where metadata1:{FMD1} metadata2:{FMD2} metadata3:{FMD3} "
+        "metadata4:{FMD4}",
+        "FMD1", fileMetaData1, "FMD2", fileMetaData2, "FMD3", fileMetaData3,
+        "FMD4", fileMetaData4);
+    if (instanceIdDb == NULL)
+    {
+        error("Failed to send sms menu data validation response as "
+              "requester is not set");
+        pldm::utils::reportError(
+            "xyz.openbmc_project.PLDM.Error.sendFileAckWithMetaDataToHost."
+            "SendSmsMenuRespFail");
+        return;
+    }
+    auto instanceId = instanceIdDb->next(mctp_eid);
+    std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
+                                    PLDM_FILE_ACK_WITH_META_DATA_REQ_BYTES);
+    auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+
+    auto rc = encode_file_ack_with_meta_data_req(
+        instanceId, fileType, fileHandle, fileStatus, fileMetaData1,
+        fileMetaData2, fileMetaData3, fileMetaData4, request);
+    if (rc != PLDM_SUCCESS)
+    {
+        instanceIdDb->free(mctp_eid, instanceId);
+        error(
+            "Failed to encode_file_ack_with_meta_data_req, response code:{RC}",
+            "RC", rc);
+        return;
+    }
+
+    auto fileAckWithMetaDataRespHandler = [this](mctp_eid_t /*eid*/,
+                                                 const pldm_msg* response,
+                                                 size_t respMsgLen) {
+        if (response == nullptr || !respMsgLen)
+        {
+            error("Failed to receive response for FileAckWithMetaData command");
+            return;
+        }
+        uint8_t completionCode{};
+        auto rc = decode_file_ack_with_meta_data_resp(response, respMsgLen,
+                                                      &completionCode);
+        if (rc || completionCode)
+        {
+            error(
+                "Failed to decode_file_ack_with_meta_data_resp or Host returned"
+                " error for file_ack_with_meta_data response code:{RC}, "
+                "completion code:{CC}",
+                "RC", rc, "CC", completionCode);
+        }
+    };
+    rc = handler->registerRequest(
+        mctp_eid, instanceId, PLDM_OEM, PLDM_FILE_ACK_WITH_META_DATA,
+        std::move(requestMsg), std::move(fileAckWithMetaDataRespHandler));
+    if (rc)
+    {
+        error("Failed to send FileAckWithMetaData Request to Host");
     }
 }
 

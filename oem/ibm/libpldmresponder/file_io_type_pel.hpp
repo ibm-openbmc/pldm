@@ -36,7 +36,8 @@ class PelHandler : public FileHandler
 
     virtual int write(const char* /*buffer*/, uint32_t /*offset*/,
                       uint32_t& /*length*/,
-                      oem_platform::Handler* /*oemPlatformHandler*/);
+                      oem_platform::Handler* /*oemPlatformHandler*/,
+                      struct fileack_status_metadata& /*metaDataObj*/);
 
     virtual int fileAck(uint8_t fileStatus);
 
@@ -70,6 +71,10 @@ class PelHandler : public FileHandler
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
+
+    virtual void postWriteAction(
+        const uint16_t /*fileType*/, const uint32_t /*fileHandle*/,
+        const struct fileack_status_metadata& /*metaDataObj*/) {};
 
     /** @brief PelHandler destructor
      */

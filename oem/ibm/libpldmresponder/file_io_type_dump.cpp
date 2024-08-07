@@ -341,7 +341,8 @@ void DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
 }
 
 int DumpHandler::write(const char* buffer, uint32_t, uint32_t& length,
-                       oem_platform::Handler* /*oemPlatformHandler*/)
+                       oem_platform::Handler* /*oemPlatformHandler*/,
+                       struct fileack_status_metadata& /*metaDataObj*/)
 {
     int rc = writeToUnixSocket(DumpHandler::fd, buffer, length);
     if (rc < 0)

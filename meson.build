@@ -213,6 +213,10 @@ subdir('pldmtool')
 
 subdir('configurations')
 
+if get_option('oem-ibm').enabled()
+  subdir('oem/ibm/pfw-sms-utils')
+endif
+
 if get_option('utilities').allowed()
   subdir('utilities')
 endif
