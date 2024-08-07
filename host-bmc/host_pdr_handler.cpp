@@ -1036,7 +1036,7 @@ void HostPDRHandler::_setHostSensorState()
 
                 if (rc != PLDM_SUCCESS)
                 {
-                    instanceIdDb.free(mctp_eid, instanceId);
+                    instanceIdDb.free(mctpEid, instanceId);
                     error(
                         "Failed to encode get state sensor readings request for sensorID '{SENSOR_ID}' and  instanceID '{INSTANCE}', response code '{RC}'",
                         "SENSOR_ID", sensorId, "INSTANCE", instanceId, "RC",
@@ -1387,7 +1387,6 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
             ++sensorMapIndex;
             if (sensorMapIndex == sensorMap.end())
             {
-                // error("sensor map completed");
                 ++objMapIndex;
                 sensorMapIndex = sensorMap.begin();
             }
@@ -1456,7 +1455,6 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
         ++sensorMapIndex;
         if (sensorMapIndex == sensorMap.end())
         {
-            // error("sensor map completed");
             ++objMapIndex;
             sensorMapIndex = sensorMap.begin();
         }
@@ -1632,6 +1630,8 @@ void HostPDRHandler::createDbusObjects()
                 break;
             case PLDM_ENTITY_CONNECTOR:
                 CustomDBus::getCustomDBus().implementConnecterInterface(
+                    entity.first);
+                CustomDBus::getCustomDBus().implementPortInterface(
                     entity.first);
                 break;
             case PLDM_ENTITY_COOLING_DEVICE:

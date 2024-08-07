@@ -116,6 +116,10 @@ std::unordered_map<std::string, callback> dBusInterfaceHandler{
      [](const std::string& path, Properties /* values */) {
     pldm::dbus::CustomDBus::getCustomDBus().implementConnecterInterface(path);
 }},
+    {"Port",
+     [](const std::string& path, Properties /* values */) {
+    pldm::dbus::CustomDBus::getCustomDBus().implementPortInterface(path);
+}},
     {"VRM",
      [](const std::string& path, Properties /* values */) {
     pldm::dbus::CustomDBus::getCustomDBus().implementVRMInterface(path);
