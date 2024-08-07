@@ -138,6 +138,7 @@ HostPDRHandler::HostPDRHandler(
                 isHostOff = true;
                 isHostTransitioningToOff = false;
                 this->sensorIndex = stateSensorPDRs.begin();
+                this->modifiedCounter = 0;
 
                 // After a power off , the remote nodes will be deleted
                 // from the entity association tree, making the nodes point
@@ -684,8 +685,6 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                 {
                     if ((isHostPdrModified == true) || !(modifiedCounter == 0))
                     {
-                        isHostPdrModified = false;
-
                         pldm_delete_by_record_handle(repo, rh, true);
 
                         rc = pldm_pdr_add_check(repo, pdr.data(), respCount,
@@ -767,10 +766,11 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
 
         for (const auto& [terminusHandle, terminusInfo] : tlPDRInfo)
         {
-            info("TerminusHandle: {TH}", "TH", terminusHandle);
-            info("TID: {TID}", "TID", std::get<0>(terminusInfo));
-            info("EID: {EID}", "EID", std::get<1>(terminusInfo));
-            info("Validity: {VALID}", "VALID", std::get<2>(terminusInfo));
+            info(
+                "TerminusHandle:'{TERMINUS_HANDLE}', TID:'{TID}', EID:'{EID}', Validity:{VALID}",
+                "TERMINUS_HANDLE", terminusHandle, "TID",
+                std::get<0>(terminusInfo), "EID", std::get<1>(terminusInfo),
+                "VALID", std::get<2>(terminusInfo));
         }
 
         updateEntityAssociation(entityAssociations, entityTree, objPathMap,
