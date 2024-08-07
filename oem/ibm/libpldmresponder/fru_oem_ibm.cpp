@@ -167,6 +167,7 @@ void Handler::dbus_map_update(const std::string& adapterObjPath,
 
 void Handler::setFirmwareUAK(const std::vector<uint8_t>& data)
 {
+    info("Got a SetFRURecordTable cmd from host to set the firmware UAK");
     using VPDManager = sdbusplus::client::com::ibm::vpd::Manager<>;
 
     static constexpr auto uakObjPath = "/com/ibm/VPD/Manager";
