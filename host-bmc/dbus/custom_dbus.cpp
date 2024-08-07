@@ -240,6 +240,16 @@ void CustomDBus::implementConnecterInterface(const std::string& path)
     }
 }
 
+void CustomDBus::implementPortInterface(const std::string& path)
+{
+    if (port.find(path) == port.end())
+    {
+        port.emplace(path,
+                     std::make_unique<Port>(pldm::utils::DBusHandler::getBus(),
+                                            path.c_str()));
+    }
+}
+
 void CustomDBus::implementVRMInterface(const std::string& path)
 {
     if (vrm.find(path) == vrm.end())
@@ -475,6 +485,11 @@ void CustomDBus::deleteObject(const std::string& path)
     if (connector.contains(path))
     {
         connector.erase(connector.find(path));
+    }
+
+    if (port.contains(path))
+    {
+        port.erase(port.find(path));
     }
 
     if (vrm.contains(path))

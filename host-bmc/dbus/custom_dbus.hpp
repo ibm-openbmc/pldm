@@ -26,6 +26,7 @@
 #include "operational_status.hpp"
 #include "pcie_device.hpp"
 #include "pcie_slot.hpp"
+#include "port.hpp"
 #include "power_supply.hpp"
 #include "vrm.hpp"
 #include "com/ibm/License/Entry/LicenseEntry/server.hpp"
@@ -216,6 +217,13 @@ class CustomDBus
      *
      */
     void implementConnecterInterface(const std::string& path);
+
+    /** @brief Implement Port Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
+    void implementPortInterface(const std::string& path);
 
     /** @brief Implement Voltage Regulator Module Interface
      *
@@ -438,7 +446,8 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<LEDGroup>> ledGroup;
     std::unordered_map<ObjectPath, std::unique_ptr<DecoratorRevision>>
         softWareVersion;
-     std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
+    std::unordered_map<ObjectPath, std::unique_ptr<Port>> port;
+    std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
 };
 
 } // namespace dbus
