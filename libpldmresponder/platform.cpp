@@ -568,6 +568,7 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                 {
                     info("Got a modified event from tid: {TID}", "TID", tid);
                     hostPDRHandler->isHostPdrModified = true;
+                    hostPDRHandler->modifiedCounter += pdrRecordHandles.size();
                 }
 
                 rc = getPDRRecordHandles(
@@ -581,7 +582,6 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                 {
                     return rc;
                 }
-                hostPDRHandler->modifiedCounter += pdrRecordHandles.size();
             }
             changeRecordData += dataOffset +
                                 (numberOfChangeEntries * sizeof(ChangeEntry));
