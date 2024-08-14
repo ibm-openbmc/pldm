@@ -130,6 +130,8 @@ void Handler::updateDBusProperty(
                 {
                     pldm::utils::setFruPresence(key, true);
                 }
+                info("Set PCIe config space information on [{KEY}]", "KEY",
+                     key);
                 dbus_map_update(key, "Function0VendorId", vendorId);
                 dbus_map_update(key, "Function0DeviceId", deviceId);
                 dbus_map_update(key, "Function0RevisionId", revisionId);
