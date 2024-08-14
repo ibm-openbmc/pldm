@@ -107,7 +107,8 @@ int pldm::responder::oem_ibm_platform::Handler::
         {
             error(
                 "Invalid entity type '{TYPE}' received for entityInstance '{INSTANCE}'",
-                "ENTITY_TYPE", entityType, "INSTANCE", entityInstance);
+                "TYPE", entityType, "INSTANCE", entityInstance);
+            return PLDM_ERROR_INVALID_DATA;
         }
         rc = setNumericEffecter(entityInstance, value, entityType);
     }
@@ -156,6 +157,14 @@ int pldm::responder::oem_ibm_platform::Handler::
             realSAIState = fetchRealSAIStatus();
             stateField.push_back({PLDM_SENSOR_ENABLED, PLDM_SENSOR_NORMAL,
                                   PLDM_SENSOR_UNKNOWN, realSAIState});
+        }
+        else if ((entityType == PLDM_ENTITY_MEMORY_MODULE) &&
+                 (stateSetId == PLDM_OEM_IBM_SBE_DUMP_UPDATE_STATE))
+        {
+            sensorOpState = fetchDimmStateSensor(entityInstance);
+            stateField.push_back({PLDM_SENSOR_ENABLED, PLDM_SENSOR_UNKNOWN,
+                                  PLDM_SENSOR_UNKNOWN, sensorOpState});
+            break;
         }
         else
         {
@@ -699,6 +708,57 @@ void buildAllNumericEffecterDimmPDR(oem_ibm_platform::Handler* platformHandler,
     }
 }
 
+void buildAllDimmSensorPDR(oem_ibm_platform::Handler* platformHandler,
+                           uint16_t entityType, uint16_t stateSetID,
+                           pdr_utils::Repo& repo)
+{
+    size_t pdrSize = 0;
+    pdrSize = sizeof(pldm_state_sensor_pdr) +
+              sizeof(state_sensor_possible_states);
+    std::vector<uint8_t> entry{};
+    entry.resize(pdrSize);
+    pldm_state_sensor_pdr* pdr =
+        reinterpret_cast<pldm_state_sensor_pdr*>(entry.data());
+    if (!pdr)
+    {
+        error("Failed to get record by PDR type, ERROR:{ERR}", "ERR", lg2::hex,
+              static_cast<unsigned>(PLDM_PLATFORM_INVALID_SENSOR_ID));
+        return;
+    }
+    auto dimm_info = generateDimmIds();
+    for (const auto& dimm : dimm_info)
+    {
+        pdr->hdr.record_handle = 0;
+        pdr->hdr.version = 1;
+        pdr->hdr.type = PLDM_STATE_SENSOR_PDR;
+        pdr->hdr.record_change_num = 0;
+        pdr->hdr.length = sizeof(pldm_state_sensor_pdr) - sizeof(pldm_pdr_hdr);
+        pdr->terminus_handle = TERMINUS_HANDLE;
+        pdr->sensor_id = platformHandler->getNextSensorId();
+        pdr->entity_type = entityType;
+        pdr->entity_instance = dimm;
+        dumpStatusMap[dimm] = DimmDumpState::UNAVAILABLE;
+        pdr->container_id = 1;
+        pdr->sensor_init = PLDM_NO_INIT;
+        pdr->sensor_auxiliary_names_pdr = false;
+        pdr->composite_sensor_count = 1;
+
+        auto* possibleStatesPtr = pdr->possible_states;
+        auto possibleStates =
+            reinterpret_cast<state_sensor_possible_states*>(possibleStatesPtr);
+        possibleStates->state_set_id = stateSetID;
+        possibleStates->possible_states_size = 1;
+        auto state =
+            reinterpret_cast<state_sensor_possible_states*>(possibleStates);
+        if (stateSetID == PLDM_OEM_IBM_SBE_DUMP_UPDATE_STATE)
+            state->states[0].byte = 7;
+        pldm::responder::pdr_utils::PdrEntry pdrEntry{};
+        pdrEntry.data = entry.data();
+        pdrEntry.size = pdrSize;
+        repo.addRecord(pdrEntry);
+    }
+}
+
 void buildAllSystemPowerStateEffecterPDR(
     oem_ibm_platform::Handler* platformHandler, uint16_t entityType,
     uint16_t entityInstance, uint16_t stateSetID, pdr_utils::Repo& repo)
@@ -972,6 +1032,8 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     buildAllNumericEffecterDimmPDR(
         this, PLDM_ENTITY_MEMORY_MODULE, ENTITY_INSTANCE_0,
         PLDM_OEM_IBM_SBE_SEMANTIC_ID, repo, instanceDimmMap);
+    buildAllDimmSensorPDR(this, PLDM_ENTITY_MEMORY_MODULE,
+                          PLDM_OEM_IBM_SBE_DUMP_UPDATE_STATE, repo);
     buildAllSystemPowerStateEffecterPDR(
         this, PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER, ENTITY_INSTANCE_0,
         PLDM_STATE_SET_SYSTEM_POWER_STATE, repo);
@@ -1063,15 +1125,56 @@ int encodeEventMsg(uint8_t eventType, const std::vector<uint8_t>& eventDataVec,
 
     return rc;
 }
+
+void pldm::responder::oem_ibm_platform::Handler::setDimmStateSensor(
+    bool status, uint16_t entityInstance)
+{
+    auto pdrs = findStateSensorPDR(TERMINUS_ID, PLDM_ENTITY_MEMORY_MODULE,
+                                   PLDM_OEM_IBM_SBE_DUMP_UPDATE_STATE, pdrRepo);
+    if (pdrs.empty())
+    {
+        error(
+            "Failed to find state sensor PDR of entity type 'PLDM_ENTITY_MEMORY_MODULE' and state set id 'PLDM_OEM_IBM_SBE_DUMP_UPDATE_STATE' for entity instance = {ENT_INSTANCE}",
+            "ENT_INSTANCE", entityInstance);
+        return;
+    }
+    for (auto& pdr : pdrs)
+    {
+        auto stateSensorPDR =
+            reinterpret_cast<pldm_state_sensor_pdr*>(pdr.data());
+        if (entityInstance == stateSensorPDR->entity_instance)
+        {
+            if (status)
+            {
+                sendStateSensorEvent(stateSensorPDR->sensor_id,
+                                     PLDM_STATE_SENSOR_STATE, 0,
+                                     uint8_t(DimmDumpState::SUCCESS),
+                                     uint8_t(dumpStatusMap[entityInstance]));
+                dumpStatusMap[entityInstance] = DimmDumpState::SUCCESS;
+            }
+            else
+            {
+                sendStateSensorEvent(stateSensorPDR->sensor_id,
+                                     PLDM_STATE_SENSOR_STATE, 0,
+                                     uint8_t(DimmDumpState::RETRY),
+                                     uint8_t(dumpStatusMap[entityInstance]));
+                dumpStatusMap[entityInstance] = DimmDumpState::RETRY;
+            }
+        }
+    }
+}
+
+int pldm::responder::oem_ibm_platform::Handler::fetchDimmStateSensor(
+    uint16_t entityInstance)
+{
+    return dumpStatusMap[entityInstance];
+}
+
 void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
     bool status, uint16_t entityTypeReceived, uint16_t entityInstance)
 {
     pldm::pdr::EntityType entityType;
-    if (entityTypeReceived == PLDM_ENTITY_MEMORY_MODULE)
-    {
-        entityType = PLDM_ENTITY_MEMORY_MODULE;
-    }
-    else if (entityTypeReceived == PLDM_ENTITY_PROC)
+    if (entityTypeReceived == PLDM_ENTITY_PROC)
     {
         entityType = PLDM_ENTITY_PROC;
     }
@@ -1202,7 +1305,14 @@ void pldm::responder::oem_ibm_platform::Handler::monitorDump(
             if (propVal ==
                 "xyz.openbmc_project.Common.Progress.OperationStatus.Completed")
             {
-                setHostEffecterState(true, entityType, entityInstance);
+                if (entityType == PLDM_ENTITY_MEMORY_MODULE)
+                {
+                    setDimmStateSensor(true, entityInstance);
+                }
+                else
+                {
+                    setHostEffecterState(true, entityType, entityInstance);
+                }
             }
             else if (
                 propVal ==
@@ -1210,7 +1320,14 @@ void pldm::responder::oem_ibm_platform::Handler::monitorDump(
                 propVal ==
                     "xyz.openbmc_project.Common.Progress.OperationStatus.Aborted")
             {
-                setHostEffecterState(false, entityType, entityInstance);
+                if (entityType == PLDM_ENTITY_MEMORY_MODULE)
+                {
+                    setDimmStateSensor(false, entityInstance);
+                }
+                else
+                {
+                    setHostEffecterState(false, entityType, entityInstance);
+                }
             }
         }
         sbeDumpMatch = nullptr;
@@ -1267,7 +1384,6 @@ int pldm::responder::oem_ibm_platform::Handler::setNumericEffecter(
 
         sdbusplus::message::object_path reply;
         response.read(reply);
-
         monitorDump(reply, entityType, entityInstance);
     }
     catch (const std::exception& e)
@@ -1277,7 +1393,14 @@ int pldm::responder::oem_ibm_platform::Handler::setNumericEffecter(
             "ERR_EXCEP", e.what());
         // case when the dump policy is disabled but we set the host effecter as
         // true and the host moves on
-        setHostEffecterState(true, entityType, entityInstance);
+        if (entityType == PLDM_ENTITY_MEMORY_MODULE)
+        {
+            setDimmStateSensor(true, entityInstance);
+        }
+        else
+        {
+            setHostEffecterState(true, entityType, entityInstance);
+        }
     }
     return PLDM_SUCCESS;
 }
