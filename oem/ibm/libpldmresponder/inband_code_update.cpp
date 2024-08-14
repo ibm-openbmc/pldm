@@ -224,13 +224,43 @@ void CodeUpdate::setVersions()
 
                 try
                 {
-                    auto propVal = dBusIntf->getDbusPropertyVariant(
-                        imageObjPath, "Activation", imageInterface);
-                    const auto& imageProp = std::get<std::string>(propVal);
-                    if (imageProp == "xyz.openbmc_project.Software."
-                                     "Activation.Activations.Ready" &&
-                        isCodeUpdateInProgress())
+                    if (isCodeUpdateInProgress())
                     {
+                        auto propVal =
+                            pldm::utils::DBusHandler().getDbusPropertyVariant(
+                                imageObjPath, "Activation", imageInterface);
+                        const auto& activation = std::get<std::string>(propVal);
+
+                        if (activation ==
+                            "xyz.openbmc_project.Software.Activation.Activations.Invalid")
+                        {
+                            error(
+                                "InbandCodeUpdate Failed: Received Invalid Signal, Sending Error on End update sensor event to PHYP");
+                            setCodeUpdateProgress(false);
+                            auto sensorId = getFirmwareUpdateSensor();
+                            sendStateSensorEvent(
+                                sensorId, PLDM_STATE_SENSOR_STATE, 0,
+                                uint8_t(CodeUpdateState::FAIL),
+                                uint8_t(CodeUpdateState::START));
+                            break;
+                        }
+                    }
+                }
+                catch (const std::exception& e)
+                {
+                    error(
+                        "Code Update: Error getting Activation property, PATH={PATH} INTERFACE={INTF} PROPERTY = Activation ERROR={ERR_EXCEP}",
+                        "PATH", imageObjPath, "INTF", imageInterface,
+                        "ERR_EXCEP", e);
+                }
+                try
+                {
+                    nonRunningVersion = path.str;
+
+                    if (isCodeUpdateInProgress())
+                    {
+                        info("Inband Code update is InProgress");
+                        // Inband update
                         newImageId = path.str;
                         if (!imageActivationMatch)
                         {
