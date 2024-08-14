@@ -621,7 +621,7 @@ int DumpHandler::fileAckWithMetaData(
         fileHandle |= dumpIdPrefix;
         std::string idStr = std::format("{:08X}", fileHandle);
 
-        dbusMapping.objectPath = dumpEntryObjPath + idStr;
+        dbusMapping.objectPath = (std::string)dumpEntryObjPath + "/" + idStr;
         dbusMapping.interface = resDumpEntry;
         dbusMapping.propertyName = "DumpRequestStatus";
         dbusMapping.propertyType = "string";
@@ -705,7 +705,7 @@ int DumpHandler::fileAckWithMetaData(
             fileHandle |= dumpIdPrefix;
             std::string idStr = std::format("{:08X}", fileHandle);
 
-            DBusMapping dbusMapping{dumpEntryObjPath + idStr,
+            DBusMapping dbusMapping{(std::string)dumpEntryObjPath + "/" + idStr,
                                     "xyz.openbmc_project.Common.Progress",
                                     "Status", "string"};
             try
