@@ -1,5 +1,6 @@
 #pragma once
 
+#include "collect_slot_vpd.hpp"
 #include "common/types.hpp"
 #include "common/utils.hpp"
 #include "inband_code_update.hpp"
@@ -65,11 +66,6 @@ namespace oem_ibm_platform
 constexpr uint16_t ENTITY_INSTANCE_0 = 0;
 constexpr uint16_t ENTITY_INSTANCE_1 = 1;
 
-constexpr uint32_t BMC_PDR_START_RANGE = 0x00000000;
-constexpr uint32_t BMC_PDR_END_RANGE = 0x00FFFFFF;
-constexpr uint32_t HOST_PDR_START_RANGE = 0x01000000;
-constexpr uint32_t HOST_PDR_END_RANGE = 0x01FFFFFF;
-
 const pldm::pdr::TerminusID HYPERVISOR_TID = 208;
 
 static constexpr uint8_t HEARTBEAT_TIMEOUT_DELTA = 10;
@@ -83,15 +79,17 @@ class Handler : public oem_platform::Handler
 {
   public:
     Handler(const pldm::utils::DBusHandler* dBusIntf,
-            pldm::responder::CodeUpdate* codeUpdate, int mctp_fd,
+            pldm::responder::CodeUpdate* codeUpdate,
+            pldm::responder::SlotHandler* slotHandler, int mctp_fd,
             uint8_t mctp_eid, pldm::InstanceIdDb& instanceIdDb,
             sdeventplus::Event& event, pldm_pdr* repo,
             pldm::requester::Handler<pldm::requester::Request>* handler,
             pldm_entity_association_tree* bmcEntityTree) :
         oem_platform::Handler(dBusIntf),
-        codeUpdate(codeUpdate), platformHandler(nullptr), mctp_fd(mctp_fd),
-        mctp_eid(mctp_eid), instanceIdDb(instanceIdDb), event(event),
-        pdrRepo(repo), handler(handler), bmcEntityTree(bmcEntityTree),
+        codeUpdate(codeUpdate), slotHandler(slotHandler),
+        platformHandler(nullptr), mctp_fd(mctp_fd), mctp_eid(mctp_eid),
+        instanceIdDb(instanceIdDb), event(event), pdrRepo(repo),
+        handler(handler), bmcEntityTree(bmcEntityTree),
         timer(event, std::bind(std::mem_fn(&Handler::setSurvTimer), this,
                                HYPERVISOR_TID, false)),
         hostTransitioningToOff(true)
@@ -226,8 +224,8 @@ class Handler : public oem_platform::Handler
     int getOemStateSensorReadingsHandler(
         pldm::pdr::EntityType entityType,
         pldm::pdr::EntityInstance entityInstance,
-        pldm::pdr::StateSetId stateSetId,
-        pldm::pdr::CompositeCount compSensorCnt,
+        pldm::pdr::ContainerID containerId, pldm::pdr::StateSetId stateSetId,
+        pldm::pdr::CompositeCount compSensorCnt, uint16_t sensorId,
         std::vector<get_sensor_state_field>& stateField);
 
     int oemSetStateEffecterStatesHandler(
@@ -432,6 +430,10 @@ class Handler : public oem_platform::Handler
     ~Handler() = default;
 
     pldm::responder::CodeUpdate* codeUpdate; //!< pointer to CodeUpdate object
+
+    pldm::responder::SlotHandler*
+        slotHandler; //!< pointer to SlotHandler object
+
     pldm::responder::platform::Handler*
         platformHandler; //!< pointer to PLDM platform handler
 
@@ -448,6 +450,10 @@ class Handler : public oem_platform::Handler
     std::unique_ptr<sdeventplus::source::Defer> assembleImageEvent;
     std::unique_ptr<sdeventplus::source::Defer> startUpdateEvent;
     std::unique_ptr<sdeventplus::source::Defer> systemRebootEvent;
+
+    /** @brief Effecterid to dbus object path map
+     */
+    std::unordered_map<uint16_t, std::string> effecterIdToDbusMap;
 
     /** @brief reference of main event loop of pldmd, primarily used to schedule
      *  work

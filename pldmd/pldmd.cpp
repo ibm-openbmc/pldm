@@ -255,10 +255,14 @@ int main(int argc, char** argv)
     std::unique_ptr<pldm::responder::CodeUpdate> codeUpdate =
         std::make_unique<pldm::responder::CodeUpdate>(&dbusHandler);
     codeUpdate->clearDirPath(LID_STAGING_DIR);
+    std::unique_ptr<pldm::responder::SlotHandler> slotHandler =
+        std::make_unique<pldm::responder::SlotHandler>(event, pdrRepo.get());
     oemPlatformHandler = std::make_unique<oem_ibm_platform::Handler>(
-        &dbusHandler, codeUpdate.get(), pldmTransport.getEventSource(), hostEID,
-        instanceIdDb, event, pdrRepo.get(), &reqHandler, bmcEntityTree.get());
+        &dbusHandler, codeUpdate.get(), slotHandler.get(),
+        pldmTransport.getEventSource(), hostEID, instanceIdDb, event,
+        pdrRepo.get(), &reqHandler, bmcEntityTree.get());
     codeUpdate->setOemPlatformHandler(oemPlatformHandler.get());
+    slotHandler->setOemPlatformHandler(oemPlatformHandler.get());
     oemFruHandler = std::make_unique<oem_ibm_fru::Handler>(pdrRepo.get());
 
     invoker.registerHandler(PLDM_OEM, std::make_unique<oem_ibm::Handler>(
@@ -296,7 +300,9 @@ int main(int argc, char** argv)
 
     auto fruHandler = std::make_unique<fru::Handler>(
         FRU_JSONS_DIR, FRU_MASTER_JSON, pdrRepo.get(), entityTree.get(),
-        bmcEntityTree.get(), oemFruHandler.get());
+        bmcEntityTree.get(), oemFruHandler.get(), dbusImplReq, &reqHandler,
+        hostEID, event, dbusToPLDMEventHandler.get());
+    fruHandler->setOemUtilsHandler(oemUtilsHandler.get());
 
     // FRU table is built lazily when a FRU command or Get PDR command is
     // handled. To enable building FRU table, the FRU handler is passed to the

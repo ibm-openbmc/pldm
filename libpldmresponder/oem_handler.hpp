@@ -22,8 +22,10 @@ class Handler : public CmdHandler
      *
      *  @param[in] entityType - entity type corresponding to the sensor
      *  @param[in] entityInstance - entity instance number
+     *  @param[in] entityContainerID - container id
      *  @param[in] stateSetId - state set id
      *  @param[in] compSensorCnt - composite sensor count
+     *  @param[in] sensorId - sensor id
      *  @param[out] stateField - The state field data for each of the states,
      *                           equal to composite sensor count in number
      *
@@ -34,8 +36,9 @@ class Handler : public CmdHandler
     virtual int getOemStateSensorReadingsHandler(
         pldm::pdr::EntityType entityType,
         pldm::pdr::EntityInstance entityInstance,
+        pldm::pdr::ContainerID entityContainerId,
         pldm::pdr::StateSetId stateSetId,
-        pldm::pdr::CompositeCount compSensorCnt,
+        pldm::pdr::CompositeCount compSensorCnt, uint16_t sensorId,
         std::vector<get_sensor_state_field>& stateField) = 0;
 
     /** @brief Interface to set the effecter requested by pldm requester
@@ -171,6 +174,30 @@ class Handler : public CmdHandler
      */
     virtual int setCoreCount(const EntityAssociations& associations,
                              const EntityMaps entityMaps) = 0;
+
+    /** @brief checks if a pcie adapter is IBM specific
+     *         cable card
+     *  @param[in] objPath - FRU object path
+     *
+     *  @return bool - true if IBM specific card
+     */
+    virtual bool checkModelPresence(const std::string& objPath) = 0;
+
+    /** @brief checks whether the fru is actually present
+     *  @param[in] objPath - the fru object path
+     *
+     *  @return bool to indicate presence or absence
+     */
+    virtual bool checkFruPresence(const char* objPath) = 0;
+
+    /** @brief finds the ports under an adapter
+     *
+     *  @param[in] adapterObjPath - D-Bus object path for the adapter
+     *
+     *  @return std::vector<std::string> - port object paths
+     */
+    virtual std::vector<std::string>
+        findPortObjects(const std::string& adapterObjPath) = 0;
 
     virtual ~Handler() = default;
 
