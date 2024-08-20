@@ -60,8 +60,8 @@ class DumpHandler : public FileHandler
     std::string getOffloadUri(uint32_t fileHandle);
     void resetOffloadUri();
     uint32_t getDumpIdPrefix(uint16_t dumpType);
-    virtual void postDataTransferCallBack(bool IsWriteToMemOp,
-                                          uint32_t /*length*/);
+    virtual int postDataTransferCallBack(bool IsWriteToMemOp,
+                                         uint32_t /*length*/);
 
     /** @brief DumpHandler destructor
      */

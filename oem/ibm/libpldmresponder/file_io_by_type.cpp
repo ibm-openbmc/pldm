@@ -160,15 +160,16 @@ void FileHandler::transferFileData(int fd, bool upstream, uint32_t offset,
         }
         if (static_cast<int>(data.length) == rc)
         {
-            wInterface->setTransferStatus(true);
-            dmaResponseToRemoteTerminus(sharedAIORespDataobj, PLDM_SUCCESS,
-                                        origLength);
             if (sharedAIORespDataobj.functionPtr != nullptr)
             {
-                sharedAIORespDataobj.functionPtr->postDataTransferCallBack(
+                rc = sharedAIORespDataobj.functionPtr->postDataTransferCallBack(
                     command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY,
                     data.length);
             }
+            auto status = (rc == PLDM_SUCCESS) ? PLDM_SUCCESS : PLDM_ERROR;
+            wInterface->setTransferStatus(true);
+            dmaResponseToRemoteTerminus(sharedAIORespDataobj, status,
+                                        origLength);
             deleteAIOobjects(wInterface, sharedAIORespDataobj);
             return;
         }
@@ -216,12 +217,12 @@ void FileHandler::transferFileDataToSocket(
         error(
             "XDMA interface initialization failed while transfering data via socket for fileType:{TYPE}",
             "TYPE", sharedAIORespDataobj.fileType);
-        dmaResponseToRemoteTerminus(sharedAIORespDataobj, PLDM_ERROR, 0);
         if (sharedAIORespDataobj.functionPtr != nullptr)
         {
             sharedAIORespDataobj.functionPtr->postDataTransferCallBack(
                 command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY, 0);
         }
+        dmaResponseToRemoteTerminus(sharedAIORespDataobj, PLDM_ERROR, 0);
         deleteAIOobjects(nullptr, sharedAIORespDataobj);
         return;
     }
@@ -238,12 +239,12 @@ void FileHandler::transferFileDataToSocket(
             error(
                 "EventLoop Timeout...Terminating tranfer operation while transfering data via socket for fileType:{TYPE}",
                 "TYPE", sharedAIORespDataobj.fileType);
-            dmaResponseToRemoteTerminus(sharedAIORespDataobj, PLDM_ERROR, 0);
             if (sharedAIORespDataobj.functionPtr != nullptr)
             {
                 sharedAIORespDataobj.functionPtr->postDataTransferCallBack(
                     command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY, 0);
             }
+            dmaResponseToRemoteTerminus(sharedAIORespDataobj, PLDM_ERROR, 0);
             deleteAIOobjects(xdmaInterface, sharedAIORespDataobj);
         }
         return;
@@ -267,13 +268,13 @@ void FileHandler::transferFileDataToSocket(
                 error(
                     "Failed to transfer muliple chunks of data to host while transfering data via socket for fileType:{TYPE}",
                     "TYPE", sharedAIORespDataobj.fileType);
-                dmaResponseToRemoteTerminus(sharedAIORespDataobj, PLDM_ERROR,
-                                            0);
                 if (sharedAIORespDataobj.functionPtr != nullptr)
                 {
                     sharedAIORespDataobj.functionPtr->postDataTransferCallBack(
                         command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY, 0);
                 }
+                dmaResponseToRemoteTerminus(sharedAIORespDataobj, PLDM_ERROR,
+                                            0);
                 deleteAIOobjects(wInterface, sharedAIORespDataobj);
                 return;
             }
@@ -285,12 +286,12 @@ void FileHandler::transferFileDataToSocket(
             error(
                 "Failed to transfer single chunks of data to host while transfering data via socket for fileType:{TYPE}",
                 "TYPE", sharedAIORespDataobj.fileType);
-            dmaResponseToRemoteTerminus(sharedAIORespDataobj, PLDM_ERROR, 0);
             if (sharedAIORespDataobj.functionPtr != nullptr)
             {
                 sharedAIORespDataobj.functionPtr->postDataTransferCallBack(
                     command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY, 0);
             }
+            dmaResponseToRemoteTerminus(sharedAIORespDataobj, PLDM_ERROR, 0);
             deleteAIOobjects(wInterface, sharedAIORespDataobj);
             return;
         }
@@ -311,12 +312,12 @@ void FileHandler::transferFileDataToSocket(
             error(
                 "Failed to open shared memory location while transfering data via socket for fileType:{TYPE}",
                 "TYPE", sharedAIORespDataobj.fileType);
-            dmaResponseToRemoteTerminus(sharedAIORespDataobj, PLDM_ERROR, 0);
             if (sharedAIORespDataobj.functionPtr != nullptr)
             {
                 sharedAIORespDataobj.functionPtr->postDataTransferCallBack(
                     command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY, 0);
             }
+            dmaResponseToRemoteTerminus(sharedAIORespDataobj, PLDM_ERROR, 0);
             deleteAIOobjects(xdmaInterface, sharedAIORespDataobj);
             return;
         }
@@ -325,12 +326,12 @@ void FileHandler::transferFileDataToSocket(
             error(
                 "Failed to start the event timer while transfering data via socket for fileType:{TYPE}",
                 "TYPE", sharedAIORespDataobj.fileType);
-            dmaResponseToRemoteTerminus(sharedAIORespDataobj, PLDM_ERROR, 0);
             if (sharedAIORespDataobj.functionPtr != nullptr)
             {
                 sharedAIORespDataobj.functionPtr->postDataTransferCallBack(
                     command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY, 0);
             }
+            dmaResponseToRemoteTerminus(sharedAIORespDataobj, PLDM_ERROR, 0);
             deleteAIOobjects(xdmaInterface, sharedAIORespDataobj);
             return;
         }
@@ -342,12 +343,12 @@ void FileHandler::transferFileDataToSocket(
         error(
             "Failed to start the event loop while transfering data via socket for fileType:{TYPE} : {ERROR}",
             "TYPE", sharedAIORespDataobj.fileType, "ERROR", e);
-        dmaResponseToRemoteTerminus(sharedAIORespDataobj, PLDM_ERROR, 0);
         if (sharedAIORespDataobj.functionPtr != nullptr)
         {
             sharedAIORespDataobj.functionPtr->postDataTransferCallBack(
                 command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY, 0);
         }
+        dmaResponseToRemoteTerminus(sharedAIORespDataobj, PLDM_ERROR, 0);
         deleteAIOobjects(xdmaInterface, sharedAIORespDataobj);
     }
     return;

@@ -230,8 +230,8 @@ class FileHandler
      *  @param[in] length    -  To do post file transfer operation based on
      * length
      */
-    virtual void postDataTransferCallBack(bool IsWriteToMemOp,
-                                          uint32_t length) = 0;
+    virtual int postDataTransferCallBack(bool IsWriteToMemOp,
+                                         uint32_t length) = 0;
 
     /** @brief method to process a new file available metadata notification from
      *  the host

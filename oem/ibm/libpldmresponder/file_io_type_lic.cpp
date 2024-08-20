@@ -86,8 +86,8 @@ void LicenseHandler::writeFromMemory(
                      sharedAIORespDataobj, event);
 }
 
-void LicenseHandler::postDataTransferCallBack(bool IsWriteToMemOp,
-                                              uint32_t length)
+int LicenseHandler::postDataTransferCallBack(bool IsWriteToMemOp,
+                                             uint32_t length)
 {
     if (IsWriteToMemOp)
     {
@@ -101,10 +101,11 @@ void LicenseHandler::postDataTransferCallBack(bool IsWriteToMemOp,
                 error(
                     "Failed to update bin file and license objs with rc as {RC} while post data transfer callback",
                     "RC", rc);
-                return;
+                return rc;
             }
         }
     }
+    return PLDM_SUCCESS;
 }
 
 int LicenseHandler::write(const char* buffer, uint32_t /*offset*/,

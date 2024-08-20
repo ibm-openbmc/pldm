@@ -93,9 +93,11 @@ class ProgressCodeHandler : public FileHandler
      *  @param[in] IsWriteToMemOp - type of operation to decide what operation
      *                              needs to be done after data transfer.
      */
-    virtual void postDataTransferCallBack(bool /*IsWriteToMemOp*/,
-                                          uint32_t /*length*/)
-    {}
+    virtual int postDataTransferCallBack(bool /*IsWriteToMemOp*/,
+                                         uint32_t /*length*/)
+    {
+        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+    }
 
     /** @brief ProgressCodeHandler destructor
      */
