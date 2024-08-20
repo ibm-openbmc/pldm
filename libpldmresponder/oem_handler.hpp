@@ -175,6 +175,30 @@ class Handler : public CmdHandler
     virtual int setCoreCount(const EntityAssociations& associations,
                              const EntityMaps entityMaps) = 0;
 
+    /** @brief checks if a pcie adapter is IBM specific
+     *         cable card
+     *  @param[in] objPath - FRU object path
+     *
+     *  @return bool - true if IBM specific card
+     */
+    virtual bool checkModelPresence(const std::string& objPath) = 0;
+
+    /** @brief checks whether the fru is actually present
+     *  @param[in] objPath - the fru object path
+     *
+     *  @return bool to indicate presence or absence
+     */
+    virtual bool checkFruPresence(const char* objPath) = 0;
+
+    /** @brief finds the ports under an adapter
+     *
+     *  @param[in] adapterObjPath - D-Bus object path for the adapter
+     *
+     *  @return std::vector<std::string> - port object paths
+     */
+    virtual std::vector<std::string>
+        findPortObjects(const std::string& adapterObjPath) = 0;
+
     virtual ~Handler() = default;
 
   protected:

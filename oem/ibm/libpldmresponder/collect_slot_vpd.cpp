@@ -1,6 +1,7 @@
 #include "collect_slot_vpd.hpp"
-
 #include "oem_ibm_handler.hpp"
+
+#include "xyz/openbmc_project/Common/error.hpp"
 
 #include <phosphor-logging/lg2.hpp>
 
@@ -90,7 +91,6 @@ void SlotHandler::processSlotOperations(const std::string& slotObjectPath,
 
     // call the VPD Manager to collect/remove VPD objects
     callVPDManager(adapterObjPath, stateFieldValue);
-
     // start the 1 min timer
     timer.restart(std::chrono::seconds(60));
 }

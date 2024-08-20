@@ -71,10 +71,10 @@ class OemIBM
         mctp_fd = pldmTransport->getEventSource();
 
         createOemFruHandler();
-        fruHandler->setOemFruHandler(oemFruHandler.get());
 
         createOemIbmFruHandler();
         oemIbmFruHandler->setIBMFruHandler(fruHandler);
+        fruHandler->setOemFruHandler(oemFruHandler.get());
 
         createResponseInterface();
         createCodeUpdate();
@@ -84,6 +84,7 @@ class OemIBM
         codeUpdate->setOemPlatformHandler(oemPlatformHandler.get());
         hostPDRHandler->setOemPlatformHandler(oemPlatformHandler.get());
         hostPDRHandler->setOemUtilsHandler(oemUtilsHandler.get());
+        fruHandler->setOemUtilsHandler(oemUtilsHandler.get());
         platformHandler->setOemPlatformHandler(oemPlatformHandler.get());
         baseHandler->setOemPlatformHandler(oemPlatformHandler.get());
         slotHandler->setOemPlatformHandler(oemPlatformHandler.get());

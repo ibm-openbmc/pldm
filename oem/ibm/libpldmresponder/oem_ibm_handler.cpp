@@ -498,8 +498,7 @@ void buildAllSlotEnableSensorPDR(oem_ibm_platform::Handler* platformHandler,
         pdr->hdr.length = sizeof(pldm_state_sensor_pdr) - sizeof(pldm_pdr_hdr);
         pdr->terminus_handle = TERMINUS_HANDLE;
         pdr->sensor_id = platformHandler->getNextSensorId();
-        if (entity_path != "" &&
-            associatedEntityMap.find(entity_path) != associatedEntityMap.end())
+        if (entity_path != "" && associatedEntityMap.contains(entity_path))
         {
             pdr->entity_type = associatedEntityMap.at(entity_path).entity_type;
             pdr->entity_instance =
@@ -644,10 +643,10 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
                                   PLDM_OEM_IBM_SYSTEM_POWER_STATE, repo);
     buildAllRealSAIEffecterPDR(this, PLDM_OEM_IBM_ENTITY_REAL_SAI,
                                ENTITY_INSTANCE_1, repo);
-
     static constexpr auto objectPath = "/xyz/openbmc_project/inventory/system";
     const std::vector<std::string> slotInterface = {
         "xyz.openbmc_project.Inventory.Item.PCIeSlot"};
+
     auto slotPaths = dBusIntf->getSubTreePaths(objectPath, 0, slotInterface);
     buildAllSlotEnableEffecterPDR(this, repo, slotPaths);
     buildAllSlotEnableSensorPDR(this, repo, slotPaths);

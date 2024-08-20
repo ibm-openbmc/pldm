@@ -22,6 +22,11 @@ namespace responder
 using ObjectPath = std::string;
 using AssociatedEntityMap = std::map<ObjectPath, pldm_entity>;
 
+static constexpr auto FreedesktopInterface = "org.freedesktop.DBus.Properties";
+static constexpr auto PresentProperty = "Present";
+static constexpr auto GetMethod = "Get";
+static constexpr auto ItemInterface = "xyz.openbmc_project.Inventory.Item";
+
 /** @class SlotHandler
  *
  *  @brief This class performs the necessary operation in pldm for

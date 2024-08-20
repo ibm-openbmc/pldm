@@ -66,11 +66,6 @@ namespace oem_ibm_platform
 constexpr uint16_t ENTITY_INSTANCE_0 = 0;
 constexpr uint16_t ENTITY_INSTANCE_1 = 1;
 
-constexpr uint32_t BMC_PDR_START_RANGE = 0x00000000;
-constexpr uint32_t BMC_PDR_END_RANGE = 0x00FFFFFF;
-constexpr uint32_t HOST_PDR_START_RANGE = 0x01000000;
-constexpr uint32_t HOST_PDR_END_RANGE = 0x01FFFFFF;
-
 const pldm::pdr::TerminusID HYPERVISOR_TID = 208;
 
 static constexpr uint8_t HEARTBEAT_TIMEOUT_DELTA = 10;

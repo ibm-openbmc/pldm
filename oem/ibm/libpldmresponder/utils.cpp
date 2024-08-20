@@ -204,27 +204,6 @@ bool checkIfIBMFru(const std::string& objPath)
     return false;
 }
 
-std::vector<std::string> findPortObjects(const std::string& adapterObjPath)
-{
-    using ItemConnector =
-        sdbusplus::client::xyz::openbmc_project::inventory::item::Connector<>;
-
-    std::vector<std::string> portObjects;
-    try
-    {
-        portObjects = pldm::utils::DBusHandler().getSubTreePaths(
-            adapterObjPath, 0,
-            std::vector<std::string>({ItemConnector::interface}));
-    }
-    catch (const std::exception& e)
-    {
-        error("No ports under adapter '{ADAPTER_OBJ_PATH}'  - {ERROR}.",
-              "ADAPTER_OBJ_PATH", adapterObjPath.c_str(), "ERROR", e);
-    }
-
-    return portObjects;
-}
-
 Json convertBinFileToJson(const fs::path& path)
 {
     std::ifstream file(path, std::ios::in | std::ios::binary);
@@ -446,6 +425,7 @@ void hostChapDataIntf(
     CustomDBus::getCustomDBus().implementChapDataInterface(
         "/xyz/openbmc_project/pldm", dbusToFilehandlerObj);
 }
+
 } // namespace utils
 
 namespace oem_ibm_utils
@@ -518,6 +498,96 @@ int pldm::responder::oem_ibm_utils::Handler::setCoreCount(
     }
     return coreCountRef;
 }
+
+bool pldm::responder::oem_ibm_utils::Handler::checkModelPresence(
+    const std::string& objPath)
+{
+    constexpr auto pcieAdapterModelInterface =
+        "xyz.openbmc_project.Inventory.Decorator.Asset";
+    constexpr auto modelProperty = "Model";
+
+    try
+    {
+        auto propVal = pldm::utils::DBusHandler().getDbusPropertyVariant(
+            objPath.c_str(), modelProperty, pcieAdapterModelInterface);
+        const auto& model = std::get<std::string>(propVal);
+        if (!model.empty())
+        {
+            return true;
+        }
+    }
+    catch (const sdbusplus::exception::SdBusError&)
+    {
+        return false;
+    }
+    return false;
+}
+
+bool pldm::responder::oem_ibm_utils::Handler::checkFruPresence(
+    const char* objPath)
+{
+    // if we enter here with port, then we need to find the
+    // parent and see if the pcie card or the drive bp is present. if so then
+    // the port is considered as present. this is so because
+    // the ports do not have "Present" property
+    std::string pcieAdapter("pcie_card");
+    std::string portStr("cxp_");
+    std::string newObjPath = objPath;
+    bool isPresent = true;
+
+    if ((newObjPath.find(pcieAdapter) != std::string::npos) &&
+        !checkModelPresence(newObjPath))
+    {
+        return true; // industry std cards
+    }
+    else if (newObjPath.find(portStr) != std::string::npos)
+    {
+        newObjPath = pldm::utils::findParent(objPath);
+    }
+
+    // Phyp expects the FRU records for industry std cards to be always
+    // built, irrespective of presence
+
+    static constexpr auto presentInterface =
+        "xyz.openbmc_project.Inventory.Item";
+    static constexpr auto presentProperty = "Present";
+    try
+    {
+        auto propVal = pldm::utils::DBusHandler().getDbusPropertyVariant(
+            newObjPath.c_str(), presentProperty, presentInterface);
+        isPresent = std::get<bool>(propVal);
+    }
+    catch (const sdbusplus::exception::SdBusError& e)
+    {
+        error("D-Bus method call to get the FRU presence failed ERROR={ERROR}",
+              "ERROR", e);
+    }
+    return isPresent;
+}
+
+std::vector<std::string>
+    pldm::responder::oem_ibm_utils::Handler::findPortObjects(
+        const std::string& adapterObjPath)
+{
+    using ItemConnector =
+        sdbusplus::client::xyz::openbmc_project::inventory::item::Connector<>;
+
+    std::vector<std::string> portObjects;
+    try
+    {
+        portObjects = pldm::utils::DBusHandler().getSubTreePaths(
+            adapterObjPath, 0,
+            std::vector<std::string>({ItemConnector::interface}));
+    }
+    catch (const std::exception& e)
+    {
+        error("No ports under adapter '{ADAPTER_OBJ_PATH}'  - {ERROR}.",
+              "ADAPTER_OBJ_PATH", adapterObjPath.c_str(), "ERROR", e);
+    }
+
+    return portObjects;
+}
+
 } // namespace oem_ibm_utils
 } // namespace responder
 } // namespace pldm

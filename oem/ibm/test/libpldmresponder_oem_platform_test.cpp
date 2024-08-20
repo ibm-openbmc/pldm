@@ -28,7 +28,6 @@ using namespace pldm::responder;
 using namespace pldm::responder::pdr;
 using namespace pldm::responder::pdr_utils;
 using namespace pldm::responder::oem_ibm_platform;
-using ::testing::Return;
 using ::testing::ReturnRef;
 
 class MockOemUtilsHandler : public oem_ibm_utils::Handler
