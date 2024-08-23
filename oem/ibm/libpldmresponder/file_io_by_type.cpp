@@ -39,7 +39,8 @@ void FileHandler::dmaResponseToRemoteTerminus(
     const SharedAIORespData& sharedAIORespDataobj,
     const pldm_completion_codes rStatus, uint32_t length)
 {
-    Response response(sizeof(pldm_msg_hdr) + sharedAIORespDataobj.command, 0);
+    Response response(
+        sizeof(pldm_msg_hdr) + PLDM_RW_FILE_BY_TYPE_MEM_RESP_BYTES, 0);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
     encode_rw_file_by_type_memory_resp(sharedAIORespDataobj.instance_id,
                                        sharedAIORespDataobj.command, rStatus,
@@ -54,7 +55,8 @@ void FileHandler::dmaResponseToRemoteTerminus(
     const SharedAIORespData& sharedAIORespDataobj,
     const pldm_fileio_completion_codes rStatus, uint32_t length)
 {
-    Response response(sizeof(pldm_msg_hdr) + sharedAIORespDataobj.command, 0);
+    Response response(
+        sizeof(pldm_msg_hdr) + PLDM_RW_FILE_BY_TYPE_MEM_RESP_BYTES, 0);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
     encode_rw_file_by_type_memory_resp(sharedAIORespDataobj.instance_id,
                                        sharedAIORespDataobj.command, rStatus,
