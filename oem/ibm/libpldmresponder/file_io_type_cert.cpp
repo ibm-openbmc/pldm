@@ -47,7 +47,7 @@ void CertHandler::writeFromMemory(uint32_t offset, uint32_t length,
     return;
 }
 
-void CertHandler::postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length)
+int CertHandler::postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length)
 {
     if (IsWriteToMemOp)
     {
@@ -57,14 +57,13 @@ void CertHandler::postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length)
             error(
                 "CertHandler::writeFromMemory:file for type {TYPE} doesn't exist",
                 "TYPE", certType);
-            return;
+            return PLDM_ERROR;
         }
-        // auto fd = std::get<0>(it->second);
+
         auto& remSize = std::get<1>(it->second);
         remSize -= length;
         if (!remSize)
         {
-            // close(fd);
             certMap.erase(it);
         }
     }
@@ -72,7 +71,7 @@ void CertHandler::postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length)
     {
         fs::remove(certfilePath);
     }
-    return;
+    return PLDM_SUCCESS;
 }
 
 void CertHandler::readIntoMemory(uint32_t offset, uint32_t length,

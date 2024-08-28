@@ -78,9 +78,11 @@ class ChapHandler : public FileHandler
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
 
-    virtual void postDataTransferCallBack(bool /*IsWriteToMemOp*/,
-                                          uint32_t /*length*/)
-    {}
+    virtual int postDataTransferCallBack(bool /*IsWriteToMemOp*/,
+                                         uint32_t /*length*/)
+    {
+        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
+    }
 
     /** @brief ChapHandler destructor
      */

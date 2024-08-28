@@ -60,7 +60,7 @@ class CertHandler : public FileHandler
         uint64_t length, uint32_t metaDataValue1, uint32_t /*metaDataValue2*/,
         uint32_t /*metaDataValue3*/, uint32_t /*metaDataValue4*/);
 
-    virtual void postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length);
+    virtual int postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length);
 
     /** @brief CertHandler destructor
      */

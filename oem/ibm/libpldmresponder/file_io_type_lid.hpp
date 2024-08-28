@@ -197,23 +197,11 @@ class LidHandler : public FileHandler
 
         transferFileData(lidPath, false, offset, length, address,
                          sharedAIORespDataobj, event);
-        if (lidType == PLDM_FILE_TYPE_LID_MARKER)
-        {
-            markerLIDremainingSize -= length;
-            if (markerLIDremainingSize == 0)
-            {
-                validateMarkerLid(oemPlatformHandler);
-            }
-        }
-        else if (mcodeUpdateInProgress)
-        {
-            processCodeUpdateLid(lidPath);
-        }
     }
 
-    virtual void postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length)
+    virtual int postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length)
     {
-        int rc = -1;
+        int rc = PLDM_SUCCESS;
         if (IsWriteToMemOp)
         {
             if (lidType == PLDM_FILE_TYPE_LID_MARKER)
@@ -221,23 +209,10 @@ class LidHandler : public FileHandler
                 markerLIDremainingSize -= length;
                 if (markerLIDremainingSize == 0)
                 {
-                    pldm::responder::oem_ibm_platform::Handler*
-                        oemIbmPlatformHandler = dynamic_cast<
-                            pldm::responder::oem_ibm_platform::Handler*>(
-                            moemPlatformHandler);
-                    if (oemIbmPlatformHandler)
+                    rc = processCodeUpdateLid(lidPath);
+                    if (rc == PLDM_SUCCESS)
                     {
-                        auto sensorId = oemIbmPlatformHandler->codeUpdate
-                                            ->getMarkerLidSensor();
-                        using namespace pldm::responder::oem_ibm_platform;
-                        oemIbmPlatformHandler->sendStateSensorEvent(
-                            sensorId, PLDM_STATE_SENSOR_STATE, 0, VALID, VALID);
-                        // rc = validate api;
-                        rc = PLDM_SUCCESS;
-                    }
-                    else
-                    {
-                        rc = -1;
+                        validateMarkerLid(moemPlatformHandler);
                     }
                 }
             }
@@ -245,13 +220,14 @@ class LidHandler : public FileHandler
             {
                 rc = processCodeUpdateLid(lidPath);
             }
-            if (rc < 0)
+            if (rc != PLDM_SUCCESS)
             {
                 error(
                     "Failed to Post Data Transfer CallBack while lid transfer {LID_PATH}",
                     "LID_PATH", lidPath);
             }
         }
+        return rc;
     }
 
     virtual void readIntoMemory(uint32_t offset, uint32_t length,

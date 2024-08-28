@@ -231,12 +231,13 @@ void PelHandler::writeFromMemory(uint32_t offset, uint32_t length,
                      event);
 }
 
-void PelHandler::postDataTransferCallBack(bool IsWriteToMemOp,
-                                          uint32_t /*length*/)
+int PelHandler::postDataTransferCallBack(bool IsWriteToMemOp,
+                                         uint32_t /*length*/)
 {
+    int rc = PLDM_SUCCESS;
     if (IsWriteToMemOp)
     {
-        auto rc = storePel(Pelpath.string());
+        rc = storePel(Pelpath.string());
         if (rc != PLDM_SUCCESS)
         {
             error(
@@ -244,6 +245,7 @@ void PelHandler::postDataTransferCallBack(bool IsWriteToMemOp,
                 "ERROR", errno, "PEL_PATH", Pelpath);
         }
     }
+    return rc;
 }
 
 int PelHandler::fileAck(uint8_t fileStatus)
