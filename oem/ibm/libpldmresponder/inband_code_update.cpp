@@ -43,6 +43,7 @@ constexpr auto hostfwImageName = "image-hostfw";
 constexpr auto bootSideFileName = "bootSide";
 
 constexpr auto bootSideAttrName = "fw_boot_side_current";
+constexpr auto bootNextSideAttrName = "fw_boot_side";
 
 /** @brief The path to the code update tarball file */
 auto tarImagePath = fs::path(imageDirPath) / tarImageName;
@@ -93,6 +94,23 @@ int CodeUpdate::setNextBootSide(const std::string& nextSide)
         error("no nonRunningVersion present");
         return PLDM_PLATFORM_INVALID_STATE_VALUE;
     }
+
+    try
+     {
+         auto priorityPropValue = dBusIntf->getDbusPropertyVariant(
+             objPath.c_str(), "Priority", redundancyIntf);
+         const auto& priorityValue = std::get<uint8_t>(priorityPropValue);
+         if (priorityValue == 0)
+         {
+             // Requested next boot side is already set
+             return PLDM_SUCCESS;
+         }
+     }
+     catch (const std::exception& e)
+     {
+         // Alternate side may not be present due to a failed code update
+         return PLDM_PLATFORM_INVALID_STATE_VALUE;
+     }
 
     pldm::utils::DBusMapping dbusMapping{objPath, redundancyIntf, "Priority",
                                          "uint8_t"};
@@ -417,6 +435,7 @@ void CodeUpdate::setVersions()
                              !isOutOfBandCodeUpdateInProgress())
                     {
                         outOfBandCodeUpdateInProgress = true;
+                        nonRunningVersion = path.str;
                         processRenameEvent();
                     }
                 }
@@ -437,8 +456,10 @@ void CodeUpdate::processRenameEvent()
     BiosAttributeList biosAttrList;
     pldm_boot_side_data pldmBootSideData = readBootSideFile();
     pldmBootSideData.current_boot_side = "Perm";
+    pldmBootSideData.next_boot_side = "Perm";
 
     currBootSide = Pside;
+    nextBootSide = Pside;
 
     auto sensorId = getBootSideRenameStateSensor();
     sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
@@ -504,6 +525,10 @@ void CodeUpdate::processPriorityChangeNotification(
                                                               : "Temp");
     writeBootSideFile(pldmBootSideData);
     nextBootSide = (pldmBootSideData.next_boot_side == "Temp" ? Tside : Pside);
+    BiosAttributeList biosAttrList;
+    biosAttrList.push_back(
+        std::make_pair(bootNextSideAttrName, pldmBootSideData.next_boot_side));
+    setBiosAttr(biosAttrList);
 }
 
 void CodeUpdate::setOemPlatformHandler(
