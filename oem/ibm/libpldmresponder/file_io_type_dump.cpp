@@ -289,13 +289,13 @@ std::string DumpHandler::getOffloadUri(uint32_t fileHandle)
     return socketInterface;
 }
 
-void DumpHandler::postDataTransferCallBack(bool IsWriteToMemOp,
-                                           uint32_t /*length*/)
+int DumpHandler::postDataTransferCallBack(bool IsWriteToMemOp,
+                                          uint32_t /*length*/)
 {
     /// execute when DMA transfer failed.
     if (IsWriteToMemOp)
     {
-        error("DumpHandler::writeFromMemory: transferFileDataToSocket failed");
+        error("Failed transfer dump fileData to socket ");
         if (DumpHandler::fd >= 0)
         {
             close(DumpHandler::fd);
@@ -304,8 +304,8 @@ void DumpHandler::postDataTransferCallBack(bool IsWriteToMemOp,
         auto socketInterface = getOffloadUri(fileHandle);
         std::remove(socketInterface.c_str());
         resetOffloadUri();
-        return;
     }
+    return PLDM_ERROR;
 }
 
 void DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,

@@ -51,7 +51,7 @@ class PelHandler : public FileHandler
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
-    virtual void postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length);
+    virtual int postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length);
 
     virtual int newFileAvailableWithMetaData(uint64_t /*length*/,
                                              uint32_t /*metaDataValue1*/,
