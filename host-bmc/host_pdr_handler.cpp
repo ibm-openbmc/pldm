@@ -105,7 +105,7 @@ HostPDRHandler::HostPDRHandler(
     //bmcEntityTree(bmcEntityTree), hostEffecterParser(hostEffecterParser),
 {
     isHostOff = false;
-    isHostTransitioningToOff = false;
+    isHostRunning = false;
     mergedHostParents = false;
     hostOffMatch = std::make_unique<sdbusplus::bus::match_t>(
         pldm::utils::DBusHandler::getBus(),
@@ -141,7 +141,7 @@ HostPDRHandler::HostPDRHandler(
                 this->stateSensorPDRs.clear();
                 fruRecordSetPDRs.clear();
                 isHostOff = true;
-                isHostTransitioningToOff = false;
+                isHostRunning = false;
                 this->sensorIndex = stateSensorPDRs.begin();
                 this->modifiedCounter = 0;
 
@@ -154,17 +154,15 @@ HostPDRHandler::HostPDRHandler(
                         this->objPathMap[element.first] = obj;
                     }
             }
-            else if (
-                propVal ==
-                "xyz.openbmc_project.State.Host.HostState.TransitioningToOff")
-            {
-                isHostTransitioningToOff = true;
-            }
             else if (propVal ==
                      "xyz.openbmc_project.State.Host.HostState.Running")
             {
-                isHostTransitioningToOff = false;
+                isHostRunning = true;
                 isHostOff = false;
+            }
+            else
+            {
+                isHostRunning = false;
             }
         }
     });
@@ -626,7 +624,7 @@ void HostPDRHandler::processHostPDRs(
     if (response == nullptr || !respMsgLen)
     {
         error("Failed to receive response for the GetPDR command");
-        if (!isHostTransitioningToOff)
+        if (isHostRunning)
         {
             pldm::utils::reportError(
                 "xyz.openbmc_project.PLDM.Error.GetPDR.PDRExchangeFailure");

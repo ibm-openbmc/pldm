@@ -461,8 +461,8 @@ class HostPDRHandler
 
     bool isHostOff;
 
-    /** @brief true/false based on the host transitioning value */
-    bool isHostTransitioningToOff;
+    /** @brief true/false based on the host is running or not */
+    bool isHostRunning;
 };
 
 } // namespace pldm
