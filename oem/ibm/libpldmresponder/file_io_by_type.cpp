@@ -520,11 +520,11 @@ std::shared_ptr<FileHandler> getSharedHandlerByType(uint16_t fileType,
         case PLDM_FILE_TYPE_RESOURCE_DUMP:
         case PLDM_FILE_TYPE_BMC_DUMP:
         case PLDM_FILE_TYPE_SBE_DUMP:
-            // case PLDM_FILE_TYPE_HOSTBOOT_DUMP:
-            // case PLDM_FILE_TYPE_HARDWARE_DUMP:
-            {
-                return std::make_shared<DumpHandler>(fileHandle, fileType);
-            }
+        case PLDM_FILE_TYPE_HOSTBOOT_DUMP:
+        case PLDM_FILE_TYPE_HARDWARE_DUMP:
+        {
+            return std::make_shared<DumpHandler>(fileHandle, fileType);
+        }
         case PLDM_FILE_TYPE_CERT_SIGNING_REQUEST:
         case PLDM_FILE_TYPE_SIGNED_CERT:
         case PLDM_FILE_TYPE_ROOT_CERT:
