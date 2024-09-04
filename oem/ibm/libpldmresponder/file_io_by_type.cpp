@@ -436,6 +436,11 @@ std::unique_ptr<FileHandler> getHandlerByType(uint16_t fileType,
             return std::make_unique<LidHandler>(fileHandle, false,
                                                 PLDM_FILE_TYPE_LID_MARKER);
         }
+        case PLDM_FILE_TYPE_LID_RUNNING:
+        {
+            return std::make_unique<LidHandler>(fileHandle, false,
+                                                PLDM_FILE_TYPE_LID_RUNNING);
+        }
         case PLDM_FILE_TYPE_DUMP:
         case PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS:
         case PLDM_FILE_TYPE_RESOURCE_DUMP:
@@ -460,11 +465,6 @@ std::unique_ptr<FileHandler> getHandlerByType(uint16_t fileType,
         case PLDM_FILE_TYPE_COD_LICENSED_RESOURCES:
         {
             return std::make_unique<LicenseHandler>(fileHandle, fileType);
-        }
-        case PLDM_FILE_TYPE_LID_RUNNING:
-        {
-            return std::make_unique<LidHandler>(fileHandle, false,
-                                                PLDM_FILE_TYPE_LID_RUNNING);
         }
         case PLDM_FILE_TYPE_PSPD_VPD_PDD_KEYWORD:
         {

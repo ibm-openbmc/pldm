@@ -78,7 +78,7 @@ int pldm::responder::oem_ibm_platform::Handler::
 
 int pldm::responder::oem_ibm_platform::Handler::
     oemSetStateEffecterStatesHandler(
-        uint16_t entityType, uint16_t entityInstance, uint16_t stateSetId,
+        uint16_t entityType, uint16_t /*entityInstance*/, uint16_t stateSetId,
         uint8_t compEffecterCnt,
         std::vector<set_effecter_state_field>& stateField, uint16_t effecterId)
 {
@@ -90,17 +90,12 @@ int pldm::responder::oem_ibm_platform::Handler::
         if (stateField[currState].set_request == PLDM_REQUEST_SET)
         {
             if (entityType == PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE &&
-                stateSetId == PLDM_OEM_IBM_BOOT_STATE)
-            {
-                rc = setBootSide(entityInstance, currState, stateField,
-                                 codeUpdate);
-            }
-            else if (entityType == PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE &&
-                     stateSetId == PLDM_OEM_IBM_FIRMWARE_UPDATE_STATE)
+                stateSetId == PLDM_OEM_IBM_FIRMWARE_UPDATE_STATE)
             {
                 if (stateField[currState].effecter_state ==
                     uint8_t(CodeUpdateState::START))
                 {
+                    std::cout << "Received Start Update Request From PHYP\n";
                     codeUpdate->setCodeUpdateProgress(true);
                     startUpdateEvent =
                         std::make_unique<sdeventplus::source::Defer>(
@@ -112,6 +107,7 @@ int pldm::responder::oem_ibm_platform::Handler::
                 else if (stateField[currState].effecter_state ==
                          uint8_t(CodeUpdateState::END))
                 {
+                    std::cout << "Received End Update Request From PHYP\n";
                     rc = PLDM_SUCCESS;
                     assembleImageEvent = std::make_unique<
                         sdeventplus::source::Defer>(
@@ -126,6 +122,7 @@ int pldm::responder::oem_ibm_platform::Handler::
                 else if (stateField[currState].effecter_state ==
                          uint8_t(CodeUpdateState::ABORT))
                 {
+                    std::cout << "Received Abort Update Request From PHYP\n";
                     codeUpdate->setCodeUpdateProgress(false);
                     codeUpdate->clearDirPath(LID_STAGING_DIR);
                     auto sensorId = codeUpdate->getFirmwareUpdateSensor();
@@ -196,6 +193,15 @@ int pldm::responder::oem_ibm_platform::Handler::
                      stateSetId == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS)
             {
                 turnOffRealSAIEffecter();
+            }
+            else if (entityType == PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE &&
+                     stateSetId == PLDM_OEM_IBM_BOOT_SIDE_RENAME)
+            {
+                if (stateField[currState].effecter_state ==
+                    PLDM_BOOT_SIDE_HAS_BEEN_RENAMED)
+                {
+                    codeUpdate->processRenameEvent();
+                }
             }
             else
             {
@@ -344,7 +350,7 @@ void buildAllCodeUpdateEffecterPDR(oem_ibm_platform::Handler* platformHandler,
     possibleStates->possible_states_size = 2;
     auto state =
         reinterpret_cast<state_effecter_possible_states*>(possibleStates);
-    if (stateSetID == PLDM_OEM_IBM_BOOT_STATE)
+    if (stateSetID == PLDM_OEM_IBM_BOOT_SIDE_RENAME)
         state->states[0].byte = 6;
     else if (stateSetID == PLDM_OEM_IBM_FIRMWARE_UPDATE_STATE)
         state->states[0].byte = 126;
@@ -460,8 +466,8 @@ void buildAllCodeUpdateSensorPDR(oem_ibm_platform::Handler* platformHandler,
     possibleStates->possible_states_size = 2;
     auto state =
         reinterpret_cast<state_sensor_possible_states*>(possibleStates);
-    if ((stateSetID == PLDM_OEM_IBM_BOOT_STATE) ||
-        (stateSetID == PLDM_OEM_IBM_VERIFICATION_STATE))
+    if ((stateSetID == PLDM_OEM_IBM_VERIFICATION_STATE) ||
+        (stateSetID == PLDM_OEM_IBM_BOOT_SIDE_RENAME))
         state->states[0].byte = 6;
     else if (stateSetID == PLDM_OEM_IBM_FIRMWARE_UPDATE_STATE)
         state->states[0].byte = 126;
@@ -630,12 +636,6 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     pdr_utils::Repo& repo)
 {
     buildAllCodeUpdateEffecterPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
-                                  ENTITY_INSTANCE_0, PLDM_OEM_IBM_BOOT_STATE,
-                                  repo);
-    buildAllCodeUpdateEffecterPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
-                                  ENTITY_INSTANCE_1, PLDM_OEM_IBM_BOOT_STATE,
-                                  repo);
-    buildAllCodeUpdateEffecterPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
                                   ENTITY_INSTANCE_0,
                                   PLDM_OEM_IBM_FIRMWARE_UPDATE_STATE, repo);
     buildAllCodeUpdateEffecterPDR(this, PLDM_ENTITY_SYSTEM_CHASSIS,
@@ -646,16 +646,13 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     static constexpr auto objectPath = "/xyz/openbmc_project/inventory/system";
     const std::vector<std::string> slotInterface = {
         "xyz.openbmc_project.Inventory.Item.PCIeSlot"};
+    buildAllCodeUpdateEffecterPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
+                                  ENTITY_INSTANCE_0,
+                                  PLDM_OEM_IBM_BOOT_SIDE_RENAME, repo);
 
     auto slotPaths = dBusIntf->getSubTreePaths(objectPath, 0, slotInterface);
     buildAllSlotEnableEffecterPDR(this, repo, slotPaths);
     buildAllSlotEnableSensorPDR(this, repo, slotPaths);
-    buildAllCodeUpdateSensorPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
-                                ENTITY_INSTANCE_0, PLDM_OEM_IBM_BOOT_STATE,
-                                repo);
-    buildAllCodeUpdateSensorPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
-                                ENTITY_INSTANCE_1, PLDM_OEM_IBM_BOOT_STATE,
-                                repo);
     buildAllCodeUpdateSensorPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
                                 ENTITY_INSTANCE_0,
                                 PLDM_OEM_IBM_FIRMWARE_UPDATE_STATE, repo);
@@ -682,6 +679,9 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     realSAISensorId = findStateSensorId(
         repo.getPdr(), 0, PLDM_OEM_IBM_ENTITY_REAL_SAI, ENTITY_INSTANCE_1, 1,
         PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS);
+    buildAllCodeUpdateSensorPDR(this, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
+                                ENTITY_INSTANCE_0,
+                                PLDM_OEM_IBM_BOOT_SIDE_RENAME, repo);
     auto sensorId = findStateSensorId(
         repo.getPdr(), 0, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
         ENTITY_INSTANCE_0, 1, PLDM_OEM_IBM_VERIFICATION_STATE);
@@ -690,6 +690,10 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
         repo.getPdr(), 0, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
         ENTITY_INSTANCE_0, 1, PLDM_OEM_IBM_FIRMWARE_UPDATE_STATE);
     codeUpdate->setFirmwareUpdateSensor(sensorId);
+    sensorId =
+        findStateSensorId(repo.getPdr(), 0, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
+                          ENTITY_INSTANCE_0, 1, PLDM_OEM_IBM_BOOT_SIDE_RENAME);
+    codeUpdate->setBootSideRenameStateSensor(sensorId);
 }
 
 void pldm::responder::oem_ibm_platform::Handler::setPlatformHandler(
@@ -794,6 +798,7 @@ void pldm::responder::oem_ibm_platform::Handler::_processEndUpdate(
     sdeventplus::source::EventBase& /*source */)
 {
     assembleImageEvent.reset();
+    std::cout << "Starting assembleCodeUpdateImage \n";
     int retc = codeUpdate->assembleCodeUpdateImage();
     if (retc != PLDM_SUCCESS)
     {
@@ -817,6 +822,7 @@ void pldm::responder::oem_ibm_platform::Handler::_processStartUpdate(
         state = CodeUpdateState::FAIL;
     }
     auto sensorId = codeUpdate->getFirmwareUpdateSensor();
+    std::cout << "Sending Start Update sensor event to PHYP\n";
     sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0, uint8_t(state),
                          uint8_t(CodeUpdateState::END));
 }
@@ -850,6 +856,9 @@ void pldm::responder::oem_ibm_platform::Handler::updateOemDbusPaths(
 void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
     sdeventplus::source::EventBase& /*source */)
 {
+    BiosAttributeList biosAttrList;
+    biosAttrList.push_back(std::make_pair("pvm_boot_initiator", "Host"));
+    setBiosAttr(biosAttrList);
     pldm::utils::PropertyValue value =
         "xyz.openbmc_project.State.Chassis.Transition.Off";
     pldm::utils::DBusMapping dbusMapping{"/xyz/openbmc_project/state/chassis0",
@@ -857,6 +866,7 @@ void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
                                          "RequestedPowerTransition", "string"};
     try
     {
+        std::cout << "InbandCodeUpdate: ChassifOff the host\n";
         dBusIntf->setDbusProperty(dbusMapping, value);
     }
     catch (const std::exception& e)
@@ -891,13 +901,14 @@ void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
                         "Policy.AlwaysOn";
                 try
                 {
+                    info("InbandCodeUpdate: Setting the one time APR policy");
                     dBusIntf->setDbusProperty(dbusMapping, value);
                 }
                 catch (const std::exception& e)
                 {
                     error(
-                        "Failure in setting one-time restore policy, unable to set property PowerRestorePolicy, error - {ERROR}",
-                        "ERROR", e);
+                        "Setting one-time restore policy failed, unable to set property PowerRestorePolicy ERROR={ERR_EXCEP}",
+                        "ERR_EXCEP", e.what());
                 }
                 dbusMapping = pldm::utils::DBusMapping{
                     "/xyz/openbmc_project/state/bmc0",
@@ -906,13 +917,14 @@ void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
                 value = "xyz.openbmc_project.State.BMC.Transition.Reboot";
                 try
                 {
+                    info("InbandCodeUpdate: Rebooting the BMC");
                     dBusIntf->setDbusProperty(dbusMapping, value);
                 }
                 catch (const std::exception& e)
                 {
                     error(
-                        "Failure in BMC state transition to reboot, unable to set property RequestedBMCTransition , error - {ERROR}",
-                        "ERROR", e);
+                        "BMC state transition to reboot failed, unable to set property RequestedBMCTransition ERROR={ERR_EXCEP}",
+                        "ERR_EXCEP", e);
                 }
             }
         }
@@ -1045,43 +1057,6 @@ bool pldm::responder::oem_ibm_platform::Handler::checkRecordHandleInRange(
 void Handler::processSetEventReceiver()
 {
     this->setEventReceiver();
-}
-
-void pldm::responder::oem_ibm_platform::Handler::startStopTimer(bool value)
-{
-    if (value)
-    {
-        timer.restart(
-            std::chrono::seconds(HEARTBEAT_TIMEOUT + HEARTBEAT_TIMEOUT_DELTA));
-    }
-    else
-    {
-        timer.setEnabled(value);
-    }
-}
-
-void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
-                                                              bool value)
-{
-    if ((hostOff || hostTransitioningToOff || (tid != HYPERVISOR_TID)) &&
-        timer.isEnabled())
-    {
-        startStopTimer(false);
-        return;
-    }
-    if (value)
-    {
-        startStopTimer(value);
-    }
-    else if (timer.isEnabled())
-    {
-        info(
-            "Failed to stop surveillance timer while remote terminus status is ‘{HOST_TRANST_OFF}’ with Terminus ID ‘{TID}’ ",
-            "HOST_TRANST_OFF", hostTransitioningToOff, "TID", tid);
-        startStopTimer(value);
-        pldm::utils::reportError(
-            "xyz.openbmc_project.PLDM.Error.setSurvTimer.RecvSurveillancePingFail");
-    }
 }
 
 void pldm::responder::oem_ibm_platform::Handler::
@@ -1258,6 +1233,121 @@ void pldm::responder::oem_ibm_platform::Handler::modifyPDROemActions(
             setBitmapMethodCall("/com/ibm/panel_app", "toggleFunctionState",
                                 "com.ibm.panel", bitMap);
         }
+    }
+}
+
+void pldm::responder::oem_ibm_platform::Handler::handleBootTypesAtPowerOn()
+{
+    BiosAttributeList biosAttrList;
+    auto bootInitiator = getBiosAttrValue("pvm_boot_initiator_current");
+    std::string restartCause;
+    if (((bootInitiator != "HMC") || (bootInitiator != "Host")) &&
+        !bootInitiator.empty())
+    {
+        try
+        {
+            restartCause =
+                pldm::utils::DBusHandler().getDbusProperty<std::string>(
+                    "/xyz/openbmc_project/state/host0", "RestartCause",
+                    "xyz.openbmc_project.State.Host");
+            setBootTypesBiosAttr(restartCause);
+        }
+        catch (const std::exception& e)
+        {
+            std::cerr << "Failed to fetch the restartCause, ERROR=" << e.what()
+                      << "\n";
+        }
+    }
+}
+
+void pldm::responder::oem_ibm_platform::Handler::setBootTypesBiosAttr(
+    const std::string& restartCause)
+{
+    BiosAttributeList biosAttrList;
+    if (restartCause ==
+        "xyz.openbmc_project.State.Host.RestartCause.ScheduledPowerOn")
+    {
+        biosAttrList.push_back(std::make_pair("pvm_boot_initiator", "Host"));
+        setBiosAttr(biosAttrList);
+        stateManagerMatch.reset();
+    }
+    else if (
+        (restartCause ==
+         "xyz.openbmc_project.State.Host.RestartCause.PowerPolicyAlwaysOn") ||
+        (restartCause ==
+         "xyz.openbmc_project.State.Host.RestartCause.PowerPolicyPreviousState"))
+    {
+        biosAttrList.push_back(std::make_pair("pvm_boot_initiator", "Auto"));
+        setBiosAttr(biosAttrList);
+        stateManagerMatch.reset();
+    }
+    else if (restartCause ==
+             "xyz.openbmc_project.State.Host.RestartCause.HostCrash")
+    {
+        biosAttrList.push_back(std::make_pair("pvm_boot_initiator", "Auto"));
+        biosAttrList.push_back(std::make_pair("pvm_boot_type", "ReIPL"));
+        setBiosAttr(biosAttrList);
+        stateManagerMatch.reset();
+    }
+}
+
+void pldm::responder::oem_ibm_platform::Handler::handleBootTypesAtChassisOff()
+{
+    BiosAttributeList biosAttrList;
+    auto bootInitiator = getBiosAttrValue("pvm_boot_initiator");
+    auto bootType = getBiosAttrValue("pvm_boot_type");
+    if (bootInitiator.empty() || bootType.empty())
+    {
+        std::cerr
+            << "ERROR in fetching the pvm_boot_initiator and pvm_boot_type BIOS attribute values\n";
+        return;
+    }
+    else if (bootInitiator != "Host")
+    {
+        biosAttrList.push_back(std::make_pair("pvm_boot_initiator", "User"));
+        biosAttrList.push_back(std::make_pair("pvm_boot_type", "IPL"));
+        setBiosAttr(biosAttrList);
+    }
+}
+
+void pldm::responder::oem_ibm_platform::Handler::startStopTimer(bool value)
+{
+    if (value)
+    {
+        timer.restart(
+            std::chrono::seconds(HEARTBEAT_TIMEOUT + HEARTBEAT_TIMEOUT_DELTA));
+    }
+    else
+    {
+        timer.setEnabled(value);
+    }
+}
+
+void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
+                                                              bool value)
+{
+    if ((hostOff == true) || (hostTransitioningToOff == true) ||
+        (tid != HYPERVISOR_TID))
+    {
+        if (timer.isEnabled())
+        {
+            startStopTimer(false);
+        }
+        return;
+    }
+    if (value)
+    {
+        startStopTimer(true);
+    }
+    else if (!value && timer.isEnabled())
+    {
+        info(
+            "setSurvTimer:LogginPel:hostOff={HOST_OFF} hostTransitioningToOff={HOST_TRANST_OFF} tid={TID}",
+            "HOST_OFF", (bool)hostOff, "HOST_TRANST_OFF",
+            (bool)hostTransitioningToOff, "TID", (uint16_t)tid);
+        startStopTimer(false);
+        pldm::utils::reportError(
+            "xyz.openbmc_project.bmc.PLDM.setSurvTimer.RecvSurveillancePingFail");
     }
 }
 

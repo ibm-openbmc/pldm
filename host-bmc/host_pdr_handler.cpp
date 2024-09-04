@@ -119,7 +119,8 @@ HostPDRHandler::HostPDRHandler(
         pldm::utils::DBusHandler::getBus(),
         propertiesChanged("/xyz/openbmc_project/state/host0",
                           "xyz.openbmc_project.State.Host"),
-        [this, repo, entityTree, bmcEntityTree](sdbusplus::message_t& msg) {
+        [this, repo, entityTree, bmcEntityTree,
+         oemPlatformHandler](sdbusplus::message::message& msg) {
         DbusChangedProps props{};
         std::string intf;
         msg.read(intf, props);

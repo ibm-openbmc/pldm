@@ -47,12 +47,32 @@ class LidHandler : public FileHandler
     {
         sideToRead = permSide ? Pside : Tside;
         isPatchDir = false;
-        std::string dir = permSide ? LID_ALTERNATE_DIR : LID_RUNNING_DIR;
+        currBootSide = (getBiosAttrValue("fw_boot_side_current") == "Perm"
+                            ? Pside
+                            : Tside);
+        std::string dir;
+        if ((currBootSide == sideToRead) ||
+            (lidType == PLDM_FILE_TYPE_LID_RUNNING))
+        {
+            dir = LID_RUNNING_DIR;
+        }
+        else
+        {
+            dir = LID_ALTERNATE_DIR;
+        }
         std::stringstream stream;
         stream << std::hex << fileHandle;
         auto lidName = stream.str() + ".lid";
-        std::string patchDir = permSide ? LID_ALTERNATE_PATCH_DIR
-                                        : LID_RUNNING_PATCH_DIR;
+        std::string patchDir;
+        if ((currBootSide == sideToRead) ||
+            (lidType == PLDM_FILE_TYPE_LID_RUNNING))
+        {
+            patchDir = LID_RUNNING_PATCH_DIR;
+        }
+        else
+        {
+            patchDir = LID_ALTERNATE_PATCH_DIR;
+        }
         auto patch = fs::path(patchDir) / lidName;
         if (fs::is_regular_file(patch))
         {
@@ -81,8 +101,9 @@ class LidHandler : public FileHandler
             {
                 dir = LID_ALTERNATE_PATCH_DIR;
             }
-            if (oemIbmPlatformHandler->codeUpdate->fetchCurrentBootSide() ==
-                sideToRead)
+            if ((oemIbmPlatformHandler->codeUpdate->fetchCurrentBootSide() ==
+                 sideToRead) ||
+                (lidType == PLDM_FILE_TYPE_LID_RUNNING))
             {
                 if (isPatchDir)
                 {
@@ -398,6 +419,7 @@ class LidHandler : public FileHandler
   protected:
     std::string lidPath;
     std::string sideToRead;
+    std::string currBootSide;
     bool isPatchDir;
     static inline MarkerLIDremainingSize markerLIDremainingSize;
     uint8_t lidType;
