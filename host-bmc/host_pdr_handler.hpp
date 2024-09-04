@@ -14,13 +14,16 @@
 #include <libpldm/base.h>
 #include <libpldm/platform.h>
 
+#include <phosphor-logging/lg2.hpp>
 #include <sdeventplus/event.hpp>
 #include <sdeventplus/source/event.hpp>
 
+#include <coroutine>
 #include <deque>
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace pldm
@@ -55,6 +58,137 @@ struct SensorEntry
 
 using HostStateSensorMap = std::map<SensorEntry, pdr::SensorInfo>;
 using PDRList = std::vector<std::vector<uint8_t>>;
+
+class Routine
+{
+  public:
+    struct sensor_t
+    {
+        uint16_t sensorId;
+        pdr::TerminusID tid;
+        uint16_t eid;
+    };
+
+  private:
+    std::queue<sensor_t> sensor_queue;
+    std::array<bool, 32> pending_requests{};
+    std::unique_ptr<InstanceIdDb> instanceIdDb;
+    std::unordered_map<int, sensor_t> allocated_requests;
+
+    struct AllocateAwaiter
+    {
+        Routine& routine_handler;
+        bool await_ready()
+        {
+            return false;
+        }
+        void await_suspend(std::coroutine_handle<> h)
+        {
+            routine_handler.resumeAllocate = h;
+        }
+        void await_resume() {}
+    };
+
+    struct RequestAwaiter
+    {
+        Routine& routine_handler;
+        bool await_ready()
+        {
+            return false;
+        }
+        void await_suspend(std::coroutine_handle<> h)
+        {
+            routine_handler.resumeRequest = h;
+        }
+        void await_resume() {}
+    };
+
+  public:
+    std::coroutine_handle<> resumeAllocate;
+    std::coroutine_handle<> resumeRequest;
+
+    Routine(std::unique_ptr<InstanceIdDb> idDb) : instanceIdDb(std::move(idDb))
+    {}
+
+    void addSensor(const sensor_t& sensor)
+    {
+        sensor_queue.push(sensor);
+    }
+
+    AllocateAwaiter waitForAllocation()
+    {
+        return AllocateAwaiter{*this};
+    }
+
+    RequestAwaiter waitForRequest()
+    {
+        return RequestAwaiter{*this};
+    }
+
+    std::optional<std::pair<sensor_t, int>> getNextSensorWithId()
+    {
+        if (sensor_queue.empty())
+        {
+            return std::nullopt;
+        }
+
+        auto sensor = sensor_queue.front();
+        auto id = instanceIdDb->next(sensor.eid);
+        if (id < 32 && !pending_requests[id])
+        {
+            sensor_queue.pop();
+            pending_requests[id] = true;
+            allocated_requests[id] = sensor;
+            return std::make_pair(sensor, id);
+        }
+        return std::nullopt;
+    }
+
+    void freeId(int id, mctp_eid_t eid)
+    {
+        if (id >= 0 && id < 32)
+        {
+            pending_requests[id] = false;
+            allocated_requests.erase(id);
+            instanceIdDb->free(eid, id);
+        }
+    }
+
+    bool hasMoreSensors() const
+    {
+        return !sensor_queue.empty();
+    }
+
+    struct Task
+    {
+        struct promise_type
+        {
+            Task get_return_object()
+            {
+                return {};
+            }
+            std::suspend_never initial_suspend()
+            {
+                return {};
+            }
+            std::suspend_always final_suspend() noexcept
+            {
+                return {};
+            } // Ensure coroutine completes properly
+            void return_void() {}
+            void unhandled_exception() {}
+        };
+        bool await_ready() const noexcept
+        {
+            return false;
+        }
+        void await_suspend(std::coroutine_handle<> h) const noexcept
+        {
+            h.resume();
+        }
+        void await_resume() const noexcept {}
+    };
+};
 
 /** @class HostPDRHandler
  *  @brief This class can fetch and process PDRs from host firmware
@@ -171,7 +305,8 @@ class HostPDRHandler
      */
     void setHostSensorState();
 
-    void _setHostSensorState();
+    // void _setHostSensorState();
+    // CoroutineTask _setHostSensorState();
 
     /** @brief check whether Host is running when pldmd starts
      */
@@ -453,11 +588,13 @@ class HostPDRHandler
     PDRList fruRecordSetPDRs{};
 
     uint16_t terminusID = 0;
-
     bool isHostOff;
 
     /** @brief true/false based on the host is running or not */
     bool isHostRunning;
+    Routine::Task allocateSensorsTask(Routine& pdrHandler);
+    Routine::Task sendRequestTask(Routine& pdrHandler, Routine::sensor_t sensor,
+                                  int instanceId);
 };
 
 } // namespace pldm
