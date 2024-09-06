@@ -102,8 +102,7 @@ HostPDRHandler::HostPDRHandler(
     pldm::responder::oem_platform::Handler* oemPlatformHandler,
     pldm::responder::oem_utils::Handler* oemUtilsHandler,
     pldm::host_associations::HostAssociationsParser* associationsParser) :
-    mctp_fd(mctp_fd),
-    mctp_eid(mctp_eid), event(event), repo(repo),
+    mctp_fd(mctp_fd), mctp_eid(mctp_eid), event(event), repo(repo),
     stateSensorHandler(eventsJsonsDir), entityTree(entityTree),
     bmcEntityTree(bmcEntityTree), hostEffecterParser(hostEffecterParser),
     instanceIdDb(instanceIdDb), handler(handler),
@@ -132,7 +131,7 @@ HostPDRHandler::HostPDRHandler(
             {
                 // Delete all the remote terminus information
                 std::erase_if(tlPDRInfo, [](const auto& item) {
-                    auto const& [key, value] = item;
+                    const auto& [key, value] = item;
                     return key != TERMINUS_HANDLE;
                 });
                 // when the host is powered off, set the availability

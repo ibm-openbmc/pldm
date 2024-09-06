@@ -659,9 +659,8 @@ class Handler : public CmdHandler
             uint8_t hostEid, pldm::InstanceIdDb* instanceIdDb,
             pldm::requester::Handler<pldm::requester::Request>* handler,
             pldm::response_api::AltResponse* respInterface) :
-        oemPlatformHandler(oemPlatformHandler),
-        hostSockFd(hostSockFd), hostEid(hostEid), instanceIdDb(instanceIdDb),
-        handler(handler),
+        oemPlatformHandler(oemPlatformHandler), hostSockFd(hostSockFd),
+        hostEid(hostEid), instanceIdDb(instanceIdDb), handler(handler),
         sharedAIORespDataobj({0, 0, nullptr, 0, respInterface})
     {
         handlers.emplace(

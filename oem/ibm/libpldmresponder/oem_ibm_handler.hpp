@@ -85,11 +85,10 @@ class Handler : public oem_platform::Handler
             sdeventplus::Event& event, pldm_pdr* repo,
             pldm::requester::Handler<pldm::requester::Request>* handler,
             pldm_entity_association_tree* bmcEntityTree) :
-        oem_platform::Handler(dBusIntf),
-        codeUpdate(codeUpdate), slotHandler(slotHandler),
-        platformHandler(nullptr), mctp_fd(mctp_fd), mctp_eid(mctp_eid),
-        instanceIdDb(instanceIdDb), event(event), pdrRepo(repo),
-        handler(handler), bmcEntityTree(bmcEntityTree),
+        oem_platform::Handler(dBusIntf), codeUpdate(codeUpdate),
+        slotHandler(slotHandler), platformHandler(nullptr), mctp_fd(mctp_fd),
+        mctp_eid(mctp_eid), instanceIdDb(instanceIdDb), event(event),
+        pdrRepo(repo), handler(handler), bmcEntityTree(bmcEntityTree),
         timer(event, std::bind(std::mem_fn(&Handler::setSurvTimer), this,
                                HYPERVISOR_TID, false)),
         hostTransitioningToOff(true)

@@ -97,8 +97,8 @@ class FruImpl
             pldm::requester::Handler<pldm::requester::Request>* handler,
             uint8_t mctp_eid, sdeventplus::Event& event,
             pldm::state_sensor::DbusToPLDMEvent* dbusToPLDMEventHandler) :
-        parser(configPath, fruMasterJsonPath),
-        pdrRepo(pdrRepo), entityTree(entityTree), bmcEntityTree(bmcEntityTree),
+        parser(configPath, fruMasterJsonPath), pdrRepo(pdrRepo),
+        entityTree(entityTree), bmcEntityTree(bmcEntityTree),
         oemFruHandler(oemFruHandler), requester(requester), handler(handler),
         mctp_eid(mctp_eid), event(event),
         dbusToPLDMEventHandler(dbusToPLDMEventHandler), oemUtilsHandler(nullptr)
