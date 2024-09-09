@@ -37,8 +37,7 @@ class AltResponse
     AltResponse(const AltResponse&) = delete;
     AltResponse(PldmTransport* pldmTransport, pldm_tid_t& TID,
                 bool verbose = false) :
-        pldmTransport(pldmTransport),
-        TID(TID), verbose(verbose)
+        pldmTransport(pldmTransport), TID(TID), verbose(verbose)
     {}
 
     /** @brief method to send response to remote pldm using Response interface

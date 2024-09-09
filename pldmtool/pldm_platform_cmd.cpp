@@ -1565,8 +1565,7 @@ class SetStateEffecter : public CommandInterface
     static constexpr auto minEffecterCount = 1;
     static constexpr auto maxEffecterCount = 8;
     explicit SetStateEffecter(const char* type, const char* name,
-                              CLI::App* app) :
-        CommandInterface(type, name, app)
+                              CLI::App* app) : CommandInterface(type, name, app)
     {
         app->add_option(
                "-i, --id", effecterId,
@@ -1830,8 +1829,7 @@ class GetSensorReading : public CommandInterface
     GetSensorReading& operator=(GetSensorReading&&) = delete;
 
     explicit GetSensorReading(const char* type, const char* name,
-                              CLI::App* app) :
-        CommandInterface(type, name, app)
+                              CLI::App* app) : CommandInterface(type, name, app)
     {
         app->add_option(
                "-i, --sensor_id", sensorId,

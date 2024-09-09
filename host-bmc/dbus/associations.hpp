@@ -30,8 +30,7 @@ class Associations : public AssociationsIntf
 
     Associations(sdbusplus::bus_t& bus, const std::string& objPath,
                  const std::map<std::string, PropertiesVariant>& vals) :
-        AssociationsIntf(bus, objPath.c_str(), vals),
-        path(objPath)
+        AssociationsIntf(bus, objPath.c_str(), vals), path(objPath)
     {}
 
     /** Get value of Associations */

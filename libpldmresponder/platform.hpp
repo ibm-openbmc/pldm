@@ -62,8 +62,7 @@ class Handler : public CmdHandler
             pldm::requester::Handler<pldm::requester::Request>* handler,
             sdeventplus::Event& event, bool buildPDRLazily = false,
             const std::optional<EventMap>& addOnHandlersMap = std::nullopt) :
-        eid(eid),
-        instanceIdDb(instanceIdDb), pdrRepo(repo),
+        eid(eid), instanceIdDb(instanceIdDb), pdrRepo(repo),
         hostPDRHandler(hostPDRHandler),
         dbusToPLDMEventHandler(dbusToPLDMEventHandler), fruHandler(fruHandler),
         bmcEntityTree(bmcEntityTree), dBusIntf(dBusIntf),
