@@ -1407,8 +1407,8 @@ uint32_t
         lastHandle = pldm_pdr_get_record_handle(pdrRepo, lastLocalRecord);
     }
     pdrEntry.handle.recordHandle = lastHandle + 1;
-    pldm_pdr_add_check(pdrRepo, pdrEntry.data, pdrEntry.size,
-                       pdrEntry.handle.recordHandle, false, &record_handle);
+    pldm_pdr_add(pdrRepo, pdrEntry.data, pdrEntry.size, false,
+                       pdrEntry.handle.recordHandle, &record_handle);
     return record_handle;
 }
 

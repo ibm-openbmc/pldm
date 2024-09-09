@@ -124,7 +124,7 @@ HostPDRHandler::HostPDRHandler(
             {
                 // Delete all the remote terminus information
                 std::erase_if(tlPDRInfo, [](const auto& item) {
-                    auto const& [key, value] = item;
+                    const auto& [key, value] = item;
                     return key != TERMINUS_HANDLE;
                 });
                 // when the host is powered off, set the availability
