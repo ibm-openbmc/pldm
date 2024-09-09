@@ -3,7 +3,7 @@
 #include "oem_ibm_handler.hpp"
 #include "pldmd/pldm_resp_interface.hpp"
 
-#include <libpldm/file_io.h>
+#include <libpldm/oem/ibm/file_io.h>
 
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server.hpp>
