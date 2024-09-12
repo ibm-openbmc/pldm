@@ -79,7 +79,7 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
             error(
                 "Failed to decode new file available response or remote terminus returned error, response code '{RC}' and completion code '{CC}'",
                 "RC", rc, "CC", static_cast<unsigned>(completionCode));
-            reportResourceDumpFailure();
+            reportResourceDumpFailure("DecodeNewFileResp");
         }
     };
     rc = handler->registerRequest(
@@ -90,12 +90,16 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
         error(
             "Failed to send NewFileAvailable Request to Host, response code '{RC}'",
             "RC", rc);
-        reportResourceDumpFailure();
+        reportResourceDumpFailure("NewFileAvailableRequest");
     }
 }
 
-void DbusToFileHandler::reportResourceDumpFailure()
+void DbusToFileHandler::reportResourceDumpFailure(std::string str)
 {
+    std::string s = "xyz.openbmc_project.PLDM.Error.ReportResourceDumpFail." +
+                    str;
+
+    pldm::utils::reportError(s.c_str());
     PropertyValue value{resDumpStatus};
     DBusMapping dbusMapping{resDumpCurrentObjPath, resDumpProgressIntf,
                             "Status", "string"};
@@ -364,6 +368,8 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
             error(
                 "Failed to decode new file available response for vmi or remote terminus returned error, response code '{RC}' and completion code '{CC}'",
                 "RC", rc, "CC", static_cast<unsigned>(completionCode));
+            pldm::utils::reportError(
+                "xyz.openbmc_project.PLDM.Error.DecodeNewFileResponseFail");
         }
     };
     rc = handler->registerRequest(
@@ -374,6 +380,8 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
         error(
             "Failed to send NewFileAvailable Request to Host for vmi, response code '{RC}'",
             "RC", rc);
+        pldm::utils::reportError(
+            "xyz.openbmc_project.PLDM.Error.NewFileAvailableRequestFail");
     }
 }
 
