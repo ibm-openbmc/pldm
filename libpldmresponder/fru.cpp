@@ -918,25 +918,13 @@ void FruImpl::processFruPresenceChange(const DbusChangedProps& chProperties,
     static constexpr auto portInterface =
         "xyz.openbmc_project.Inventory.Item.Connector";
 
-#ifdef OEM_IBM
-    if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice")
-    {
-        if (!pldm::responder::utils::checkIfIBMCableCard(fruObjPath))
-        {
-            return;
-        }
-        pldm::responder::utils::findPortObjects(fruObjPath, portObjects);
-        /*   std::cout << "after finding the port objects " <<
-           portObjects.size()
-                     << std::endl;*/
-    }
-    // as per current code the ports do not have Present property
-#endif
-
     // if(fruInterface != "xyz.openbmc_project.Inventory.Item.PCIeDevice")
     {
         if (newPropVal)
         {
+            error(
+                "calling buildIndividualFRU for fru: {FRU_INTF} with object path: {FRU_OBJ}",
+                "FRU_INTF", fruInterface, "FRU_OBJ", fruObjPath);
             buildIndividualFRU(fruInterface, fruObjPath);
             for (auto portObject : portObjects)
             {
@@ -945,6 +933,9 @@ void FruImpl::processFruPresenceChange(const DbusChangedProps& chProperties,
         }
         else
         {
+            error(
+                "calling removeIndividualFRU for fru: {FRU_INTF} with object path: {FRU_OBJ}",
+                "FRU_INTF", fruInterface, "FRU_OBJ", fruObjPath);
             for (auto portObject : portObjects)
             {
                 removeIndividualFRU(portObject);
