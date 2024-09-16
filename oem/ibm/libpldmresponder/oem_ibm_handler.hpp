@@ -63,6 +63,24 @@ class Handler : public oem_fileio::Handler
 
 namespace oem_ibm_platform
 {
+using AttributeName = std::string;
+using AttributeType = std::string;
+using ReadonlyStatus = bool;
+using DisplayName = std::string;
+using Description = std::string;
+using MenuPath = std::string;
+using CurrentValue = std::variant<int64_t, std::string>;
+using DefaultValue = std::variant<int64_t, std::string>;
+using OptionString = std::string;
+using OptionValue = std::variant<int64_t, std::string>;
+using Option = std::vector<std::tuple<OptionString, OptionValue>>;
+using BIOSTableObj =
+    std::tuple<AttributeType, ReadonlyStatus, DisplayName, Description,
+               MenuPath, CurrentValue, DefaultValue, Option>;
+using BaseBIOSTable = std::map<AttributeName, BIOSTableObj>;
+
+using PendingObj = std::tuple<AttributeType, CurrentValue>;
+using PendingAttributes = std::map<AttributeName, PendingObj>;
 constexpr uint16_t ENTITY_INSTANCE_0 = 0;
 constexpr uint16_t ENTITY_INSTANCE_1 = 1;
 
@@ -127,7 +145,6 @@ class Handler : public oem_platform::Handler
                 else if (propVal ==
                          "xyz.openbmc_project.State.Host.HostState.Running")
                 {
-                    hostOff = false;
                     hostTransitioningToOff = false;
                 }
                 else if (
@@ -218,6 +235,64 @@ class Handler : public oem_platform::Handler
                 processSAIUpdate();
             }
         });
+        updateBIOSMatch = std::make_unique<sdbusplus::bus::match::match>(
+            pldm::utils::DBusHandler::getBus(),
+            propertiesChanged("/xyz/openbmc_project/bios_config/manager",
+                              "xyz.openbmc_project.BIOSConfig.Manager"),
+            [this, codeUpdate](sdbusplus::message_t& msg) {
+            constexpr auto propertyName = "PendingAttributes";
+            using Value =
+                std::variant<std::string, PendingAttributes, BaseBIOSTable>;
+            using Properties = std::map<pldm::utils::DbusProp, Value>;
+            Properties props{};
+            std::string intf;
+            msg.read(intf, props);
+            auto valPropMap = props.find(propertyName);
+            if (valPropMap == props.end())
+            {
+                return;
+            }
+
+            PendingAttributes pendingAttributes =
+                std::get<PendingAttributes>(valPropMap->second);
+            for (auto it : pendingAttributes)
+            {
+                if (it.first == "fw_boot_side")
+                {
+                    auto& [attributeType, attributevalue] = it.second;
+                    std::string nextBootSide =
+                        std::get<std::string>(attributevalue);
+                    codeUpdate->setNextBootSide(nextBootSide);
+                }
+            }
+        });
+        stateManagerMatch = std::make_unique<sdbusplus::bus::match::match>(
+            pldm::utils::DBusHandler::getBus(),
+            sdbusplus::bus::match::rules::interfacesAdded() +
+                sdbusplus::bus::match::rules::argNpath(
+                    0, "/xyz/openbmc_project/state/host0"),
+            [this](sdbusplus::message::message& msg) {
+            sdbusplus::message::object_path path;
+            std::map<std::string, std::map<std::string, dbus::Value>>
+                interfaces;
+            msg.read(path, interfaces);
+
+            if (!interfaces.contains("xyz.openbmc_project.State.Host"))
+            {
+                return;
+            }
+
+            const auto& properties =
+                interfaces.at("xyz.openbmc_project.State.Host");
+
+            if (!properties.contains("RestartCause"))
+            {
+                return;
+            }
+
+            restartCause = std::get<std::string>(properties.at("RestartCause"));
+            setBootTypesBiosAttr(restartCause);
+        });
     }
 
     int getOemStateSensorReadingsHandler(
@@ -228,8 +303,7 @@ class Handler : public oem_platform::Handler
         std::vector<get_sensor_state_field>& stateField);
 
     int oemSetStateEffecterStatesHandler(
-        uint16_t entityType, uint16_t entityInstance, uint16_t stateSetId,
-        uint8_t compEffecterCnt,
+        uint16_t entityType, uint16_t stateSetId, uint8_t compEffecterCnt,
         std::vector<set_effecter_state_field>& stateField, uint16_t effecterId);
 
     /** @brief Method to set the platform handler in the
@@ -426,6 +500,19 @@ class Handler : public oem_platform::Handler
                              const std::string& dbusInterface,
                              const pldm::utils::PropertyValue& value);
 
+    /** @brief To handle the boot types bios attributes at power on*/
+    void handleBootTypesAtPowerOn();
+
+    /** @brief To set the boot types bios attributes based on the RestartCause
+     *  of host
+     *
+     *  @param[in] RestartCause - Host restart cause
+     */
+    void setBootTypesBiosAttr(const std::string& restartCause);
+
+    /** @brief To handle the boot types bios attributes at shutdown*/
+    void handleBootTypesAtChassisOff();
+
     ~Handler() = default;
 
     pldm::responder::CodeUpdate* codeUpdate; //!< pointer to CodeUpdate object
@@ -460,12 +547,8 @@ class Handler : public oem_platform::Handler
     sdeventplus::Event& event;
 
   private:
-    /** @brief Method to reset or stop the surveillance timer
-     *
-     * @param[in] value - true or false, to indicate if the timer
-     *                    should be reset or turned off
-     */
-    void startStopTimer(bool value);
+    /*@brief Host restart cause*/
+    std::string restartCause;
 
     /** @brief D-Bus property changed signal match for CurrentPowerState*/
     std::unique_ptr<sdbusplus::bus::match_t> chassisOffMatch;
@@ -477,6 +560,8 @@ class Handler : public oem_platform::Handler
 
     /** @brief Pointer to BMC's entity association tree */
     pldm_entity_association_tree* bmcEntityTree;
+    /** @brief D-Bus property changed signal match */
+    std::unique_ptr<sdbusplus::bus::match_t> updateBIOSMatch;
 
     /** @brief D-Bus property changed signal match */
     std::unique_ptr<sdbusplus::bus::match_t> hostOffMatch;
@@ -486,12 +571,17 @@ class Handler : public oem_platform::Handler
 
     /** @brief D-Bus Interface added signal match for virtual platform SAI */
     std::unique_ptr<sdbusplus::bus::match_t> platformSAIMatch;
+    /** @brief D-Bus Interfaced added signal match for Entity Manager */
+    std::unique_ptr<sdbusplus::bus::match_t> ibmCompatibleMatch;
+    /** @brief D-Bus Interfaced added signal match for State Manager */
+    std::unique_ptr<sdbusplus::bus::match_t> stateManagerMatch;
+    /** @brief D-Bus property Changed Signal match for bootProgress*/
+    std::unique_ptr<sdbusplus::bus::match_t> bootProgressMatch;
+    /** @brief Timer used for monitoring surveillance pings from host */
+    sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic> timer;
 
     /** @brief D-Bus Interface added signal match for virtual partition SAI */
     std::unique_ptr<sdbusplus::bus::match_t> partitionSAIMatch;
-
-    /** @brief Timer used for monitoring surveillance pings from host */
-    sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic> timer;
 
     bool hostOff = true;
 
@@ -503,6 +593,12 @@ class Handler : public oem_platform::Handler
     uint16_t realSAISensorId;
 
     std::unique_ptr<pldm::responder::oem_fileio::Handler> dbusToFileioIntf;
+
+    /** @brief Method to reset or stop the surveillance timer
+     *
+     *  @param[in] value - true or false, to indicate if the timer
+     *                    should be reset or turned off*/
+    void startStopTimer(bool value);
 };
 
 /** @brief Method to encode code update event msg

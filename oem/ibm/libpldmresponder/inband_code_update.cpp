@@ -36,18 +36,17 @@ auto updateDirPath = fs::path(LID_STAGING_DIR) / "update";
 /** @brief The file name of the code update tarball */
 constexpr auto tarImageName = "image.tar";
 
-/** @brief The file name of the hostfw image */
-constexpr auto hostfwImageName = "image-hostfw";
-
 /** @brief The path to the code update tarball file */
 auto tarImagePath = fs::path(imageDirPath) / tarImageName;
 
-/** @brief The path to the hostfw image */
-auto hostfwImagePath = fs::path(imageDirPath) / hostfwImageName;
+/** @brief The filename of the file where bootside data will be saved */
+constexpr auto bootSideFileName = "bootSide";
 
-/** @brief The path to the tarball file expected by the phosphor software
- *         manager */
-auto updateImagePath = fs::path("/tmp/images") / tarImageName;
+constexpr auto bootSideAttrName = "fw_boot_side_current";
+constexpr auto bootNextSideAttrName = "fw_boot_side";
+
+/** @brief The filepath of file where bootside data will be saved */
+auto bootSideDirPath = fs::path("/var/lib/pldm/") / bootSideFileName;
 
 std::string CodeUpdate::fetchCurrentBootSide()
 {
@@ -67,7 +66,10 @@ int CodeUpdate::setCurrentBootSide(const std::string& currSide)
 
 int CodeUpdate::setNextBootSide(const std::string& nextSide)
 {
+    pldm_boot_side_data pldmBootSideData = readBootSideFile();
+    currBootSide = pldmBootSideData.current_boot_side;
     nextBootSide = nextSide;
+    pldmBootSideData.next_boot_side = nextSide;
     std::string objPath{};
     if (nextBootSide == currBootSide)
     {
@@ -80,6 +82,24 @@ int CodeUpdate::setNextBootSide(const std::string& nextSide)
     if (objPath.empty())
     {
         error("no nonRunningVersion present");
+        return PLDM_PLATFORM_INVALID_STATE_VALUE;
+    }
+
+    try
+    {
+        auto priorityPropValue = dBusIntf->getDbusPropertyVariant(
+            objPath.c_str(), "Priority", redundancyIntf);
+        const auto& priorityValue = std::get<uint8_t>(priorityPropValue);
+        if (priorityValue == 0)
+        {
+            // Requested next boot side is already set
+            return PLDM_SUCCESS;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        // Alternate side may not be present due to a failed code update
+        info("Alternate side not present due to failed code update");
         return PLDM_PLATFORM_INVALID_STATE_VALUE;
     }
 
@@ -97,6 +117,7 @@ int CodeUpdate::setNextBootSide(const std::string& nextSide)
               "PATH", objPath, "ERROR", e);
         return PLDM_ERROR;
     }
+    writeBootSideFile(pldmBootSideData);
     return PLDM_SUCCESS;
 }
 
@@ -152,12 +173,14 @@ int CodeUpdate::setRequestedActivation()
 
 void CodeUpdate::setVersions()
 {
+    BiosAttributeList biosAttrList;
     static constexpr auto mapperService = "xyz.openbmc_project.ObjectMapper";
     static constexpr auto functionalObjPath =
         "/xyz/openbmc_project/software/functional";
     static constexpr auto activeObjPath =
         "/xyz/openbmc_project/software/active";
     static constexpr auto propIntf = "org.freedesktop.DBus.Properties";
+    static constexpr auto pathIntf = "xyz.openbmc_project.Common.FilePath";
 
     auto& bus = dBusIntf->getBus();
     try
@@ -171,6 +194,9 @@ void CodeUpdate::setVersions()
         reply.read(paths);
 
         runningVersion = std::get<std::vector<std::string>>(paths)[0];
+        auto runningPathPropValue = dBusIntf->getDbusPropertyVariant(
+            runningVersion.c_str(), "Path", pathIntf);
+        const auto& runningPath = std::get<std::string>(runningPathPropValue);
 
         auto method1 = bus.new_method_call(mapperService, activeObjPath,
                                            propIntf, "Get");
@@ -186,12 +212,82 @@ void CodeUpdate::setVersions()
                 break;
             }
         }
+
+        if (!fs::exists(bootSideDirPath))
+        {
+            pldm_boot_side_data pldmBootSideData;
+            std::string nextBootSideBiosValue =
+                getBiosAttrValue("fw_boot_side");
+            pldmBootSideData.current_boot_side = nextBootSideBiosValue;
+            pldmBootSideData.next_boot_side = nextBootSideBiosValue;
+            pldmBootSideData.running_version_object = runningPath;
+
+            writeBootSideFile(pldmBootSideData);
+            biosAttrList.push_back(std::make_pair(
+                bootSideAttrName, pldmBootSideData.current_boot_side));
+            biosAttrList.push_back(std::make_pair(
+                bootNextSideAttrName, pldmBootSideData.next_boot_side));
+            setBiosAttr(biosAttrList);
+        }
+        else
+        {
+            pldm_boot_side_data pldmBootSideData = readBootSideFile();
+            if (pldmBootSideData.running_version_object != runningPath)
+            {
+                info(
+                    "BMC have booted with the new image runningPath={RUNN_PATH}",
+                    "RUNN_PATH", runningPath.c_str());
+                info("Previous Image was: {RUNN_VERS}", "RUNN_VERS",
+                     pldmBootSideData.running_version_object);
+                auto current_boot_side =
+                    (pldmBootSideData.current_boot_side == "Temp" ? "Perm"
+                                                                  : "Temp");
+                pldmBootSideData.current_boot_side = current_boot_side;
+                pldmBootSideData.next_boot_side = current_boot_side;
+                pldmBootSideData.running_version_object = runningPath;
+                writeBootSideFile(pldmBootSideData);
+                biosAttrList.push_back(
+                    std::make_pair(bootSideAttrName, current_boot_side));
+                biosAttrList.push_back(std::make_pair(
+                    bootNextSideAttrName, pldmBootSideData.next_boot_side));
+                setBiosAttr(biosAttrList);
+            }
+            else
+            {
+                info(
+                    "BMC have booted with the previous image runningPath={RUNN_PATH}",
+                    "RUNN_PATH", pldmBootSideData.running_version_object);
+                pldm_boot_side_data pldmBootSideData = readBootSideFile();
+                pldmBootSideData.next_boot_side =
+                    pldmBootSideData.current_boot_side;
+                writeBootSideFile(pldmBootSideData);
+                biosAttrList.push_back(std::make_pair(
+                    bootSideAttrName, pldmBootSideData.current_boot_side));
+                biosAttrList.push_back(std::make_pair(
+                    bootNextSideAttrName, pldmBootSideData.next_boot_side));
+                setBiosAttr(biosAttrList);
+            }
+            currBootSide =
+                (pldmBootSideData.current_boot_side == "Temp" ? Tside : Pside);
+            nextBootSide = (pldmBootSideData.next_boot_side == "Temp" ? Tside
+                                                                      : Pside);
+        }
     }
     catch (const std::exception& e)
     {
         error(
             "Failed to make a d-bus call to Object Mapper Association, error - {ERROR}",
             "ERROR", e);
+        if (retrySetVersion < maxVersionRetry)
+        {
+            retrySetVersion++;
+            usleep(500 * 1000);
+            setVersions();
+        }
+        else
+        {
+            throw std::runtime_error("Failed to fetch Update Software Object");
+        }
         return;
     }
 
@@ -221,6 +317,12 @@ void CodeUpdate::setVersions()
             {
                 auto imageInterface = "xyz.openbmc_project.Software.Activation";
                 auto imageObjPath = path.str.c_str();
+
+                // If the version interface is added with the Activation
+                // value as Invalid, it is considered as assemble code
+                // update image failure.
+                // Failure is occurred while assembling
+                // lid files or while creating a tar ball.
 
                 try
                 {
@@ -293,6 +395,7 @@ void CodeUpdate::setVersions()
                                             0, uint8_t(state),
                                             uint8_t(CodeUpdateState::START));
                                         newImageId.clear();
+                                        imageActivationMatch.reset();
                                     }
                                     else if (propVal == "xyz.openbmc_project."
                                                         "Software.Activation."
@@ -303,6 +406,8 @@ void CodeUpdate::setVersions()
                                                         "Activations."
                                                         "Invalid")
                                     {
+                                        info(
+                                            "Image activation Failed or image Invalid, sending Failure on End update to PHYP");
                                         CodeUpdateState state =
                                             CodeUpdateState::FAIL;
                                         setCodeUpdateProgress(false);
@@ -313,6 +418,7 @@ void CodeUpdate::setVersions()
                                             0, uint8_t(state),
                                             uint8_t(CodeUpdateState::START));
                                         newImageId.clear();
+                                        imageActivationMatch.reset();
                                     }
                                 }
                             });
@@ -331,6 +437,11 @@ void CodeUpdate::setVersions()
                         }
                         break;
                     }
+                    else
+                    {
+                        // Out of band update
+                        processRenameEvent();
+                    }
                 }
                 catch (const sdbusplus::exception_t& e)
                 {
@@ -344,6 +455,63 @@ void CodeUpdate::setVersions()
     }));
 }
 
+void CodeUpdate::processRenameEvent()
+{
+    info("Processing Rename Event");
+
+    BiosAttributeList biosAttrList;
+    pldm_boot_side_data pldmBootSideData = readBootSideFile();
+    pldmBootSideData.current_boot_side = "Perm";
+    pldmBootSideData.next_boot_side = "Perm";
+
+    currBootSide = Pside;
+    nextBootSide = Pside;
+
+    auto sensorId = getBootSideRenameStateSensor();
+    sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
+                         PLDM_BOOT_SIDE_HAS_BEEN_RENAMED,
+                         PLDM_BOOT_SIDE_NOT_RENAMED);
+    writeBootSideFile(pldmBootSideData);
+    biosAttrList.push_back(
+        std::make_pair(bootSideAttrName, pldmBootSideData.current_boot_side));
+    biosAttrList.push_back(
+        std::make_pair(bootNextSideAttrName, pldmBootSideData.next_boot_side));
+    setBiosAttr(biosAttrList);
+}
+
+void CodeUpdate::writeBootSideFile(const pldm_boot_side_data& pldmBootSideData)
+{
+    std::ofstream writeFile(bootSideDirPath.string(),
+                            std::ios::out | std::ios::binary);
+    if (writeFile)
+    {
+        writeFile << pldmBootSideData.current_boot_side << std::endl;
+        writeFile << pldmBootSideData.next_boot_side << std::endl;
+        writeFile << pldmBootSideData.running_version_object << std::endl;
+
+        writeFile.close();
+    }
+}
+
+pldm_boot_side_data CodeUpdate::readBootSideFile()
+{
+    pldm_boot_side_data pldmBootSideDataRead{};
+
+    std::ifstream readFile(bootSideDirPath.string(),
+                           std::ios::in | std::ios::binary);
+
+    if (readFile)
+    {
+        readFile >> pldmBootSideDataRead.current_boot_side;
+        readFile >> pldmBootSideDataRead.next_boot_side;
+        readFile >> pldmBootSideDataRead.running_version_object;
+
+        readFile.close();
+    }
+
+    return pldmBootSideDataRead;
+}
+
 void CodeUpdate::processPriorityChangeNotification(
     const DbusChangedProps& chProperties)
 {
@@ -354,8 +522,24 @@ void CodeUpdate::processPriorityChangeNotification(
         return;
     }
     uint8_t newVal = std::get<uint8_t>(it->second);
-    nextBootSide = (newVal == 0) ? currBootSide
-                                 : ((currBootSide == Tside) ? Pside : Tside);
+
+    pldm_boot_side_data pldmBootSideData = readBootSideFile();
+    pldmBootSideData.next_boot_side =
+        (newVal == 0)
+            ? pldmBootSideData.current_boot_side
+            : ((pldmBootSideData.current_boot_side == "Temp") ? "Perm"
+                                                              : "Temp");
+    writeBootSideFile(pldmBootSideData);
+    nextBootSide = (pldmBootSideData.next_boot_side == "Temp" ? Tside : Pside);
+    std::string currNextBootSide = getBiosAttrValue(bootNextSideAttrName);
+    if (currNextBootSide == nextBootSide)
+    {
+        return;
+    }
+    BiosAttributeList biosAttrList;
+    biosAttrList.push_back(
+        std::make_pair(bootNextSideAttrName, pldmBootSideData.next_boot_side));
+    setBiosAttr(biosAttrList);
 }
 
 void CodeUpdate::setOemPlatformHandler(
@@ -560,114 +744,33 @@ int processCodeUpdateLid(const std::string& filePath)
 
 int CodeUpdate::assembleCodeUpdateImage()
 {
-    pid_t pid = fork();
+    static constexpr auto UPDATER_SERVICE =
+        "xyz.openbmc_project.Software.BMC.Updater";
+    static constexpr auto SOFTWARE_PATH = "/xyz/openbmc_project/software";
+    static constexpr auto LID_INTERFACE = "xyz.openbmc_project.Software.LID";
 
-    if (pid == 0)
+    auto& bus = dBusIntf->getBus();
+
+    try
     {
-        pid_t nextPid = fork();
-        if (nextPid == 0)
-        {
-            // Create the hostfw squashfs image from the LID files without
-            // header
-            auto rc = executeCmd("/usr/sbin/mksquashfs", lidDirPath.c_str(),
-                                 hostfwImagePath.c_str(), "-all-root",
-                                 "-no-recovery");
-            if (rc < 0)
-            {
-                error("Error occurred during the mksqusquashfs call");
-                setCodeUpdateProgress(false);
-                auto sensorId = getFirmwareUpdateSensor();
-                sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
-                                     uint8_t(CodeUpdateState::FAIL),
-                                     uint8_t(CodeUpdateState::START));
-                exit(EXIT_FAILURE);
-            }
-
-            fs::create_directories(updateDirPath);
-
-            // Extract the BMC tarball content
-            rc = executeCmd("/bin/tar", "-xf", tarImagePath.c_str(), "-C",
-                            updateDirPath);
-            if (rc < 0)
-            {
-                setCodeUpdateProgress(false);
-                auto sensorId = getFirmwareUpdateSensor();
-                sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
-                                     uint8_t(CodeUpdateState::FAIL),
-                                     uint8_t(CodeUpdateState::START));
-                exit(EXIT_FAILURE);
-            }
-
-            // Add the hostfw image to the directory where the contents were
-            // extracted
-            fs::copy_file(hostfwImagePath,
-                          fs::path(updateDirPath) / hostfwImageName,
-                          fs::copy_options::overwrite_existing);
-
-            // Remove the tarball file, then re-generate it with so that the
-            // hostfw image becomes part of the tarball
-            fs::remove(tarImagePath);
-            rc = executeCmd("/bin/tar", "-cf", tarImagePath, ".", "-C",
-                            updateDirPath);
-            if (rc < 0)
-            {
-                error("Error occurred during the generation of the tarball");
-                setCodeUpdateProgress(false);
-                auto sensorId = getFirmwareUpdateSensor();
-                sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
-                                     uint8_t(CodeUpdateState::FAIL),
-                                     uint8_t(CodeUpdateState::START));
-                exit(EXIT_FAILURE);
-            }
-
-            // Copy the tarball to the update directory to trigger the phosphor
-            // software manager to create a version interface
-            fs::copy_file(tarImagePath, updateImagePath,
-                          fs::copy_options::overwrite_existing);
-
-            // Cleanup
-            fs::remove_all(updateDirPath);
-            fs::remove_all(lidDirPath);
-            fs::remove_all(imageDirPath);
-
-            exit(EXIT_SUCCESS);
-        }
-        else if (nextPid < 0)
-        {
-            error("Failure occurred during fork, error number - {ERROR_NUM}",
-                  "ERROR_NUM", errno);
-            exit(EXIT_FAILURE);
-        }
-
-        // Do nothing as parent. When parent exits, child will be reparented
-        // under init and be reaped properly.
-        exit(0);
+        info("InbandCodeUpdate: AssembleCodeUpdateImage");
+        auto method = bus.new_method_call(UPDATER_SERVICE, SOFTWARE_PATH,
+                                          LID_INTERFACE,
+                                          "AssembleCodeUpdateImage");
+        bus.call_noreply(method);
     }
-    else if (pid > 0)
+    catch (const std::exception& e)
     {
-        int status;
-        if (waitpid(pid, &status, 0) < 0)
-        {
-            error("Error occurred during waitpid, error number - {ERROR_NUM}",
-                  "ERROR_NUM", errno);
-
-            return PLDM_ERROR;
-        }
-        else if (WEXITSTATUS(status) != 0)
-        {
-            error(
-                "Failed to execute the assembling of the image, status is {IMG_STATUS}",
-                "IMG_STATUS", status);
-            return PLDM_ERROR;
-        }
-    }
-    else
-    {
-        error("Error occurred during fork, error number - {ERROR_NUM}}",
-              "ERROR_NUM", errno);
+        error(
+            "InbandCodeUpdate: Failed to Assemble code update image ERROR={ERR_EXCEP}",
+            "ERR_EXCEP", e);
+        setCodeUpdateProgress(false);
+        auto sensorId = getFirmwareUpdateSensor();
+        sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
+                             uint8_t(CodeUpdateState::FAIL),
+                             uint8_t(CodeUpdateState::START));
         return PLDM_ERROR;
     }
-
     return PLDM_SUCCESS;
 }
 

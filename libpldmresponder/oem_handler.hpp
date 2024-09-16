@@ -46,7 +46,6 @@ class Handler : public CmdHandler
      *         it's own handler.
      *
      *  @param[in] entityType - entity type corresponding to the effecter id
-     *  @param[in] entityInstance - entity instance
      *  @param[in] stateSetId - state set id
      *  @param[in] compEffecterCnt - composite effecter count
      *  @param[in] stateField - The state field data for each of the states,
@@ -58,8 +57,7 @@ class Handler : public CmdHandler
      *            be set
      */
     virtual int oemSetStateEffecterStatesHandler(
-        uint16_t entityType, uint16_t entityInstance, uint16_t stateSetId,
-        uint8_t compEffecterCnt,
+        uint16_t entityType, uint16_t stateSetId, uint8_t compEffecterCnt,
         std::vector<set_effecter_state_field>& stateField,
         uint16_t effecterId) = 0;
 
@@ -117,6 +115,11 @@ class Handler : public CmdHandler
     virtual void processSetEventReceiver() = 0;
 
     /** @brief Interface to monitor the surveillance pings from remote terminus
+     *  @param[in] value - true or false, to indicate if the timer
+     *                     should be reset or turned off*/
+    virtual void startStopTimer(bool value) = 0;
+
+    /** @brief Interface to monitor the surveillance pings from remote terminus
      *
      * @param[in] tid - TID of the remote terminus
      * @param[in] value - true or false, to indicate if the timer is
@@ -127,6 +130,12 @@ class Handler : public CmdHandler
     /** @brief Interface to perform OEM actions*/
     virtual void modifyPDROemActions(uint16_t entityType,
                                      uint16_t stateSetId) = 0;
+
+    /** @brief To handle the boot types bios attributes at power on*/
+    virtual void handleBootTypesAtPowerOn() = 0;
+
+    /** @brief To handle the boot types bios attributes at shutdown*/
+    virtual void handleBootTypesAtChassisOff() = 0;
 
     virtual ~Handler() = default;
 
