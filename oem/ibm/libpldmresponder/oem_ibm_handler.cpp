@@ -76,6 +76,99 @@ int pldm::responder::oem_ibm_platform::Handler::
     return rc;
 }
 
+std::vector<InstanceInfo>
+    pldm::responder::oem_ibm_platform::Handler::generateProcAndDcmIDs()
+{
+    std::vector<InstanceInfo> dcmProcInfo;
+    std::vector<std::string> procObjectPaths;
+    procObjectPaths = getProcObjectPaths();
+
+    for (const auto& entity_path : procObjectPaths)
+    {
+        if (entity_path.rfind('/') != std::string::npos)
+        {
+            char pId = entity_path.back();
+            auto procId = pId - 48;
+            char id = entity_path.at(61);
+            auto dcmId = id - 48;
+
+            dcmProcInfo.emplace_back(InstanceInfo{static_cast<uint8_t>(procId),
+                                                  static_cast<uint8_t>(dcmId)});
+        }
+    }
+    return dcmProcInfo;
+}
+
+std::vector<uint16_t>
+    pldm::responder::oem_ibm_platform::Handler::generateDimmIds()
+{
+    std::vector<uint16_t> dimmInfo;
+    std::vector<std::string> dimmObjPaths;
+    dimmObjPaths = getDimmObjectPaths();
+
+    for (const auto& entity_path : dimmObjPaths)
+    {
+        if (entity_path.rfind('/') != std::string::npos)
+        {
+            auto dimmId = atoi(entity_path.substr(62).c_str());
+            dimmInfo.emplace_back(dimmId);
+        }
+    }
+    return dimmInfo;
+}
+
+int pldm::responder::oem_ibm_platform::Handler::
+    oemSetNumericEffecterValueHandler(
+        uint16_t entityType, uint16_t entityInstance,
+        uint16_t effecterSemanticId, uint8_t effecterDataSize,
+        uint8_t* effecterValue, real32_t effecterOffset,
+        real32_t effecterResolution, uint16_t effecterId)
+{
+    int rc = PLDM_SUCCESS;
+
+    if (effecterSemanticId == PLDM_OEM_IBM_SBE_SEMANTIC_ID &&
+        effecterDataSize == PLDM_EFFECTER_DATA_SIZE_UINT32)
+    {
+        uint32_t currentValue =
+            *(reinterpret_cast<uint32_t*>(&effecterValue[0]));
+        auto rawValue = static_cast<uint32_t>(
+            round(currentValue - effecterOffset) / effecterResolution);
+        pldm::utils::PropertyValue value;
+        value = rawValue;
+
+        if (entityType == PLDM_ENTITY_PROC)
+        {
+            for (auto& [key, value] : instanceMap)
+            {
+                if (key == effecterId)
+                {
+                    entityInstance = (value.dcmId * 2) +
+                                     value.procId; // failingUintId
+                }
+            }
+        }
+
+        else if (entityType == PLDM_ENTITY_MEMORY_MODULE)
+        {
+            for (auto& [key, value] : instanceDimmMap)
+            {
+                if (key == effecterId)
+                {
+                    entityInstance = value; // failingUintId
+                }
+            }
+        }
+
+        else
+        {
+            error("Invalid entity type received: {ENTITY_TYPE}", "ENTITY_TYPE",
+                  entityType);
+        }
+        rc = setNumericEffecter(entityInstance, value, entityType);
+    }
+    return rc;
+}
+
 int pldm::responder::oem_ibm_platform::Handler::
     oemSetStateEffecterStatesHandler(
         uint16_t entityType, uint16_t stateSetId, uint8_t compEffecterCnt,
@@ -631,6 +724,161 @@ void buildAllRealSAISensorPDR(oem_ibm_platform::Handler* platformHandler,
     repo.addRecord(pdrEntry);
 }
 
+void buildAllNumericEffecterPDR(oem_ibm_platform::Handler* platformHandler,
+                                uint16_t entityType, uint16_t entityInstance,
+                                uint16_t effecterSemanticId,
+                                pdr_utils::Repo& repo,
+                                HostEffecterInstanceMap& instanceMap)
+{
+    size_t pdrSize = sizeof(pldm_numeric_effecter_value_pdr);
+    std::vector<uint8_t> entry{};
+    entry.resize(pdrSize);
+    pldm_numeric_effecter_value_pdr* pdr =
+        reinterpret_cast<pldm_numeric_effecter_value_pdr*>(entry.data());
+    if (!pdr)
+    {
+        error("Failed to get record by PDR type");
+        return;
+    }
+
+    std::vector<InstanceInfo> info = platformHandler->generateProcAndDcmIDs();
+
+    for (auto procDcmInfo : info)
+    {
+        pdr->hdr.record_handle = 0;
+        pdr->hdr.version = 1;
+        pdr->hdr.type = PLDM_NUMERIC_EFFECTER_PDR;
+        pdr->hdr.record_change_num = 0;
+        pdr->hdr.length = sizeof(pldm_numeric_effecter_value_pdr) -
+                          sizeof(pldm_pdr_hdr);
+        pdr->terminus_handle = TERMINUS_HANDLE;
+        pdr->effecter_id = platformHandler->getNextEffecterId();
+
+        uint16_t effecterId = pdr->effecter_id;
+
+        pdr->entity_type = entityType;
+
+        instanceMap.emplace(effecterId, procDcmInfo);
+
+        entityInstance = procDcmInfo.procId;
+        ;
+
+        pdr->entity_instance = entityInstance;
+        pdr->container_id = 1; // default
+        pdr->effecter_semantic_id = effecterSemanticId;
+        pdr->effecter_init = PLDM_NO_INIT;
+        pdr->effecter_auxiliary_names = false;
+        pdr->base_unit = 0;
+        pdr->unit_modifier = 0;
+        pdr->rate_unit = 0;
+        pdr->base_oem_unit_handle = 0;
+        pdr->aux_unit = 0;
+        pdr->aux_unit_modifier = 0;
+        pdr->aux_oem_unit_handle = 0;
+        pdr->aux_rate_unit = 0;
+        pdr->is_linear = true;
+        pdr->effecter_data_size = PLDM_EFFECTER_DATA_SIZE_UINT32;
+        pdr->resolution = 1.00;
+        pdr->offset = 0.00;
+        pdr->accuracy = 0;
+        pdr->plus_tolerance = 0;
+        pdr->minus_tolerance = 0;
+        pdr->state_transition_interval = 0.00;
+        pdr->transition_interval = 0.00;
+        pdr->max_settable.value_u32 = 0xFFFFFFFF;
+        pdr->min_settable.value_u32 = 0x0;
+        pdr->range_field_format = 0;
+        pdr->range_field_support.byte = 0;
+        pdr->nominal_value.value_u32 = 0;
+        pdr->normal_max.value_u32 = 0;
+        pdr->normal_min.value_u32 = 0;
+        pdr->rated_max.value_u32 = 0;
+        pdr->rated_min.value_u32 = 0;
+
+        pldm::responder::pdr_utils::PdrEntry pdrEntry{};
+        pdrEntry.data = entry.data();
+        pdrEntry.size = pdrSize;
+        repo.addRecord(pdrEntry);
+    }
+}
+
+void buildAllNumericEffecterDimmPDR(oem_ibm_platform::Handler* platformHandler,
+                                    uint16_t entityType,
+                                    uint16_t entityInstance,
+                                    uint16_t effecterSemanticId,
+                                    pdr_utils::Repo& repo,
+                                    HostEffecterDimmMap& instanceDimmMap)
+{
+    size_t pdrSize = sizeof(pldm_numeric_effecter_value_pdr);
+    std::vector<uint8_t> entry{};
+    entry.resize(pdrSize);
+    pldm_numeric_effecter_value_pdr* pdr =
+        reinterpret_cast<pldm_numeric_effecter_value_pdr*>(entry.data());
+    if (!pdr)
+    {
+        error("Failed to get record by PDR type");
+        return;
+    }
+    if (entityType == PLDM_ENTITY_MEMORY_MODULE &&
+        effecterSemanticId == PLDM_OEM_IBM_SBE_SEMANTIC_ID)
+    {
+        auto dimm_info = platformHandler->generateDimmIds();
+        for (auto dimm : dimm_info)
+        {
+            pdr->hdr.record_handle = 0;
+            pdr->hdr.version = 1;
+            pdr->hdr.type = PLDM_NUMERIC_EFFECTER_PDR;
+            pdr->hdr.record_change_num = 0;
+            pdr->hdr.length = sizeof(pldm_numeric_effecter_value_pdr) -
+                              sizeof(pldm_pdr_hdr);
+            pdr->terminus_handle = TERMINUS_HANDLE;
+            pdr->effecter_id = platformHandler->getNextEffecterId();
+
+            uint16_t effecterId = pdr->effecter_id;
+
+            pdr->entity_type = entityType;
+            instanceDimmMap.emplace(effecterId, dimm);
+            entityInstance = dimm;
+            pdr->entity_instance = entityInstance;
+            pdr->container_id = 1; // default
+            pdr->effecter_semantic_id = effecterSemanticId;
+            pdr->effecter_init = PLDM_NO_INIT;
+            pdr->effecter_auxiliary_names = false;
+            pdr->base_unit = 0;
+            pdr->unit_modifier = 0;
+            pdr->rate_unit = 0;
+            pdr->base_oem_unit_handle = 0;
+            pdr->aux_unit = 0;
+            pdr->aux_unit_modifier = 0;
+            pdr->aux_oem_unit_handle = 0;
+            pdr->aux_rate_unit = 0;
+            pdr->is_linear = true;
+            pdr->effecter_data_size = PLDM_EFFECTER_DATA_SIZE_UINT32;
+            pdr->resolution = 1.00;
+            pdr->offset = 0.00;
+            pdr->accuracy = 0;
+            pdr->plus_tolerance = 0;
+            pdr->minus_tolerance = 0;
+            pdr->state_transition_interval = 0.00;
+            pdr->transition_interval = 0.00;
+            pdr->max_settable.value_u32 = 0xFFFFFFFF;
+            pdr->min_settable.value_u32 = 0x0;
+            pdr->range_field_format = 0;
+            pdr->range_field_support.byte = 0;
+            pdr->nominal_value.value_u32 = 0;
+            pdr->normal_max.value_u32 = 0;
+            pdr->normal_min.value_u32 = 0;
+            pdr->rated_max.value_u32 = 0;
+            pdr->rated_min.value_u32 = 0;
+
+            pldm::responder::pdr_utils::PdrEntry pdrEntry{};
+            pdrEntry.data = entry.data();
+            pdrEntry.size = pdrSize;
+            repo.addRecord(pdrEntry);
+        }
+    }
+}
+
 void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     pdr_utils::Repo& repo)
 {
@@ -644,7 +892,6 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     static constexpr auto objectPath = "/xyz/openbmc_project/inventory/system";
     const std::vector<std::string> slotInterface = {
         "xyz.openbmc_project.Inventory.Item.PCIeSlot"};
-
     auto slotPaths = dBusIntf->getSubTreePaths(objectPath, 0, slotInterface);
 
     buildAllSlotEnableEffecterPDR(this, repo, slotPaths);
@@ -676,6 +923,7 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     attachOemEntityToEntityAssociationPDR(
         this, bmcEntityTree, "/xyz/openbmc_project/inventory/system", repo,
         saiEntity);
+
     pldm_entity powerStateEntity = {PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER, 0,
                                     1};
     attachOemEntityToEntityAssociationPDR(
@@ -685,6 +933,12 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
     realSAISensorId = findStateSensorId(
         repo.getPdr(), 0, PLDM_OEM_IBM_ENTITY_REAL_SAI, ENTITY_INSTANCE_1, 1,
         PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS);
+
+    buildAllNumericEffecterPDR(this, PLDM_ENTITY_PROC, ENTITY_INSTANCE_0,
+                               PLDM_OEM_IBM_SBE_SEMANTIC_ID, repo, instanceMap);
+    buildAllNumericEffecterDimmPDR(
+        this, PLDM_ENTITY_MEMORY_MODULE, ENTITY_INSTANCE_0,
+        PLDM_OEM_IBM_SBE_SEMANTIC_ID, repo, instanceDimmMap);
     auto sensorId = findStateSensorId(
         repo.getPdr(), 0, PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE,
         ENTITY_INSTANCE_0, 1, PLDM_OEM_IBM_VERIFICATION_STATE);
@@ -754,6 +1008,246 @@ int encodeEventMsg(uint8_t eventType, const std::vector<uint8_t>& eventDataVec,
         eventDataVec.size() + PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES);
 
     return rc;
+}
+
+void pldm::responder::oem_ibm_platform::Handler::setHostEffecterState(
+    bool status, uint16_t entityTypeReceived, uint16_t entityInstance)
+{
+    pldm::pdr::EntityType entityType;
+    if (entityTypeReceived == PLDM_ENTITY_MEMORY_MODULE)
+    {
+        entityType = PLDM_ENTITY_MEMORY_MODULE;
+    }
+    else if (entityTypeReceived == PLDM_ENTITY_PROC)
+    {
+        entityType = PLDM_ENTITY_PROC;
+    }
+    else
+    {
+        error("Invalid entity type received: {ENTITY_TYPE}", "ENTITY_TYPE",
+              entityTypeReceived);
+        return;
+    }
+
+    auto pdrs = findStateEffecterPDR(
+        TERMINUS_ID, entityType, PLDM_OEM_IBM_SBE_MAINTENANCE_STATE, pdrRepo);
+    for (auto& pdr : pdrs)
+    {
+        auto stateEffecterPDR =
+            reinterpret_cast<pldm_state_effecter_pdr*>(pdr.data());
+        uint16_t effecterId = stateEffecterPDR->effecter_id;
+        if (entityInstance == stateEffecterPDR->entity_instance)
+        {
+            uint8_t compEffecterCount =
+                stateEffecterPDR->composite_effecter_count;
+
+            std::vector<uint8_t> requestMsg(
+                sizeof(pldm_msg_hdr) + sizeof(effecterId) +
+                    sizeof(compEffecterCount) +
+                    sizeof(set_effecter_state_field) * compEffecterCount,
+                0);
+
+            auto instanceId = instanceIdDb.next(mctp_eid);
+
+            auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+            std::vector<set_effecter_state_field> stateField;
+            if (status == true)
+            {
+                stateField.push_back(set_effecter_state_field{
+                    PLDM_REQUEST_SET, SBE_DUMP_COMPLETED});
+            }
+            else
+            {
+                stateField.push_back(set_effecter_state_field{
+                    PLDM_REQUEST_SET, SBE_RETRY_REQUIRED});
+            }
+            auto rc = encode_set_state_effecter_states_req(
+                instanceId, effecterId, compEffecterCount, stateField.data(),
+                request);
+            if (rc != PLDM_SUCCESS)
+            {
+                error(
+                    "Set state effecter state command for {EFF_ID} failure. PLDM error code: {RESPONSE_CODE}",
+                    "EFF_ID", effecterId, "RESPONSE_CODE", rc);
+                instanceIdDb.free(mctp_eid, instanceId);
+                return;
+            }
+            auto setStateEffecterStatesRespHandler =
+                [=, this](mctp_eid_t /*eid*/, const pldm_msg* response,
+                          size_t respMsgLen) {
+                if (response == nullptr || !respMsgLen)
+                {
+                    error(
+                        "Failed to receive response for setstateEffecterSates command for {EFF_ID}",
+                        "EFF_ID", effecterId);
+                    return;
+                }
+                uint8_t completionCode{};
+                auto rc = decode_set_state_effecter_states_resp(
+                    response, respMsgLen, &completionCode);
+                if (rc)
+                {
+                    error(
+                        "Failed to decode setStateEffecterStates for {EFF_ID} response: {RESPONSE_CODE}",
+                        "EFF_ID", effecterId, "RESPONSE_CODE", rc);
+                    pldm::utils::reportError(
+                        "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed");
+                }
+                if (completionCode)
+                {
+                    error(
+                        "Failed to set a Host effecter for {EFF_ID}: {COMPLETION_CODE}",
+                        "EFF_ID", effecterId, "COMPLETION_CODE",
+                        completionCode);
+                    pldm::utils::reportError(
+                        "xyz.openbmc_project.PLDM.Error.SetHostEffecterFailed");
+                }
+            };
+            rc = handler->registerRequest(
+                mctp_eid, instanceId, PLDM_PLATFORM,
+                PLDM_SET_STATE_EFFECTER_STATES, std::move(requestMsg),
+                std::move(setStateEffecterStatesRespHandler));
+            if (rc)
+            {
+                error(
+                    "Failed to send request to set an effecter {EFF_ID} on Host",
+                    "EFF_ID", effecterId);
+            }
+        }
+    }
+}
+
+void pldm::responder::oem_ibm_platform::Handler::monitorDump(
+    const std::string& obj_path, uint16_t entityType, uint16_t entityInstance)
+{
+    std::string matchInterface = "xyz.openbmc_project.Common.Progress";
+    sbeDumpMatch = std::make_unique<sdbusplus::bus::match_t>(
+        pldm::utils::DBusHandler::getBus(),
+        sdbusplus::bus::match::rules::propertiesChanged(obj_path.c_str(),
+                                                        matchInterface.c_str()),
+        [=, this](sdbusplus::message_t& msg) {
+        DbusChangedProps props{};
+        std::string intf;
+        msg.read(intf, props);
+        const auto itr = props.find("Status");
+        if (itr != props.end())
+        {
+            PropertyValue value = itr->second;
+            auto propVal = std::get<std::string>(value);
+            if (propVal ==
+                "xyz.openbmc_project.Common.Progress.OperationStatus.Completed")
+            {
+                setHostEffecterState(true, entityType, entityInstance);
+            }
+            else if (
+                propVal ==
+                    "xyz.openbmc_project.Common.Progress.OperationStatus.Failed" ||
+                propVal ==
+                    "xyz.openbmc_project.Common.Progress.OperationStatus.Aborted")
+            {
+                setHostEffecterState(false, entityType, entityInstance);
+            }
+        }
+        sbeDumpMatch = nullptr;
+    });
+}
+
+int pldm::responder::oem_ibm_platform::Handler::setNumericEffecter(
+    uint16_t entityInstance, const PropertyValue& propertyValue,
+    uint16_t entityType)
+{
+    static constexpr auto objectPath = "/xyz/openbmc_project/dump/system";
+    static constexpr auto interface = "xyz.openbmc_project.Dump.Create";
+
+    uint32_t value = std::get<uint32_t>(propertyValue);
+    auto& bus = pldm::utils::DBusHandler::getBus();
+
+    try
+    {
+        auto service = pldm::utils::DBusHandler().getService(objectPath,
+                                                             interface);
+        auto method = bus.new_method_call(service.c_str(), objectPath,
+                                          interface, "CreateDump");
+        static constexpr auto dumpParam =
+            "com.ibm.Dump.Create.CreateParameters.DumpType";
+        static constexpr auto errLogIdParam =
+            "com.ibm.Dump.Create.CreateParameters.ErrorLogId";
+        static constexpr auto failingUnitIdParam =
+            "com.ibm.Dump.Create.CreateParameters.FailingUnitId";
+        static constexpr auto sbeParam = "com.ibm.Dump.Create.DumpType.SBE";
+        static constexpr auto msbeParam =
+            "com.ibm.Dump.Create.DumpType.MemoryBufferSBE";
+
+        std::map<std::string, std::variant<std::string, uint64_t>> createParams;
+        if (entityType == PLDM_ENTITY_MEMORY_MODULE)
+        {
+            createParams[dumpParam] = msbeParam;
+        }
+        else if (entityType == PLDM_ENTITY_PROC)
+        {
+            createParams[dumpParam] = sbeParam;
+        }
+        else
+        {
+            error("Invalid entity type received: {ENTITY_TYPE}", "ENTITY_TYPE",
+                  entityType);
+            return PLDM_ERROR;
+        }
+        createParams[errLogIdParam] = (uint64_t)value;
+        createParams[failingUnitIdParam] = (uint64_t)entityInstance;
+        method.append(createParams);
+
+        auto response = bus.call(method);
+
+        sdbusplus::message::object_path reply;
+        response.read(reply);
+
+        monitorDump(reply, entityType, entityInstance);
+    }
+    catch (const std::exception& e)
+    {
+        error(
+            "Failed to make a DBus call as the dump policy is disabled, ERROR= {ERR}",
+            "ERR", e);
+        // case when the dump policy is disabled but we set the host effecter as
+        // true and the host moves on
+        setHostEffecterState(true, entityType, entityInstance);
+    }
+    return PLDM_SUCCESS;
+}
+
+std::vector<std::string>
+    pldm::responder::oem_ibm_platform::Handler::getProcObjectPaths()
+{
+    static constexpr auto searchpath = "/xyz/openbmc_project/inventory/system";
+    int depth = 0;
+    std::vector<std::string> procInterface = {
+        "xyz.openbmc_project.Inventory.Item.Cpu"};
+    pldm::utils::GetSubTreeResponse response =
+        dBusIntf->getSubtree(searchpath, depth, procInterface);
+    std::vector<std::string> procPaths;
+    for (const auto& [objPath, serviceMap] : response)
+    {
+        procPaths.emplace_back(objPath);
+    }
+    return procPaths;
+}
+
+std::vector<std::string>
+    pldm::responder::oem_ibm_platform::Handler::getDimmObjectPaths()
+{
+    static constexpr auto searchpath = "/xyz/openbmc_project/inventory/system";
+    static constexpr auto itemPath = "xyz.openbmc_project.Inventory.Item.Dimm";
+    int depth = 0;
+    std::vector<std::string> dimmInterface = {itemPath};
+    pldm::utils::GetSubTreeResponse response =
+        dBusIntf->getSubtree(searchpath, depth, dimmInterface);
+    std::vector<std::string> dimmPaths;
+    for (const auto& [objPath, serviceMap] : response)
+    {
+        dimmPaths.emplace_back(objPath);
+    }
+    return dimmPaths;
 }
 
 void pldm::responder::oem_ibm_platform::Handler::sendStateSensorEvent(
@@ -1040,6 +1534,22 @@ int pldm::responder::oem_ibm_platform::Handler::checkBMCState()
         return PLDM_ERROR;
     }
     return PLDM_SUCCESS;
+}
+
+void pldm::responder::oem_ibm_platform::Handler::updateContainerID()
+{
+    for (auto& [key, value] : instanceMap)
+    {
+        uint16_t newContainerID = pldm_find_container_id(
+            pdrRepo, PLDM_ENTITY_PROC_MODULE, value.dcmId);
+        pldm_change_container_id_of_effecter(pdrRepo, key, newContainerID);
+    }
+    for (auto& [key, value] : instanceDimmMap)
+    {
+        uint16_t newDimmContainerID =
+            pldm_find_container_id(pdrRepo, PLDM_ENTITY_MEMORY_BOARD, value);
+        pldm_change_container_id_of_effecter(pdrRepo, key, newDimmContainerID);
+    }
 }
 
 const pldm_pdr_record*
