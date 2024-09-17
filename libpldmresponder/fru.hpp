@@ -47,6 +47,7 @@ using ChangeEntry = uint32_t;
 static constexpr auto inventoryObjPath =
     "/xyz/openbmc_project/inventory/system/chassis";
 static constexpr auto itemInterface = "xyz.openbmc_project.Inventory.Item";
+static constexpr auto assetInterface = "xyz.openbmc_project.Inventory.Decorator.Asset";
 static constexpr auto fanInterface = "xyz.openbmc_project.Inventory.Item.Fan";
 static constexpr auto psuInterface =
     "xyz.openbmc_project.Inventory.Item.PowerSupply";

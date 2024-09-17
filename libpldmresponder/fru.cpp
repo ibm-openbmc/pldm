@@ -151,11 +151,14 @@ void FruImpl::buildFRUTable()
                          fanHotplugMatch);
     subscribeFruPresence(inventoryObjPath, psuInterface, itemInterface,
                          psuHotplugMatch);
-    subscribeFruPresence(inventoryObjPath, pcieAdapterInterface, itemInterface,
+    //subscribeFruPresence(inventoryObjPath, pcieAdapterInterface, itemInterface,
+      //                   pcieHotplugMatch);
+    subscribeFruPresence(inventoryObjPath, pcieAdapterInterface, assetInterface,
                          pcieHotplugMatch);
     subscribeFruPresence(inventoryObjPath, panelInterface, itemInterface,
                          panelHotplugMatch);
 
+    
     fru_parser::DBusLookupInfo dbusInfo;
 
     // Read the all the inventory D-Bus objects
@@ -892,7 +895,14 @@ void FruImpl::subscribeFruPresence(
                 DbusChangedProps props;
                 std::string iface;
                 msg.read(iface, props);
-                processFruPresenceChange(props, fruObjPath, fruInterface);
+                if (itemInterface == "xyz.openbmc_project.Inventory.Decorator.Asset")
+                {
+                    processFruModelChange(props, fruObjPath, fruInterface);
+                }
+                else
+                {
+                    processFruPresenceChange(props, fruObjPath, fruInterface);
+                }
             }));
         }
     }
@@ -904,6 +914,61 @@ void FruImpl::subscribeFruPresence(
     }
 }
 
+void FruImpl::processFruModelChange(const DbusChangedProps& chProperties,
+                                       const std::string& fruObjPath,
+                                       const std::string& fruInterface)
+{
+    std::cout << "processFruModelChange\n";
+    static constexpr auto propertyName = "Model";
+    const auto it = chProperties.find(propertyName);
+
+    if (it == chProperties.end())
+    {
+        return;
+    }
+    auto newPropVal = std::get<std::string>(it->second);
+    if (!isBuilt)
+    {
+        return;
+    }
+
+    std::vector<std::string> portObjects;
+    static constexpr auto portInterface =
+        "xyz.openbmc_project.Inventory.Item.Connector";
+
+    if (oemUtilsHandler)
+    {
+        std::cout << "inside oem util handler\n";
+        if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice")
+        {
+            std::cout << "fruInterface ...\n";
+            portObjects = oemUtilsHandler->findPortObjects(fruObjPath);
+        }
+        // as per current code the ports do not have Present property
+    }
+
+    if (!newPropVal.empty())
+    {
+        std::cout << "Model has value\n";
+        buildIndividualFRU(fruInterface, fruObjPath);
+        for (auto portObject : portObjects)
+        {
+             std::cout << "Building Port\n";
+            
+            buildIndividualFRU(portInterface, portObject);
+        }
+    }
+    else
+    {
+        std::cout << "Model empty\n";
+        for (auto portObject : portObjects)
+        {
+             std::cout << "Removing Port\n";
+            removeIndividualFRU(portObject);
+        }
+        removeIndividualFRU(fruObjPath);
+    }
+}
 void FruImpl::processFruPresenceChange(const DbusChangedProps& chProperties,
                                        const std::string& fruObjPath,
                                        const std::string& fruInterface)
