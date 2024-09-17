@@ -8,6 +8,7 @@
 #include "libpldmresponder/pdr_utils.hpp"
 #include "libpldmresponder/platform.hpp"
 #include "oem/ibm/requester/dbus_to_file_handler.hpp"
+#include "pldmd/dbus_impl_requester.hpp"
 #include "requester/handler.hpp"
 #include "utils.hpp"
 
@@ -105,6 +106,14 @@ const pldm::pdr::TerminusID HYPERVISOR_TID = 208;
 
 static constexpr uint8_t HEARTBEAT_TIMEOUT_DELTA = 10;
 
+struct InstanceInfo
+{
+    uint8_t procId;
+    uint8_t dcmId;
+};
+using HostEffecterInstanceMap = std::map<pldm::pdr::EffecterID, InstanceInfo>;
+using HostEffecterDimmMap = std::map<pldm::pdr::EffecterID, uint16_t>;
+
 enum SetEventReceiverCount
 {
     SET_EVENT_RECEIVER_SENT = 0x2,
@@ -131,6 +140,7 @@ class Handler : public oem_platform::Handler
         codeUpdate->setVersions();
         pldm::responder::utils::clearLicenseStatus();
         setEventReceiverCnt = 0;
+
         sdbusplus::message::object_path path;
         dbusToFileioIntf =
             std::make_unique<pldm::responder::oem_ibm_fileio::Handler>(
@@ -138,6 +148,7 @@ class Handler : public oem_platform::Handler
         pldm::responder::utils::hostChapDataIntf(dbusToFileioIntf.get());
 
         using namespace sdbusplus::bus::match::rules;
+
         hostOffMatch = std::make_unique<sdbusplus::bus::match_t>(
             pldm::utils::DBusHandler::getBus(),
             propertiesChanged("/xyz/openbmc_project/state/host0",
@@ -315,6 +326,12 @@ class Handler : public oem_platform::Handler
         });
     }
 
+    int oemSetNumericEffecterValueHandler(
+        uint16_t entityType, uint16_t entityInstance,
+        uint16_t effecterSemanticId, uint8_t effecterDataSize,
+        uint8_t* effecterValue, real32_t effecterOffset,
+        real32_t effecterResolution, uint16_t effecterId);
+
     int getOemStateSensorReadingsHandler(
         pldm::pdr::EntityType entityType,
         pldm::pdr::EntityInstance entityInstance,
@@ -362,6 +379,31 @@ class Handler : public oem_platform::Handler
     {
         return platformHandler->getAssociateEntityMap();
     }
+
+    /** @brief Method to generate and populate list of dcm/cpu ids
+     *
+     *  @return a vector of InstanceInfo type containing ids
+     */
+    std::vector<InstanceInfo> generateProcAndDcmIDs();
+
+    /** @brief Method to get and store dcm/cpu paths from dbus using getSubTree
+     * api
+     *
+     *  @return a vector containing cpu object paths
+     */
+    std::vector<std::string> getProcObjectPaths();
+
+    /** @brief Method to get and store dimm paths from dbus using getSubTree api
+     *
+     *  @return a vector containing dimm object paths
+     */
+    std::vector<std::string> getDimmObjectPaths();
+
+    /** @brief Method to generate and populate list of dimm ids
+     *
+     *  @return a vector containing dimm ids
+     */
+    std::vector<uint16_t> generateDimmIds();
 
     /** @brief Method to Generate the OEM PDRs
      *
@@ -438,6 +480,40 @@ class Handler : public oem_platform::Handler
 
     /** @brief update the dbus object paths */
     void updateOemDbusPaths(std::string& dbusPath);
+
+    /** @brief update containerID in PDRs */
+    void updateContainerID();
+
+    /** @brief setNumericEffecter
+     *
+     *  @param[in] entityInstance - the entity Instance
+     *  @param[in] propertyValue - the value to be set
+     *  @param[in] entityType - the type of numeric effecter(entity)
+     *
+     *  @return PLDM completion_code
+     */
+    int setNumericEffecter(uint16_t entityInstance,
+                           const pldm::utils::PropertyValue& propertyValue,
+                           uint16_t entityType);
+
+    /** @brief monitor the dump
+     *
+     *  @param[in] object_path - The object path of the dump to monitor
+     *  @param[in] entityType - the entity type
+     *  @param[in] entityInstance - the entity instance id of the effecter
+     *
+     */
+    void monitorDump(const std::string& obj_path, uint16_t entityType,
+                     uint16_t entityInstance);
+
+    /** @brief Method to set the host effecter state
+     *  @param status - the status of dump creation
+     *  @param entityTypeReceived - the entity type
+     *  @param entityInstance - the entity instance id of the effecter
+     *
+     */
+    void setHostEffecterState(bool status, uint16_t entityTypeReceived,
+                              uint16_t entityInstance);
 
     /** @brief Method to fetch the last BMC record from the PDR repo
      *
@@ -543,6 +619,9 @@ class Handler : public oem_platform::Handler
     pldm::responder::platform::Handler*
         platformHandler; //!< pointer to PLDM platform handler
 
+    /** unique pointer to the SBE dump match */
+    std::unique_ptr<sdbusplus::bus::match_t> sbeDumpMatch;
+
     /** @brief fd of MCTP communications socket */
     int mctp_fd;
 
@@ -619,6 +698,14 @@ class Handler : public oem_platform::Handler
      *  @param[in] value - true or false, to indicate if the timer
      *                    should be reset or turned off*/
     void startStopTimer(bool value);
+
+    /** @brief instanceMap is a lookup data structure to lookup <EffecterID,
+     * InstanceInfo> */
+    HostEffecterInstanceMap instanceMap;
+
+    /** @brief instanceDimmMap is a lookup data structure to lookup <EffecterID,
+     * dimmID> */
+    HostEffecterDimmMap instanceDimmMap;
 };
 
 /** @brief Method to encode code update event msg

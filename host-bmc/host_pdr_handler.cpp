@@ -915,6 +915,10 @@ void HostPDRHandler::processHostPDRs(
 void HostPDRHandler::_processPDRRepoChgEvent(
     sdeventplus::source::EventBase& /*source */)
 {
+    if (oemPlatformHandler)
+    {
+        oemPlatformHandler->updateContainerID();
+    }
     deferredPDRRepoChgEvent.reset();
     this->sendPDRRepositoryChgEvent(
         std::vector<uint8_t>(1, PLDM_PDR_ENTITY_ASSOCIATION),
