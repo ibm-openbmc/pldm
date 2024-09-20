@@ -963,6 +963,10 @@ bool isOemNumericEffecter(Handler& handler, uint16_t effecterId,
             effecterResolution = tmpEffecterResolution;
             return true;
         }
+        else
+        {
+            return false;
+        }
     }
     return false;
 }
