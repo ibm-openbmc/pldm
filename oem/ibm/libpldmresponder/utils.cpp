@@ -440,6 +440,14 @@ std::vector<char> vecSplit(const std::vector<char>& inputVec,
     return resultVec;
 }
 
+void hostPCIETopologyIntf(
+    uint8_t mctp_eid,
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser)
+{
+    CustomDBus::getCustomDBus().implementPcieTopologyInterface(
+        "/xyz/openbmc_project/pldm", mctp_eid, hostEffecterParser);
+}
+
 } // namespace utils
 
 namespace oem_ibm_utils

@@ -303,7 +303,7 @@ int main(int argc, char** argv)
     pldm::oem_ibm::OemIBM oemIBM(
         &dbusHandler, &pldmTransport, hostEID, pdrRepo.get(),
         instanceIdDb, event, invoker, hostPDRHandler.get(),
-        platformHandler.get(), fruHandler.get(), baseHandler.get(),
+        platformHandler.get(), fruHandler.get(), baseHandler.get(), hostEffecterParser.get(),
         &reqHandler, bmcEntityTree.get(), TID, verbose);
 #endif
 

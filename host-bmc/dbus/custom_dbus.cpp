@@ -450,6 +450,19 @@ void CustomDBus::implementGlobalInterface(const std::string& path)
     }
 }
 
+void CustomDBus::implementPcieTopologyInterface(
+    const std::string& path, uint8_t mctpEid,
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser)
+{
+    if (pcietopology.find(path) == pcietopology.end())
+    {
+        pcietopology.emplace(path,
+                             std::make_unique<PCIETopology>(
+                                 pldm::utils::DBusHandler::getBus(),
+                                 path.c_str(), hostEffecterParser, mctpEid));
+    }
+}
+
 void CustomDBus::deleteObject(const std::string& path)
 {
     if (location.contains(path))
@@ -594,6 +607,15 @@ void CustomDBus::removeDBus(const std::vector<uint16_t> types)
         {
             deleteObject(path);
         }
+    }
+}
+
+void CustomDBus::updateTopologyProperty(bool value)
+{
+    if (pcietopology.contains("/xyz/openbmc_project/pldm"))
+    {
+        pcietopology.at("/xyz/openbmc_project/pldm")
+            ->pcIeTopologyRefresh(value);
     }
 }
 
