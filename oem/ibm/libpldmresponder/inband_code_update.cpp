@@ -66,17 +66,23 @@ int CodeUpdate::setCurrentBootSide(const std::string& currSide)
 
 int CodeUpdate::setNextBootSide(const std::string& nextSide)
 {
+    info("setNextBootSide, nextSide={NXT_SIDE}", "NXT_SIDE", nextSide);
     pldm_boot_side_data pldmBootSideData = readBootSideFile();
-    currBootSide = pldmBootSideData.current_boot_side;
+    currBootSide = (pldmBootSideData.current_boot_side == "Perm" ? Pside
+                                                                 : Tside);
     nextBootSide = nextSide;
-    pldmBootSideData.next_boot_side = nextSide;
+    pldmBootSideData.next_boot_side = (nextSide == Pside ? "Perm" : "Temp");
     std::string objPath{};
     if (nextBootSide == currBootSide)
     {
+        info("Current bootside is same as next boot side");
+        info("setting priority of running version 0");
         objPath = runningVersion;
     }
     else
     {
+        info("Current bootside is not same as next boot side");
+        info("setting priority of non running version 0");
         objPath = nonRunningVersion;
     }
     if (objPath.empty())
@@ -99,7 +105,9 @@ int CodeUpdate::setNextBootSide(const std::string& nextSide)
     catch (const std::exception& e)
     {
         // Alternate side may not be present due to a failed code update
-        info("Alternate side not present due to failed code update");
+        error(
+            "Alternate side may not be present due to a failed code update. ERROR = {ERR}",
+            "ERR", e);
         return PLDM_PLATFORM_INVALID_STATE_VALUE;
     }
 
@@ -218,6 +226,19 @@ void CodeUpdate::setVersions()
             pldm_boot_side_data pldmBootSideData;
             std::string nextBootSideBiosValue =
                 getBiosAttrValue("fw_boot_side");
+
+            // We enter this path during Genesis boot/boot after Factory reset.
+            // PLDM waits for Entity manager to populate System Type. After
+            // receiving system Type from EM it populates the bios attributes
+            // specific to that system We do not have bios attributes populated
+            // when we reach here so setting it to default value of the
+            // attribute as mentioned in the json files.
+            if (nextBootSideBiosValue.empty())
+            {
+                info(
+                    "Boot side is not initialized yet, so setting default value");
+                nextBootSideBiosValue = "Temp";
+            }
             pldmBootSideData.current_boot_side = nextBootSideBiosValue;
             pldmBootSideData.next_boot_side = nextBootSideBiosValue;
             pldmBootSideData.running_version_object = runningPath;
@@ -385,6 +406,8 @@ void CodeUpdate::setVersions()
                                         "xyz.openbmc_project.Software."
                                         "Activation.Activations.Active")
                                     {
+                                        info(
+                                            "Received Active signal, Sending success on End update sensor event to PHYP");
                                         CodeUpdateState state =
                                             CodeUpdateState::END;
                                         setCodeUpdateProgress(false);
@@ -669,6 +692,7 @@ int executeCmd(const T&... t)
 
 int processCodeUpdateLid(const std::string& filePath)
 {
+    info("processCodeUpdateLid path {PATH}", "PATH", filePath);
     struct LidHeader
     {
         uint16_t magicNumber;
@@ -713,6 +737,16 @@ int processCodeUpdateLid(const std::string& filePath)
     fs::create_directories(imageDirPath);
     fs::create_directories(lidDirPath);
 
+    // Set the lid directory permissions to 777
+    std::error_code ec;
+    fs::permissions(lidDirPath, fs::perms::all, fs::perm_options::replace, ec);
+    if (ec)
+    {
+        error("Failed to set the lid directory permissions:{ERR}", "ERR",
+              ec.message());
+        return PLDM_ERROR;
+    }
+
     constexpr auto bmcClass = 0x2000;
     if (htons(header.lidClass) == bmcClass)
     {
@@ -735,6 +769,17 @@ int processCodeUpdateLid(const std::string& filePath)
         ofs << ifs.rdbuf();
         ofs.flush();
         ofs.close();
+        // Set the lid file permissions to 440
+        std::error_code ec;
+        fs::permissions(lidNoHeaderPath,
+                        fs::perms::owner_read | fs::perms::group_read,
+                        fs::perm_options::replace, ec);
+        if (ec)
+        {
+            error("Failed to set the lid file permissions: {ERR}", "ERR",
+                  ec.message());
+            return PLDM_ERROR;
+        }
     }
 
     ifs.close();
@@ -757,7 +802,7 @@ int CodeUpdate::assembleCodeUpdateImage()
         auto method = bus.new_method_call(UPDATER_SERVICE, SOFTWARE_PATH,
                                           LID_INTERFACE,
                                           "AssembleCodeUpdateImage");
-        bus.call_noreply(method);
+        bus.call_noreply(method, dbusTimeout);
     }
     catch (const std::exception& e)
     {
