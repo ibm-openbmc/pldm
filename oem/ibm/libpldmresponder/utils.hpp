@@ -165,6 +165,15 @@ void hostChapDataIntf(
  */
 std::vector<char> vecSplit(const std::vector<char>& inputVec,
                            const uint32_t startIdx, const uint32_t endIdx);
+/** @brief host PCIE Topology Interface
+ *  @param[in] mctp_eid - MCTP Endpoint ID
+ *  @param[in] hostEffecterParser - Pointer to host effecter parser
+ */
+
+void hostPCIETopologyIntf(
+    uint8_t mctp_eid,
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser);
+
 } // namespace utils
 
 namespace oem_ibm_utils
