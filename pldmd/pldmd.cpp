@@ -256,6 +256,14 @@ int main(int argc, char** argv)
     std::unique_ptr<oem_fru::Handler> oemFruHandler{};
     std::unique_ptr<oem_utils::Handler> oemUtilsHandler{};
 
+    if (hostEID)
+    {
+        hostEffecterParser =
+            std::make_unique<pldm::host_effecters::HostEffecterParser>(
+                &dbusImplReq, pldmTransport.getEventSource(), pdrRepo.get(),
+                &dbusHandler, HOST_JSONS_DIR, &reqHandler);
+    }
+
 #ifdef OEM_IBM
     respInterface.responseObj =
         std::make_unique<pldm::response_api::AltResponse>(&pldmTransport, TID,
@@ -269,7 +277,8 @@ int main(int argc, char** argv)
     oemPlatformHandler = std::make_unique<oem_ibm_platform::Handler>(
         &dbusHandler, codeUpdate.get(), slotHandler.get(),
         pldmTransport.getEventSource(), hostEID, instanceIdDb, event,
-        pdrRepo.get(), &reqHandler, bmcEntityTree.get());
+        pdrRepo.get(), &reqHandler, bmcEntityTree.get(),
+        hostEffecterParser.get());
     codeUpdate->setOemPlatformHandler(oemPlatformHandler.get());
     slotHandler->setOemPlatformHandler(oemPlatformHandler.get());
     oemFruHandler = std::make_unique<oem_ibm_fru::Handler>(pdrRepo.get());
@@ -285,10 +294,6 @@ int main(int argc, char** argv)
         associationsParser =
             std::make_unique<pldm::host_associations::HostAssociationsParser>(
                 HOST_JSONS_DIR);
-        hostEffecterParser =
-            std::make_unique<pldm::host_effecters::HostEffecterParser>(
-                &dbusImplReq, pldmTransport.getEventSource(), pdrRepo.get(),
-                &dbusHandler, HOST_JSONS_DIR, &reqHandler);
         hostPDRHandler = std::make_shared<HostPDRHandler>(
             pldmTransport.getEventSource(), hostEID, event, pdrRepo.get(),
             EVENTS_JSONS_DIR, entityTree.get(), bmcEntityTree.get(),
