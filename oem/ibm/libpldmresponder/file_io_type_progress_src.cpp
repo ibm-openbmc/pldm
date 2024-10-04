@@ -50,7 +50,8 @@ int ProgressCodeHandler::setRawBootProperty(
 
 int ProgressCodeHandler::write(const char* buffer, uint32_t /*offset*/,
                                uint32_t& length,
-                               oem_platform::Handler* /*oemPlatformHandler*/)
+                               oem_platform::Handler* /*oemPlatformHandler*/,
+                               struct fileack_status_metadata& /*metaDataObj*/)
 {
     static constexpr auto StartOffset = 40;
     static constexpr auto EndOffset = 48;

@@ -147,8 +147,9 @@ class PCIeInfoHandler : public FileHandler
                                  SharedAIORespData& sharedAIORespDataobj,
                                  sdeventplus::Event& event) override;
 
-    virtual int write(const char* buffer, uint32_t offset, uint32_t& length,
-                      oem_platform::Handler* /*oemPlatformHandler*/) override;
+    int write(const char* buffer, uint32_t offset, uint32_t& length,
+                      oem_platform::Handler* /*oemPlatformHandler*/,
+                      struct fileack_status_metadata& /*metaDataObj*/)override;
 
     virtual int fileAck(uint8_t fileStatus) override;
 
@@ -202,6 +203,10 @@ class PCIeInfoHandler : public FileHandler
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
+
+    virtual void postWriteAction(
+        const uint16_t /*fileType*/, const uint32_t /*fileHandle*/,
+        const struct fileack_status_metadata& /*metaDataObj*/) override{};
 
     /** @brief PCIeInfoHandler destructor
      */

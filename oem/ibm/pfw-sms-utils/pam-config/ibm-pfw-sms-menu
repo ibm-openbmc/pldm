@@ -1,0 +1,8 @@
+# The Linux-PAM config file for IBM Power systems PFW SMS Menu service
+# Authentication and password change is supported.
+
+auth     include  common-auth
+# Fail account management if user is not admin or service
+account  required pam_succeed_if.so quiet_success user ingroup priv-admin:priv-oemibmserviceagent
+account  include  common-account
+password include  common-password

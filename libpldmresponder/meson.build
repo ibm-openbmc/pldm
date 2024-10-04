@@ -57,28 +57,34 @@ sources = [
 responder_headers = ['.']
 
 if get_option('oem-ibm').allowed()
-    responder_headers += ['../oem/ibm/']
-    sources += [
-        '../oem/ibm/libpldmresponder/utils.cpp',
-        '../oem/ibm/libpldmresponder/file_io.cpp',
-        '../oem/ibm/libpldmresponder/file_table.cpp',
-        '../oem/ibm/libpldmresponder/file_io_by_type.cpp',
-        '../oem/ibm/libpldmresponder/file_io_type_pel.cpp',
-        '../oem/ibm/libpldmresponder/file_io_type_dump.cpp',
-        '../oem/ibm/libpldmresponder/file_io_type_chap.cpp',
-        '../oem/ibm/libpldmresponder/file_io_type_cert.cpp',
-        '../oem/ibm/libpldmresponder/platform_oem_ibm.cpp',
-        '../oem/ibm/libpldmresponder/fru_oem_ibm.cpp',
-        '../oem/ibm/libpldmresponder/oem_ibm_handler.cpp',
-        '../oem/ibm/libpldmresponder/inband_code_update.cpp',
-        '../oem/ibm/requester/dbus_to_file_handler.cpp',
-        '../oem/ibm/libpldmresponder/collect_slot_vpd.cpp',
-        '../oem/ibm/libpldmresponder/file_io_type_progress_src.cpp',
-        '../oem/ibm/libpldmresponder/file_io_type_vpd.cpp',
-        '../oem/ibm/libpldmresponder/file_io_type_pcie.cpp',
-        '../oem/ibm/host-bmc/host_lamp_test.cpp',
-        '../oem/ibm/libpldmresponder/file_io_type_lic.cpp',
-    ]
+   responder_headers += [
+    '../oem/ibm/',
+   ]
+  sources += [
+    '../oem/ibm/libpldmresponder/utils.cpp',
+    '../oem/ibm/libpldmresponder/file_io.cpp',
+    '../oem/ibm/libpldmresponder/file_table.cpp',
+    '../oem/ibm/libpldmresponder/file_io_by_type.cpp',
+    '../oem/ibm/libpldmresponder/file_io_type_pel.cpp',
+    '../oem/ibm/libpldmresponder/file_io_type_dump.cpp',
+    '../oem/ibm/libpldmresponder/file_io_type_chap.cpp',
+    '../oem/ibm/libpldmresponder/file_io_type_cert.cpp',
+    '../oem/ibm/libpldmresponder/platform_oem_ibm.cpp',
+    '../oem/ibm/libpldmresponder/fru_oem_ibm.cpp',
+    '../oem/ibm/libpldmresponder/oem_ibm_handler.cpp',
+    '../oem/ibm/libpldmresponder/inband_code_update.cpp',
+    '../oem/ibm/libpldmresponder/collect_slot_vpd.cpp',
+    '../oem/ibm/requester/dbus_to_file_handler.cpp',
+    '../oem/ibm/libpldmresponder/file_io_type_progress_src.cpp',
+    '../oem/ibm/libpldmresponder/file_io_type_vpd.cpp',
+    '../oem/ibm/libpldmresponder/file_io_type_pcie.cpp',
+    '../oem/ibm/libpldmresponder/file_io_type_lic.cpp',
+    '../oem/ibm/pfw-sms-utils/pfw_sms_menu.cpp',
+    '../oem/ibm/host-bmc/host_lamp_test.cpp',
+    '../oem/ibm/libpldmresponder/file_io_type_smsmenu.cpp',
+  ]
+  libpam = cpp.find_library('pam', required: true)
+  libpldmresponder_deps += [libpam]
 endif
 
 libpldmresponder = library(

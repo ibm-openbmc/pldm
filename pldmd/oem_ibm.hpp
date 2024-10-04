@@ -174,7 +174,7 @@ class OemIBM
         invoker.registerHandler(
             PLDM_OEM, std::make_unique<pldm::responder::oem_ibm::Handler>(
                           oemPlatformHandler.get(), mctp_fd, mctp_eid,
-                          &instanceIdDb, reqHandler, respInterface.responseObj.get()));
+                          &instanceIdDb, reqHandler, respInterface.responseObj.get(), event));
     }
 
   private:

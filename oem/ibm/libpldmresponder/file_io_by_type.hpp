@@ -154,10 +154,22 @@ class FileHandler
      *  @param[in/out] length - length to be written
      *  @param[in] oemPlatformHandler - oem handler for PLDM platform related
      *                                  tasks
+     *  @param[out] metaDataObj - file ack meta data status and values
      *  @return PLDM status code
      */
     virtual int write(const char* buffer, uint32_t offset, uint32_t& length,
-                      oem_platform::Handler* oemPlatformHandler) = 0;
+                      oem_platform::Handler* oemPlatformHandler,
+                      struct fileack_status_metadata& metaDataObj) = 0;
+
+    /** @brief Execute the post actions after sending back the write command
+     *  response to the host
+     *  @param[in] fileType - type of the file
+     *  @param[in] fileHandle - file handle
+     *  @param[in] metaDataObj - file ack meta data status and values
+     */
+    virtual void
+        postWriteAction(const uint16_t fileType, const uint32_t fileHandle,
+                        const struct fileack_status_metadata& metaDataObj) = 0;
 
     virtual int fileAck(uint8_t fileStatus) = 0;
 
@@ -282,17 +294,25 @@ class FileHandler
  *
  *  @param[in] fileType - type of file
  *  @param[in] fileHandle - file handle
+ *  @param[in] instanceIdDb - pldm instance DB requester
+ *  @param[in] handler - pldm request handler
+ *
+ *  @return Unique file handler
  */
 
-std::unique_ptr<FileHandler>
-    getHandlerByType(uint16_t fileType, uint32_t fileHandle);
+std::unique_ptr<FileHandler> getHandlerByType(
+    uint16_t fileType, uint32_t fileHandle, pldm::InstanceIdDb* instanceIdDb,
+    pldm::requester::Handler<pldm::requester::Request>* handler);
 
 /** @brief Method to create shared file handler objects based on file type
  *
  *  @param[in] fileType - type of file
  *  @param[in] fileHandle - file handle
+ *  @param[in] instanceIdDb - pldm instance DB requester
+ *  @param[in] handler - pldm request handler
  */
-std::shared_ptr<FileHandler> getSharedHandlerByType(uint16_t fileType,
-                                                    uint32_t fileHandle);
+std::shared_ptr<FileHandler> getSharedHandlerByType(
+    uint16_t fileType, uint32_t fileHandle, pldm::InstanceIdDb* instanceIdDb,
+    pldm::requester::Handler<pldm::requester::Request>* handler);
 } // namespace responder
 } // namespace pldm

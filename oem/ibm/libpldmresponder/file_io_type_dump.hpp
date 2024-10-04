@@ -38,7 +38,8 @@ class DumpHandler : public FileHandler
                      oem_platform::Handler* /*oemPlatformHandler*/);
 
     virtual int write(const char* buffer, uint32_t offset, uint32_t& length,
-                      oem_platform::Handler* /*oemPlatformHandler*/);
+                      oem_platform::Handler* /*oemPlatformHandler*/,
+                      struct fileack_status_metadata& /*metaDataObj*/);
 
     virtual int newFileAvailable(uint64_t length);
 
@@ -62,6 +63,10 @@ class DumpHandler : public FileHandler
     uint32_t getDumpIdPrefix(uint16_t dumpType);
     virtual int postDataTransferCallBack(bool IsWriteToMemOp,
                                          uint32_t /*length*/);
+
+    virtual void postWriteAction(
+        const uint16_t /*fileType*/, const uint32_t /*fileHandle*/,
+        const struct fileack_status_metadata& /*metaDataObj*/) {};
 
     /** @brief DumpHandler destructor
      */
