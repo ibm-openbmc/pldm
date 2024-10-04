@@ -80,7 +80,11 @@ if get_option('oem-ibm').allowed()
     '../oem/ibm/libpldmresponder/file_io_type_vpd.cpp',
     '../oem/ibm/libpldmresponder/file_io_type_pcie.cpp',
     '../oem/ibm/libpldmresponder/file_io_type_lic.cpp',
+    '../oem/ibm/pfw-sms-utils/pfw_sms_menu.cpp',
+    '../oem/ibm/libpldmresponder/file_io_type_smsmenu.cpp',
   ]
+  libpam = cpp.find_library('pam', required: true)
+  libpldmresponder_deps += [libpam]
 endif
 
 libpldmresponder = library(

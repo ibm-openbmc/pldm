@@ -42,7 +42,8 @@ class CertHandler : public FileHandler
                      oem_platform::Handler* /*oemPlatformHandler*/);
 
     virtual int write(const char* buffer, uint32_t offset, uint32_t& length,
-                      oem_platform::Handler* /*oemPlatformHandler*/);
+                      oem_platform::Handler* /*oemPlatformHandler*/,
+                      struct fileack_status_metadata& /*metaDataObj*/);
 
     virtual int fileAck(uint8_t /*fileStatus*/)
     {
@@ -64,6 +65,10 @@ class CertHandler : public FileHandler
                                              uint32_t /*metaDataValue4*/);
 
     virtual int postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length);
+
+    virtual void postWriteAction(
+        const uint16_t /*fileType*/, const uint32_t /*fileHandle*/,
+        const struct fileack_status_metadata& /*metaDataObj*/) {};
 
     /** @brief CertHandler destructor
      */

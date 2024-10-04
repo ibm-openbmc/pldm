@@ -15,6 +15,18 @@
 
 namespace pldm
 {
+
+/** @brief Holds the file ack with meta data status and values
+ */
+struct fileack_status_metadata
+{
+    uint8_t fileStatus;
+    uint32_t fileMetaData1;
+    uint32_t fileMetaData2;
+    uint32_t fileMetaData3;
+    uint32_t fileMetaData4;
+};
+
 namespace responder
 {
 namespace utils
@@ -144,6 +156,15 @@ int createOrUpdateLicenseObjs();
 void hostChapDataIntf(
     pldm::responder::oem_fileio::Handler* dbusToFilehandlerObj);
 
+/** @brief Split the vector according to the start and end index and return
+ *  back the resultant vector
+ *  @param[in] inputVec - input vector
+ *  @param[in] startIdx - start index
+ *  @param[in] endIdx - end index
+ *  @return  the resultant split vector
+ */
+std::vector<char> vecSplit(const std::vector<char>& inputVec,
+                           const uint32_t startIdx, const uint32_t endIdx);
 } // namespace utils
 
 namespace oem_ibm_utils

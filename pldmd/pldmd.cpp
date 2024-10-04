@@ -274,11 +274,11 @@ int main(int argc, char** argv)
     slotHandler->setOemPlatformHandler(oemPlatformHandler.get());
     oemFruHandler = std::make_unique<oem_ibm_fru::Handler>(pdrRepo.get());
 
-    invoker.registerHandler(PLDM_OEM, std::make_unique<oem_ibm::Handler>(
-                                          oemPlatformHandler.get(),
-                                          pldmTransport.getEventSource(),
-                                          hostEID, &instanceIdDb, &reqHandler,
-                                          respInterface.responseObj.get()));
+    invoker.registerHandler(
+        PLDM_OEM, std::make_unique<oem_ibm::Handler>(
+                      oemPlatformHandler.get(), pldmTransport.getEventSource(),
+                      hostEID, &instanceIdDb, &reqHandler,
+                      respInterface.responseObj.get(), event));
 #endif
     if (hostEID)
     {
