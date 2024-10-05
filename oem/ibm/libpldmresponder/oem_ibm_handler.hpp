@@ -271,8 +271,10 @@ class Handler : public oem_platform::Handler
                 if (it.first == "fw_boot_side")
                 {
                     auto& [attributeType, attributevalue] = it.second;
-                    std::string nextBootSide =
+                    std::string nextBootSideAttr =
                         std::get<std::string>(attributevalue);
+                    std::string nextBootSide =
+                        (nextBootSideAttr == "Perm" ? Pside : Tside);
                     codeUpdate->setNextBootSide(nextBootSide);
                 }
             }
