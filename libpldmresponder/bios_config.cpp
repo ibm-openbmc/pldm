@@ -39,6 +39,8 @@ constexpr auto stringTableFile = "stringTable";
 constexpr auto attrTableFile = "attributeTable";
 constexpr auto attrValueTableFile = "attributeValueTable";
 
+constexpr auto biosObjPath = "/xyz/openbmc_project/bios_config/manager";
+constexpr auto biosInterface = "xyz.openbmc_project.BIOSConfig.Manager";
 } // namespace
 
 BIOSConfig::BIOSConfig(
@@ -60,8 +62,6 @@ BIOSConfig::BIOSConfig(
 #else
     initBIOSAttributes(sysType, false);
 #endif
-
-    listenPendingAttributes();
 }
 
 void BIOSConfig::checkSystemTypeAvailability()
@@ -100,7 +100,53 @@ void BIOSConfig::initBIOSAttributes(const std::string& systemType,
         return;
     }
     constructAttributes();
+
+    using PendingAttributesType = std::vector<std::pair<
+        std::string, std::tuple<std::string, std::variant<std::string>>>>;
+    PendingAttributesType pendingAttributes;
+    std::variant<PendingAttributesType> varPendingAttributes;
+    auto& bus = dbusHandler->getBus();
+    auto service = dbusHandler->getService(biosObjPath, biosInterface);
+
+    try
+    {
+        info("Getting Pending Attributes");
+        auto method = bus.new_method_call(service.c_str(), biosObjPath,
+                                          "org.freedesktop.DBus.Properties",
+                                          "Get");
+        method.append(biosInterface, "PendingAttributes");
+        auto reply = bus.call(method, dbusTimeout);
+        reply.read(varPendingAttributes);
+        pendingAttributes =
+            std::get<PendingAttributesType>(varPendingAttributes);
+    }
+    catch (const std::exception& e)
+    {
+        error("Failed to read PendingAttributes property, error - {ERROR}",
+              "ERROR", e);
+    }
+
     buildTables();
+
+    if (pendingAttributes.size())
+    {
+        try
+        {
+            info("Setting Pending Attributes");
+            auto method = bus.new_method_call(service.c_str(), biosObjPath,
+                                              dbusProperties, "Set");
+            method.append(biosInterface, "PendingAttributes",
+                          varPendingAttributes);
+            bus.call_noreply(method, dbusTimeout);
+        }
+        catch (const std::exception& e)
+        {
+            error("Failed to update PendingAttribute property, error - {ERROR}",
+                  "ERROR", e);
+        }
+    }
+    info("Register listenPendingAttributes");
+    listenPendingAttributes();
     if (registerService)
     {
         requestPLDMServiceName();
@@ -582,8 +628,6 @@ void BIOSConfig::buildAndStoreAttrTables(const Table& stringTable)
     }
 
     BaseBIOSTable biosTable{};
-    constexpr auto biosObjPath = "/xyz/openbmc_project/bios_config/manager";
-    constexpr auto biosInterface = "xyz.openbmc_project.BIOSConfig.Manager";
 
     try
     {

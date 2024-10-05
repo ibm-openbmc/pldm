@@ -71,8 +71,9 @@ int sendBiosAttributeUpdateEvent(
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
 
     auto rc = encode_bios_attribute_update_event_req(
-        instanceId, PLDM_PLATFORM_EVENT_MESSAGE_FORMAT_VERSION, TERMINUS_ID,
-        handles.size(), reinterpret_cast<const uint8_t*>(handles.data()),
+        instanceId, PLDM_PLATFORM_EVENT_MESSAGE_FORMAT_VERSION,
+        pldm::responder::pdr::BmcMctpEid, handles.size(),
+        reinterpret_cast<const uint8_t*>(handles.data()),
         requestMsg.size() - sizeof(pldm_msg_hdr), request);
     if (rc != PLDM_SUCCESS)
     {
@@ -83,6 +84,17 @@ int sendBiosAttributeUpdateEvent(
         return rc;
     }
 
+    if (requestMsg.size())
+    {
+        std::ostringstream tempStream;
+        for (int byte : requestMsg)
+        {
+            tempStream << std::setfill('0') << std::setw(2) << std::hex << byte
+                       << " ";
+        }
+        std::cout << "platformEventMessage for BIOS Attribute  "
+                  << tempStream.str() << std::endl;
+    }
     auto platformEventMessageResponseHandler =
         [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
