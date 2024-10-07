@@ -4,8 +4,8 @@
 
 #include <libpldm/base.h>
 #include <libpldm/oem/ibm/file_io.h>
-#include <stdint.h>
 
+#include <cstdint>
 #include <iostream>
 
 namespace pldm
