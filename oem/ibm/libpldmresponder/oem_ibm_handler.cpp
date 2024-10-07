@@ -919,6 +919,10 @@ void pldm::responder::oem_ibm_platform::Handler::buildOEMPDR(
         this, PLDM_OEM_IBM_CHASSIS_POWER_CONTROLLER, ENTITY_INSTANCE_0,
         PLDM_STATE_SET_SYSTEM_POWER_STATE, repo);
 
+    pldm_entity fwUpEntity = {PLDM_OEM_IBM_ENTITY_FIRMWARE_UPDATE, 0, 1};
+    attachOemEntityToEntityAssociationPDR(
+        this, bmcEntityTree, "/xyz/openbmc_project/inventory/system", repo,
+        fwUpEntity);
     pldm_entity saiEntity = {PLDM_OEM_IBM_ENTITY_REAL_SAI, 1, 1};
     attachOemEntityToEntityAssociationPDR(
         this, bmcEntityTree, "/xyz/openbmc_project/inventory/system", repo,
