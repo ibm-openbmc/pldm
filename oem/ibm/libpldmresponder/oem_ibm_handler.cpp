@@ -1541,13 +1541,15 @@ void pldm::responder::oem_ibm_platform::Handler::updateContainerID()
     for (auto& [key, value] : instanceMap)
     {
         uint16_t newContainerID = pldm_find_container_id(
-            pdrRepo, PLDM_ENTITY_PROC_MODULE, value.dcmId);
+            pdrRepo, PLDM_ENTITY_PROC_MODULE, value.dcmId, HOST_PDR_START_RANGE,
+            HOST_PDR_END_RANGE);
         pldm_change_container_id_of_effecter(pdrRepo, key, newContainerID);
     }
     for (auto& [key, value] : instanceDimmMap)
     {
         uint16_t newDimmContainerID =
-            pldm_find_container_id(pdrRepo, PLDM_ENTITY_MEMORY_BOARD, value);
+            pldm_find_container_id(pdrRepo, PLDM_ENTITY_MEMORY_BOARD, value,
+                                   HOST_PDR_START_RANGE, HOST_PDR_END_RANGE);
         pldm_change_container_id_of_effecter(pdrRepo, key, newDimmContainerID);
     }
 }
