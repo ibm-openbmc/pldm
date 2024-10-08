@@ -190,7 +190,7 @@ class Handler : public oem_platform::Handler
             pldm::utils::DBusHandler::getBus(),
             propertiesChanged("/xyz/openbmc_project/state/chassis0",
                               "xyz.openbmc_project.State.Chassis"),
-            [](sdbusplus::message_t& msg) {
+            [this](sdbusplus::message_t& msg) {
             pldm::utils::DbusChangedProps props{};
             std::string intf;
             msg.read(intf, props);
@@ -202,6 +202,9 @@ class Handler : public oem_platform::Handler
                 if (propVal ==
                     "xyz.openbmc_project.State.Chassis.PowerState.Off")
                 {
+                    startStopTimer(false);
+                    handleBootTypesAtChassisOff();
+
                     static constexpr auto searchpath =
                         "/xyz/openbmc_project/inventory/system/chassis/motherboard";
                     int depth = 0;
@@ -290,10 +293,12 @@ class Handler : public oem_platform::Handler
                 {
                     if (it.first == "fw_boot_side")
                     {
-                        auto& [attributeType, attributevalue] = it.second;
-                        std::string nextBootSide =
-                            std::get<std::string>(attributevalue);
-                        codeUpdate->setNextBootSide(nextBootSide);
+                    auto& [attributeType, attributevalue] = it.second;
+                    std::string nextBootSideAttr =
+                        std::get<std::string>(attributevalue);
+                    std::string nextBootSide =
+                        (nextBootSideAttr == "Perm" ? Pside : Tside);
+                    codeUpdate->setNextBootSide(nextBootSide);
                     }
                 }
         });

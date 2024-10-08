@@ -975,7 +975,7 @@ void setBiosAttr(const BiosAttributeList& biosAttrList)
             method.append(
                 biosConfigIntf, "PendingAttributes",
                 std::variant<PendingAttributesType>(pendingAttributes));
-            bus.call_noreply(method);
+            bus.call_noreply(method, dbusTimeout);
         }
         catch (const sdbusplus::exception::SdBusError& e)
         {

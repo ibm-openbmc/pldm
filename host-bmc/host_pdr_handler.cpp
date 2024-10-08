@@ -123,6 +123,10 @@ HostPDRHandler::HostPDRHandler(
             auto propVal = std::get<std::string>(value);
             if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
             {
+                if (oemPlatformHandler)
+                {
+                    oemPlatformHandler->startStopTimer(false);
+                }
                 // Delete all the remote terminus information
                 std::erase_if(tlPDRInfo, [](const auto& item) {
                     const auto& [key, value] = item;
@@ -1237,7 +1241,6 @@ void HostPDRHandler::getFRURecordTableMetadataByRemote()
                 "RC", lg2::hex, rc, "CC", cc);
             return;
         }
-        info("Fru RecordTable length {LEN}", "LEN", total);
         // pass total to getFRURecordTableByRemote
         this->getFRURecordTableByRemote(total);
     };
@@ -1262,7 +1265,6 @@ void HostPDRHandler::getFRURecordTableByRemote(uint16_t& totalTableRecords)
 
     if (!totalTableRecords)
     {
-        error("Failed to get fru record table");
         return;
     }
 
