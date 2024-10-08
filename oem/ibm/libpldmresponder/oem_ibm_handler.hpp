@@ -16,8 +16,17 @@
 #include "requester/handler.hpp"
 #include "utils.hpp"
 
-typedef ibm_oem_pldm_state_set_firmware_update_state_values CodeUpdateState;
+enum ibm_oem_pldm_state_set_dimm_dump_state_values
+{
+    UNAVAILABLE = 0,
+    SUCCESS = 0x1,
+    RETRY = 0x2,
+};
 
+typedef ibm_oem_pldm_state_set_firmware_update_state_values CodeUpdateState;
+typedef ibm_oem_pldm_state_set_dimm_dump_state_values DimmDumpState;
+
+static std::map<uint16_t, int> dumpStatusMap;
 namespace pldm
 {
 namespace responder
@@ -449,6 +458,18 @@ class Handler : public oem_platform::Handler
     void upadteOemDbusPaths(std::string& dbusPath);
     /** @brief update the conatiner ID */
     void updateContainerID();
+
+    /** @brief read the state of a dimm sensor
+     *   @param entityInstance - the entity instance id of the dimm sensor
+     *   @return the state of the sensor
+     */
+    int fetchDimmStateSensor(uint16_t entityInstance);
+
+    /** @brief Methode to set the dimm sensor state
+     *   @param status - the status of dump creation
+     *   @param entityInstance - the entity instance id of the sensor
+     */
+    void setDimmStateSensor(bool status, uint16_t entityInstance);
 
     /** @brief Method to set the host effecter state
      *  @param status - the status of dump creation
