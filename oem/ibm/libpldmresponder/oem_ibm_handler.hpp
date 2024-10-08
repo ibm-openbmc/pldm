@@ -156,6 +156,7 @@ class Handler : public oem_platform::Handler
                 else if (propVal ==
                          "xyz.openbmc_project.State.Host.HostState.Running")
                 {
+                    hostOff = false;
                     hostTransitioningToOff = false;
                 }
                 else if (
@@ -183,6 +184,9 @@ class Handler : public oem_platform::Handler
                 if (propVal ==
                     "xyz.openbmc_project.State.Chassis.PowerState.Off")
                 {
+                    startStopTimer(false);
+                    handleBootTypesAtChassisOff();
+
                     static constexpr auto searchpath =
                         "/xyz/openbmc_project/inventory/system/chassis/motherboard";
                     int depth = 0;
@@ -271,8 +275,10 @@ class Handler : public oem_platform::Handler
                 if (it.first == "fw_boot_side")
                 {
                     auto& [attributeType, attributevalue] = it.second;
-                    std::string nextBootSide =
+                    std::string nextBootSideAttr =
                         std::get<std::string>(attributevalue);
+                    std::string nextBootSide =
+                        (nextBootSideAttr == "Perm" ? Pside : Tside);
                     codeUpdate->setNextBootSide(nextBootSide);
                 }
             }
