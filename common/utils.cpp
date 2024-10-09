@@ -1,7 +1,10 @@
 #include "utils.hpp"
 
+#include "libpldm/platform.h"
+
 #include <libpldm/pdr.h>
 #include <libpldm/pldm_types.h>
+#include <stdio.h>
 
 #include <phosphor-logging/lg2.hpp>
 #include <xyz/openbmc_project/Common/error.hpp>
@@ -555,16 +558,20 @@ void printBuffer(bool isTx, const std::vector<uint8_t>& buffer)
 {
     if (buffer.empty())
     {
+        std::cerr << "Buffer is empty" << std::endl;
         return;
     }
+    else if (buffer[2] == PLDM_GET_PDR ||
+             buffer[2] == PLDM_PLATFORM_EVENT_MESSAGE)
+    {
+        std::cout << (isTx ? "Tx: " : "Rx: ");
 
-    std::cout << (isTx ? "Tx: " : "Rx: ");
+        std::ranges::for_each(buffer, [](uint8_t byte) {
+            std::cout << std::format("{:02x} ", byte);
+        });
 
-    std::ranges::for_each(buffer, [](uint8_t byte) {
-        std::cout << std::format("{:02x} ", byte);
-    });
-
-    std::cout << std::endl;
+        std::cout << std::endl;
+    }
 }
 
 std::string toString(const struct variable_field& var)

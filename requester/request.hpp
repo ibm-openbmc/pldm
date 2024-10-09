@@ -6,6 +6,7 @@
 #include "common/utils.hpp"
 
 #include <libpldm/base.h>
+#include <stdio.h>
 #include <sys/socket.h>
 
 #include <phosphor-logging/lg2.hpp>
@@ -57,9 +58,11 @@ class RequestRetryTimer
      */
     int start()
     {
+        std::cerr << "before calling send()" << std::endl;
         auto rc = send();
         if (rc)
         {
+            std::cerr << "send command failed" << std::endl;
             return rc;
         }
 
@@ -85,6 +88,7 @@ class RequestRetryTimer
     void stop()
     {
         auto rc = timer.stop();
+        std::cerr << "Inside stop() once the timer is stopped " << std::endl;
         if (rc)
         {
             error("Failed to stop the request timer, response code '{RC}'",
@@ -108,12 +112,17 @@ class RequestRetryTimer
     /** @brief Callback function invoked when the timeout happens */
     void callback()
     {
+        std::cerr << "inside the callback function when timeout happens"
+                  << std::endl;
         if (numRetries--)
         {
+            std::cerr << "Calling send() - number of retries left: "
+                      << (unsigned)numRetries << std::endl;
             send();
         }
         else
         {
+            std::cerr << "Calling stop() - retries are done" << std::endl;
             stop();
         }
     }
@@ -170,6 +179,7 @@ class Request final : public RequestRetryTimer
      */
     int send() const
     {
+        std::cerr << "Inside the send function" << std::endl;
         if (verbose)
         {
             pldm::utils::printBuffer(pldm::utils::Tx, requestMsg);
@@ -180,12 +190,14 @@ class Request final : public RequestRetryTimer
             (struct pldm_msg_hdr*)(requestMsg.data());
         if (!hdr->request)
         {
+            std::cerr << "not a request message" << std::endl;
             return PLDM_REQUESTER_NOT_REQ_MSG;
         }
 
         if (pldmTransport == nullptr)
         {
-            error("Invalid transport: Unable to send PLDM request");
+            std::cerr << "Invalid transport: Unable to send PLDM request"
+                      << std::endl;
             return PLDM_ERROR;
         }
 
@@ -198,6 +210,7 @@ class Request final : public RequestRetryTimer
                 "RC", static_cast<int>(rc), "ERROR", errno);
             return PLDM_ERROR;
         }
+        std::cerr << "returning success from send()" << std::endl;
         return PLDM_SUCCESS;
     }
 };

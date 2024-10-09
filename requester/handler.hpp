@@ -6,6 +6,7 @@
 #include "request.hpp"
 
 #include <libpldm/base.h>
+#include <stdio.h>
 #include <sys/socket.h>
 
 #include <phosphor-logging/lg2.hpp>
@@ -142,7 +143,10 @@ class Handler
 
     void instanceIdExpiryCallBack(RequestKey key)
     {
+        std::cerr << "inside instanceIdExpiryCallBack" << std::endl;
         auto eid = key.eid;
+        auto command = key.command;
+        std::cerr << "key.command is: " << (unsigned)command << std::endl;
         if (this->handlers.contains(key))
         {
             info(
@@ -151,6 +155,7 @@ class Handler
                 (unsigned)key.instanceId);
             auto& [request, responseHandler,
                    timerInstance] = this->handlers[key];
+            std::cerr << "Before calling stop()" << std::endl;
             request->stop();
             auto rc = timerInstance->stop();
             if (rc)
@@ -168,11 +173,13 @@ class Handler
                     event, std::bind(&Handler::removeRequestEntry, this, key)));
             endpointMessageQueues[eid]->activeRequest = false;
 
+            std::cerr << "Calling pollEndpointQueue after expiry" << std::endl;
             /* try to send new request if the endpoint is free */
             pollEndpointQueue(eid);
         }
         else
         {
+            std::cerr << "asserting false" << std::endl;
             // This condition is not possible, if a response is received
             // before the instance ID expiry, then the response handler
             // is executed and the entry will be removed.
@@ -186,9 +193,16 @@ class Handler
      */
     int pollEndpointQueue(mctp_eid_t eid)
     {
+        std::cerr << "Inside poll endpoint queue with eid: " << (unsigned)eid
+                  << std::endl;
         if (endpointMessageQueues[eid]->activeRequest ||
             endpointMessageQueues[eid]->requestQueue.empty())
         {
+            std::cerr
+                << "endpointMessageQueues[eid]->activeRequest is "
+                << std::boolalpha << endpointMessageQueues[eid]->activeRequest
+                << " or endpointMessageQueues[eid]->requestQueue.empty() returning success"
+                << std::endl;
             return PLDM_SUCCESS;
         }
 
@@ -200,10 +214,13 @@ class Handler
             pldmTransport, requestMsg->key.eid, event,
             std::move(requestMsg->reqMsg), numRetries, responseTimeOut,
             verbose);
+        std::cerr << "binding the instanceIdExpiryCallBack and starting timer"
+                  << std::endl;
         auto timer = std::make_unique<sdbusplus::Timer>(
             event.get(), std::bind(&Handler::instanceIdExpiryCallBack, this,
                                    requestMsg->key));
 
+        std::cerr << "Calling start" << std::endl;
         auto rc = request->start();
         if (rc)
         {
@@ -253,6 +270,10 @@ class Handler
                         ResponseHandler&& responseHandler)
     {
         RequestKey key{eid, instanceId, type, command};
+        std::cerr << "Inside Register request with eid " << (unsigned)eid
+                  << " instance ID: " << (unsigned)instanceId
+                  << " type: " << (unsigned)type
+                  << " command: " << (unsigned)command << std::endl;
 
         if (handlers.contains(key))
         {
@@ -276,9 +297,15 @@ class Handler
                 std::make_shared<EndpointMessageQueue>(eid, reqQueue, false);
         }
 
+        if (command == PLDM_GET_PDR)
+        {
+            std::cerr << "calling pollEndPointQueue with eid: " << (unsigned)eid
+                      << std::endl;
+        }
         /* try to send new request if the endpoint is free */
         pollEndpointQueue(eid);
 
+        std::cerr << "Returning success from register request" << std::endl;
         return PLDM_SUCCESS;
     }
 

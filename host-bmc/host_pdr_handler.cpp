@@ -12,6 +12,7 @@
 #include "dbus/serialize.hpp"
 
 #include <assert.h>
+#include <stdio.h>
 
 #include <nlohmann/json.hpp>
 #include <phosphor-logging/lg2.hpp>
@@ -195,8 +196,13 @@ void HostPDRHandler::setPresenceFrus()
 
 void HostPDRHandler::fetchPDR(PDRRecordHandles&& recordHandles, uint8_t tid)
 {
+    std::cerr << "Inside the fetchPDR in host-bmc with tid:" << tid
+              << std::endl;
     pdrRecordHandles.clear();
     modifiedPDRRecordHandles.clear();
+
+    std::cerr << "isHostPDRModified flag is set to: " << std::boolalpha
+              << isHostPdrModified << std::endl;
 
     if (isHostPdrModified)
     {
@@ -212,13 +218,24 @@ void HostPDRHandler::fetchPDR(PDRRecordHandles&& recordHandles, uint8_t tid)
     // Defer the actual fetch of PDRs from the host (by queuing the call on the
     // main event loop). That way, we can respond to the platform event msg from
     // the host firmware.
+    std::cerr << "Calling the deferred event" << std::endl;
+
     pdrFetchEvent = std::make_unique<sdeventplus::source::Defer>(
         event, std::bind(std::mem_fn(&HostPDRHandler::_fetchPDR), this,
                          std::placeholders::_1));
+    if (pdrFetchEvent)
+    {
+        std::cerr << "pdrFetchEvent is not null" << std::endl;
+    }
+    else
+    {
+        std::cerr << "PDRFetchEvent is null" << std::endl;
+    }
 }
 
 void HostPDRHandler::_fetchPDR(sdeventplus::source::EventBase& /*source*/)
 {
+    std::cerr << "Calling getHostPDR" << std::endl;
     getHostPDR();
 }
 
@@ -235,18 +252,26 @@ void HostPDRHandler::getHostPDR(uint32_t nextRecordHandle)
     {
         recordHandle = modifiedPDRRecordHandles.front();
         modifiedPDRRecordHandles.pop_front();
+        std::cerr << "RecordHandle assigned from modifiedHandles is : "
+                  << recordHandle << std::endl;
     }
     else if (!nextRecordHandle && (!pdrRecordHandles.empty()))
     {
         recordHandle = pdrRecordHandles.front();
         pdrRecordHandles.pop_front();
+        std::cerr << "Recordhandle assigned from pdrRecordHandle is : "
+                  << recordHandle << std::endl;
     }
     else
     {
         recordHandle = nextRecordHandle;
+        std::cerr << "RecordHandle assigned to send request to: "
+                  << recordHandle << std::endl;
     }
     auto instanceId = instanceIdDb.next(mctp_eid);
 
+    std::cerr << "Instance ID assigned to the PDr request is "
+              << (unsigned)instanceId << std::endl;
     auto rc = encode_get_pdr_req(instanceId, recordHandle, 0,
                                  PLDM_GET_FIRSTPART, UINT16_MAX, 0, request,
                                  PLDM_GET_PDR_REQ_BYTES);
@@ -717,6 +742,9 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                     if (terminus_locator_type ==
                         PLDM_TERMINUS_LOCATOR_TYPE_MCTP_EID)
                     {
+                        std::cerr
+                            << "Got a terminus locator PDR with record handle "
+                            << rh << std::endl;
                         auto locatorValue = reinterpret_cast<
                             const pldm_terminus_locator_type_mctp_eid*>(
                             tlpdr->terminus_locator_value);
@@ -769,8 +797,14 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                     pldm_pdr_update_TL_pdr(repo, terminusHandle, tid, tlEid,
                                            tlValid);
 
+                    std::cerr << "the responseReceived flag is set to "
+                              << std::boolalpha << responseReceived
+                              << std::endl;
                     if (!isHostUp())
                     {
+                        std::cerr
+                            << "Host is not up assign next record handle as 0"
+                            << std::endl;
                         // The terminus PDR becomes invalid when the terminus
                         // itself is down. We don't need to do PDR exchange in
                         // that case, so setting the next record handle to 0.
@@ -836,15 +870,6 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                                 "Failed to add PDR when isHostPdrModified is not true");
                         }
                     }
-                    else
-                    {
-                        rc = pldm_pdr_add_check(repo, pdr.data(), respCount,
-                                                true, pdrTerminusHandle, &rh);
-                        if (rc)
-                        {
-                            throw std::runtime_error("Failed to add PDR");
-                        }
-                    }
                 }
             }
         }
@@ -888,6 +913,7 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
         entityAssociations.clear();
 
         mergedHostParents = false;
+        info("the merged flag is set to : {MERGED}", "MERGED", merged);
 
         if (merged)
         {
@@ -926,6 +952,9 @@ void HostPDRHandler::_processPDRRepoChgEvent(
         oemPlatformHandler->updateContainerID();
     }
     deferredPDRRepoChgEvent.reset();
+    info(
+        "Before sending repo change event the isHostPDRModified is set to: {FLAG}",
+        "FLAG", isHostPdrModified);
     this->sendPDRRepositoryChgEvent(
         std::move(std::vector<uint8_t>(1, PLDM_PDR_ENTITY_ASSOCIATION)),
         FORMAT_IS_PDR_HANDLES);
@@ -945,6 +974,8 @@ void HostPDRHandler::_processFetchPDREvent(
         nextRecordHandle = this->modifiedPDRRecordHandles.front();
         this->modifiedPDRRecordHandles.pop_front();
     }
+    std::cerr << "calling getHostPDR with next record handle: "
+              << nextRecordHandle << std::endl;
     this->getHostPDR(nextRecordHandle);
 }
 

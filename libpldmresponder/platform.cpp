@@ -19,6 +19,7 @@
 
 #include <libpldm/entity.h>
 #include <libpldm/state_set.h>
+#include <stdio.h>
 
 #include <phosphor-logging/lg2.hpp>
 
@@ -581,6 +582,7 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
         &dataOffset);
     if (rc != PLDM_SUCCESS)
     {
+        std::cerr << "decode repo change event failed" << std::endl;
         return rc;
     }
 
@@ -588,6 +590,7 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
 
     if (eventDataFormat == FORMAT_IS_PDR_TYPES)
     {
+        std::cerr << "event data format is PDR_TYPES" << std::endl;
         return PLDM_ERROR_INVALID_DATA;
     }
 
@@ -606,17 +609,22 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
 
             if (rc != PLDM_SUCCESS)
             {
+                std::cerr << "decode repo change record data failed"
+                          << std::endl;
                 return rc;
             }
 
             if (eventDataOperation == PLDM_RECORDS_ADDED ||
                 eventDataOperation == PLDM_RECORDS_MODIFIED)
             {
+                std::cerr << "Got a added or modified event" << std::endl;
                 if (eventDataOperation == PLDM_RECORDS_MODIFIED)
                 {
                     info("Got a modified event from tid: {TID}", "TID", tid);
                     hostPDRHandler->isHostPdrModified = true;
                     hostPDRHandler->modifiedCounter += pdrRecordHandles.size();
+                    info("Size of modified counter is: {MC}", "MC",
+                         hostPDRHandler->modifiedCounter);
                 }
 
                 rc = getPDRRecordHandles(
@@ -628,6 +636,7 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
 
                 if (rc != PLDM_SUCCESS)
                 {
+                    std::cerr << "getPDRRecordHandles failed" << std::endl;
                     return rc;
                 }
             }
@@ -636,6 +645,7 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
             changeRecordDataSize -=
                 dataOffset + (numberOfChangeEntries * sizeof(ChangeEntry));
         }
+        std::cerr << "while loop exited" << std::endl;
     }
     if (hostPDRHandler)
     {
@@ -656,6 +666,8 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                                                             terminusHandle);
                 }
             }
+            std::cerr << "removed all remote pdrs of TID: " << (unsigned)tid
+                      << std::endl;
         }
         if (eventDataOperation == PLDM_RECORDS_DELETED)
         {
@@ -669,6 +681,9 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
             info(
                 "Got a records added/modified event from tid '{TID}' eventDataOperation is {ED}",
                 "TID", tid, "ED", eventDataOperation);
+            info(
+                "isHostPDRModified flag before we start fetching PDRs is set to: {FLAG}",
+                "FLAG", hostPDRHandler->isHostPdrModified);
             hostPDRHandler->fetchPDR(std::move(pdrRecordHandles), tid);
         }
     }
@@ -683,11 +698,17 @@ int Handler::getPDRRecordHandles(const ChangeEntry* changeEntryData,
 {
     if (numberOfChangeEntries > (changeEntryDataSize / sizeof(ChangeEntry)))
     {
+        info("Error in changeEntries number");
         return PLDM_ERROR_INVALID_DATA;
     }
     for (size_t i = 0; i < numberOfChangeEntries; i++)
     {
         pdrRecordHandles.push_back(changeEntryData[i]);
+    }
+    for (const auto& i : pdrRecordHandles)
+    {
+        error("Record handles sent down to BMC: {PDR_REC_HNDL}", "PDR_REC_HNDL",
+              static_cast<unsigned>(i));
     }
 
     return PLDM_SUCCESS;
