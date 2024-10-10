@@ -1368,7 +1368,10 @@ void pldm::responder::oem_ibm_platform::Handler::_processSystemReboot(
                                          "RequestedPowerTransition", "string"};
     try
     {
-        info("InbandCodeUpdate: ChassifOff the host");
+        info(
+            "InbandCodeUpdate: ChassisOff the host. Current Boot Side {C}, Next boot Side {N}",
+            "C", getBiosAttrValue("fw_boot_side_current"), "N",
+            getBiosAttrValue("fw_boot_side"));
         dBusIntf->setDbusProperty(dbusMapping, value);
     }
     catch (const std::exception& e)

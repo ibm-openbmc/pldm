@@ -407,12 +407,12 @@ int createOrUpdateLicenseObjs()
 
         if (fs::exists(newLicFilePath))
         {
-            fs::remove_all(newLicFilePath);
+            // fs::remove_all(newLicFilePath);
         }
 
         if (fs::exists(newLicJsonFilePath))
         {
-            fs::remove_all(newLicJsonFilePath);
+            // fs::remove_all(newLicJsonFilePath);
         }
     }
 
