@@ -233,7 +233,7 @@ TEST(generateStateEffecterOEMPDR, testGoodRequest)
                 getSubtree("/xyz/openbmc_project/inventory/system", 0,
                            std::vector<std::string>{
                                "xyz.openbmc_project.Inventory.Item.Dimm"}))
-        .WillOnce(Return(mockDimmResponse));
+        .WillRepeatedly(Return(mockDimmResponse));
 
     std::unique_ptr<MockOemPlatformHandler> mockoemPlatformHandler =
         std::make_unique<MockOemPlatformHandler>(mockDbusHandler.get(),
@@ -395,7 +395,7 @@ TEST(generateStateSensorOEMPDR, testGoodRequest)
                 getSubtree("/xyz/openbmc_project/inventory/system", 0,
                            std::vector<std::string>{
                                "xyz.openbmc_project.Inventory.Item.Dimm"}))
-        .WillOnce(Return(mockDimmResponse));
+        .WillRepeatedly(Return(mockDimmResponse));
 
     std::unique_ptr<MockOemPlatformHandler> mockoemPlatformHandler =
         std::make_unique<MockOemPlatformHandler>(mockDbusHandler.get(),

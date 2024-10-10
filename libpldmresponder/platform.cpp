@@ -772,6 +772,11 @@ Response Handler::setNumericEffecterValue(const pldm_msg* request,
 
     int rc = decode_set_numeric_effecter_value_req(
         request, payloadLength, &effecterId, &effecterDataSize, effecterValue);
+    if (rc)
+    {
+        error("Failed to decode set numeric effecter value request, RC = {RC}",
+              "RC", rc);
+    }
 
     const pldm::utils::DBusHandler dBusIntf;
     uint16_t entityType{};
