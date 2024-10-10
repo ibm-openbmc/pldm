@@ -33,13 +33,17 @@ int LicenseHandler::updateBinFileAndLicObjs(const fs::path& newLicJsonFilePath)
     int rc = PLDM_SUCCESS;
     fs::path newLicFilePath(fs::path(licFilePath) / newLicenseFile);
     std::ifstream jsonFileNew(newLicJsonFilePath);
+    Json dataNew;
 
-    auto dataNew = Json::parse(jsonFileNew, nullptr, false);
-    if (dataNew.is_discarded())
+    try
+    {
+        dataNew = Json::parse(jsonFileNew);
+    }
+    catch (const Json::parse_error& e)
     {
         error("Failed to parse the new license json file '{NEW_LIC_JSON}'",
               "NEW_LIC_JSON", newLicJsonFilePath);
-        throw InternalFailure();
+        return PLDM_ERROR_INVALID_DATA;
     }
 
     // Store the json data in a file with binary format
