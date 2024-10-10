@@ -128,11 +128,20 @@ void BIOSConfig::initBIOSAttributes(const std::string& systemType,
 
     buildTables();
 
+    info("Register listenPendingAttributes");
+    listenPendingAttributes();
+
     if (pendingAttributes.size())
     {
         try
         {
-            info("Setting Pending Attributes");
+            for (const auto& pair : pendingAttributes)
+            {
+                info("Pending Attribute is {A}", "A", pair.first);
+            }
+
+            info("Setting Pending Attributes {NUMBER}", "NUMBER",
+                 (int)pendingAttributes.size());
             auto method = bus.new_method_call(service.c_str(), biosObjPath,
                                               dbusProperties, "Set");
             method.append(biosInterface, "PendingAttributes",
@@ -145,8 +154,6 @@ void BIOSConfig::initBIOSAttributes(const std::string& systemType,
                   "ERROR", e);
         }
     }
-    info("Register listenPendingAttributes");
-    listenPendingAttributes();
     if (registerService)
     {
         requestPLDMServiceName();
