@@ -423,7 +423,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
                         "Failed to make a D-bus call to DUMP manager for reseting source dump file '{PATH}' on interface '{INTERFACE}', error - {ERROR}",
                         "PATH", path, "INTERFACE", dumpIntf, "ERROR", e);
                     pldm::utils::reportError(
-                        "xyz.openbmc_project.bmc.PLDM.fileAck.SourceDumpIdResetFail");
+                        "xyz.openbmc_project.PLDM.Error.fileAck.SourceDumpIdResetFail");
                     return PLDM_ERROR;
                 }
             }
@@ -441,7 +441,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
                     "Failed to make a D-bus call to DUMP manager for delete dump file '{PATH}', error - {ERROR}",
                     "PATH", path, "ERROR", e);
                 pldm::utils::reportError(
-                    "xyz.openbmc_project.bmc.PLDM.fileAck.DumpEntryDeleteFail");
+                    "xyz.openbmc_project.PLDM.Error.fileAck.DumpEntryDeleteFail");
                 return PLDM_ERROR;
             }
             return PLDM_SUCCESS;
