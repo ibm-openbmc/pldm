@@ -921,7 +921,9 @@ void FruImpl::processFruPresenceChange(const DbusChangedProps& chProperties,
 #ifdef OEM_IBM
     if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice")
     {
-        if (!pldm::responder::utils::checkIfIBMCableCard(fruObjPath))
+        bool isPresent =
+            pldm::responder::utils::checkFruPresence(fruObjPath.c_str());
+        if (!isPresent)
         {
             return;
         }
