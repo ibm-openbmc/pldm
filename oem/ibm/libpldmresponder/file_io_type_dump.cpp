@@ -88,8 +88,10 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
 
     if (dumpType == PLDM_FILE_TYPE_BMC_DUMP)
     {
-        curDumpEntryPath =
-            (std::string)bmcDumpObjPath + "/" + std::to_string(fileHandle);
+        curDumpEntryPath = (std::string)bmcDumpObjPath + "/" +
+                           std::to_string(fileHandle);
+        info("BMC dump entry path is {DUMPENTRY}", "DUMPENTRY",
+             curDumpEntryPath);
     }
     else if (dumpType == PLDM_FILE_TYPE_SBE_DUMP)
     {
@@ -292,6 +294,7 @@ std::string DumpHandler::getOffloadUri(uint32_t fileHandle)
 int DumpHandler::postDataTransferCallBack(bool IsWriteToMemOp,
                                           uint32_t /*length*/)
 {
+    int rc = PLDM_SUCCESS;
     /// execute when DMA transfer failed.
     if (IsWriteToMemOp)
     {
@@ -304,8 +307,9 @@ int DumpHandler::postDataTransferCallBack(bool IsWriteToMemOp,
         auto socketInterface = getOffloadUri(fileHandle);
         std::remove(socketInterface.c_str());
         resetOffloadUri();
+        rc = PLDM_ERROR;
     }
-    return PLDM_ERROR;
+    return rc;
 }
 
 void DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
