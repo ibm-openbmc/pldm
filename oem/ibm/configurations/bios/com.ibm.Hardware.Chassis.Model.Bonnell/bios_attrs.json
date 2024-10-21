@@ -635,7 +635,7 @@
         },
         {
             "attribute_type": "enum",
-            "attribute_name": "hb_power_PS0_functional",
+            "attribute_name": "hb_power_PS0_present",
             "possible_values": ["Enabled", "Disabled"],
             "value_names": ["Enabled", "Disabled"],
             "default_values": ["Disabled"],
@@ -651,7 +651,7 @@
         },
         {
             "attribute_type": "enum",
-            "attribute_name": "hb_power_PS1_functional",
+            "attribute_name": "hb_power_PS1_present",
             "possible_values": ["Enabled", "Disabled"],
             "value_names": ["Enabled", "Disabled"],
             "default_values": ["Disabled"],
@@ -667,7 +667,7 @@
         },
         {
             "attribute_type": "enum",
-            "attribute_name": "hb_power_PS2_functional",
+            "attribute_name": "hb_power_PS2_present",
             "possible_values": ["Enabled", "Disabled"],
             "value_names": ["Enabled", "Disabled"],
             "default_values": ["Disabled"],
@@ -683,7 +683,7 @@
         },
         {
             "attribute_type": "enum",
-            "attribute_name": "hb_power_PS3_functional",
+            "attribute_name": "hb_power_PS3_present",
             "possible_values": ["Enabled", "Disabled"],
             "value_names": ["Enabled", "Disabled"],
             "default_values": ["Disabled"],
