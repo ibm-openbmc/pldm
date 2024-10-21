@@ -2006,7 +2006,7 @@ void pldm::responder::oem_ibm_platform::Handler::setSurvTimer(uint8_t tid,
             (bool)hostTransitioningToOff, "TID", (uint16_t)tid);
         startStopTimer(false);
         pldm::utils::reportError(
-            "xyz.openbmc_project.bmc.PLDM.setSurvTimer.RecvSurveillancePingFail");
+            "xyz.openbmc_project.PLDM.Error.setSurvTimer.RecvSurveillancePingFail");
     }
 }
 
