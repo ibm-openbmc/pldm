@@ -5,6 +5,7 @@
 
 #include <libpldm/base.h>
 #include <libpldm/platform.h>
+#include <stdio.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
@@ -418,6 +419,15 @@ int createOrUpdateLicenseObjs()
 
     return rc;
 }
+std::pair<std::string, std::string>
+    getSlotAndAdapter(const std::string& portLocationCode)
+{
+    std::filesystem::path portPath =
+        pldm::responder::utils::getObjectPathByLocationCode(
+            portLocationCode, "xyz.openbmc_project.Inventory.Item.Connector");
+    return std::make_pair(portPath.parent_path().parent_path(),
+                          portPath.parent_path());
+}
 
 void hostChapDataIntf(
     pldm::responder::oem_fileio::Handler* dbusToFilehandlerObj)
@@ -446,6 +456,50 @@ void hostPCIETopologyIntf(
 {
     CustomDBus::getCustomDBus().implementPcieTopologyInterface(
         "/xyz/openbmc_project/pldm", mctp_eid, hostEffecterParser);
+}
+
+std::string getObjectPathByLocationCode(const std::string& locationCode,
+                                        const std::string& inventoryItemType)
+{
+    std::string locationIface(
+        "xyz.openbmc_project.Inventory.Decorator.LocationCode");
+
+    std::string path;
+    pldm::utils::ObjectValueTree objects;
+    try
+    {
+        objects = pldm::utils::DBusHandler::getInventoryObjects<
+            pldm::utils::DBusHandler>();
+    }
+    catch (const std::exception& e)
+    {
+        error(
+            "Look up of inventory objects failed for location {LOC_CODE} ERROR={ERR_EXCEP}",
+            "LOC_CODE", locationCode, "ERR_EXCEP", e);
+        return path;
+    }
+
+    for (const auto& objPath : objects)
+    {
+        pldm::utils::InterfaceMap interfaces = objPath.second;
+        if (interfaces.contains(inventoryItemType) &&
+            interfaces.contains(locationIface))
+        {
+            pldm::utils::PropertyMap properties = interfaces[locationIface];
+            if (properties.contains("LocationCode"))
+            {
+                if (get<std::string>(properties["LocationCode"]) ==
+                    locationCode)
+                {
+                    path = objPath.first.str;
+                    return path;
+                }
+            }
+        }
+    }
+    error("Location not found {LOC_CODE} for Item type {INVEN_ITEM_TYP}",
+          "LOC_CODE", locationCode, "INVEN_ITEM_TYP", inventoryItemType);
+    return path;
 }
 
 } // namespace utils

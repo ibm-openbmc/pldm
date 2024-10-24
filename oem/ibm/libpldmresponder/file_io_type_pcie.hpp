@@ -2,8 +2,13 @@
 
 #include "file_io_by_type.hpp"
 
+#include <arpa/inet.h>
+#include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
+#include <cstring>
 #include <unordered_map>
 
 namespace pldm
@@ -192,21 +197,65 @@ class PCIeInfoHandler : public FileHandler
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
 
+    virtual int postDataTransferCallBack(bool /*IsWriteToMemOp*/,
+                                         uint32_t /*length*/)override
+    {
+        return PLDM_SUCCESS;
+    }
+
     /** @brief method to parse the pcie topology information */
     virtual void parseTopologyData();
 
     /** @brief method to parse the cable information */
     virtual void parseCableInfo();
 
-    virtual int postDataTransferCallBack(bool /*IsWriteToMemOp*/,
-                                         uint32_t /*length*/) override
-    {
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
-    }
-
     virtual void postWriteAction(
         const uint16_t /*fileType*/, const uint32_t /*fileHandle*/,
         const struct fileack_status_metadata& /*metaDataObj*/) override{};
+
+    /** @brief method to clear the topology cache */
+    virtual void clearTopologyInfo();
+
+    virtual void setTopologyAttrsOnDbus();
+
+    virtual void getMexObjects();
+
+    virtual void parsePrimaryLink(uint8_t linkType,
+                                  const IoSlotLocation& ioSlotLocationCode,
+                                  const LocalPort& localPortLocation,
+                                  const uint32_t& linkId,
+                                  const std::string& linkStatus,
+                                  uint8_t linkSpeed, int64_t linkWidth,
+                                  uint8_t parentLinkId);
+    virtual void parseSecondaryLink(uint8_t linkType,
+                                    const IoSlotLocation& ioSlotLocationCode,
+                                    const LocalPort& localPortLocation,
+                                    const RemotePort& remotePortLocation,
+                                    const uint32_t& linkId,
+                                    const std::string& linkStatus,
+                                    uint8_t linkSpeed, int64_t linkWidth);
+    virtual void setTopologyOnSlotAndAdapter(
+        uint8_t linkType,
+        const std::pair<std::string, std::string>& slotAndAdapter,
+        const uint32_t& linkId, const std::string& linkStatus,
+        uint8_t linkSpeed, int64_t linkWidth, bool isHostedByPLDM);
+
+    virtual void setProperty(const std::string& objPath,
+                             const std::string& propertyName,
+                             const pldm::utils::PropertyValue& propertyValue,
+                             const std::string& interfaceName,
+                             const std::string& propertyType);
+    virtual std::string
+        getMexObjectFromLocationCode(const std::string& locationCode,
+                                     uint16_t entityType);
+    virtual std::string getAdapterFromSlot(const std::string& mexSlotObject);
+
+    virtual std::pair<std::string, std::string>
+        getMexSlotandAdapter(const std::filesystem::path& connector);
+
+    virtual std::string
+        getDownStreamChassis(const std::string& slotOrConnecterPath);
+    virtual void parseSpeciallink(LinkId linkId, LinkId parentLinkId);
 
     /** @brief PCIeInfoHandler destructor
      */
@@ -267,12 +316,21 @@ class PCIeInfoHandler : public FileHandler
      */
     static std::unordered_map<LinkId, linkTypeData> linkTypeInfo;
 
+    static std::map<std::string, std::tuple<uint16_t, std::string,
+                                            std::optional<std::string>>>
+        mexObjectMap;
+
+    static std::vector<std::string> cables;
+
+    static std::vector<std::pair<LinkId, LinkId>> needPostProcessing;
     /** @brief A static unordered map storing information about received files.
      *
      *  This unordered map associates file type with a boolean value indicating
      *  whether the file of that type has been received or not.
      */
     static std::unordered_map<uint16_t, bool> receivedFiles;
+
+    void deleteTopologyFiles();
 };
 
 } // namespace responder

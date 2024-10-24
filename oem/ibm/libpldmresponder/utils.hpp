@@ -174,6 +174,20 @@ void hostPCIETopologyIntf(
     uint8_t mctp_eid,
     pldm::host_effecters::HostEffecterParser* hostEffecterParser);
 
+std::pair<std::string, std::string>
+    getSlotAndAdapter(const std::string& portLocationCode);
+
+/** @brief Fetch D-Bus object path based on location details and the type of
+ * Inventory Item
+ *
+ *  @param[in] locationCode - property value of LocationCode
+ *  @param[in] inventoryItemType - inventory item type
+ *
+ *  @return std::string - the D-Bus object path
+ */
+std::string getObjectPathByLocationCode(const std::string& locationCode,
+                                        const std::string& inventoryItemType);
+
 } // namespace utils
 
 namespace oem_ibm_utils

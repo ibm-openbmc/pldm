@@ -146,15 +146,14 @@ void CustomDBus::setSlotType(const std::string& path,
 }
 
 void CustomDBus::setSlotProperties(const std::string& path,
-                                   const uint32_t& /*value*/,
-                                   const std::string& /*linkState*/)
+                                   const uint32_t& value,
+                                   const std::string& linkState)
 {
-    // auto linkStatus =
-    // pldm::dbus::PCIeSlot::convertStatusFromString(linkState);
+    auto linkStatus = pldm::dbus::PCIeSlot::convertStatusFromString(linkState);
     if (pcieSlot.contains(path))
     {
-        // pcieSlot.at(path)->busId(value);
-        //  pcieSlot.at(path)->linkStatus(linkStatus);
+        pcieSlot.at(path)->busId(value);
+        pcieSlot.at(path)->linkStatus(linkStatus);
     }
 }
 
@@ -182,12 +181,15 @@ void CustomDBus::setPCIeDeviceProps(const std::string& path, size_t lanesInuse,
 
 void CustomDBus::setCableAttributes(const std::string& path, double length,
                                     const std::string& cableDescription,
-                                    const std::string& /*status*/)
+                                    const std::string& status)
 {
+    pldm::dbus::ItemCable::Status cableStatus =
+        pldm::dbus::Cable::convertStatusFromString(status);
     if (cable.contains(path))
     {
         cable.at(path)->length(length);
         cable.at(path)->cableTypeDescription(cableDescription);
+        cable.at(path)->cableStatus(cableStatus);
     }
 }
 

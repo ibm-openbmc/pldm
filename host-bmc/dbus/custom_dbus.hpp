@@ -151,7 +151,8 @@ class CustomDBus
      *  @param[in] cableDescription - cable details
      */
     void setCableAttributes(const std::string& path, double length,
-                            const std::string& cableDescription);
+                            const std::string& cableDescription,
+                            const std::string& cableStatus);
 
     /** @brief Set the Functional property
      *
@@ -418,15 +419,6 @@ class CustomDBus
     /** @brief set properties  on slots */
     void setSlotProperties(const std::string& path, const uint32_t& value,
                            const std::string& linkState);
-
-    /** @brief set pcie device properties */
-    void setPCIeDeviceProps(const std::string& path, size_t lanesInuse,
-                            const std::string& value);
-
-    /** @brief set cable attributes */
-    void setCableAttributes(const std::string& path, double length,
-                            const std::string& cableDescription,
-                            const std::string& cableStatus);
 
     /* @brief set partNumber */
     void setPartNumber(const std::string& path, const std::string& partNumber);
