@@ -140,6 +140,12 @@ conf_data.set(
 )
 conf_data.set('SENSOR_POLLING_TIME', get_option('sensor-polling-time'))
 
+oem_files = []
+if get_option('oem-ampere').enabled()
+    add_project_arguments('-DOEM_AMPERE', language : 'cpp')
+    subdir('oem/ampere')
+endif
+
 configure_file(output: 'config.h', configuration: conf_data)
 
 add_project_arguments(
@@ -287,6 +293,7 @@ executable(
     'platform-mc/sensor_manager.cpp',
     'platform-mc/numeric_sensor.cpp',
     'platform-mc/event_manager.cpp',
+    oem_files,
     'requester/mctp_endpoint_discovery.cpp',
     implicit_include_directories: false,
     dependencies: deps,
