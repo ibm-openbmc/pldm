@@ -472,14 +472,16 @@ bool checkFruPresence(const char* objPath)
     std::string newObjPath = objPath;
     bool isPresent = true;
 
-    if ((newObjPath.find(pcieAdapter) != std::string::npos) &&
-        !checkIfIBMCableCard(newObjPath))
+    if (newObjPath.find(pcieAdapter) != std::string::npos)
     {
-        return true; // industry std cards
-    }
-    else if (newObjPath.find(portStr) != std::string::npos)
-    {
-        newObjPath = pldm::utils::findParent(objPath);
+        if (newObjPath.find(portStr) != std::string::npos)
+        {
+            newObjPath = pldm::utils::findParent(objPath);
+        }
+        else
+        {
+            return true; // industry std cards
+        }
     }
 
     // Phyp expects the FRU records for industry std cards to be always
