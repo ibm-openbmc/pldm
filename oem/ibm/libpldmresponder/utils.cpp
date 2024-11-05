@@ -457,7 +457,7 @@ using namespace pldm::utils;
 int pldm::responder::oem_ibm_utils::Handler::setCoreCount(
     const EntityAssociations& Associations, const EntityMaps entityMaps)
 {
-    int coreCountRef = 0;
+    int coreCount = 0;
     // get the CPU pldm entities
     for (const auto& entries : Associations)
     {
@@ -465,7 +465,8 @@ int pldm::responder::oem_ibm_utils::Handler::setCoreCount(
         // entries[0] would be the parent in the entity association map
         if (parent.entity_type == PLDM_ENTITY_PROC)
         {
-            int& coreCount = coreCountRef;
+            // Need to reset the count for each of the processors
+            coreCount = 0;
             for (const auto& entry : entries)
             {
                 auto child = pldm_entity_extract(entry);
@@ -518,7 +519,7 @@ int pldm::responder::oem_ibm_utils::Handler::setCoreCount(
             }
         }
     }
-    return coreCountRef;
+    return coreCount;
 }
 
 bool pldm::responder::oem_ibm_utils::Handler::checkModelPresence(
