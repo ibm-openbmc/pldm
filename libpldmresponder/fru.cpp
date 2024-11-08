@@ -375,6 +375,12 @@ uint32_t FruImpl::populateRecords(
 void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
 {
     uint16_t rsi = objectPathToRSIMap[fruObjPath];
+    if (!rsi)
+    {
+        info("No Pdrs to delete for the object path {PATH}", "PATH", fruObjPath);
+        return;
+    }
+  
     pldm_entity removeEntity;
     uint16_t terminusHdl{};
     uint16_t entityType{};
@@ -544,6 +550,13 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
     pldm_entity parentEntity{};
     static uint32_t last_bmc_record_handle = 0;
     uint32_t newRecordHdl{};
+
+    if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice")
+    {
+        info("Removing old PDRs {PATH}", "PATH", fruObjectPath);
+        removeIndividualFRU(fruObjectPath);
+    }
+
     try
     {
         entity.entity_type = parser.getEntityType(fruInterface);
@@ -901,6 +914,7 @@ void FruImpl::processFruPresenceChange(const DbusChangedProps& chProperties,
     /*   std::cout << "enter processFruPresenceChange for " << fruObjPath << "
        and "
                  << fruInterface << std::endl;*/
+    info("processFruPresenceChange for {PATH}", "PATH", fruObjPath);
     static constexpr auto propertyName = "Present";
     const auto it = chProperties.find(propertyName);
 
@@ -918,39 +932,51 @@ void FruImpl::processFruPresenceChange(const DbusChangedProps& chProperties,
     static constexpr auto portInterface =
         "xyz.openbmc_project.Inventory.Item.Connector";
 
+    if (newPropVal)
+    {
+        info("Presence changed to true");
+        buildIndividualFRU(fruInterface, fruObjPath);
+        if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice")
+        {
 #ifdef OEM_IBM
-    if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice")
-    {
-        if (!pldm::responder::utils::checkFruPresence(fruObjPath.c_str()))
-        {
-            return;
-        }
-        pldm::responder::utils::findPortObjects(fruObjPath, portObjects);
-        /*   std::cout << "after finding the port objects " <<
-           portObjects.size()
-                     << std::endl;*/
-    }
-    // as per current code the ports do not have Present property
+            if (pldm::responder::utils::checkIfIBMCableCard(fruObjPath))
+            {
+                pldm::responder::utils::findPortObjects(fruObjPath,
+                                                        portObjects);
+            }
 #endif
-
-    // if(fruInterface != "xyz.openbmc_project.Inventory.Item.PCIeDevice")
-    {
-        if (newPropVal)
-        {
-            buildIndividualFRU(fruInterface, fruObjPath);
+            info("Ports under the cable card: {NUM}", "NUM",
+                 (int)portObjects.size());
             for (auto portObject : portObjects)
             {
                 buildIndividualFRU(portInterface, portObject);
             }
         }
-        else
+    }
+    else
+    {
+        if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice")
         {
-            for (auto portObject : portObjects)
+#ifdef OEM_IBM
+            if (!pldm::responder::utils::checkFruPresence(fruObjPath.c_str()))
             {
-                removeIndividualFRU(portObject);
+                error(
+                    "Adapter FRU presence is false, so not removing FRU {PATH}",
+                    "PATH", fruObjPath);
+                return;
             }
-            removeIndividualFRU(fruObjPath);
+            pldm::responder::utils::findPortObjects(fruObjPath, portObjects);
+#endif
+            /*   std::cout << "after finding the port objects " <<
+                 portObjects.size()
+                 << std::endl;*/
         }
+        // as per current code the ports do not have Present property
+        for (auto portObject : portObjects)
+        {
+            removeIndividualFRU(portObject);
+        }
+        removeIndividualFRU(fruObjPath);
     }
 }
 
