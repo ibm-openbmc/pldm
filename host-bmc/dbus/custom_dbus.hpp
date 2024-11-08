@@ -363,7 +363,7 @@ class CustomDBus
                            const std::string& linkState);
 
     /** @brief set pcie device properties */
-    void setPCIeDeviceProps(const std::string& path, int64_t lanesInuse,
+    void setPCIeDeviceProps(const std::string& path, size_t lanesInuse,
                             const std::string& value);
 
     /** @brief set cable attributes */
