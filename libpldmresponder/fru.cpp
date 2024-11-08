@@ -375,6 +375,12 @@ uint32_t FruImpl::populateRecords(
 void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
 {
     uint16_t rsi = objectPathToRSIMap[fruObjPath];
+    if (!rsi)
+    {
+        info("No Pdrs to delete for the object path {PATH}", "PATH", fruObjPath);
+        return;
+    }
+  
     pldm_entity removeEntity;
     uint16_t terminusHdl{};
     uint16_t entityType{};
@@ -391,13 +397,17 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
     auto updateRecordHdlBmc =
         pldm_entity_association_pdr_remove_contained_entity(
             pdrRepo, removeEntity, &bmcEventDataOps, false);
+    error("delete/remove contained entity from bmc record handle: {HANDLE}", "HANDLE", updateRecordHdlBmc);
 
     auto updateRecordHdlHost =
         pldm_entity_association_pdr_remove_contained_entity(
             pdrRepo, removeEntity, &hostEventDataOps, true);
+    error("delete/remove contained entity host record handle: {HANDLE}", "HANDLE", updateRecordHdlHost);
 
     auto deleteRecordHdl = pldm_pdr_remove_fru_record_set_by_rsi(pdrRepo, rsi,
                                                                  false);
+    error("delete record handle: {HANDLE} from rsi: {RSI}", "HANDLE",
+          deleteRecordHdl, "RSI", rsi);
 
     // sm00
     /* std::cout << "\nprinting the entityTree before deleting node\n";
@@ -426,6 +436,7 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
         static_cast<unsigned>(removeEntity.entity_container_id));
     associatedEntityMap.erase(fruObjPath); // sm00
 
+    error("delete RSI: {HANDLE}", "HANDLE", rsi);
     deleteFruRecord(rsi);
 
     std::vector<ChangeEntry> handlesTobeDeleted;
@@ -444,6 +455,8 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
         effecterDbusObjMaps.erase(ids);
         if (delEffecterHdl != 0)
         {
+            error("delete effecter ID: {ID} and record handle: {HANDLE}", "ID",
+                  ids, "HANDLE", delEffecterHdl);
             handlesTobeDeleted.push_back(delEffecterHdl);
         }
     }
@@ -457,6 +470,8 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
         sensorDbusObjMaps.erase(ids);
         if (delSensorHdl != 0)
         {
+            error("delete sensor ID: {ID} and record handle: {HANDLE}", "ID",
+                  ids, "HANDLE", delSensorHdl);
             handlesTobeDeleted.push_back(delSensorHdl);
         }
     }
@@ -476,6 +491,19 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
             ? handlesTobeDeleted.push_back(updateRecordHdlHost)
             : handlesTobeModified.push_back(updateRecordHdlHost);
     } // sm00 this can be RECORDS_DELETED also for adapter pdrs
+
+    
+    error("Modified Handles");
+    for(const auto &modified : handlesTobeModified)
+    {
+        error("{H}", "H", modified);
+    }
+    error("Deleted Handles");
+    for(const auto &deleted : handlesTobeDeleted)
+    {
+        error("{H}", "H", deleted);
+    }
+
     if (!handlesTobeDeleted.empty())
     {
         sendPDRRepositoryChgEventbyPDRHandles(
@@ -544,6 +572,13 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
     pldm_entity parentEntity{};
     static uint32_t last_bmc_record_handle = 0;
     uint32_t newRecordHdl{};
+
+    if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice")
+    {
+        info("Removing old PDRs {PATH}", "PATH", fruObjectPath);
+        removeIndividualFRU(fruObjectPath);
+    }
+
     try
     {
         entity.entity_type = parser.getEntityType(fruInterface);
@@ -602,6 +637,7 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
             bmcEntityTree, &entity, 0xFFFF, bmcTreeParentNode,
             PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true, last_container_id);
 
+        objects = DBusHandler::getManagedObj(inventoryService, inventoryPath);
         for (const auto& object : objects)
         {
             if (object.first.str == fruObjectPath)
@@ -609,6 +645,9 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
                 const auto& interfaces = object.second;
                 newRecordHdl = populateRecords(interfaces, recordInfos, entity,
                                                fruObjectPath, true);
+                error(
+                    "build record handle: {HANDLE} FRU object path: {OBJPATH}",
+                    "HANDLE", newRecordHdl, "OBJPATH", fruObjectPath);
                 associatedEntityMap.emplace(fruObjectPath, entity);
                 break;
             }
@@ -633,6 +672,7 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
     auto lastBMCRecord = pldm_pdr_find_last_local_record(pdrRepo);
     last_bmc_record_handle = lastBMCRecord->record_handle;
 #endif
+    error("build bmc record handle: {HANDLE}", "HANDLE", updatedRecordHdlBmc);
 
     uint8_t hostEventDataOps = PLDM_INVALID_OP;
 
@@ -640,6 +680,7 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
         pldm_entity_association_pdr_add_contained_entity(
             pdrRepo, entity, parentEntity, &hostEventDataOps, true,
             last_bmc_record_handle);
+    error("build host record handle: {HANDLE}", "HANDLE", updatedRecordHdlHost);
 
     // create the relevant state effecter and sensor PDRs for the new fru record
     std::vector<uint32_t> recordHdlList;
@@ -652,6 +693,7 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
 
     for (auto& ids : recordHdlList)
     {
+        error("build record handle from list: {HANDLE}", "HANDLE", ids);
         handlesTobeAdded.push_back(ids);
     }
     if (updatedRecordHdlBmc != 0)
@@ -665,6 +707,16 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
         (hostEventDataOps == PLDM_RECORDS_MODIFIED)
             ? handlesTobeModified.push_back(updatedRecordHdlHost)
             : handlesTobeAdded.push_back(updatedRecordHdlHost);
+    }
+    error("Modified Handles");
+    for(const auto &modified : handlesTobeModified)
+    {
+        error("{H}", "H", modified);
+    }
+    error("Added Handles");
+    for(const auto &deleted : handlesTobeAdded)
+    {
+        error("{H}", "H", deleted);
     }
     if (!handlesTobeAdded.empty())
     {
@@ -901,6 +953,7 @@ void FruImpl::processFruPresenceChange(const DbusChangedProps& chProperties,
     /*   std::cout << "enter processFruPresenceChange for " << fruObjPath << "
        and "
                  << fruInterface << std::endl;*/
+    info("processFruPresenceChange for {PATH}", "PATH", fruObjPath);
     static constexpr auto propertyName = "Present";
     const auto it = chProperties.find(propertyName);
 
@@ -918,39 +971,55 @@ void FruImpl::processFruPresenceChange(const DbusChangedProps& chProperties,
     static constexpr auto portInterface =
         "xyz.openbmc_project.Inventory.Item.Connector";
 
+    if (newPropVal)
+    {
+        info("Presence changed to true");
 #ifdef OEM_IBM
-    if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice")
-    {
-        if (!pldm::responder::utils::checkFruPresence(fruObjPath.c_str()))
-        {
-            return;
-        }
-        pldm::responder::utils::findPortObjects(fruObjPath, portObjects);
-        /*   std::cout << "after finding the port objects " <<
-           portObjects.size()
-                     << std::endl;*/
-    }
-    // as per current code the ports do not have Present property
+        // Skipping buildFRU for Industry Standard card
+        if ( (fruInterface != "xyz.openbmc_project.Inventory.Item.PCIeDevice") || pldm::responder::utils::checkIfIBMCableCard(fruObjPath))
 #endif
-
-    // if(fruInterface != "xyz.openbmc_project.Inventory.Item.PCIeDevice")
-    {
-        if (newPropVal)
         {
             buildIndividualFRU(fruInterface, fruObjPath);
+        }
+#ifdef OEM_IBM
+        // Check for ports only for IBM Cable cards
+        if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice" && (pldm::responder::utils::checkIfIBMCableCard(fruObjPath)))
+        {
+            pldm::responder::utils::findPortObjects(fruObjPath,
+                    portObjects);
+            info("Ports under the cable card: {NUM}", "NUM",
+                 (int)portObjects.size());
             for (auto portObject : portObjects)
             {
                 buildIndividualFRU(portInterface, portObject);
             }
         }
-        else
+#endif
+    }
+    else
+    {
+        if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice")
         {
-            for (auto portObject : portObjects)
+#ifdef OEM_IBM
+            if (!pldm::responder::utils::checkFruPresence(fruObjPath.c_str()))
             {
-                removeIndividualFRU(portObject);
+                error(
+                    "Adapter FRU presence is false, so not removing FRU {PATH}",
+                    "PATH", fruObjPath);
+                return;
             }
-            removeIndividualFRU(fruObjPath);
+            pldm::responder::utils::findPortObjects(fruObjPath, portObjects);
+#endif
+            /*   std::cout << "after finding the port objects " <<
+                 portObjects.size()
+                 << std::endl;*/
         }
+        // as per current code the ports do not have Present property
+        for (auto portObject : portObjects)
+        {
+            removeIndividualFRU(portObject);
+        }
+        removeIndividualFRU(fruObjPath);
     }
 }
 
