@@ -145,6 +145,8 @@ class Handler : public oem_platform::Handler
                 mctp_fd, mctp_eid, &instanceIdDb, path, handler);
         pldm::responder::utils::hostChapDataIntf(dbusToFileioIntf.get());
 
+        createMatches();
+
         using namespace sdbusplus::bus::match::rules;
 
         hostOffMatch = std::make_unique<sdbusplus::bus::match_t>(
@@ -576,6 +578,21 @@ class Handler : public oem_platform::Handler
      */
     void setSurvTimer(uint8_t tid, bool value);
 
+    /** @brief method to fetch the properties changed
+     *
+     *  @param[in] chProperties - list of properties which have changed
+     *  @param[in] objPath - path on which property is changed
+     */
+    void propertyChanged(const DbusChangedProps& chProperties,
+                         std::string objPath);
+
+    /** @brief method to trigger host effecter
+     *
+     *  @param[in] value - value to set
+     *  @param[in] path - path for which the effecter is set
+     */
+    void triggerHostEffecter(bool value, std::string path);
+
     /** @brief To turn off Real SAI effecter*/
     void turnOffRealSAIEffecter();
 
@@ -696,6 +713,9 @@ class Handler : public oem_platform::Handler
     /** @brief Timer used for monitoring surveillance pings from host */
     sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic> timer;
 
+    /** @brief vector of DBus property changed signal match for linkReset*/
+    std::vector<std::unique_ptr<sdbusplus::bus::match_t>> matches;
+
     /** @brief D-Bus Interface added signal match for virtual partition SAI */
     std::unique_ptr<sdbusplus::bus::match_t> partitionSAIMatch;
 
@@ -723,6 +743,10 @@ class Handler : public oem_platform::Handler
     /** @brief instanceDimmMap is a lookup data structure to lookup <EffecterID,
      * dimmID> */
     HostEffecterDimmMap instanceDimmMap;
+
+    /** @brief method to create matches for the proeprty changed signal for link
+     * reset on all slot paths */
+    void createMatches();
 };
 
 /** @brief Method to encode code update event msg

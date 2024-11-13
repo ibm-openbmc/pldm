@@ -34,6 +34,8 @@ std::mutex lockMutex;
 namespace utils
 {
 
+using ObjectMapper = sdbusplus::client::xyz::openbmc_project::ObjectMapper<>;
+
 static constexpr auto curLicFilePath =
     "/var/lib/pldm/license/current_license.bin";
 static constexpr auto newLicFilePath = "/var/lib/pldm/license/new_license.bin";
@@ -434,6 +436,37 @@ void hostChapDataIntf(
 {
     CustomDBus::getCustomDBus().implementChapDataInterface(
         "/xyz/openbmc_project/pldm", dbusToFilehandlerObj);
+}
+
+uint32_t getLinkResetInstanceNumber(std::string& path)
+{
+    uint32_t id = pldm::dbus::CustomDBus::getCustomDBus().getBusId(path);
+    return id;
+}
+
+void findSlotObjects(const std::string& boardObjPath,
+                     std::vector<std::string>& slotObjects)
+{
+    static constexpr auto slotInterface =
+        "xyz.openbmc_project.Inventory.Item.PCIeSlot";
+
+    auto& bus = pldm::utils::DBusHandler::getBus();
+    try
+    {
+        auto method = bus.new_method_call(
+            ObjectMapper::default_service, ObjectMapper::instance_path,
+            ObjectMapper::interface, "GetSubTreePaths");
+        method.append(boardObjPath);
+        method.append(0);
+        method.append(std::vector<std::string>({slotInterface}));
+        auto reply = bus.call(method);
+        reply.read(slotObjects);
+    }
+    catch (const std::exception& e)
+    {
+        error("No cec slots under motherboard = {OBJ_PATH}", "OBJ_PATH",
+              boardObjPath);
+    }
 }
 
 std::vector<char> vecSplit(const std::vector<char>& inputVec,
