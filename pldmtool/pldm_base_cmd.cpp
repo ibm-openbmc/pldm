@@ -13,8 +13,6 @@
 
 #include <string>
 
-PHOSPHOR_LOG2_USING;
-
 namespace pldmtool
 {
 
@@ -113,8 +111,8 @@ class GetPLDMTypes : public CommandInterface
                                         types.data());
         if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
         {
-            error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0", rc,
-                  "KEY1", (int)cc);
+            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
+                       rc, "KEY1", (int)cc);
             return;
         }
 
@@ -184,8 +182,8 @@ class GetPLDMVersion : public CommandInterface
                                           &version);
         if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
         {
-            error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0", rc,
-                  "KEY1", (int)cc);
+            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
+                       rc, "KEY1", (int)cc);
             return;
         }
         char buffer[16] = {0};
@@ -234,8 +232,8 @@ class GetTID : public CommandInterface
         auto rc = decode_get_tid_resp(responsePtr, payloadLength, &cc, &tid);
         if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
         {
-            error("Response Message Error:rc = {KEY0}, cc={KEY1}", "KEY0", rc,
-                  "KEY1", (int)cc);
+            lg2::error("Response Message Error:rc = {KEY0}, cc={KEY1}", "KEY0",
+                       rc, "KEY1", (int)cc);
             return;
         }
         ordered_json data;
@@ -282,8 +280,8 @@ class GetPLDMCommands : public CommandInterface
                                            cmdTypes.data());
         if (rc != PLDM_SUCCESS || cc != PLDM_SUCCESS)
         {
-            error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0", rc,
-                  "KEY1", (int)cc);
+            lg2::error("Response Message Error: rc = {KEY0}, cc={KEY1}", "KEY0",
+                       rc, "KEY1", (int)cc);
             return;
         }
         printPldmCommands(cmdTypes, pldmType);
