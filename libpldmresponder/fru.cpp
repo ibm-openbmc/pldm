@@ -928,7 +928,7 @@ void FruImpl::processFruPresenceChange(const DbusChangedProps& chProperties,
     {
         if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice")
         {
-            if (!(oemUtilsHandler->checkModelPresence(fruObjPath)))
+            if (!oemUtilsHandler->checkFruPresence(fruObjPath.c_str()))
             {
                 return;
             }
