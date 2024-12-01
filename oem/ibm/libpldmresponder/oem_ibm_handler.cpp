@@ -91,17 +91,17 @@ std::vector<InstanceInfo>
     std::vector<std::string> procObjectPaths;
     procObjectPaths = getProcObjectPaths();
 
+    std::regex path_pattern("dcm(\\d+)/cpu(\\d+)");
+    std::smatch matches;
+
     for (const auto& entity_path : procObjectPaths)
     {
-        if (entity_path.rfind('/') != std::string::npos)
+        if (std::regex_search(entity_path, matches, path_pattern))
         {
-            char pId = entity_path.back();
-            auto procId = pId - 48;
-            char id = entity_path.at(61);
-            auto dcmId = id - 48;
+            uint8_t dcmId = std::stoi(matches[1]);
+            uint8_t procId = std::stoi(matches[2]);
 
-            dcmProcInfo.emplace_back(InstanceInfo{static_cast<uint8_t>(procId),
-                                                  static_cast<uint8_t>(dcmId)});
+            dcmProcInfo.emplace_back(InstanceInfo{procId, dcmId});
         }
     }
     return dcmProcInfo;
@@ -114,12 +114,14 @@ std::vector<uint16_t>
     std::vector<std::string> dimmObjPaths;
     dimmObjPaths = getDimmObjectPaths();
 
+    std::regex dimm_pattern("dimm(\\d+)");
+    std::smatch match;
+
     for (const auto& entity_path : dimmObjPaths)
     {
-        if (entity_path.rfind('/') != std::string::npos)
+        if (std::regex_search(entity_path, match, dimm_pattern))
         {
-            auto dimmId = atoi(entity_path.substr(62).c_str());
-            dimmInfo.emplace_back(dimmId);
+            dimmInfo.emplace_back(std::stoi(match[1]));
         }
     }
     return dimmInfo;
@@ -1363,13 +1365,8 @@ std::vector<std::string>
     int depth = 0;
     std::vector<std::string> procInterface = {
         "xyz.openbmc_project.Inventory.Item.Cpu"};
-    pldm::utils::GetSubTreeResponse response =
-        dBusIntf->getSubtree(searchpath, depth, procInterface);
-    std::vector<std::string> procPaths;
-    for (const auto& [objPath, serviceMap] : response)
-    {
-        procPaths.emplace_back(objPath);
-    }
+    pldm::utils::GetSubTreePathsResponse procPaths =
+        dBusIntf->getSubTreePaths(searchpath, depth, procInterface);
     return procPaths;
 }
 
@@ -1380,13 +1377,8 @@ std::vector<std::string>
     static constexpr auto itemPath = "xyz.openbmc_project.Inventory.Item.Dimm";
     int depth = 0;
     std::vector<std::string> dimmInterface = {itemPath};
-    pldm::utils::GetSubTreeResponse response =
-        dBusIntf->getSubtree(searchpath, depth, dimmInterface);
-    std::vector<std::string> dimmPaths;
-    for (const auto& [objPath, serviceMap] : response)
-    {
-        dimmPaths.emplace_back(objPath);
-    }
+    pldm::utils::GetSubTreePathsResponse dimmPaths =
+        dBusIntf->getSubTreePaths(searchpath, depth, dimmInterface);
     return dimmPaths;
 }
 
