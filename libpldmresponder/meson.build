@@ -52,6 +52,7 @@ sources = [
   '../host-bmc/dbus/serialize.cpp',
   '../host-bmc/dbus/location_code.cpp',
   '../host-bmc/dbus/deserialize.cpp',
+  '../host-bmc/dbus/pcie_topology.cpp',
   'event_parser.cpp'
 ]
 

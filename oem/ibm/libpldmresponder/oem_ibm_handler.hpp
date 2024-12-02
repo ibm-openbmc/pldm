@@ -122,11 +122,13 @@ class Handler : public oem_platform::Handler
             uint8_t mctp_eid, pldm::InstanceIdDb& instanceIdDb,
             sdeventplus::Event& event, pldm_pdr* repo,
             pldm::requester::Handler<pldm::requester::Request>* handler,
-            pldm_entity_association_tree* bmcEntityTree) :
+            pldm_entity_association_tree* bmcEntityTree,
+            pldm::host_effecters::HostEffecterParser* hostEffecterParser) :
         oem_platform::Handler(dBusIntf), codeUpdate(codeUpdate),
         slotHandler(slotHandler), platformHandler(nullptr), mctp_fd(mctp_fd),
         mctp_eid(mctp_eid), instanceIdDb(instanceIdDb), event(event),
         pdrRepo(repo), handler(handler), bmcEntityTree(bmcEntityTree),
+        hostEffecterParser(hostEffecterParser),
         timer(event, std::bind(std::mem_fn(&Handler::setSurvTimer), this,
                                HYPERVISOR_TID, false)),
         hostTransitioningToOff(true)
@@ -134,6 +136,8 @@ class Handler : public oem_platform::Handler
         codeUpdate->setVersions();
         pldm::responder::utils::clearLicenseStatus();
         setEventReceiverCnt = 0;
+        pldm::responder::utils::hostPCIETopologyIntf(mctp_eid,
+                                                     hostEffecterParser);
 
         sdbusplus::message::object_path path;
         dbusToFileioIntf =
@@ -668,6 +672,10 @@ class Handler : public oem_platform::Handler
 
     /** @brief Pointer to BMC's entity association tree */
     pldm_entity_association_tree* bmcEntityTree;
+
+    /** @brief Pointer to host effecter parser */
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser;
+
     /** @brief D-Bus property changed signal match */
     std::unique_ptr<sdbusplus::bus::match_t> updateBIOSMatch;
 
