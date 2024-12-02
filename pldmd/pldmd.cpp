@@ -254,7 +254,6 @@ int main(int argc, char** argv)
         std::make_unique<platform_config::Handler>(PDR_JSONS_DIR);
     std::unique_ptr<oem_fru::Handler> oemFruHandler{};
     std::unique_ptr<oem_utils::Handler> oemUtilsHandler{};
-
     if (hostEID)
     {
         associationsParser =

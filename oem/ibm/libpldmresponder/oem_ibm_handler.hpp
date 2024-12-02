@@ -691,9 +691,6 @@ class Handler : public oem_platform::Handler
     /** @brief Pointer to BMC's entity association tree */
     pldm_entity_association_tree* bmcEntityTree;
 
-    /** @brief Pointer to host effecter parser */
-    // pldm::host_effecters::HostEffecterParser* hostEffecterParser;
-
     /** @brief D-Bus property changed signal match */
     std::unique_ptr<sdbusplus::bus::match_t> updateBIOSMatch;
 

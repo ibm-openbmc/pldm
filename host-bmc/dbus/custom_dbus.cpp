@@ -134,17 +134,6 @@ void CustomDBus::implementPCIeSlotInterface(const std::string& path)
     }
 }
 
-void CustomDBus::setSlotType(const std::string& path,
-                             const std::string& slotType)
-{
-    auto typeOfSlot =
-        pldm::dbus::PCIeSlot::convertSlotTypesFromString(slotType);
-    if (pcieSlot.contains(path))
-    {
-        pcieSlot.at(path)->slotType(typeOfSlot);
-    }
-}
-
 void CustomDBus::setSlotProperties(const std::string& path,
                                    const uint32_t& value,
                                    const std::string& linkState)
@@ -154,6 +143,17 @@ void CustomDBus::setSlotProperties(const std::string& path,
     {
         pcieSlot.at(path)->busId(value);
         pcieSlot.at(path)->linkStatus(linkStatus);
+    }
+}
+
+void CustomDBus::setSlotType(const std::string& path,
+                             const std::string& slotType)
+{
+    auto typeOfSlot =
+        pldm::dbus::PCIeSlot::convertSlotTypesFromString(slotType);
+    if (pcieSlot.contains(path))
+    {
+        pcieSlot.at(path)->slotType(typeOfSlot);
     }
 }
 

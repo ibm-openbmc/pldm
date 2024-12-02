@@ -202,7 +202,6 @@ class PCIeInfoHandler : public FileHandler
     {
         return PLDM_SUCCESS;
     }
-
     /** @brief method to parse the pcie topology information */
     virtual void parseTopologyData();
 
