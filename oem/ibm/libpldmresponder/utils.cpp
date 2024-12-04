@@ -468,24 +468,30 @@ bool checkFruPresence(const char* objPath)
     // the port is considered as present. this is so because
     // the ports do not have "Present" property
     std::string pcieAdapter("pcie_card");
+    std::string nvmeAdapter("_drive");
     std::string portStr("cxp_");
+    std::string connectorStr("_connector");
     std::string newObjPath = objPath;
     bool isPresent = true;
 
-    if (newObjPath.find(pcieAdapter) != std::string::npos)
+    if ((newObjPath.find(pcieAdapter) != std::string::npos) ||
+        (newObjPath.find(nvmeAdapter) != std::string::npos))
     {
-        if (newObjPath.find(portStr) != std::string::npos)
+        if ((newObjPath.find(portStr) != std::string::npos) ||
+            (newObjPath.find(connectorStr) != std::string::npos))
         {
             newObjPath = pldm::utils::findParent(objPath);
         }
         else
         {
-            return true; // industry std cards
+            // Adapter PDRs are always created underneath the slot for
+            // Insustry standard cards as well as IBM cable cards.
+            // Phyp expects the FRU records for industry std cards to be always
+            // built, irrespective of presence. This is needed by PHYP to send
+            // the Fan floor information
+            return true; // industry std cards/IBM cable cards
         }
     }
-
-    // Phyp expects the FRU records for industry std cards to be always
-    // built, irrespective of presence
 
     static constexpr auto presentInterface =
         "xyz.openbmc_project.Inventory.Item";
@@ -498,8 +504,9 @@ bool checkFruPresence(const char* objPath)
     }
     catch (const sdbusplus::exception::SdBusError& e)
     {
-        error("D-Bus method call to get the FRU presence failed ERROR={ERR}",
-              "ERR", e.what());
+        error(
+            "D-Bus method call to get the FRU presence of {FRU} failed ERROR={ERR} and return is {V}",
+            "FRU", newObjPath, "ERR", e.what(), "V", (int)isPresent);
     }
     return isPresent;
 }
