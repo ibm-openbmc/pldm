@@ -61,8 +61,9 @@ std::unordered_map<std::string, callback> dBusInterfaceHandler{
      [](const std::string& path, Properties values) {
          if (values.contains("present"))
          {
-             pldm::dbus::CustomDBus::getCustomDBus().updateItemPresentStatus(
-                 path, std::get<bool>(values.at("present")));
+             pldm::dbus::CustomDBus::getCustomDBus()
+                 .updateInventoryItemProperties(
+                     path, std::get<bool>(values.at("present")));
          }
      }},
     {"Enable",

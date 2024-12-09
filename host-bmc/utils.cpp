@@ -266,6 +266,65 @@ EntityMaps parseEntityMap(const fs::path& filePath)
     return entityMaps;
 }
 
+std::shared_ptr<EntityAuxiliaryNames>
+    parseEntityAuxNamesPDR(std::vector<uint8_t>& pdrData)
+{
+    auto names_offset = sizeof(struct pldm_pdr_hdr) +
+                        PLDM_PDR_ENTITY_AUXILIARY_NAME_PDR_MIN_LENGTH;
+    auto names_size = pdrData.size() - names_offset;
+
+    size_t decodedPdrSize =
+        sizeof(struct pldm_entity_auxiliary_names_pdr) + names_size;
+    auto vPdr = std::vector<char>(decodedPdrSize);
+    auto decodedPdr =
+        reinterpret_cast<struct pldm_entity_auxiliary_names_pdr*>(vPdr.data());
+
+    auto rc = decode_entity_auxiliary_names_pdr(pdrData.data(), pdrData.size(),
+                                                decodedPdr, decodedPdrSize);
+    if (rc)
+    {
+        error("Failed to decode Entity Auxiliary Name PDR data, error {RC}.",
+              "RC", rc);
+        return nullptr;
+    }
+
+    auto vNames =
+        std::vector<pldm_entity_auxiliary_name>(decodedPdr->name_string_count);
+    decodedPdr->names = vNames.data();
+
+    rc = decode_pldm_entity_auxiliary_names_pdr_index(decodedPdr);
+    if (rc)
+    {
+        error("Failed to decode Entity Auxiliary Name, error {RC}.", "RC", rc);
+        return nullptr;
+    }
+
+    AuxiliaryNames nameStrings{};
+    for (const auto& count :
+         std::views::iota(0, static_cast<int>(decodedPdr->name_string_count)))
+    {
+        std::string_view nameLanguageTag =
+            static_cast<std::string_view>(decodedPdr->names[count].tag);
+        const size_t u16NameStringLen =
+            std::char_traits<char16_t>::length(decodedPdr->names[count].name);
+        std::u16string u16NameString(decodedPdr->names[count].name,
+                                     u16NameStringLen);
+        std::transform(u16NameString.cbegin(), u16NameString.cend(),
+                       u16NameString.begin(),
+                       [](uint16_t utf16) { return be16toh(utf16); });
+        std::string nameString =
+            std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}
+                .to_bytes(u16NameString);
+        nameStrings.emplace_back(std::make_pair(nameLanguageTag, nameString));
+    }
+
+    EntityKey key{decodedPdr->container.entity_type,
+                  decodedPdr->container.entity_instance_num,
+                  decodedPdr->container.entity_container_id};
+
+    return std::make_shared<EntityAuxiliaryNames>(key, nameStrings);
+}
+
 } // namespace utils
 } // namespace hostbmc
 } // namespace pldm

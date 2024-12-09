@@ -1,3 +1,5 @@
+#pragma once
+
 #include "common/utils.hpp"
 #include "libpldmresponder/oem_handler.hpp"
 
@@ -22,6 +24,34 @@ namespace hostbmc
 namespace utils
 {
 
+using ContainerID = uint16_t;
+using EntityInstanceNumber = uint16_t;
+using EntityType = uint16_t;
+
+/** @struct EntityKey
+ *
+ *  EntityKey uniquely identifies the PLDM entity and a combination of Entity
+ *  Type, Entity Instance Number, Entity Container ID
+ *
+ */
+struct EntityKey
+{
+    EntityType type;                  //!< Entity type
+    EntityInstanceNumber instanceIdx; //!< Entity instance number
+    ContainerID containerId;          //!< Entity container ID
+
+    bool operator==(const EntityKey& e) const
+    {
+        return ((type == e.type) && (instanceIdx == e.instanceIdx) &&
+                (containerId == e.containerId));
+    }
+};
+
+using NameLanguageTag = std::string;
+using AuxiliaryNames = std::vector<std::pair<NameLanguageTag, std::string>>;
+using EntityKey = struct EntityKey;
+using EntityAuxiliaryNames = std::tuple<EntityKey, AuxiliaryNames>;
+
 /** @brief Vector a entity name to pldm_entity from entity association tree
  *  @param[in]  entityAssoc    - Vector of associated pldm entities
  *  @param[in]  entityTree     - entity association tree
@@ -42,6 +72,15 @@ void updateEntityAssociation(
  *  @return returns the entity to DBus string mapping object
  */
 pldm::utils::EntityMaps parseEntityMap(const fs::path& filePath);
+
+/** @brief Parse the enitity auxilliary names PDRs
+ *
+ *  @param[in] pdrData - the response PDRs from GetPDR command
+ *
+ *  @return - EntityAuxiliaryNames details
+ */
+std::shared_ptr<EntityAuxiliaryNames>
+    parseEntityAuxNamesPDR(std::vector<uint8_t>& pdrData);
 
 } // namespace utils
 } // namespace hostbmc

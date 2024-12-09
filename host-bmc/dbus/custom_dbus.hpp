@@ -119,11 +119,14 @@ class CustomDBus
         const std::string& path,
         pldm::responder::oem_fileio::Handler* dbusToFilehandlerObj);
 
-    /** @brief Set the Inventory Item property
+    /** @brief Update the Inventory item presence and pretty name properties
      *  @param[in] path - The object path
      *  @param[in] bool - the presence of fru
+     *  @param[in] prettyName - the pretty name of fru
      */
-    void updateItemPresentStatus(const std::string& path, bool isPresent);
+    void updateInventoryItemProperties(
+        const std::string& path, bool isPresent,
+        const std::optional<std::string>& prettyName = std::nullopt);
 
     /** @brief get Bus ID
      *  @param[in] path - The object path
