@@ -20,6 +20,7 @@
 #include "inventory_item.hpp"
 #include "led_group.hpp"
 #include "license_entry.hpp"
+#include "linkreset.hpp"
 #include "location_code.hpp"
 #include "motherboard.hpp"
 #include "operational_status.hpp"
@@ -394,6 +395,11 @@ class CustomDBus
      *  @param[in] value - topology value
      */
     void updateTopologyProperty(bool value);
+    /** set reset link value*/
+    void setLinkReset(
+        const std::string& path, bool value,
+        pldm::host_effecters::HostEffecterParser* hostEffecterParser,
+        uint8_t instanceId);
 
   private:
     std::unordered_map<ObjectPath, std::unique_ptr<LocationCode>> location;
@@ -427,6 +433,7 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
     std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIETopology>> pcietopology;
+    std::unordered_map<ObjectPath, std::unique_ptr<Link>> link;
 };
 
 } // namespace dbus

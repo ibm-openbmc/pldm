@@ -188,6 +188,12 @@ std::pair<std::string, std::string>
 std::string getObjectPathByLocationCode(const std::string& locationCode,
                                         const std::string& inventoryItemType);
 
+/** @brief method to get the BusId based on the path */
+uint32_t getLinkResetInstanceNumber(std::string& path);
+
+/** @brief method to find slot objects */
+void findSlotObjects(const std::string& boardObjPath,
+                     std::vector<std::string>& slotObjects);
 } // namespace utils
 
 namespace oem_ibm_utils
