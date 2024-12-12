@@ -136,8 +136,8 @@ TEST_F(HandlerTest, multipleRequestResponseScenario)
 
     pldm::Response response(sizeof(pldm_msg_hdr) + sizeof(uint8_t));
     auto responsePtr = reinterpret_cast<const pldm_msg*>(response.data());
-    reqHandler.handleResponse(eid, instanceId, 0, 0, responsePtr,
-                              response.size());
+    reqHandler.handleResponse(eid, instanceIdNxt, 0, 0, responsePtr,
+                              sizeof(response));
     EXPECT_EQ(validResponse, true);
     EXPECT_EQ(callbackCount, 1);
     validResponse = false;
@@ -146,8 +146,8 @@ TEST_F(HandlerTest, multipleRequestResponseScenario)
     // simulate a delayed response for the first request
     waitEventExpiry(milliseconds(500));
 
-    reqHandler.handleResponse(eid, instanceIdNxt, 0, 0, responsePtr,
-                              response.size());
+    reqHandler.handleResponse(eid, instanceId, 0, 0, responsePtr,
+                              sizeof(response));
 
     EXPECT_EQ(validResponse, true);
     EXPECT_EQ(callbackCount, 2);
