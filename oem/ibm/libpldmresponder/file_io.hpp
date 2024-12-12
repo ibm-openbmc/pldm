@@ -659,8 +659,10 @@ class Handler : public CmdHandler
     Handler(oem_platform::Handler* oemPlatformHandler, int hostSockFd,
             uint8_t hostEid, pldm::InstanceIdDb* instanceIdDb,
             pldm::requester::Handler<pldm::requester::Request>* handler,
-            pldm::response_api::AltResponse* respInterface,  sdeventplus::Event& event) :
-        oemPlatformHandler(oemPlatformHandler), instanceIdDb(instanceIdDb), handler(handler), 
+            pldm::response_api::AltResponse* respInterface,
+            sdeventplus::Event& event) :
+        oemPlatformHandler(oemPlatformHandler), instanceIdDb(instanceIdDb),
+        handler(handler),
         sharedAIORespDataobj({0, 0, nullptr, 0, respInterface}), event(event)
     {
         handlers.emplace(
@@ -727,26 +729,28 @@ class Handler : public CmdHandler
         handlers.emplace(
             PLDM_NEW_FILE_AVAILABLE_WITH_META_DATA,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
-            return this->newFileAvailableWithMetaData(request, payloadLength);
-        });
+                return this->newFileAvailableWithMetaData(request,
+                                                          payloadLength);
+            });
         handlers.emplace(
             PLDM_FILE_ACK_WITH_META_DATA,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
-            return this->fileAckWithMetaData(request, payloadLength);
-        });
+                return this->fileAckWithMetaData(request, payloadLength);
+            });
         resDumpMatcher = std::make_unique<sdbusplus::bus::match_t>(
             pldm::utils::DBusHandler::getBus(),
             sdbusplus::bus::match::rules::interfacesAdded() +
                 sdbusplus::bus::match::rules::argNpath(0, dumpObjPath),
             [this, hostSockFd, hostEid, instanceIdDb,
              handler](sdbusplus::message_t& msg) {
-            std::map<std::string,
-                     std::map<std::string, std::variant<std::string, uint32_t>>>
-                interfaces;
-            sdbusplus::message::object_path path;
-            msg.read(path, interfaces);
-            std::string vspstring;
-            std::string userchallenge;
+                std::map<
+                    std::string,
+                    std::map<std::string, std::variant<std::string, uint32_t>>>
+                    interfaces;
+                sdbusplus::message::object_path path;
+                msg.read(path, interfaces);
+                std::string vspstring;
+                std::string userchallenge;
 
                 for (const auto& interface : interfaces)
                 {
@@ -756,50 +760,51 @@ class Handler : public CmdHandler
                         {
                             if (property.first == "VSPString")
                             {
-                            vspstring = std::get<std::string>(property.second);
-                        }
-                        else if (property.first == "UserChallenge")
-                        {
-                            userchallenge =
-                                std::get<std::string>(property.second);
-                        }
-                        }
-                    dbusToFileHandlers
-                        .emplace_back(
-                            std::make_unique<
-                                pldm::requester::oem_ibm::DbusToFileHandler>(
-                                hostSockFd, hostEid, instanceIdDb, path,
-                                handler))
-                        ->processNewResourceDump(vspstring, userchallenge);
-                    break;
-                }
-                if (interface.first == sysDumpEntry)
-                {
-                    for (const auto& property : interface.second)
-                    {
-                        if (property.first == "SystemImpact")
-                        {
-                            if (std::get<std::string>(property.second) ==
-                                "xyz.openbmc_project.Dump.Entry.System.SystemImpact.NonDisruptive")
+                                vspstring =
+                                    std::get<std::string>(property.second);
+                            }
+                            else if (property.first == "UserChallenge")
                             {
-                                vspstring = "system";
+                                userchallenge =
+                                    std::get<std::string>(property.second);
                             }
                         }
-                        else if (property.first == "UserChallenge")
-                        {
-                            userchallenge =
-                                std::get<std::string>(property.second);
-                        }
+                        dbusToFileHandlers
+                            .emplace_back(
+                                std::make_unique<pldm::requester::oem_ibm::
+                                                     DbusToFileHandler>(
+                                    hostSockFd, hostEid, instanceIdDb, path,
+                                    handler))
+                            ->processNewResourceDump(vspstring, userchallenge);
+                        break;
                     }
-                    dbusToFileHandlers
-                        .emplace_back(
-                            std::make_unique<
-                                pldm::requester::oem_ibm::DbusToFileHandler>(
-                                hostSockFd, hostEid, instanceIdDb, path,
-                                handler))
-                        ->processNewResourceDump(vspstring, userchallenge);
-                    break;
-                }
+                    if (interface.first == sysDumpEntry)
+                    {
+                        for (const auto& property : interface.second)
+                        {
+                            if (property.first == "SystemImpact")
+                            {
+                                if (std::get<std::string>(property.second) ==
+                                    "xyz.openbmc_project.Dump.Entry.System.SystemImpact.NonDisruptive")
+                                {
+                                    vspstring = "system";
+                                }
+                            }
+                            else if (property.first == "UserChallenge")
+                            {
+                                userchallenge =
+                                    std::get<std::string>(property.second);
+                            }
+                        }
+                        dbusToFileHandlers
+                            .emplace_back(
+                                std::make_unique<pldm::requester::oem_ibm::
+                                                     DbusToFileHandler>(
+                                    hostSockFd, hostEid, instanceIdDb, path,
+                                    handler))
+                            ->processNewResourceDump(vspstring, userchallenge);
+                        break;
+                    }
                 }
             });
         vmiCertMatcher = std::make_unique<sdbusplus::bus::match_t>(
@@ -849,33 +854,33 @@ class Handler : public CmdHandler
                                                             codLicInterface),
             [this, hostSockFd, hostEid, instanceIdDb,
              handler](sdbusplus::message_t& msg) {
-            sdbusplus::message::object_path path;
-            std::map<dbus::Property, pldm::utils::PropertyValue> props;
-            std::string iface;
-            msg.read(iface, props);
-            std::string licenseStr;
+                sdbusplus::message::object_path path;
+                std::map<dbus::Property, pldm::utils::PropertyValue> props;
+                std::string iface;
+                msg.read(iface, props);
+                std::string licenseStr;
 
-            for (auto& prop : props)
-            {
-                if (prop.first == "LicenseString")
+                for (auto& prop : props)
                 {
-                    pldm::utils::PropertyValue licStrVal{prop.second};
-                    licenseStr = std::get<std::string>(licStrVal);
-                    if (licenseStr.empty())
+                    if (prop.first == "LicenseString")
                     {
-                        return;
+                        pldm::utils::PropertyValue licStrVal{prop.second};
+                        licenseStr = std::get<std::string>(licStrVal);
+                        if (licenseStr.empty())
+                        {
+                            return;
+                        }
+                        dbusToFileHandlers
+                            .emplace_back(
+                                std::make_unique<pldm::requester::oem_ibm::
+                                                     DbusToFileHandler>(
+                                    hostSockFd, hostEid, instanceIdDb, path,
+                                    handler))
+                            ->newLicFileAvailable(licenseStr);
+                        break;
                     }
-                    dbusToFileHandlers
-                        .emplace_back(
-                            std::make_unique<
-                                pldm::requester::oem_ibm::DbusToFileHandler>(
-                                hostSockFd, hostEid, instanceIdDb, path,
-                                handler))
-                        ->newLicFileAvailable(licenseStr);
-                    break;
                 }
-            }
-        });
+            });
     }
 
     /** @brief Handler for readFileIntoMemory command

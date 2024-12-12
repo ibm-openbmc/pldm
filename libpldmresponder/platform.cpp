@@ -91,26 +91,26 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
          [this](const DBusHandler& dBusIntf, const auto& json,
                 RepoInterface& repo,
                 pldm_entity_association_tree* bmcEntityTree) {
-        pdr_state_effecter::generateStateEffecterPDR<pldm::utils::DBusHandler,
-                                                     Handler>(
-            dBusIntf, json, *this, repo, bmcEntityTree);
-    }},
+             pdr_state_effecter::generateStateEffecterPDR<
+                 pldm::utils::DBusHandler, Handler>(dBusIntf, json, *this, repo,
+                                                    bmcEntityTree);
+         }},
         {PLDM_NUMERIC_EFFECTER_PDR,
          [this](const DBusHandler& dBusIntf, const auto& json,
                 RepoInterface& repo,
                 pldm_entity_association_tree* bmcEntityTree) {
-        pdr_numeric_effecter::generateNumericEffecterPDR<
-            pldm::utils::DBusHandler, Handler>(dBusIntf, json, *this, repo,
-                                               bmcEntityTree);
-    }},
+             pdr_numeric_effecter::generateNumericEffecterPDR<
+                 pldm::utils::DBusHandler, Handler>(dBusIntf, json, *this, repo,
+                                                    bmcEntityTree);
+         }},
         {PLDM_STATE_SENSOR_PDR,
          [this](const DBusHandler& dBusIntf, const auto& json,
                 RepoInterface& repo,
                 pldm_entity_association_tree* bmcEntityTree) {
-        pdr_state_sensor::generateStateSensorPDR<pldm::utils::DBusHandler,
-                                                 Handler>(dBusIntf, json, *this,
-                                                          repo, bmcEntityTree);
-    }}};
+             pdr_state_sensor::generateStateSensorPDR<pldm::utils::DBusHandler,
+                                                      Handler>(
+                 dBusIntf, json, *this, repo, bmcEntityTree);
+         }}};
 
     Type pdrType{};
     for (const auto& directory : dir)
@@ -136,8 +136,8 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
                         for (const auto& sensor : sensorPDRs)
                         {
                             pdrType = sensor.value("pdrType", 0);
-                            generateHandlers.at(pdrType)(dBusIntf, sensor, repo,
-                                                         bmcEntityTree);
+                            generateHandlers.at(
+                                pdrType)(dBusIntf, sensor, repo, bmcEntityTree);
                         }
                     }
                 }
@@ -551,8 +551,8 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
             sensorOffset,
             stateSetIds[sensorOffset],
             false};
-        return hostPDRHandler->handleStateSensorEvent(stateSetIds, stateSensorEntry,
-                                                      eventState);
+        return hostPDRHandler->handleStateSensorEvent(
+            stateSetIds, stateSensorEntry, eventState);
     }
     else
     {
@@ -913,12 +913,11 @@ void Handler::_processPostGetPDRActions(sdeventplus::source::EventBase&
     dbusToPLDMEventHandler->listenSensorEvent(pdrRepo, sensorDbusObjMaps);
 }
 
-bool isOemNumericEffecter(Handler& handler, uint16_t effecterId,
-                          uint16_t& entityType, uint16_t& entityInstance,
-                          uint8_t& effecterDataSize,
-                          uint16_t& effecterSemanticId,
-                          real32_t& effecterOffset,
-                          real32_t& effecterResolution)
+bool isOemNumericEffecter(
+    Handler& handler, uint16_t effecterId, uint16_t& entityType,
+    uint16_t& entityInstance, uint8_t& effecterDataSize,
+    uint16_t& effecterSemanticId, real32_t& effecterOffset,
+    real32_t& effecterResolution)
 {
     pldm_numeric_effecter_value_pdr* pdr = nullptr;
 

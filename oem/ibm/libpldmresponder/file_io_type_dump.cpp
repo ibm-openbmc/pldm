@@ -88,8 +88,8 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
 
     if (dumpType == PLDM_FILE_TYPE_BMC_DUMP)
     {
-        curDumpEntryPath = (std::string)bmcDumpObjPath + "/" +
-                           std::to_string(fileHandle);
+        curDumpEntryPath =
+            (std::string)bmcDumpObjPath + "/" + std::to_string(fileHandle);
         info("BMC dump entry path is {DUMPENTRY}", "DUMPENTRY",
              curDumpEntryPath);
     }
@@ -664,8 +664,8 @@ int DumpHandler::fileAckWithMetaData(
             fileHandle |= dumpIdPrefix;
             std::string idStr = std::format("{:08X}", fileHandle);
 
-            dbusMapping.objectPath = "/xyz/openbmc_project/dump/system/entry/" +
-                                     idStr;
+            dbusMapping.objectPath =
+                "/xyz/openbmc_project/dump/system/entry/" + idStr;
             dbusMapping.interface = "com.ibm.Dump.Entry.Resource";
             dbusMapping.propertyName = "Token";
             dbusMapping.propertyType = "uint32_t";

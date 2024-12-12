@@ -265,8 +265,9 @@ int main(int argc, char** argv)
                 &dbusHandler, HOST_JSONS_DIR, &reqHandler);
         hostPDRHandler = std::make_shared<HostPDRHandler>(
             pldmTransport.getEventSource(), hostEID, event, pdrRepo.get(),
-            EVENTS_JSONS_DIR, entityTree.get(), bmcEntityTree.get(), hostEffecterParser.get(),
-            instanceIdDb, &reqHandler, associationsParser.get());
+            EVENTS_JSONS_DIR, entityTree.get(), bmcEntityTree.get(),
+            hostEffecterParser.get(), instanceIdDb, &reqHandler,
+            associationsParser.get());
 
         // HostFirmware interface needs access to hostPDR to know if host
         // is running
@@ -278,9 +279,9 @@ int main(int argc, char** argv)
 
     auto fruHandler = std::make_unique<fru::Handler>(
         FRU_JSONS_DIR, FRU_MASTER_JSON, pdrRepo.get(), entityTree.get(),
-        bmcEntityTree.get(), dbusImplReq, &reqHandler,
-        hostEID, event, dbusToPLDMEventHandler.get());
-    //fruHandler->setOemUtilsHandler(oemUtilsHandler.get());
+        bmcEntityTree.get(), dbusImplReq, &reqHandler, hostEID, event,
+        dbusToPLDMEventHandler.get());
+    // fruHandler->setOemUtilsHandler(oemUtilsHandler.get());
 
     // FRU table is built lazily when a FRU command or Get PDR command is
     // handled. To enable building FRU table, the FRU handler is passed to the
@@ -288,9 +289,10 @@ int main(int argc, char** argv)
     auto platformHandler = std::make_unique<platform::Handler>(
         &dbusHandler, hostEID, &instanceIdDb, PDR_JSONS_DIR, pdrRepo.get(),
         hostPDRHandler.get(), dbusToPLDMEventHandler.get(), fruHandler.get(),
-        bmcEntityTree.get(), platformConfigHandler.get(), &reqHandler, event, true);
-        //bmcEntityTree.get(), oemPlatformHandler.get(),
-        //platformConfigHandler.get(), &reqHandler, event, true);
+        bmcEntityTree.get(), platformConfigHandler.get(), &reqHandler, event,
+        true);
+    // bmcEntityTree.get(), oemPlatformHandler.get(),
+    // platformConfigHandler.get(), &reqHandler, event, true);
 
     auto biosHandler = std::make_unique<bios::Handler>(
         pldmTransport.getEventSource(), hostEID, &instanceIdDb, &reqHandler,
@@ -300,9 +302,9 @@ int main(int argc, char** argv)
 
 #ifdef OEM_IBM
     pldm::oem_ibm::OemIBM oemIBM(
-        &dbusHandler, &pldmTransport, hostEID, pdrRepo.get(),
-        instanceIdDb, event, invoker, hostPDRHandler.get(),
-        platformHandler.get(), fruHandler.get(), baseHandler.get(), hostEffecterParser.get(),
+        &dbusHandler, &pldmTransport, hostEID, pdrRepo.get(), instanceIdDb,
+        event, invoker, hostPDRHandler.get(), platformHandler.get(),
+        fruHandler.get(), baseHandler.get(), hostEffecterParser.get(),
         &reqHandler, bmcEntityTree.get(), TID, verbose);
 #endif
 

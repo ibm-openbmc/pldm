@@ -23,11 +23,10 @@ static constexpr auto certFilePath = "/var/lib/ibm/bmcweb/";
 
 CertMap CertHandler::certMap;
 
-void CertHandler::writeFromMemory(uint32_t offset, uint32_t length,
-                                  uint64_t address,
-                                  oem_platform::Handler* /*oemPlatformHandler*/,
-                                  SharedAIORespData& sharedAIORespDataobj,
-                                  sdeventplus::Event& event)
+void CertHandler::writeFromMemory(
+    uint32_t offset, uint32_t length, uint64_t address,
+    oem_platform::Handler* /*oemPlatformHandler*/,
+    SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event)
 {
     auto it = certMap.find(certType);
     if (it == certMap.end())
@@ -74,11 +73,10 @@ int CertHandler::postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length)
     return PLDM_SUCCESS;
 }
 
-void CertHandler::readIntoMemory(uint32_t offset, uint32_t length,
-                                 uint64_t address,
-                                 oem_platform::Handler* /*oemPlatformHandler*/,
-                                 SharedAIORespData& sharedAIORespDataobj,
-                                 sdeventplus::Event& event)
+void CertHandler::readIntoMemory(
+    uint32_t offset, uint32_t length, uint64_t address,
+    oem_platform::Handler* /*oemPlatformHandler*/,
+    SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event)
 {
     std::string filePath = certFilePath;
     filePath += "CSR_" + std::to_string(fileHandle);

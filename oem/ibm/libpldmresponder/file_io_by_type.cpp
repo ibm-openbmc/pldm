@@ -86,10 +86,9 @@ void FileHandler::deleteAIOobjects(
     }
 }
 
-void FileHandler::transferFileData(int fd, bool upstream, uint32_t offset,
-                                   uint32_t& length, uint64_t address,
-                                   SharedAIORespData& sharedAIORespDataobj,
-                                   sdeventplus::Event& event)
+void FileHandler::transferFileData(
+    int fd, bool upstream, uint32_t offset, uint32_t& length, uint64_t address,
+    SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event)
 {
     std::shared_ptr<dma::DMA> xdmaInterface =
         std::make_shared<dma::DMA>(length);
@@ -280,8 +279,8 @@ void FileHandler::transferFileDataToSocket(
                 return;
             }
         }
-        rc = wInterface->transferHostDataToSocket(fd, data.length,
-                                                  data.address);
+        rc =
+            wInterface->transferHostDataToSocket(fd, data.length, data.address);
         if (rc < 0)
         {
             error(
@@ -355,11 +354,10 @@ void FileHandler::transferFileDataToSocket(
     return;
 }
 
-void FileHandler::transferFileData(const fs::path& path, bool upstream,
-                                   uint32_t offset, uint32_t& length,
-                                   uint64_t address,
-                                   SharedAIORespData& sharedAIORespDataobj,
-                                   sdeventplus::Event& event)
+void FileHandler::transferFileData(
+    const fs::path& path, bool upstream, uint32_t offset, uint32_t& length,
+    uint64_t address, SharedAIORespData& sharedAIORespDataobj,
+    sdeventplus::Event& event)
 {
     bool fileExists = false;
     if (upstream)

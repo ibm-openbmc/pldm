@@ -21,22 +21,20 @@ class ChapHandler : public FileHandler
         FileHandler(fileHandle)
     {}
 
-    virtual void writeFromMemory(uint32_t /*offset*/, uint32_t length,
-                                 uint64_t /*address*/,
-                                 oem_platform::Handler* /*oemPlatformHandle*/,
-                                 SharedAIORespData& sharedAIORespDataobj,
-                                 sdeventplus::Event& /*event*/)
+    virtual void writeFromMemory(
+        uint32_t /*offset*/, uint32_t length, uint64_t /*address*/,
+        oem_platform::Handler* /*oemPlatformHandle*/,
+        SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& /*event*/)
     {
         FileHandler::dmaResponseToRemoteTerminus(
             sharedAIORespDataobj, PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
         FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
     }
 
-    virtual void readIntoMemory(uint32_t /*offset*/, uint32_t length,
-                                uint64_t /*address*/,
-                                oem_platform::Handler* /*oemPlatformHandler*/,
-                                SharedAIORespData& sharedAIORespDataobj,
-                                sdeventplus::Event& /*event*/)
+    virtual void readIntoMemory(
+        uint32_t /*offset*/, uint32_t length, uint64_t /*address*/,
+        oem_platform::Handler* /*oemPlatformHandler*/,
+        SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& /*event*/)
     {
         FileHandler::dmaResponseToRemoteTerminus(
             sharedAIORespDataobj, PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
@@ -61,20 +59,18 @@ class ChapHandler : public FileHandler
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
 
-    virtual int fileAckWithMetaData(uint8_t /*fileStatus*/,
-                                    uint32_t /*metaDataValue1*/,
-                                    uint32_t /*metaDataValue2*/,
-                                    uint32_t /*metaDataValue3*/,
-                                    uint32_t /*metaDataValue4*/)
+    virtual int fileAckWithMetaData(
+        uint8_t /*fileStatus*/, uint32_t /*metaDataValue1*/,
+        uint32_t /*metaDataValue2*/, uint32_t /*metaDataValue3*/,
+        uint32_t /*metaDataValue4*/)
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
 
-    virtual int newFileAvailableWithMetaData(uint64_t /*length*/,
-                                             uint32_t /*metaDataValue1*/,
-                                             uint32_t /*metaDataValue2*/,
-                                             uint32_t /*metaDataValue3*/,
-                                             uint32_t /*metaDataValue4*/)
+    virtual int newFileAvailableWithMetaData(
+        uint64_t /*length*/, uint32_t /*metaDataValue1*/,
+        uint32_t /*metaDataValue2*/, uint32_t /*metaDataValue3*/,
+        uint32_t /*metaDataValue4*/)
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }

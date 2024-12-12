@@ -615,8 +615,8 @@ TEST(SetCoreCount, testgoodpath)
     pldm::utils::GetSubTreeResponse res{};
     auto oemMockedUtils =
         std::make_unique<MockOemUtilsHandler>(&mockedDbusUtils);
-    int coreCount = oemMockedUtils->setCoreCount(entityAssociations,
-                                                 entityMaps);
+    int coreCount =
+        oemMockedUtils->setCoreCount(entityAssociations, entityMaps);
     EXPECT_EQ(coreCount, 1);
     pldm_entity_association_tree_destroy(tree);
 }

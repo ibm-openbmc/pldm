@@ -55,9 +55,9 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
     info(
         "File name in sendNewFileAvailableCmd that we encode new_file_req is {FILENAME}",
         "FILENAME", filename);
-    auto rc = encode_new_file_req(instanceId,
-                                  PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS,
-                                  fileHandle, fileSize, request);
+    auto rc =
+        encode_new_file_req(instanceId, PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS,
+                            fileHandle, fileSize, request);
     if (rc != PLDM_SUCCESS)
     {
         instanceIdDb->free(mctp_eid, instanceId);
@@ -268,8 +268,8 @@ void DbusToFileHandler::newChapDataFileAvailable(
                         fs::perms::others_read | fs::perms::owner_write);
     }
 
-    fs::path chapFilePath = std::string(chapDataDirPath) +
-                            std::string("chapsecret");
+    fs::path chapFilePath =
+        std::string(chapDataDirPath) + std::string("chapsecret");
     uint32_t fileHandle = atoi(fs::path((std::string)chapFilePath).c_str());
     std::ofstream fileHandleFd;
     fileHandleFd.open(chapFilePath, std::ios::out | std::ofstream::binary);
@@ -408,8 +408,8 @@ void DbusToFileHandler::sendFileAckWithMetaDataToHost(
         return;
     }
     auto instanceId = instanceIdDb->next(mctp_eid);
-    std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
-                                    PLDM_FILE_ACK_WITH_META_DATA_REQ_BYTES);
+    std::vector<uint8_t> requestMsg(
+        sizeof(pldm_msg_hdr) + PLDM_FILE_ACK_WITH_META_DATA_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
 
     auto rc = encode_file_ack_with_meta_data_req(
@@ -425,8 +425,8 @@ void DbusToFileHandler::sendFileAckWithMetaDataToHost(
     }
 
     auto fileAckWithMetaDataRespHandler = [](mctp_eid_t /*eid*/,
-                                                 const pldm_msg* response,
-                                                 size_t respMsgLen) {
+                                             const pldm_msg* response,
+                                             size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             error("Failed to receive response for FileAckWithMetaData command");

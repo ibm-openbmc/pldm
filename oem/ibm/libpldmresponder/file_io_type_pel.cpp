@@ -90,11 +90,10 @@ Entry::Level getEntryLevelFromPEL(const std::string& pelFileName)
 }
 } // namespace detail
 
-void PelHandler::readIntoMemory(uint32_t offset, uint32_t length,
-                                uint64_t address,
-                                oem_platform::Handler* /*oemPlatformHandler*/,
-                                SharedAIORespData& sharedAIORespDataobj,
-                                sdeventplus::Event& event)
+void PelHandler::readIntoMemory(
+    uint32_t offset, uint32_t length, uint64_t address,
+    oem_platform::Handler* /*oemPlatformHandler*/,
+    SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event)
 {
     static constexpr auto logObjPath = "/xyz/openbmc_project/logging";
     static constexpr auto logInterface = "org.open_power.Logging.PEL";
@@ -207,11 +206,10 @@ int PelHandler::read(uint32_t offset, uint32_t& length, Response& response,
     return PLDM_SUCCESS;
 }
 
-void PelHandler::writeFromMemory(uint32_t offset, uint32_t length,
-                                 uint64_t address,
-                                 oem_platform::Handler* /*oemPlatformHandler*/,
-                                 SharedAIORespData& sharedAIORespDataobj,
-                                 sdeventplus::Event& event)
+void PelHandler::writeFromMemory(
+    uint32_t offset, uint32_t length, uint64_t address,
+    oem_platform::Handler* /*oemPlatformHandler*/,
+    SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event)
 {
     char tmpFile[] = "/tmp/pel.XXXXXX";
     int fd = mkstemp(tmpFile);

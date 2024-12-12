@@ -115,11 +115,10 @@ class FileHandler
      *  @param[in] event - sdbusplus event object
      *  @return PLDM status code
      */
-    virtual void writeFromMemory(uint32_t offset, uint32_t length,
-                                 uint64_t address,
-                                 oem_platform::Handler* oemPlatformHandler,
-                                 SharedAIORespData& sharedAIORespDataobj,
-                                 sdeventplus::Event& event) = 0;
+    virtual void writeFromMemory(
+        uint32_t offset, uint32_t length, uint64_t address,
+        oem_platform::Handler* oemPlatformHandler,
+        SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event) = 0;
 
     /** @brief Method to read an oem file type into remote terminus memory.
      * Individual file types need to override this method to do the file
@@ -131,11 +130,10 @@ class FileHandler
      *                                  tasks
      *  @return PLDM status code
      */
-    virtual void readIntoMemory(uint32_t offset, uint32_t length,
-                                uint64_t address,
-                                oem_platform::Handler* oemPlatformHandler,
-                                SharedAIORespData& sharedAIORespDataobj,
-                                sdeventplus::Event& event) = 0;
+    virtual void readIntoMemory(
+        uint32_t offset, uint32_t length, uint64_t address,
+        oem_platform::Handler* oemPlatformHandler,
+        SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event) = 0;
 
     /** @brief Method to read an oem file type's content into the PLDM response.
      *  @param[in] offset - offset to read
@@ -218,21 +216,19 @@ class FileHandler
      *
      *  @return PLDM status code
      */
-    virtual void transferFileData(const fs::path& path, bool upstream,
-                                  uint32_t offset, uint32_t& length,
-                                  uint64_t address,
-                                  SharedAIORespData& sharedAIORespDataobj,
-                                  sdeventplus::Event& event);
+    virtual void transferFileData(
+        const fs::path& path, bool upstream, uint32_t offset, uint32_t& length,
+        uint64_t address, SharedAIORespData& sharedAIORespDataobj,
+        sdeventplus::Event& event);
 
     virtual void transferFileData(int fd, bool upstream, uint32_t offset,
                                   uint32_t& length, uint64_t address,
                                   SharedAIORespData& sharedAIORespDataobj,
                                   sdeventplus::Event& event);
 
-    virtual void
-        transferFileDataToSocket(int fd, uint32_t& length, uint64_t address,
-                                 SharedAIORespData& sharedAIORespDataobj,
-                                 sdeventplus::Event& event);
+    virtual void transferFileDataToSocket(
+        int fd, uint32_t& length, uint64_t address,
+        SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event);
 
     /** @brief Method to do necessary operation according different
      *         file type and being call when data transfer completed.
@@ -256,11 +252,9 @@ class FileHandler
      *
      *  @return PLDM status code
      */
-    virtual int newFileAvailableWithMetaData(uint64_t length,
-                                             uint32_t metaDataValue1,
-                                             uint32_t metaDataValue2,
-                                             uint32_t metaDataValue3,
-                                             uint32_t metaDataValue4) = 0;
+    virtual int newFileAvailableWithMetaData(
+        uint64_t length, uint32_t metaDataValue1, uint32_t metaDataValue2,
+        uint32_t metaDataValue3, uint32_t metaDataValue4) = 0;
 
     /** @brief Method to process a file ack with meta data notification from the
      *  host. The bmc can chose to do different actions based on the file type.
@@ -273,10 +267,9 @@ class FileHandler
      *
      *  @return PLDM status code
      */
-    virtual int fileAckWithMetaData(uint8_t fileStatus, uint32_t metaDataValue1,
-                                    uint32_t metaDataValue2,
-                                    uint32_t metaDataValue3,
-                                    uint32_t metaDataValue4) = 0;
+    virtual int fileAckWithMetaData(
+        uint8_t fileStatus, uint32_t metaDataValue1, uint32_t metaDataValue2,
+        uint32_t metaDataValue3, uint32_t metaDataValue4) = 0;
 
     /** @brief Constructor to create a FileHandler object
      */

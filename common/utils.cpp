@@ -583,8 +583,8 @@ std::string toString(const struct variable_field& var)
     }
 
     std::string str(reinterpret_cast<const char*>(var.ptr), var.length);
-    std::replace_if(str.begin(), str.end(),
-                    [](const char& c) { return !isprint(c); }, ' ');
+    std::replace_if(
+        str.begin(), str.end(), [](const char& c) { return !isprint(c); }, ' ');
     return str;
 }
 
@@ -739,9 +739,8 @@ bool dbusPropValuesToDouble(const std::string_view& type,
     return true;
 }
 
-std::vector<std::vector<pldm::pdr::Pdr_t>>
-    getStateSensorPDRsByType(uint8_t /*tid*/, uint16_t entityType,
-                             const pldm_pdr* repo)
+std::vector<std::vector<pldm::pdr::Pdr_t>> getStateSensorPDRsByType(
+    uint8_t /*tid*/, uint16_t entityType, const pldm_pdr* repo)
 {
     uint8_t* outData = nullptr;
     uint32_t size{};
@@ -788,10 +787,9 @@ std::vector<std::vector<pldm::pdr::Pdr_t>>
     return pdrs;
 }
 
-std::vector<pldm::pdr::SensorID> findSensorIds(const pldm_pdr* pdrRepo,
-                                               uint8_t tid, uint16_t entityType,
-                                               uint16_t entityInstance,
-                                               uint16_t containerId)
+std::vector<pldm::pdr::SensorID>
+    findSensorIds(const pldm_pdr* pdrRepo, uint8_t tid, uint16_t entityType,
+                  uint16_t entityInstance, uint16_t containerId)
 {
     std::vector<uint16_t> sensorIDs;
 
@@ -818,18 +816,17 @@ std::vector<pldm::pdr::SensorID> findSensorIds(const pldm_pdr* pdrRepo,
                     uint16_t id = sensorPdr->sensor_id;
                     sensorIDs.emplace_back(std::move(id));
                 }
-                possible_states_start += possibleStateSize +
-                                         sizeof(possibleStates->state_set_id) +
-                                         sizeof(possibleStateSize);
+                possible_states_start +=
+                    possibleStateSize + sizeof(possibleStates->state_set_id) +
+                    sizeof(possibleStateSize);
             }
         }
     }
     return sensorIDs;
 }
 
-std::vector<std::vector<pldm::pdr::Pdr_t>>
-    getStateEffecterPDRsByType(uint8_t /*tid*/, uint16_t entityType,
-                               const pldm_pdr* repo)
+std::vector<std::vector<pldm::pdr::Pdr_t>> getStateEffecterPDRsByType(
+    uint8_t /*tid*/, uint16_t entityType, const pldm_pdr* repo)
 {
     uint8_t* outData = nullptr;
     uint32_t size{};
@@ -906,9 +903,9 @@ std::vector<pldm::pdr::EffecterID>
                     uint16_t id = effecterPdr->effecter_id;
                     effecterIDs.emplace_back(std::move(id));
                 }
-                possible_states_start += possibleStateSize +
-                                         sizeof(possibleStates->state_set_id) +
-                                         sizeof(possibleStateSize);
+                possible_states_start +=
+                    possibleStateSize + sizeof(possibleStates->state_set_id) +
+                    sizeof(possibleStateSize);
             }
         }
     }
@@ -969,9 +966,9 @@ void setBiosAttr(const BiosAttributeList& biosAttrList)
         {
             auto service = pldm::utils::DBusHandler().getService(
                 biosConfigPath, biosConfigIntf);
-            auto method = bus.new_method_call(service.c_str(), biosConfigPath,
-                                              SYSTEMD_PROPERTY_INTERFACE,
-                                              "Set");
+            auto method =
+                bus.new_method_call(service.c_str(), biosConfigPath,
+                                    SYSTEMD_PROPERTY_INTERFACE, "Set");
             method.append(
                 biosConfigIntf, "PendingAttributes",
                 std::variant<PendingAttributesType>(pendingAttributes));

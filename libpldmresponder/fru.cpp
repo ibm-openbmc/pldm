@@ -603,8 +603,8 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
     {
         auto lastLocalRecord = pldm_pdr_find_last_in_range(
             pdrRepo, BMC_PDR_START_RANGE, BMC_PDR_END_RANGE);
-        bmc_record_handle = pldm_pdr_get_record_handle(pdrRepo,
-                                                       lastLocalRecord);
+        bmc_record_handle =
+            pldm_pdr_get_record_handle(pdrRepo, lastLocalRecord);
     }
 
     uint8_t bmcEventDataOps;
@@ -645,9 +645,9 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
     }
     else
     {
-        pldm_entity_association_pdr_create_new(pdrRepo, bmc_record_handle,
-                                               &parent, &entity,
-                                               &updatedRecordHdlHost);
+        pldm_entity_association_pdr_create_new(
+            pdrRepo, bmc_record_handle, &parent, &entity,
+            &updatedRecordHdlHost);
         hostEventDataOps = PLDM_RECORDS_ADDED;
     }
 
@@ -888,11 +888,12 @@ void FruImpl::subscribeFruPresence(
                     bus, propertiesChanged(fruObjPath, itemInterface),
                     [this, fruObjPath,
                      fruInterface](sdbusplus::message::message& msg) {
-                DbusChangedProps props;
-                std::string iface;
-                msg.read(iface, props);
-                processFruPresenceChange(props, fruObjPath, fruInterface);
-            }));
+                        DbusChangedProps props;
+                        std::string iface;
+                        msg.read(iface, props);
+                        processFruPresenceChange(props, fruObjPath,
+                                                 fruInterface);
+                    }));
         }
     }
     catch (const std::exception& e)
@@ -993,9 +994,9 @@ void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
         return;
     }
     auto instanceId = requester.getInstanceId(mctp_eid);
-    std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
-                                    PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES +
-                                    actualSize);
+    std::vector<uint8_t> requestMsg(
+        sizeof(pldm_msg_hdr) + PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES +
+        actualSize);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
     rc = encode_platform_event_message_req(
         instanceId, 1, TERMINUS_ID, PLDM_PDR_REPOSITORY_CHG_EVENT,
@@ -1008,8 +1009,9 @@ void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
               static_cast<unsigned>(rc));
         return;
     }
-    auto platformEventMessageResponseHandler =
-        [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
+    auto platformEventMessageResponseHandler = [](mctp_eid_t /*eid*/,
+                                                  const pldm_msg* response,
+                                                  size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             error(
@@ -1318,8 +1320,8 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
 
             pldm::responder::pdr_utils::DbusMappings dbusMappings{};
             pldm::responder::pdr_utils::DbusValMaps dbusValMaps{};
-            uint8_t* start = entry.data() + sizeof(pldm_state_sensor_pdr) -
-                             sizeof(uint8_t);
+            uint8_t* start =
+                entry.data() + sizeof(pldm_state_sensor_pdr) - sizeof(uint8_t);
             for (const auto& sensor : sensors)
             {
                 auto set = sensor.value("set", empty);
@@ -1408,7 +1410,7 @@ uint32_t
     }
     pdrEntry.handle.recordHandle = lastHandle + 1;
     pldm_pdr_add(pdrRepo, pdrEntry.data, pdrEntry.size, false,
-                       pdrEntry.handle.recordHandle, &record_handle);
+                 pdrEntry.handle.recordHandle, &record_handle);
     return record_handle;
 }
 

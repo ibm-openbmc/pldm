@@ -80,13 +80,11 @@ class DbusToFileHandler
      *  @param[in] fileMetaData3 - file meta data value 3
      *  @param[in] fileMetaData4 - file meta data value 4
      */
-    void sendFileAckWithMetaDataToHost(const uint16_t fileType,
-                                       const uint32_t fileHandle,
-                                       const uint8_t fileStatus,
-                                       const uint32_t fileMetaData1,
-                                       const uint32_t fileMetaData2,
-                                       const uint32_t fileMetaData3,
-                                       const uint32_t fileMetaData4);
+    void sendFileAckWithMetaDataToHost(
+        const uint16_t fileType, const uint32_t fileHandle,
+        const uint8_t fileStatus, const uint32_t fileMetaData1,
+        const uint32_t fileMetaData2, const uint32_t fileMetaData3,
+        const uint32_t fileMetaData4);
 
   private:
     /** @brief Send the new file available command request to hypervisor

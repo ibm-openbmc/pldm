@@ -98,8 +98,8 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
                 "transferHostDataToSocket : Received interrupt during dump DMA transfer. Skipping Unmap");
         }
     };
-    std::unique_ptr<void, decltype(mmapCleanup)> vgaMemPtr(vgaMemDump,
-                                                           mmapCleanup);
+    std::unique_ptr<void, decltype(mmapCleanup)> vgaMemPtr(
+        vgaMemDump, mmapCleanup);
 
     AspeedXdmaOp xdmaOp;
     xdmaOp.upstream = 0;
@@ -917,9 +917,9 @@ Response Handler::rwFileByTypeIntoMemory(
                                           responsePtr);
         return response;
     }
-    sharedAIORespDataobj =
-        SharedAIORespData({request->hdr.instance_id, cmd, handler, fileType,
-                           sharedAIORespDataobj.respInterface});
+    sharedAIORespDataobj = SharedAIORespData(
+        {request->hdr.instance_id, cmd, handler, fileType,
+         sharedAIORespDataobj.respInterface});
     sdeventplus::Event event = sdeventplus::Event::get_default();
     if (cmd == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY)
     {
@@ -1297,8 +1297,8 @@ Response Handler::newFileAvailableWithMetaData(const pldm_msg* request,
 Response Handler::fileAckWithMetaData(const pldm_msg* request,
                                       size_t payloadLength)
 {
-    Response response(sizeof(pldm_msg_hdr) +
-                      PLDM_FILE_ACK_WITH_META_DATA_RESP_BYTES);
+    Response response(
+        sizeof(pldm_msg_hdr) + PLDM_FILE_ACK_WITH_META_DATA_RESP_BYTES);
 
     if (payloadLength != PLDM_FILE_ACK_WITH_META_DATA_REQ_BYTES)
     {

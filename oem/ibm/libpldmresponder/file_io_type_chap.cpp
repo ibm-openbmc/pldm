@@ -22,8 +22,8 @@ int ChapHandler::read(uint32_t offset, uint32_t& length, Response& response,
         return PLDM_ERROR;
     }
 
-    std::string filePath = std::string(chapDataFilePath) +
-                           std::string(chapDataFilename);
+    std::string filePath =
+        std::string(chapDataFilePath) + std::string(chapDataFilename);
 
     auto rc = readFile(filePath.c_str(), offset, length, response);
     fs::remove(filePath);

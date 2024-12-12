@@ -1,6 +1,5 @@
 #pragma once
 
-#include "com/ibm/License/Entry/LicenseEntry/server.hpp"
 #include "../dbus_to_terminus_effecters.hpp"
 #include "asset.hpp"
 #include "associations.hpp"
@@ -30,28 +29,21 @@
 #include "port.hpp"
 #include "power_supply.hpp"
 #include "vrm.hpp"
-#include "com/ibm/License/Entry/LicenseEntry/server.hpp"
-
-#include <sdbusplus/server.hpp>
-#include <xyz/openbmc_project/Inventory/Decorator/LocationCode/server.hpp>
-#include <xyz/openbmc_project/State/Decorator/Availability/server.hpp>
-#include <xyz/openbmc_project/State/Decorator/OperationalStatus/server.hpp>
-#include <libpldm/state_set.h>
-
-#include <memory>
-#include <optional>
-#include <string>
-#include <unordered_map>
 
 #include <libpldm/state_set.h>
 
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server.hpp>
 #include <sdbusplus/server/object.hpp>
+#include <xyz/openbmc_project/Inventory/Decorator/LocationCode/server.hpp>
+#include <xyz/openbmc_project/State/Decorator/Availability/server.hpp>
+#include <xyz/openbmc_project/State/Decorator/OperationalStatus/server.hpp>
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
+#include <unordered_map>
 
 namespace pldm
 {
@@ -436,7 +428,8 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<PCIeSlot>> pcieSlot;
     std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
     std::unordered_map<ObjectPath, std::unique_ptr<Motherboard>> motherboard;
-    std::map<ObjectPath, std::unique_ptr<OperationalStatusIntf>> operationalStatus;
+    std::map<ObjectPath, std::unique_ptr<OperationalStatusIntf>>
+        operationalStatus;
     std::map<ObjectPath, std::unique_ptr<AvailabilityIntf>> availabilityState;
     std::unordered_map<ObjectPath, std::unique_ptr<LicIntf>> codLic;
     std::unordered_map<ObjectPath, std::unique_ptr<Enable>> enabledStatus;

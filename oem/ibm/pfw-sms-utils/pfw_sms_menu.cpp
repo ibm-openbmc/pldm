@@ -40,10 +40,9 @@ struct pfw_sms_pam_appdata
  * @note For parameter descriptions, see docs for pam_start and pam_conv
  * @return PAM status code (int)
  */
-static int pamConversationFunction(int num_msg,
-                                   const struct pam_message** message_ptr,
-                                   struct pam_response** response_ptr,
-                                   void* appdata_ptr)
+static int pamConversationFunction(
+    int num_msg, const struct pam_message** message_ptr,
+    struct pam_response** response_ptr, void* appdata_ptr)
 {
     if ((appdata_ptr == nullptr) || (message_ptr == nullptr) ||
         (response_ptr == nullptr))
@@ -168,12 +167,10 @@ static int pamConversationFunction(int num_msg,
 
 /** @brief Common code factored out between authenticate() and changePassword().
  */
-static void common_authentication_handler(const std::string& username,
-                                          const std::string& password,
-                                          bool& authenticated,
-                                          bool& passwordChangeRequired,
-                                          bool& operationAllowed,
-                                          bool& passwordChangeAllowed)
+static void common_authentication_handler(
+    const std::string& username, const std::string& password,
+    bool& authenticated, bool& passwordChangeRequired, bool& operationAllowed,
+    bool& passwordChangeAllowed)
 {
     authenticated = false; // default to fail safe (no access)
     passwordChangeRequired = false;
@@ -193,8 +190,8 @@ static void common_authentication_handler(const std::string& username,
         return;
     }
 
-    retval = pam_authenticate(pamHandle,
-                              PAM_SILENT | PAM_DISALLOW_NULL_AUTHTOK);
+    retval =
+        pam_authenticate(pamHandle, PAM_SILENT | PAM_DISALLOW_NULL_AUTHTOK);
     if (retval != PAM_SUCCESS)
     {
         pam_end(pamHandle, retval); // ignore retval
@@ -234,10 +231,9 @@ void authenticate(const std::string& username, const std::string& password,
                                   passwordChangeAllowed);
 }
 
-enum changePasswordReasonCode changePassword(const std::string& username,
-                                             const std::string& currentPassword,
-                                             const std::string& newPassword,
-                                             bool& operationAllowed)
+enum changePasswordReasonCode changePassword(
+    const std::string& username, const std::string& currentPassword,
+    const std::string& newPassword, bool& operationAllowed)
 {
     bool passwordChangeRequired = false;
     operationAllowed = false;

@@ -109,9 +109,9 @@ void BIOSConfig::initBIOSAttributes(const std::string& systemType,
     try
     {
         info("Getting Pending Attributes");
-        auto method = bus.new_method_call(service.c_str(), biosObjPath,
-                                          "org.freedesktop.DBus.Properties",
-                                          "Get");
+        auto method =
+            bus.new_method_call(service.c_str(), biosObjPath,
+                                "org.freedesktop.DBus.Properties", "Get");
         method.append(biosInterface, "PendingAttributes");
         auto reply = bus.call(method, dbusTimeout);
         reply.read(varPendingAttributes);

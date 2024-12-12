@@ -299,9 +299,9 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
         effecterState = PLDM_SW_TERM_GRACEFUL_SHUTDOWN_REQUESTED;
     }
 
-    std::array<uint8_t, sizeof(pldm_msg_hdr) + sizeof(effecterID) +
-                            sizeof(effecterCount) +
-                            sizeof(set_effecter_state_field)>
+    std::array<uint8_t,
+               sizeof(pldm_msg_hdr) + sizeof(effecterID) +
+                   sizeof(effecterCount) + sizeof(set_effecter_state_field)>
         requestMsg{};
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
     set_effecter_state_field stateField{PLDM_REQUEST_SET, effecterState};

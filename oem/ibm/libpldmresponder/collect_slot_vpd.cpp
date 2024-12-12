@@ -1,6 +1,6 @@
 #include "collect_slot_vpd.hpp"
-#include "oem_ibm_handler.hpp"
 
+#include "oem_ibm_handler.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
 
 #include <phosphor-logging/lg2.hpp>

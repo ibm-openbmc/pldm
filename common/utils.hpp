@@ -537,9 +537,8 @@ bool dbusPropValuesToDouble(const std::string_view& type,
  *
  *  @return vector of vector of all state effecter PDRs
  */
-std::vector<std::vector<pldm::pdr::Pdr_t>>
-    getStateEffecterPDRsByType(uint8_t /*tid*/, uint16_t entityType,
-                               const pldm_pdr* repo);
+std::vector<std::vector<pldm::pdr::Pdr_t>> getStateEffecterPDRsByType(
+    uint8_t /*tid*/, uint16_t entityType, const pldm_pdr* repo);
 
 /** @brief Method to find all state sensor PDRs
  *
@@ -549,9 +548,8 @@ std::vector<std::vector<pldm::pdr::Pdr_t>>
  *
  *  @return vector of vector of all state sensor PDRs
  */
-std::vector<std::vector<pldm::pdr::Pdr_t>>
-    getStateSensorPDRsByType(uint8_t /*tid*/, uint16_t entityType,
-                             const pldm_pdr* repo);
+std::vector<std::vector<pldm::pdr::Pdr_t>> getStateSensorPDRsByType(
+    uint8_t /*tid*/, uint16_t entityType, const pldm_pdr* repo);
 
 /** @brief method to find sensor IDs based on the pldm_entity
  *
@@ -577,11 +575,9 @@ std::vector<pldm::pdr::SensorID>
  *
  *  @return vector of all effecter IDs
  */
-std::vector<pldm::pdr::EffecterID> findEffecterIds(const pldm_pdr* pdrRepo,
-                                                   uint8_t /*tid*/,
-                                                   uint16_t entityType,
-                                                   uint16_t entityInstance,
-                                                   uint16_t containerId);
+std::vector<pldm::pdr::EffecterID> findEffecterIds(
+    const pldm_pdr* pdrRepo, uint8_t /*tid*/, uint16_t entityType,
+    uint16_t entityInstance, uint16_t containerId);
 
 /** @brief Method to get the value from a bios attribute
  *

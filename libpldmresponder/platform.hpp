@@ -148,20 +148,21 @@ class Handler : public CmdHandler
             propertiesChanged("/xyz/openbmc_project/state/host0",
                               "xyz.openbmc_project.State.Host"),
             [this](sdbusplus::message::message& msg) {
-            DbusChangedProps props{};
-            std::string intf;
-            msg.read(intf, props);
-            const auto itr = props.find("CurrentHostState");
-            if (itr != props.end())
-            {
-                utils::PropertyValue value = itr->second;
-                auto propVal = std::get<std::string>(value);
-                if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
+                DbusChangedProps props{};
+                std::string intf;
+                msg.read(intf, props);
+                const auto itr = props.find("CurrentHostState");
+                if (itr != props.end())
                 {
-                    clearMexObj = true;
+                    utils::PropertyValue value = itr->second;
+                    auto propVal = std::get<std::string>(value);
+                    if (propVal ==
+                        "xyz.openbmc_project.State.Host.HostState.Off")
+                    {
+                        clearMexObj = true;
+                    }
                 }
-            }
-        });
+            });
     }
 
     pdr_utils::Repo& getRepo()
@@ -566,12 +567,11 @@ class Handler : public CmdHandler
  *  @return true if the effecter is OEM. All out parameters are invalid
  *                  for a non OEM effecter
  */
-bool isOemNumericEffecter(Handler& handler, uint16_t effecterId,
-                          uint16_t& entityType, uint16_t& entityInstance,
-                          uint8_t& effecterDataSize,
-                          uint16_t& effecterSemanticId,
-                          real32_t& effecterOffset,
-                          real32_t& effecterResolution);
+bool isOemNumericEffecter(
+    Handler& handler, uint16_t effecterId, uint16_t& entityType,
+    uint16_t& entityInstance, uint8_t& effecterDataSize,
+    uint16_t& effecterSemanticId, real32_t& effecterOffset,
+    real32_t& effecterResolution);
 
 /** @brief Function to check if a sensor falls in OEM range
  *         A sensor is considered to be oem if either of entity

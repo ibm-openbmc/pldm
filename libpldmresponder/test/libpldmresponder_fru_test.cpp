@@ -123,8 +123,8 @@ TEST(FruImpl, updateAssociationTreeTest)
 
     pldm::responder::FruImpl mockedFruHandler(
         FRU_JSONS_DIR, "./fru_jsons/fru_master/fru_master.json", pdrRepo.get(),
-        entityTree.get(), bmcEntityTree.get(), requester, nullptr, 0x9,
-        event, nullptr);
+        entityTree.get(), bmcEntityTree.get(), requester, nullptr, 0x9, event,
+        nullptr);
 
     pldm_entity systemEntity{0x2d01, 1, 0};
     pldm_entity chassisEntity{0x2d, 1, 1};
@@ -193,8 +193,8 @@ TEST(FruImpl, entityByObjectPath)
     InterfaceMap iface = {{"xyz.openbmc_project.Inventory.Item.Chassis", {}}};
     pldm::responder::FruImpl mockedFruHandler(
         FRU_JSONS_DIR, "./fru_jsons/fru_master/fru_master.json", pdrRepo.get(),
-        entityTree.get(), bmcEntityTree.get(), requester, nullptr, 0x9,
-        event, nullptr);
+        entityTree.get(), bmcEntityTree.get(), requester, nullptr, 0x9, event,
+        nullptr);
 
     // Good path
     auto entityPtr = mockedFruHandler.getEntityByObjectPath(iface);

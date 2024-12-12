@@ -20,21 +20,19 @@ class keywordHandler : public FileHandler
     keywordHandler(uint32_t fileHandle, uint16_t /* fileType */) :
         FileHandler(fileHandle)
     {}
-    virtual void writeFromMemory(uint32_t /*offset*/, uint32_t length,
-                                 uint64_t /*address*/,
-                                 oem_platform::Handler* /*oemPlatformHandler*/,
-                                 SharedAIORespData& sharedAIORespDataobj,
-                                 sdeventplus::Event& /*event*/)
+    virtual void writeFromMemory(
+        uint32_t /*offset*/, uint32_t length, uint64_t /*address*/,
+        oem_platform::Handler* /*oemPlatformHandler*/,
+        SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& /*event*/)
     {
         FileHandler::dmaResponseToRemoteTerminus(
             sharedAIORespDataobj, PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);
         FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
     }
-    virtual void readIntoMemory(uint32_t /*offset*/, uint32_t length,
-                                uint64_t /*address*/,
-                                oem_platform::Handler* /*oemPlatformHandler*/,
-                                SharedAIORespData& sharedAIORespDataobj,
-                                sdeventplus::Event& /*event*/)
+    virtual void readIntoMemory(
+        uint32_t /*offset*/, uint32_t length, uint64_t /*address*/,
+        oem_platform::Handler* /*oemPlatformHandler*/,
+        SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& /*event*/)
     {
         FileHandler::dmaResponseToRemoteTerminus(
             sharedAIORespDataobj, PLDM_ERROR_UNSUPPORTED_PLDM_CMD, length);

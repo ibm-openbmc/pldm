@@ -56,18 +56,20 @@ class OemIBM
      * @param[in] reqHandler - reqHandler handler
      */
     explicit OemIBM(
-        const pldm::utils::DBusHandler* dBusIntf, PldmTransport* pldmTransport, uint8_t mctp_eid,
-        pldm_pdr* repo, pldm::InstanceIdDb& instanceIdDb,
+        const pldm::utils::DBusHandler* dBusIntf, PldmTransport* pldmTransport,
+        uint8_t mctp_eid, pldm_pdr* repo, pldm::InstanceIdDb& instanceIdDb,
         sdeventplus::Event& event, responder::Invoker& invoker,
         HostPDRHandler* hostPDRHandler,
         responder::platform::Handler* platformHandler,
         responder::fru::Handler* fruHandler,
         responder::base::Handler* baseHandler,
         pldm::host_effecters::HostEffecterParser* hostEffecterParser,
-        pldm::requester::Handler<pldm::requester::Request>* reqHandler, pldm_entity_association_tree* bmcEntityTree, pldm_tid_t tid, bool verbose) :
-        dBusIntf(dBusIntf), mctp_eid(mctp_eid), tid(tid), verbose(verbose), repo(repo),
-        pldmTransport(pldmTransport), instanceIdDb(instanceIdDb), event(event), invoker(invoker),
-        reqHandler(reqHandler)
+        pldm::requester::Handler<pldm::requester::Request>* reqHandler,
+        pldm_entity_association_tree* bmcEntityTree, pldm_tid_t tid,
+        bool verbose) :
+        dBusIntf(dBusIntf), mctp_eid(mctp_eid), tid(tid), verbose(verbose),
+        repo(repo), pldmTransport(pldmTransport), instanceIdDb(instanceIdDb),
+        event(event), invoker(invoker), reqHandler(reqHandler)
     {
         mctp_fd = pldmTransport->getEventSource();
 
@@ -118,11 +120,14 @@ class OemIBM
      *  This method also assigns the oemPlatformHandler to the below
      *  different handlers.
      */
-    void createOemPlatformHandler(pldm_entity_association_tree* bmcEntityTree, pldm::host_effecters::HostEffecterParser* hostEffecterParser)
+    void createOemPlatformHandler(
+        pldm_entity_association_tree* bmcEntityTree,
+        pldm::host_effecters::HostEffecterParser* hostEffecterParser)
     {
         oemPlatformHandler = std::make_unique<oem_ibm_platform::Handler>(
             dBusIntf, codeUpdate.get(), slotHandler.get(), mctp_fd, mctp_eid,
-            instanceIdDb, event, repo, reqHandler, bmcEntityTree, hostEffecterParser);
+            instanceIdDb, event, repo, reqHandler, bmcEntityTree,
+            hostEffecterParser);
     }
 
     /** @brief Method for creating oemIbmPlatformHandler */
@@ -165,17 +170,18 @@ class OemIBM
     void createResponseInterface()
     {
         respInterface.responseObj =
-        std::make_unique<pldm::response_api::AltResponse>(pldmTransport, tid,
-                                                          verbose);
+            std::make_unique<pldm::response_api::AltResponse>(pldmTransport,
+                                                              tid, verbose);
     }
 
     /** @brief Method for registering PLDM OEM handler */
     void registerHandler()
     {
         invoker.registerHandler(
-            PLDM_OEM, std::make_unique<pldm::responder::oem_ibm::Handler>(
-                          oemPlatformHandler.get(), mctp_fd, mctp_eid,
-                          &instanceIdDb, reqHandler, respInterface.responseObj.get(), event));
+            PLDM_OEM,
+            std::make_unique<pldm::responder::oem_ibm::Handler>(
+                oemPlatformHandler.get(), mctp_fd, mctp_eid, &instanceIdDb,
+                reqHandler, respInterface.responseObj.get(), event));
     }
 
   private:
@@ -241,7 +247,6 @@ class OemIBM
 
     /** @brief Response interface created to handle return AIO reponses */
     pldm::response_api::ResponseInterface respInterface;
-
 };
 
 } // namespace oem_ibm

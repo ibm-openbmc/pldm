@@ -153,8 +153,8 @@ class PCIeInfoHandler : public FileHandler
                                  sdeventplus::Event& event) override;
 
     int write(const char* buffer, uint32_t offset, uint32_t& length,
-                      oem_platform::Handler* /*oemPlatformHandler*/,
-                      struct fileack_status_metadata& /*metaDataObj*/)override;
+              oem_platform::Handler* /*oemPlatformHandler*/,
+              struct fileack_status_metadata& /*metaDataObj*/) override;
 
     virtual int fileAck(uint8_t fileStatus) override;
 
@@ -184,7 +184,7 @@ class PCIeInfoHandler : public FileHandler
     virtual int fileAckWithMetaData(
         uint8_t /*fileStatus*/, uint32_t /*metaDataValue1*/,
         uint32_t /*metaDataValue2*/, uint32_t /*metaDataValue3*/,
-        uint32_t /*metaDataValue4*/) override 
+        uint32_t /*metaDataValue4*/) override
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
@@ -192,13 +192,13 @@ class PCIeInfoHandler : public FileHandler
     virtual int newFileAvailableWithMetaData(
         uint64_t /*length*/, uint32_t /*metaDataValue1*/,
         uint32_t /*metaDataValue2*/, uint32_t /*metaDataValue3*/,
-        uint32_t /*metaDataValue4*/)override
+        uint32_t /*metaDataValue4*/) override
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
 
     virtual int postDataTransferCallBack(bool /*IsWriteToMemOp*/,
-                                         uint32_t /*length*/)override
+                                         uint32_t /*length*/) override
     {
         return PLDM_SUCCESS;
     }
@@ -210,7 +210,7 @@ class PCIeInfoHandler : public FileHandler
 
     virtual void postWriteAction(
         const uint16_t /*fileType*/, const uint32_t /*fileHandle*/,
-        const struct fileack_status_metadata& /*metaDataObj*/) override{};
+        const struct fileack_status_metadata& /*metaDataObj*/) override {};
 
     /** @brief method to clear the topology cache */
     virtual void clearTopologyInfo();
@@ -219,34 +219,28 @@ class PCIeInfoHandler : public FileHandler
 
     virtual void getMexObjects();
 
-    virtual void parsePrimaryLink(uint8_t linkType,
-                                  const IoSlotLocation& ioSlotLocationCode,
-                                  const LocalPort& localPortLocation,
-                                  const uint32_t& linkId,
-                                  const std::string& linkStatus,
-                                  uint8_t linkSpeed, int64_t linkWidth,
-                                  uint8_t parentLinkId);
-    virtual void parseSecondaryLink(uint8_t linkType,
-                                    const IoSlotLocation& ioSlotLocationCode,
-                                    const LocalPort& localPortLocation,
-                                    const RemotePort& remotePortLocation,
-                                    const uint32_t& linkId,
-                                    const std::string& linkStatus,
-                                    uint8_t linkSpeed, int64_t linkWidth);
+    virtual void parsePrimaryLink(
+        uint8_t linkType, const IoSlotLocation& ioSlotLocationCode,
+        const LocalPort& localPortLocation, const uint32_t& linkId,
+        const std::string& linkStatus, uint8_t linkSpeed, int64_t linkWidth,
+        uint8_t parentLinkId);
+    virtual void parseSecondaryLink(
+        uint8_t linkType, const IoSlotLocation& ioSlotLocationCode,
+        const LocalPort& localPortLocation,
+        const RemotePort& remotePortLocation, const uint32_t& linkId,
+        const std::string& linkStatus, uint8_t linkSpeed, int64_t linkWidth);
     virtual void setTopologyOnSlotAndAdapter(
         uint8_t linkType,
         const std::pair<std::string, std::string>& slotAndAdapter,
         const uint32_t& linkId, const std::string& linkStatus,
         uint8_t linkSpeed, int64_t linkWidth, bool isHostedByPLDM);
 
-    virtual void setProperty(const std::string& objPath,
-                             const std::string& propertyName,
-                             const pldm::utils::PropertyValue& propertyValue,
-                             const std::string& interfaceName,
-                             const std::string& propertyType);
-    virtual std::string
-        getMexObjectFromLocationCode(const std::string& locationCode,
-                                     uint16_t entityType);
+    virtual void setProperty(
+        const std::string& objPath, const std::string& propertyName,
+        const pldm::utils::PropertyValue& propertyValue,
+        const std::string& interfaceName, const std::string& propertyType);
+    virtual std::string getMexObjectFromLocationCode(
+        const std::string& locationCode, uint16_t entityType);
     virtual std::string getAdapterFromSlot(const std::string& mexSlotObject);
 
     virtual std::pair<std::string, std::string>

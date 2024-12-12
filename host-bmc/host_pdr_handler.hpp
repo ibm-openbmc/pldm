@@ -318,11 +318,10 @@ class HostPDRHandler
      *  @param[in] path       - object path
      *  @param[in] stateSetId - state set Id
      */
-    void getPresentStateBySensorReadigs(const pldm::pdr::TerminusID& tid,
-                                        uint16_t sensorId, uint16_t type,
-                                        uint16_t instance, uint16_t containerId,
-                                        const std::string& path,
-                                        pldm::pdr::StateSetId stateSetId);
+    void getPresentStateBySensorReadigs(
+        const pldm::pdr::TerminusID& tid, uint16_t sensorId, uint16_t type,
+        uint16_t instance, uint16_t containerId, const std::string& path,
+        pldm::pdr::StateSetId stateSetId);
 
     /** @brief Set the OperationalStatus interface
      *  @return
