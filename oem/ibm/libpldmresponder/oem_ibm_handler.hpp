@@ -44,23 +44,6 @@ using AssociatedEntityMap = std::map<ObjectPath, pldm_entity>;
 
 namespace oem_ibm_fileio
 {
-using AttributeName = std::string;
-using AttributeType = std::string;
-using ReadonlyStatus = bool;
-using DisplayName = std::string;
-using Description = std::string;
-using MenuPath = std::string;
-using CurrentValue = std::variant<int64_t, std::string>;
-using DefaultValue = std::variant<int64_t, std::string>;
-using OptionString = std::string;
-using OptionValue = std::variant<int64_t, std::string>;
-using Option = std::vector<std::tuple<OptionString, OptionValue>>;
-using BIOSTableObj =
-    std::tuple<AttributeType, ReadonlyStatus, DisplayName, Description,
-               MenuPath, CurrentValue, DefaultValue, Option>;
-using BaseBIOSTable = std::map<AttributeName, BIOSTableObj>;
-using PendingObj = std::tuple<AttributeType, CurrentValue>;
-using PendingAttributes = std::map<AttributeName, PendingObj>;
 
 class Handler : public oem_fileio::Handler
 {
@@ -160,6 +143,8 @@ class Handler : public oem_platform::Handler
             std::make_unique<pldm::responder::oem_ibm_fileio::Handler>(
                 mctp_fd, mctp_eid, &instanceIdDb, path, handler);
         pldm::responder::utils::hostChapDataIntf(dbusToFileioIntf.get());
+
+        createMatches();
 
         using namespace sdbusplus::bus::match::rules;
 
@@ -595,6 +580,21 @@ class Handler : public oem_platform::Handler
      */
     void setSurvTimer(uint8_t tid, bool value);
 
+    /** @brief method to fetch the properties changed
+     *
+     *  @param[in] chProperties - list of properties which have changed
+     *  @param[in] objPath - path on which property is changed
+     */
+    void propertyChanged(const DbusChangedProps& chProperties,
+                         std::string objPath);
+
+    /** @brief method to trigger host effecter
+     *
+     *  @param[in] value - value to set
+     *  @param[in] path - path for which the effecter is set
+     */
+    void triggerHostEffecter(bool value, std::string path);
+
     /** @brief To turn off Real SAI effecter*/
     void turnOffRealSAIEffecter();
 
@@ -692,6 +692,9 @@ class Handler : public oem_platform::Handler
     /** @brief Pointer to BMC's entity association tree */
     pldm_entity_association_tree* bmcEntityTree;
 
+    /** @brief Pointer to host effecter parser */
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser;
+
     /** @brief D-Bus property changed signal match */
     std::unique_ptr<sdbusplus::bus::match_t> updateBIOSMatch;
 
@@ -711,6 +714,9 @@ class Handler : public oem_platform::Handler
     std::unique_ptr<sdbusplus::bus::match_t> bootProgressMatch;
     /** @brief Timer used for monitoring surveillance pings from host */
     sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic> timer;
+
+    /** @brief vector of DBus property changed signal match for linkReset*/
+    std::vector<std::unique_ptr<sdbusplus::bus::match_t>> matches;
 
     /** @brief D-Bus Interface added signal match for virtual partition SAI */
     std::unique_ptr<sdbusplus::bus::match_t> partitionSAIMatch;
@@ -739,6 +745,10 @@ class Handler : public oem_platform::Handler
     /** @brief instanceDimmMap is a lookup data structure to lookup <EffecterID,
      * dimmID> */
     HostEffecterDimmMap instanceDimmMap;
+
+    /** @brief method to create matches for the proeprty changed signal for link
+     * reset on all slot paths */
+    void createMatches();
 };
 
 /** @brief Method to encode code update event msg

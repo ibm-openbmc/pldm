@@ -70,6 +70,15 @@ bool CustomDBus::getOperationalStatus(const std::string& path) const
     return false;
 }
 
+size_t CustomDBus::getBusId(const std::string& path) const
+{
+    if (pcieSlot.find(path) != pcieSlot.end())
+    {
+        return pcieSlot.at(path)->busId();
+    }
+    return 0;
+}
+
 void CustomDBus::implementChapDataInterface(
     const std::string& path,
     pldm::responder::oem_fileio::Handler* dbusToFilehandlerObj)
@@ -89,6 +98,20 @@ void CustomDBus::implementCableInterface(const std::string& path)
         cable.emplace(path, std::make_unique<Cable>(
                                 pldm::utils::DBusHandler::getBus(), path));
     }
+}
+
+void CustomDBus::setLinkReset(
+    const std::string& path, bool value,
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser,
+    uint8_t mctpEid)
+{
+    if (!link.contains(path))
+    {
+        link.emplace(path, std::make_unique<Link>(
+                               pldm::utils::DBusHandler::getBus(), path.c_str(),
+                               hostEffecterParser, mctpEid));
+    }
+    link.at(path)->linkReset(value);
 }
 
 void CustomDBus::updateItemPresentStatus(const std::string& path,
@@ -206,9 +229,8 @@ void CustomDBus::implementAssetInterface(const std::string& path)
 {
     if (!asset.contains(path))
     {
-        asset.emplace(path,
-                      std::make_unique<Asset>(
-                          pldm::utils::DBusHandler::getBus(), path.c_str()));
+        asset.emplace(path, std::make_unique<Asset>(
+                                pldm::utils::DBusHandler::getBus(), path));
     }
 }
 

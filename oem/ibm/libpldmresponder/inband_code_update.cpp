@@ -257,7 +257,7 @@ void CodeUpdate::setVersions()
             {
                 info(
                     "BMC have booted with the new image runningPath={RUNN_PATH}",
-                    "RUNN_PATH", runningVersion.c_str());
+                    "RUNN_PATH", runningPath.c_str());
                 info("Previous Image was: {RUNN_VERS}", "RUNN_VERS",
                      pldmBootSideData.running_version_object);
                 auto current_boot_side =
@@ -387,6 +387,7 @@ void CodeUpdate::setVersions()
                                                                     // creating
                                                                     // a tar
                                                                     // ball.
+
                                                                     try
                                                                     {
                                                                         if (isCodeUpdateInProgress())

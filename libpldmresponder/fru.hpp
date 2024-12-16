@@ -85,6 +85,7 @@ class FruImpl
      *  *  @param[in] requester - PLDM Requester reference
      *  @param[in] handler - PLDM request handler
      *  @param[in] mctp_eid - MCTP eid of Host
+     *  @param[in] event - reference of main event loop of pldmd
      *  @param[in] dbusToPLDMEventHandler - dbus to PLDM Event Handler
      */
     FruImpl(const std::string& configPath,
@@ -307,7 +308,6 @@ class FruImpl
     pldm_entity_association_tree* entityTree;
     pldm_entity_association_tree* bmcEntityTree;
     pldm::responder::oem_fru::Handler* oemFruHandler = nullptr;
-    dbus::ObjectValueTree objects;
     Requester& requester;
     pldm::requester::Handler<pldm::requester::Request>* handler;
     uint8_t mctp_eid;
@@ -415,6 +415,7 @@ class FruImpl
     std::vector<std::unique_ptr<sdbusplus::bus::match::match>> pcieHotplugMatch;
     std::vector<std::unique_ptr<sdbusplus::bus::match::match>>
         panelHotplugMatch;
+    dbus::ObjectValueTree objects;
     std::vector<fs::path> statePDRJsonsDir;
     uint16_t startStateSensorId;
     uint16_t startStateEffecterId;

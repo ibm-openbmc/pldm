@@ -194,14 +194,8 @@ class HostPDRHandler
         oemPlatformHandler = handler;
     }
 
-    /* @brief Method to set the oem utils handler in host pdr handler class
-     *
-     * @param[in] handler - oem utils handler
-     */
-    inline void setOemUtilsHandler(pldm::responder::oem_utils::Handler* handler)
-    {
-        oemUtilsHandler = handler;
-    }
+    /** @brief map that captures various terminus information **/
+    TLPDRMap tlPDRInfo;
 
     /** @brief Updating the entity object path and entity node in map
      *
@@ -214,8 +208,14 @@ class HostPDRHandler
         objPathMap[path] = entity;
     }
 
-    /** @brief map that captures various terminus information **/
-    TLPDRMap tlPDRInfo;
+    /* @brief Method to set the oem utils handler in host pdr handler class
+     *
+     * @param[in] handler - oem utils handler
+     */
+    inline void setOemUtilsHandler(pldm::responder::oem_utils::Handler* handler)
+    {
+        oemUtilsHandler = handler;
+    }
 
     /** @brief Delete DBUS objects
      *

@@ -214,7 +214,10 @@ int main(int argc, char** argv)
     Invoker invoker{};
     requester::Handler<requester::Request> reqHandler(&pldmTransport, event,
                                                       instanceIdDb, verbose);
-
+    pldm::response_api::ResponseInterface respInterface;
+#ifdef LIBPLDMRESPONDER
+    using namespace pldm::state_sensor;
+    dbus_api::Host dbusImplHost(bus, "/xyz/openbmc_project/pldm");
     std::unique_ptr<pldm_pdr, decltype(&pldm_pdr_destroy)> pdrRepo(
         pldm_pdr_init(), pldm_pdr_destroy);
     if (!pdrRepo)
@@ -222,9 +225,6 @@ int main(int argc, char** argv)
         throw std::runtime_error("Failed to instantiate PDR repository");
     }
     DBusHandler dbusHandler;
-#ifdef LIBPLDMRESPONDER
-    using namespace pldm::state_sensor;
-    dbus_api::Host dbusImplHost(bus, "/xyz/openbmc_project/pldm");
     std::unique_ptr<pldm_entity_association_tree,
                     decltype(&pldm_entity_association_tree_destroy)>
         entityTree(pldm_entity_association_tree_init(),

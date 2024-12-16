@@ -103,6 +103,7 @@ void DbusToFileHandler::reportResourceDumpFailure(const std::string_view& str)
 
     pldm::utils::reportError(s.c_str());
 
+    pldm::utils::reportError(s.c_str());
     PropertyValue value{resDumpStatus};
     DBusMapping dbusMapping{resDumpCurrentObjPath, resDumpProgressIntf,
                             "Status", "string"};

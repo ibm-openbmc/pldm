@@ -20,6 +20,7 @@
 #include "inventory_item.hpp"
 #include "led_group.hpp"
 #include "license_entry.hpp"
+#include "linkreset.hpp"
 #include "location_code.hpp"
 #include "motherboard.hpp"
 #include "operational_status.hpp"
@@ -35,9 +36,6 @@
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server.hpp>
 #include <sdbusplus/server/object.hpp>
-#include <xyz/openbmc_project/Inventory/Decorator/LocationCode/server.hpp>
-#include <xyz/openbmc_project/State/Decorator/Availability/server.hpp>
-#include <xyz/openbmc_project/State/Decorator/OperationalStatus/server.hpp>
 
 #include <map>
 #include <memory>
@@ -50,16 +48,6 @@ namespace pldm
 namespace dbus
 {
 
-using LocationIntf =
-    sdbusplus::server::object_t<sdbusplus::xyz::openbmc_project::Inventory::
-                                    Decorator::server::LocationCode>;
-using LicIntf = sdbusplus::server::object_t<
-    sdbusplus::com::ibm::License::Entry::server::LicenseEntry>;
-using AvailabilityIntf = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::State::Decorator::server::Availability>;
-using OperationalStatusIntf =
-    sdbusplus::server::object_t<sdbusplus::xyz::openbmc_project::State::
-                                    Decorator::server::OperationalStatus>;
 using ObjectPath = std::string;
 
 /** @class CustomDBus
@@ -101,50 +89,6 @@ class CustomDBus
      *          property
      */
     std::optional<std::string> getLocationCode(const std::string& path) const;
-
-    /** @brief Implement PCIeSlot Interface
-     *
-     *  @param[in] path - the object path
-     */
-    void implementPCIeSlotInterface(const std::string& path);
-
-    /** @brief Set the slot type
-     *
-     *  @param[in] path - the object path
-     *  @param[in] slot type - Slot type
-     */
-    void setSlotType(const std::string& path, const std::string& slotType);
-
-    /** @brief Implement PCIe Device Interface
-     *
-     *  @param[in] path - the object path
-     */
-    void implementPCIeDeviceInterface(const std::string& path);
-
-    /** @brief Set PCIe Device Lanes in use property
-     *
-     *  @param[in] path - the object path
-     *  @param[in] lanesInUse - Lanes in use
-     *  @param[in] value - Generation in use
-     */
-    void setPCIeDeviceProps(const std::string& path, size_t lanesInUse,
-                            const std::string& value);
-
-    /** @brief Implement PCIe Cable Interface
-     *
-     *  @param[in] path - the object path
-     */
-    void implementCableInterface(const std::string& path);
-
-    /** @brief set cable attributes
-     *
-     *  @param[in] path - the object path
-     *  @param[in] length - length of the wire
-     *  @param[in] cableDescription - cable details
-     */
-    void setCableAttributes(const std::string& path, double length,
-                            const std::string& cableDescription,
-                            const std::string& cableStatus);
 
     /** @brief Set the Functional property
      *
@@ -190,6 +134,13 @@ class CustomDBus
      *  @param[in] path - the object path
      */
     void implementChassisInterface(const std::string& path);
+
+    /** @brief Implement PCIeSlot Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
+    void implementPCIeSlotInterface(const std::string& path);
 
     /** @brief Implement PowerSupply Interface
      *
@@ -240,12 +191,26 @@ class CustomDBus
      */
     void implementBoard(const std::string& path);
 
+    /** @brief Implement PCIeDevice Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
+    void implementPCIeDeviceInterface(const std::string& path);
+
     /** @brief Implement Global Interface
      *
      *  @param[in] path - The object path
      *
      */
     void implementGlobalInterface(const std::string& path);
+
+    /** @brief Implement Cable Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
+    void implementCableInterface(const std::string& path);
 
     /** @brief Implement Asset Interface
      *
@@ -412,30 +377,41 @@ class CustomDBus
     void setSlotProperties(const std::string& path, const uint32_t& value,
                            const std::string& linkState);
 
+    /** @brief set pcie device properties */
+    void setPCIeDeviceProps(const std::string& path, size_t lanesInuse,
+                            const std::string& value);
+
+    /** @brief set cable attributes */
+    void setCableAttributes(const std::string& path, double length,
+                            const std::string& cableDescription,
+                            const std::string& cableStatus);
+
     /* @brief set partNumber */
     void setPartNumber(const std::string& path, const std::string& partNumber);
+
+    /* @brief set slot type */
+    void setSlotType(const std::string& path, const std::string& slotType);
 
     /** @brief update topology property
      *
      *  @param[in] value - topology value
      */
     void updateTopologyProperty(bool value);
+    /** set reset link value*/
+    void setLinkReset(
+        const std::string& path, bool value,
+        pldm::host_effecters::HostEffecterParser* hostEffecterParser,
+        uint8_t instanceId);
 
   private:
-    std::unordered_map<ObjectPath, std::unique_ptr<LocationIntf>> location;
-    std::unordered_map<ObjectPath, std::unique_ptr<CPUCore>> cpuCore;
-    std::unordered_map<ObjectPath, std::unique_ptr<PCIeDevice>> pcieDevice;
-    std::unordered_map<ObjectPath, std::unique_ptr<PCIeSlot>> pcieSlot;
-    std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
-    std::unordered_map<ObjectPath, std::unique_ptr<Motherboard>> motherboard;
-    std::map<ObjectPath, std::unique_ptr<OperationalStatusIntf>>
+    std::unordered_map<ObjectPath, std::unique_ptr<LocationCode>> location;
+    std::unordered_map<ObjectPath, std::unique_ptr<OperationalStatus>>
         operationalStatus;
-    std::map<ObjectPath, std::unique_ptr<AvailabilityIntf>> availabilityState;
-    std::unordered_map<ObjectPath, std::unique_ptr<LicIntf>> codLic;
-    std::unordered_map<ObjectPath, std::unique_ptr<Enable>> enabledStatus;
     std::unordered_map<ObjectPath, std::unique_ptr<InventoryItem>>
         presentStatus;
     std::unordered_map<ObjectPath, std::unique_ptr<ItemChassis>> chassis;
+    std::unordered_map<ObjectPath, std::unique_ptr<CPUCore>> cpuCore;
+    std::unordered_map<ObjectPath, std::unique_ptr<Enable>> enabledStatus;
     std::unordered_map<ObjectPath, std::unique_ptr<Fan>> fan;
     std::unordered_map<ObjectPath, std::unique_ptr<Connector>> connector;
     std::unordered_map<ObjectPath, std::unique_ptr<VRM>> vrm;
@@ -444,14 +420,22 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<Board>> board;
     std::unordered_map<ObjectPath, std::unique_ptr<FabricAdapter>>
         fabricAdapter;
+    std::unordered_map<ObjectPath, std::unique_ptr<Motherboard>> motherboard;
     std::unordered_map<ObjectPath, std::unique_ptr<ChapDatas>> chapdata;
+    std::unordered_map<ObjectPath, std::unique_ptr<Availability>>
+        availabilityState;
+    std::unordered_map<ObjectPath, std::unique_ptr<PCIeSlot>> pcieSlot;
+    std::unordered_map<ObjectPath, std::unique_ptr<LicenseEntry>> codLic;
     std::unordered_map<ObjectPath, std::unique_ptr<Associations>> associations;
     std::unordered_map<ObjectPath, std::unique_ptr<LEDGroup>> ledGroup;
     std::unordered_map<ObjectPath, std::unique_ptr<DecoratorRevision>>
         softWareVersion;
+    std::unordered_map<ObjectPath, std::unique_ptr<PCIeDevice>> pcieDevice;
     std::unordered_map<ObjectPath, std::unique_ptr<Port>> port;
+    std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
     std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIETopology>> pcietopology;
+    std::unordered_map<ObjectPath, std::unique_ptr<Link>> link;
 };
 
 } // namespace dbus

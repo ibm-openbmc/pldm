@@ -73,8 +73,8 @@ int SmsMenuHandler::write(const char* buffer, uint32_t /*offset*/,
     // Read the size of User Name which is the content of first four bytes
     auto userNameLen = readVecContent(smsBuf, 0, sizeof(uint32_t));
 
-    // Read the size of Password/Old Password which is the content of four bytes
-    // after User Name
+    // Read the size of Password/Old Password which is the content of four
+    // bytes after User Name
     auto userPassLen =
         readVecContent(smsBuf, sizeof(uint32_t) + userNameLen,
                        sizeof(uint32_t) + userNameLen + sizeof(uint32_t));

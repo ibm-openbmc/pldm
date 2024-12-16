@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../common/utils.hpp"
 #include "host-bmc/host_pdr_handler.hpp"
-#include "license_entry.hpp"
 #include "type.hpp"
 
 #include <filesystem>

@@ -23,6 +23,8 @@ class Connector : public ItemConnector
     ~Connector() = default;
     Connector(const Connector&) = delete;
     Connector& operator=(const Connector&) = delete;
+    Connector(Connector&&) = delete;
+    Connector& operator=(Connector&&) = delete;
 
     Connector(sdbusplus::bus_t& bus, const std::string& objPath) :
         ItemConnector(bus, objPath.c_str())
