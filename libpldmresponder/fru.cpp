@@ -407,13 +407,37 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
     auto removeBmcEntityRc =
         pldm_entity_association_pdr_remove_contained_entity(
             pdrRepo, &removeEntity, false, &updateRecordHdlBmc);
+    error("delete/remove contained entity from bmc record handle: {HANDLE}", "HANDLE", updateRecordHdlBmc);
+
+    pldm::responder::pdr_utils::PdrEntry pdrEntry;
+    uint8_t* pdrData = nullptr;
+    auto record = pldm_pdr_find_record(pdrRepo, updateRecordHdlBmc, &pdrData,
+                                       &pdrEntry.size,
+                                       &pdrEntry.handle.nextRecordHandle);
+    if (record)
+    {
+        error("Found BMC Record {REC}", "REC", updateRecordHdlBmc);
+    }
+    bmcEventDataOps = record ? PLDM_RECORDS_MODIFIED : PLDM_RECORDS_DELETED;
 
     auto removeHostEntityRc =
         pldm_entity_association_pdr_remove_contained_entity(
             pdrRepo, &removeEntity, true, &updateRecordHdlHost);
+    error("delete/remove contained entity host record handle: {HANDLE}", "HANDLE", updateRecordHdlHost);
+    record = pldm_pdr_find_record(pdrRepo, updateRecordHdlHost, &pdrData,
+                                       &pdrEntry.size,
+                                       &pdrEntry.handle.nextRecordHandle);
+    if (record)
+    {
+        error("Found Host Record {REC}", "REC", updateRecordHdlHost);
+    }
+    hostEventDataOps = record ? PLDM_RECORDS_MODIFIED : PLDM_RECORDS_DELETED;
 
     pldm_pdr_remove_fru_record_set_by_rsi(pdrRepo, rsi, false,
                                           &deleteRecordHdl);
+
+    error("delete record handle: {HANDLE} from rsi: {RSI}", "HANDLE",
+          deleteRecordHdl, "RSI", rsi);
 
     pldm_entity_association_tree_delete_node(entityTree, removeEntity);
     pldm_entity_association_tree_delete_node(bmcEntityTree, removeEntity);
@@ -428,6 +452,7 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
         static_cast<unsigned>(removeEntity.entity_container_id));
     associatedEntityMap.erase(fruObjPath);
 
+    error("delete RSI: {HANDLE}", "HANDLE", rsi);
     deleteFruRecord(rsi);
 
     std::vector<ChangeEntry> handlesTobeDeleted;
@@ -446,6 +471,8 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
         effecterDbusObjMaps.erase(ids);
         if (delEffecterHdl != 0)
         {
+            error("delete effecter ID: {ID} and record handle: {HANDLE}", "ID",
+                  ids, "HANDLE", delEffecterHdl);
             handlesTobeDeleted.push_back(delEffecterHdl);
         }
     }
@@ -459,6 +486,8 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
         sensorDbusObjMaps.erase(ids);
         if (delSensorHdl != 0)
         {
+            error("delete sensor ID: {ID} and record handle: {HANDLE}", "ID",
+                  ids, "HANDLE", delSensorHdl);
             handlesTobeDeleted.push_back(delSensorHdl);
         }
     }
@@ -478,15 +507,30 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
             ? handlesTobeDeleted.push_back(updateRecordHdlHost)
             : handlesTobeModified.push_back(updateRecordHdlHost);
     }
+
+    
+    error("Modified Handles");
+    for(const auto &modified : handlesTobeModified)
+    {
+        error("{H}", "H", modified);
+    }
+    error("Deleted Handles");
+    for(const auto &deleted : handlesTobeDeleted)
+    {
+        error("{H}", "H", deleted);
+    }
+
     // Adapter PDRs can have deleted records
     if (!handlesTobeDeleted.empty())
     {
+        error("Sending repo change event for deleted handler");
         sendPDRRepositoryChgEventbyPDRHandles(
             std::move(handlesTobeDeleted),
             std::move(std::vector<uint8_t>(1, PLDM_RECORDS_DELETED)));
     }
     if (!handlesTobeModified.empty())
     {
+        error("Sending repo change event fored handler");
         sendPDRRepositoryChgEventbyPDRHandles(
             std::move(handlesTobeModified),
             std::move(std::vector<uint8_t>(1, PLDM_RECORDS_MODIFIED)));
@@ -597,6 +641,15 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
         pldm_entity_association_tree_add(bmcEntityTree, &entity, 0xFFFF,
                                          bmcTreeParentNode,
                                          PLDM_ENTITY_ASSOCIAION_PHYSICAL);
+        info(
+            "2 Building Individual FRU [{FRU_OBJ_PATH}] with entityid [ {ENTITY_TYPE}, {ENTITY_NUM}, {ENTITY_ID} ] Parent :[ {P_ENTITY_TYP}, {P_ENTITY_NUM}, {P_ENTITY_ID} ]",
+            "FRU_OBJ_PATH", fruObjectPath, "ENTITY_TYPE",
+            static_cast<unsigned>(node_entity.entity_type), "ENTITY_NUM",
+            static_cast<unsigned>(node_entity.entity_instance_num), "ENTITY_ID",
+            static_cast<unsigned>(node_entity.entity_container_id),
+            "P_ENTITY_TYP", static_cast<unsigned>(parent.entity_type),
+            "P_ENTITY_NUM", static_cast<unsigned>(parent.entity_instance_num),
+            "P_ENTITY_ID", static_cast<unsigned>(parent.entity_container_id));
 
         objects = DBusHandler::getManagedObj(
             "xyz.openbmc_project.Inventory.Manager", inventoryPath);
@@ -607,6 +660,9 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
                 const auto& interfaces = object.second;
                 newRecordHdl = populateRecords(interfaces, recordInfos, entity,
                                                fruObjectPath, true);
+                error(
+                    "build record handle: {HANDLE} FRU object path: {OBJPATH}",
+                    "HANDLE", newRecordHdl, "OBJPATH", fruObjectPath);
                 associatedEntityMap.emplace(fruObjectPath, entity);
                 break;
             }
@@ -656,11 +712,13 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
     found = false;
     pldm_entity_association_find_parent_entity(pdrRepo, &parent, true,
                                                &updatedRecordHdlHost, &found);
+    error("build host record handle: {HANDLE}", "HANDLE", updatedRecordHdlHost);
     if (found)
     {
         pldm_entity_association_pdr_add_contained_entity_to_remote_pdr(
             pdrRepo, &entity, updatedRecordHdlHost);
         hostEventDataOps = PLDM_RECORDS_MODIFIED;
+        error("Modify build host record handle: {HANDLE}", "HANDLE", updatedRecordHdlHost);
     }
     else
     {
@@ -668,6 +726,8 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
                                                &parent, &entity,
                                                &updatedRecordHdlHost);
         hostEventDataOps = PLDM_RECORDS_ADDED;
+        error(" build host record handle: {HANDLE}", "HANDLE", updatedRecordHdlHost);
+
     }
 
     // create the relevant state effecter and sensor PDRs for the new fru record
@@ -681,6 +741,7 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
 
     for (auto& ids : recordHdlList)
     {
+        error("build record handle from list: {HANDLE}", "HANDLE", ids);
         handlesTobeAdded.push_back(ids);
     }
     if (updatedRecordHdlBmc != 0)
@@ -694,6 +755,16 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
         (hostEventDataOps == PLDM_RECORDS_MODIFIED)
             ? handlesTobeModified.push_back(updatedRecordHdlHost)
             : handlesTobeAdded.push_back(updatedRecordHdlHost);
+    }
+    error("Modified Handles");
+    for(const auto &modified : handlesTobeModified)
+    {
+        error("{H}", "H", modified);
+    }
+    error("Added Handles");
+    for(const auto &deleted : handlesTobeAdded)
+    {
+        error("{H}", "H", deleted);
     }
     if (!handlesTobeAdded.empty())
     {
