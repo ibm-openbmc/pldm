@@ -52,10 +52,10 @@ class TerminusManager
     virtual ~TerminusManager() = default;
 
     explicit TerminusManager(
-        sdeventplus::Event& /* event */, RequesterHandler& handler,
+        sdeventplus::Event& /* event */, RequesterHandler& /* handler */,
         pldm::InstanceIdDb& instanceIdDb, TerminiMapper& termini,
         Manager* manager, mctp_eid_t localEid) :
-        handler(handler), instanceIdDb(instanceIdDb), termini(termini),
+        instanceIdDb(instanceIdDb), termini(termini),
         tidPool(tidPoolSize, false), manager(manager), localEid(localEid)
     {
         // DSP0240 v1.1.0 table-8, special value: 0,0xFF = reserved
@@ -216,7 +216,7 @@ class TerminusManager
     /** @brief Reference to a Handler object that manages the request/response
      *         logic.
      */
-    RequesterHandler& handler;
+    // RequesterHandler& handler;
 
     /** @brief Reference to the instanceID data base from libpldm */
     pldm::InstanceIdDb& instanceIdDb;
