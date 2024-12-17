@@ -379,14 +379,16 @@ exec::task<int> TerminusManager::initMctpTerminus(const MctpInfo& mctpInfo)
 }
 
 exec::task<int> TerminusManager::sendRecvPldmMsgOverMctp(
-    mctp_eid_t eid, Request& request, const pldm_msg** responseMsg,
-    size_t* responseLen)
+    mctp_eid_t /* eid*/, Request& /*request*/, const pldm_msg** /*responseMsg*/,
+    size_t* /*responseLen*/)
 {
     int rc = 0;
     try
     {
-        std::tie(rc, *responseMsg, *responseLen) =
-            co_await handler.sendRecvMsg(eid, std::move(request));
+        // Commented below code as Coroutine code is reverted as 
+        // part of Queue Requester logic
+        //std::tie(rc, *responseMsg, *responseLen) =
+          //  co_await handler.sendRecvMsg(eid, std::move(request));
     }
     catch (const sdbusplus::exception_t& e)
     {
