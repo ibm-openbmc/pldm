@@ -206,34 +206,6 @@ TEST(generateStateEffecterOEMPDR, testGoodRequest)
     auto event = sdeventplus::Event::get_default();
     std::unique_ptr<CodeUpdate> mockCodeUpdate =
         std::make_unique<MockCodeUpdate>(mockDbusHandler.get());
-    GetSubTreeResponse mockResponse1 = {
-        {"/xyz/openbmc_project/inventory/system/chassis/motherboard/dcm0/cpu0",
-         {{"xyz.openbmc_project.Inventory.Manager",
-           {"xyz.openbmc_project.Inventory.Item.Cpu"}}}}};
-
-    EXPECT_CALL(*mockDbusHandler,
-                getSubtree("/xyz/openbmc_project/inventory/system", 0,
-                           std::vector<std::string>{
-                               "xyz.openbmc_project.Inventory.Item.Cpu"}))
-        .WillRepeatedly(Return(mockResponse1));
-
-    pldm::utils::GetSubTreeResponse mockDimmResponse = {
-        {"/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm0",
-         {{"xyz.openbmc_project.Inventory.Manager",
-           {"com.ibm.ipzvpd.Location", "org.freedesktop.DBus.Introspectable",
-            "org.freedesktop.DBus.Peer", "org.freedesktop.DBus.Properties",
-            "xyz.openbmc_project.Association.Definitions",
-            "xyz.openbmc_project.Inventory.Decorator.LocationCode",
-            "xyz.openbmc_project.Inventory.Item",
-            "xyz.openbmc_project.Inventory.Item.Dimm",
-            "xyz.openbmc_project.Object.Enable",
-            "xyz.openbmc_project.State.Decorator.Availability",
-            "xyz.openbmc_project.State.Decorator.OperationalStatus"}}}}};
-    EXPECT_CALL(*mockDbusHandler,
-                getSubtree("/xyz/openbmc_project/inventory/system", 0,
-                           std::vector<std::string>{
-                               "xyz.openbmc_project.Inventory.Item.Dimm"}))
-        .WillRepeatedly(Return(mockDimmResponse));
 
     std::unique_ptr<MockOemPlatformHandler> mockoemPlatformHandler =
         std::make_unique<MockOemPlatformHandler>(
@@ -368,34 +340,6 @@ TEST(generateStateSensorOEMPDR, testGoodRequest)
     auto event = sdeventplus::Event::get_default();
     std::unique_ptr<CodeUpdate> mockCodeUpdate =
         std::make_unique<MockCodeUpdate>(mockDbusHandler.get());
-    GetSubTreeResponse mockResponse1 = {
-        {"/xyz/openbmc_project/inventory/system/chassis/motherboard/dcm0/cpu0",
-         {{"xyz.openbmc_project.Inventory.Manager",
-           {"xyz.openbmc_project.Inventory.Item.Cpu"}}}}};
-
-    EXPECT_CALL(*mockDbusHandler,
-                getSubtree("/xyz/openbmc_project/inventory/system", 0,
-                           std::vector<std::string>{
-                               "xyz.openbmc_project.Inventory.Item.Cpu"}))
-        .WillRepeatedly(Return(mockResponse1));
-
-    pldm::utils::GetSubTreeResponse mockDimmResponse = {
-        {"/xyz/openbmc_project/inventory/system/chassis/motherboard/dimm0",
-         {{"xyz.openbmc_project.Inventory.Manager",
-           {"com.ibm.ipzvpd.Location", "org.freedesktop.DBus.Introspectable",
-            "org.freedesktop.DBus.Peer", "org.freedesktop.DBus.Properties",
-            "xyz.openbmc_project.Association.Definitions",
-            "xyz.openbmc_project.Inventory.Decorator.LocationCode",
-            "xyz.openbmc_project.Inventory.Item",
-            "xyz.openbmc_project.Inventory.Item.Dimm",
-            "xyz.openbmc_project.Object.Enable",
-            "xyz.openbmc_project.State.Decorator.Availability",
-            "xyz.openbmc_project.State.Decorator.OperationalStatus"}}}}};
-    EXPECT_CALL(*mockDbusHandler,
-                getSubtree("/xyz/openbmc_project/inventory/system", 0,
-                           std::vector<std::string>{
-                               "xyz.openbmc_project.Inventory.Item.Dimm"}))
-        .WillRepeatedly(Return(mockDimmResponse));
 
     std::unique_ptr<MockOemPlatformHandler> mockoemPlatformHandler =
         std::make_unique<MockOemPlatformHandler>(

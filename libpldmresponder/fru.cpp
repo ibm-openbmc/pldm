@@ -1,6 +1,9 @@
 #include "fru.hpp"
 
 #include "common/utils.hpp"
+#ifdef OEM_IBM
+#include "oem/ibm/libpldmresponder/utils.hpp"
+#endif
 
 #include <libpldm/entity.h>
 #include <libpldm/utils.h>
@@ -379,6 +382,12 @@ uint32_t FruImpl::populateRecords(
 void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
 {
     uint16_t rsi = objectPathToRSIMap[fruObjPath];
+    if (!rsi)
+    {
+        info("No Pdrs to delete for the object path {PATH}", "PATH",
+             fruObjPath);
+        return;
+    }
     pldm_entity removeEntity;
     uint16_t terminusHdl{};
     uint16_t entityType{};
@@ -538,6 +547,14 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
     pldm_entity parentEntity{};
     static uint32_t bmc_record_handle = 0;
     uint32_t newRecordHdl{};
+
+    if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice")
+    {
+        // Delete the existing adapter PDR before creating new one
+        info("Removing old PDRs {PATH}", "PATH", fruObjectPath);
+        removeIndividualFRU(fruObjectPath);
+    }
+
     try
     {
         entity.entity_type = parser.getEntityType(fruInterface);
@@ -581,6 +598,8 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
                                          bmcTreeParentNode,
                                          PLDM_ENTITY_ASSOCIAION_PHYSICAL);
 
+        objects = DBusHandler::getManagedObj(
+            "xyz.openbmc_project.Inventory.Manager", inventoryPath);
         for (const auto& object : objects)
         {
             if (object.first.str == fruObjectPath)
@@ -922,37 +941,67 @@ void FruImpl::processFruPresenceChange(const DbusChangedProps& chProperties,
     }
 
     std::vector<std::string> portObjects;
-    static constexpr auto portInterface =
-        "xyz.openbmc_project.Inventory.Item.Connector";
-
-    if (oemUtilsHandler)
-    {
-        if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice")
-        {
-            if (!oemUtilsHandler->checkFruPresence(fruObjPath.c_str()))
-            {
-                return;
-            }
-            portObjects = oemUtilsHandler->findPortObjects(fruObjPath);
-        }
-        // as per current code the ports do not have Present property
-    }
 
     if (newPropVal)
     {
-        buildIndividualFRU(fruInterface, fruObjPath);
-        for (auto portObject : portObjects)
+        info("Presence changed to true for {PATH}", "PATH", fruObjPath);
+        // oemUtilsHandler check is added to make sure that it is OEM_IBM path
+        if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice" &&
+            oemUtilsHandler)
         {
-            buildIndividualFRU(portInterface, portObject);
+            if (pldm::responder::utils::checkIfIBMFru(fruObjPath))
+            {
+                static constexpr auto portInterface =
+                    "xyz.openbmc_project.Inventory.Item.Connector";
+
+                // if the added fru is IBM cable card, build the adapter
+                // PDRs and the port PDRs.
+                buildIndividualFRU(fruInterface, fruObjPath);
+                portObjects = oemUtilsHandler->findPortObjects(fruObjPath);
+                info("Ports under the cable card: {NUM}", "NUM",
+                     (int)portObjects.size());
+                for (auto portObject : portObjects)
+                {
+                    buildIndividualFRU(portInterface, portObject);
+                }
+                return;
+            }
+            else
+            {
+                // PDRs realted to industry standard card are not
+                // rebuilt.
+                return;
+            }
         }
+        buildIndividualFRU(fruInterface, fruObjPath);
     }
     else
     {
-        for (auto portObject : portObjects)
+        info("Presence changed to false for {PATH}", "PATH", fruObjPath);
+        if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice")
         {
-            removeIndividualFRU(portObject);
+            // If the card is removed from the system, we do remove the port
+            // pdrs(if present) but not the adapter PDR as adapter PDR should be
+            // always there inspite of the presence of the card.
+            if (oemUtilsHandler)
+            {
+                portObjects = oemUtilsHandler->findPortObjects(fruObjPath);
+                for (auto portObject : portObjects)
+                {
+                    removeIndividualFRU(portObject);
+                }
+            }
+            else
+            {
+                // Non OEM-IBM path, remove the pcieDevice pdrs
+                removeIndividualFRU(fruObjPath);
+            }
         }
-        removeIndividualFRU(fruObjPath);
+        else
+        {
+            info("Removing Individual FRU {PATH}", "PATH", fruObjPath);
+            removeIndividualFRU(fruObjPath);
+        }
     }
 }
 
