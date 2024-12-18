@@ -44,6 +44,15 @@ class Handler : public oem_fru::Handler
      */
     void setIBMFruHandler(pldm::responder::fru::Handler* handler);
 
+    /** @brief Method to set the oem utils handler
+     *
+     *  @param[in] handler - pointer to OEM Utils handler
+     */
+    inline void setOemUtilsHandler(pldm::responder::oem_utils::Handler* handler)
+    {
+        oemUtilsHandler = handler;
+    }
+
     /** @brief Process OEM FRU table
      *
      *  @param[in] fruData - the data of the fru records
@@ -64,6 +73,9 @@ class Handler : public oem_fru::Handler
     const pldm_pdr* pdrRepo;
 
     pldm::responder::fru::Handler* fruHandler; //!< pointer to PLDM fru handler
+
+    pldm::responder::oem_utils::Handler*
+        oemUtilsHandler; //!< pointer to OEM utils handler
 
     /** @brief update the DBus property
      *

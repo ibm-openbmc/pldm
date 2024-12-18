@@ -291,8 +291,6 @@ int main(int argc, char** argv)
         hostPDRHandler.get(), dbusToPLDMEventHandler.get(), fruHandler.get(),
         bmcEntityTree.get(), platformConfigHandler.get(), &reqHandler, event,
         true);
-    // bmcEntityTree.get(), oemPlatformHandler.get(),
-    // platformConfigHandler.get(), &reqHandler, event, true);
 
     auto biosHandler = std::make_unique<bios::Handler>(
         pldmTransport.getEventSource(), hostEID, &instanceIdDb, &reqHandler,

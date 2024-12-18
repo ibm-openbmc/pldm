@@ -90,14 +90,6 @@ int setupUnixSocket(const std::string& socketInterface);
 int writeToUnixSocket(const int sock, const char* buf,
                       const uint64_t blockSize);
 
-/** @brief checks if given FRU is IBM specific
- *
- *  @param[in] objPath - FRU object path
- *
- *  @return bool - true if IBM specific FRU
- */
-bool checkIfIBMFru(const std::string& objPath);
-
 /** @brief Converts a binary file to json data
  *  This function converts bson data stored in a binary file to
  *  nlohmann json data
@@ -311,6 +303,14 @@ class Handler : public oem_utils::Handler
      *  @return bool to indicate presence or absence
      */
     virtual bool checkFruPresence(const char* objPath);
+
+    /** @brief checks if given FRU is IBM specific
+     *
+     *  @param[in] objPath - FRU object path
+     *
+     *  @return bool - true if IBM specific FRU
+     */
+    virtual bool checkIfIBMFru(const std::string& objPath);
 
     /** @brief finds the ports under an adapter
      *

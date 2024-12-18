@@ -125,7 +125,7 @@ void Handler::updateDBusProperty(
                 entityType == value.entity_type &&
                 containerId == value.entity_container_id)
             {
-                if (!(pldm::responder::utils::checkIfIBMFru(key)))
+                if (oemUtilsHandler && !(oemUtilsHandler->checkIfIBMFru(key)))
                 {
                     pldm::utils::setFruPresence(key, true);
                 }

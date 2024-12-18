@@ -236,6 +236,14 @@ class Handler : public CmdHandler
      */
     virtual bool checkFruPresence(const char* objPath) = 0;
 
+    /** @brief checks if given FRU is IBM specific
+     *
+     *  @param[in] objPath - FRU object path
+     *
+     *  @return bool - true if IBM specific FRU
+     */
+    virtual bool checkIfIBMFru(const std::string& objPath) = 0;
+
     /** @brief finds the ports under an adapter
      *
      *  @param[in] adapterObjPath - D-Bus object path for the adapter
