@@ -160,14 +160,6 @@ class Handler
             }
         };
 
-        if (handlers.contains(key))
-        {
-            error(
-                "Register request for EID '{EID}' is using InstanceID '{INSTANCEID}'",
-                "EID", eid, "INSTANCEID", instanceId);
-            return PLDM_ERROR;
-        }
-
         auto request = std::make_unique<RequestInterface>(
             pldmTransport, eid, event, std::move(requestMsg), numRetries,
             responseTimeOut, verbose);
