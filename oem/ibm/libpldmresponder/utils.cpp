@@ -496,6 +496,7 @@ std::string getObjectPathByLocationCode(const std::string& locationCode,
 {
     std::string locationIface(
         "xyz.openbmc_project.Inventory.Decorator.LocationCode");
+    std::string inventoryIface("xyz.openbmc_project.Inventory.Item");
 
     std::string path;
     pldm::utils::ObjectValueTree objects;
@@ -519,13 +520,25 @@ std::string getObjectPathByLocationCode(const std::string& locationCode,
             interfaces.contains(locationIface))
         {
             pldm::utils::PropertyMap properties = interfaces[locationIface];
+            pldm::utils::PropertyMap presentInfo = interfaces[inventoryIface];
             if (properties.contains("LocationCode"))
             {
                 if (get<std::string>(properties["LocationCode"]) ==
                     locationCode)
                 {
-                    path = objPath.first.str;
-                    return path;
+                    // Return the object path only if either
+                    // The "xyz.openbmc_project.Inventory.Item" interface is not
+                    // present or
+                    // The "Present" property is not populated or it is present
+                    // and its value is true
+                    if (!interfaces.contains(
+                            "xyz.openbmc_project.Inventory.Item") ||
+                        !presentInfo.contains("Present") ||
+                        get<bool>(presentInfo["Present"]))
+                    {
+                        path = objPath.first.str;
+                        return path;
+                    }
                 }
             }
         }
