@@ -4,9 +4,10 @@
 
 #include <libpldm/base.h>
 #include <libpldm/oem/ibm/file_io.h>
-#include <stdint.h>
 
 #include <phosphor-logging/lg2.hpp>
+
+#include <cstdint>
 
 PHOSPHOR_LOG2_USING;
 
@@ -22,11 +23,10 @@ static constexpr auto certFilePath = "/var/lib/ibm/bmcweb/";
 
 CertMap CertHandler::certMap;
 
-void CertHandler::writeFromMemory(uint32_t offset, uint32_t length,
-                                  uint64_t address,
-                                  oem_platform::Handler* /*oemPlatformHandler*/,
-                                  SharedAIORespData& sharedAIORespDataobj,
-                                  sdeventplus::Event& event)
+void CertHandler::writeFromMemory(
+    uint32_t offset, uint32_t length, uint64_t address,
+    oem_platform::Handler* /*oemPlatformHandler*/,
+    SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event)
 {
     auto it = certMap.find(certType);
     if (it == certMap.end())
@@ -73,11 +73,10 @@ int CertHandler::postDataTransferCallBack(bool IsWriteToMemOp, uint32_t length)
     return PLDM_SUCCESS;
 }
 
-void CertHandler::readIntoMemory(uint32_t offset, uint32_t length,
-                                 uint64_t address,
-                                 oem_platform::Handler* /*oemPlatformHandler*/,
-                                 SharedAIORespData& sharedAIORespDataobj,
-                                 sdeventplus::Event& event)
+void CertHandler::readIntoMemory(
+    uint32_t offset, uint32_t length, uint64_t address,
+    oem_platform::Handler* /*oemPlatformHandler*/,
+    SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event)
 {
     std::string filePath = certFilePath;
     filePath += "CSR_" + std::to_string(fileHandle);
@@ -185,9 +184,9 @@ int CertHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
             }
             PropertyValue valueStatus{
                 "xyz.openbmc_project.Certs.Entry.State.Complete"};
-            DBusMapping dbusMappingStatus{certObjPath +
-                                              std::to_string(fileHandle),
-                                          certEntryIntf, "Status", "string"};
+            DBusMapping dbusMappingStatus{
+                certObjPath + std::to_string(fileHandle), certEntryIntf,
+                "Status", "string"};
             try
             {
                 info(
@@ -220,7 +219,7 @@ int CertHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
             catch (const std::exception& e)
             {
                 error(
-                    "Failed to write the set status property for certficate entry, error - {ERROR}",
+                    "Failed to write the set status property for certificate entry, error - {ERROR}",
                     "ERROR", e);
                 return PLDM_ERROR;
             }
@@ -253,8 +252,8 @@ int CertHandler::newFileAvailable(uint64_t length)
     }
     else if (certType == PLDM_FILE_TYPE_ROOT_CERT)
     {
-        fileFd = open((filePath + "RootCert").c_str(), flags,
-                      S_IRUSR | S_IWUSR);
+        fileFd =
+            open((filePath + "RootCert").c_str(), flags, S_IRUSR | S_IWUSR);
     }
     if (fileFd == -1)
     {
@@ -267,11 +266,9 @@ int CertHandler::newFileAvailable(uint64_t length)
     return PLDM_SUCCESS;
 }
 
-int CertHandler::newFileAvailableWithMetaData(uint64_t length,
-                                              uint32_t metaDataValue1,
-                                              uint32_t /*metaDataValue2*/,
-                                              uint32_t /*metaDataValue3*/,
-                                              uint32_t /*metaDataValue4*/)
+int CertHandler::newFileAvailableWithMetaData(
+    uint64_t length, uint32_t metaDataValue1, uint32_t /*metaDataValue2*/,
+    uint32_t /*metaDataValue3*/, uint32_t /*metaDataValue4*/)
 {
     fs::create_directories(certFilePath);
     fs::permissions(certFilePath,
@@ -319,8 +316,8 @@ int CertHandler::newFileAvailableWithMetaData(uint64_t length,
     }
     else if (certType == PLDM_FILE_TYPE_ROOT_CERT)
     {
-        fileFd = open((filePath + "RootCert").c_str(), flags,
-                      S_IRUSR | S_IWUSR);
+        fileFd =
+            open((filePath + "RootCert").c_str(), flags, S_IRUSR | S_IWUSR);
     }
     if (fileFd == -1)
     {
@@ -333,11 +330,10 @@ int CertHandler::newFileAvailableWithMetaData(uint64_t length,
     return PLDM_SUCCESS;
 }
 
-int CertHandler::fileAckWithMetaData(uint8_t fileStatus,
-                                     uint32_t /*metaDataValue1*/,
-                                     uint32_t /*metaDataValue2*/,
-                                     uint32_t /*metaDataValue3*/,
-                                     uint32_t /*metaDataValue4*/)
+int CertHandler::fileAckWithMetaData(
+    uint8_t fileStatus, uint32_t /*metaDataValue1*/,
+    uint32_t /*metaDataValue2*/, uint32_t /*metaDataValue3*/,
+    uint32_t /*metaDataValue4*/)
 {
     if (certType == PLDM_FILE_TYPE_CERT_SIGNING_REQUEST)
     {

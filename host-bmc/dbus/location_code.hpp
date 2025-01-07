@@ -22,8 +22,8 @@ class LocationCode : public LocationIntf
     ~LocationCode() = default;
     LocationCode(const LocationCode&) = delete;
     LocationCode& operator=(const LocationCode&) = delete;
-    LocationCode(LocationCode&&) = default;
-    LocationCode& operator=(LocationCode&&) = default;
+    LocationCode(LocationCode&&) = delete;
+    LocationCode& operator=(LocationCode&&) = delete;
 
     LocationCode(sdbusplus::bus_t& bus, const std::string& objPath) :
         LocationIntf(bus, objPath.c_str()), path(objPath)

@@ -23,8 +23,8 @@ class FabricAdapter : public ItemFabricAdapter
     ~FabricAdapter() = default;
     FabricAdapter(const FabricAdapter&) = delete;
     FabricAdapter& operator=(const FabricAdapter&) = delete;
-    FabricAdapter(FabricAdapter&&) = default;
-    FabricAdapter& operator=(FabricAdapter&&) = default;
+    FabricAdapter(FabricAdapter&&) = delete;
+    FabricAdapter& operator=(FabricAdapter&&) = delete;
 
     FabricAdapter(sdbusplus::bus_t& bus, const std::string& objPath) :
         ItemFabricAdapter(bus, objPath.c_str())

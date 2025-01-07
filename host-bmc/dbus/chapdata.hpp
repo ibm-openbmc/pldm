@@ -29,8 +29,8 @@ class ChapDatas : public ChapDataObj
     ~ChapDatas() = default;
     ChapDatas(const ChapDatas&) = delete;
     ChapDatas& operator=(const ChapDatas&) = delete;
-    ChapDatas(ChapDatas&&) = default;
-    ChapDatas& operator=(ChapDatas&&) = default;
+    ChapDatas(ChapDatas&&) = delete;
+    ChapDatas& operator=(ChapDatas&&) = delete;
 
     ChapDatas(sdbusplus::bus_t& bus, const std::string& objPath,
               pldm::responder::oem_fileio::Handler* dbusToFilehandlerObj) :

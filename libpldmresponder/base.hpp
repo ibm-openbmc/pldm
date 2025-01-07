@@ -3,10 +3,10 @@
 #include "libpldmresponder/platform.hpp"
 
 #include <libpldm/base.h>
-#include <stdint.h>
 
 #include <sdeventplus/source/event.hpp>
 
+#include <cstdint>
 #include <vector>
 
 using namespace pldm::responder;
@@ -20,30 +20,28 @@ namespace base
 class Handler : public CmdHandler
 {
   public:
-    Handler(sdeventplus::Event& event,
-            pldm::responder::oem_platform::Handler* oemPlatformHandler) :
-        event(event), oemPlatformHandler(oemPlatformHandler)
+    Handler(sdeventplus::Event& event) : event(event)
     {
         handlers.emplace(
             PLDM_GET_PLDM_TYPES,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
-            return this->getPLDMTypes(request, payloadLength);
-        });
+                return this->getPLDMTypes(request, payloadLength);
+            });
         handlers.emplace(
             PLDM_GET_PLDM_COMMANDS,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
-            return this->getPLDMCommands(request, payloadLength);
-        });
+                return this->getPLDMCommands(request, payloadLength);
+            });
         handlers.emplace(
             PLDM_GET_PLDM_VERSION,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
-            return this->getPLDMVersion(request, payloadLength);
-        });
+                return this->getPLDMVersion(request, payloadLength);
+            });
         handlers.emplace(
             PLDM_GET_TID,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
-            return this->getTID(request, payloadLength);
-        });
+                return this->getTID(request, payloadLength);
+            });
     }
 
     /** @brief Handler for getPLDMTypes
@@ -86,6 +84,16 @@ class Handler : public CmdHandler
      */
     Response getTID(const pldm_msg* request, size_t payloadLength);
 
+    /* @brief Method to set the oem platform handler in base handler class
+     *
+     * @param[in] handler - oem platform handler
+     */
+    inline void
+        setOemPlatformHandler(pldm::responder::oem_platform::Handler* handler)
+    {
+        oemPlatformHandler = handler;
+    }
+
   private:
     /** @brief reference of main event loop of pldmd, primarily used to schedule
      *  work
@@ -93,7 +101,7 @@ class Handler : public CmdHandler
     sdeventplus::Event& event;
 
     /** @brief OEM platform handler */
-    pldm::responder::oem_platform::Handler* oemPlatformHandler;
+    pldm::responder::oem_platform::Handler* oemPlatformHandler = nullptr;
 
     /** @brief sdeventplus event source */
     std::unique_ptr<sdeventplus::source::Defer> survEvent;

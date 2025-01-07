@@ -23,8 +23,8 @@ class Global : public ItemGlobal
     ~Global() = default;
     Global(const Global&) = delete;
     Global& operator=(const Global&) = delete;
-    Global(Global&&) = default;
-    Global& operator=(Global&&) = default;
+    Global(Global&&) = delete;
+    Global& operator=(Global&&) = delete;
 
     Global(sdbusplus::bus_t& bus, const std::string& objPath) :
         ItemGlobal(bus, objPath.c_str())

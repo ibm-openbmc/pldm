@@ -11,8 +11,6 @@
 #include "dbus/deserialize.hpp"
 #include "dbus/serialize.hpp"
 
-#include <assert.h>
-
 #include <nlohmann/json.hpp>
 #include <phosphor-logging/lg2.hpp>
 #include <sdeventplus/clock.hpp>
@@ -20,6 +18,7 @@
 #include <sdeventplus/source/io.hpp>
 #include <sdeventplus/source/time.hpp>
 
+#include <cassert>
 #include <fstream>
 #include <type_traits>
 
@@ -35,11 +34,9 @@ using namespace pldm::hostbmc::utils;
 using Json = nlohmann::json;
 namespace fs = std::filesystem;
 using namespace pldm::dbus;
-constexpr auto fruJson = "host_frus.json";
 constexpr auto ledFwdAssociation = "identifying";
 constexpr auto ledReverseAssociation = "identified_by";
 const Json emptyJson{};
-const std::vector<Json> emptyJsonList{};
 
 template <typename T>
 uint16_t extractTerminusHandle(std::vector<uint8_t>& pdr)
@@ -83,8 +80,8 @@ void updateContainerId(pldm_entity_association_tree* entityTree,
     }
 
     pldm_entity entity{t->entity_type, t->entity_instance, t->container_id};
-    auto node = pldm_entity_association_tree_find_with_locality(entityTree,
-                                                                &entity, true);
+    auto node = pldm_entity_association_tree_find_with_locality(
+        entityTree, &entity, true);
     if (node)
     {
         pldm_entity e = pldm_entity_extract(node);
@@ -93,23 +90,20 @@ void updateContainerId(pldm_entity_association_tree* entityTree,
 }
 
 HostPDRHandler::HostPDRHandler(
-    int mctp_fd, uint8_t mctp_eid, sdeventplus::Event& event, pldm_pdr* repo,
-    const std::string& eventsJsonsDir, pldm_entity_association_tree* entityTree,
+    int /* mctp_fd */, uint8_t mctp_eid, sdeventplus::Event& event,
+    pldm_pdr* repo, const std::string& eventsJsonsDir,
+    pldm_entity_association_tree* entityTree,
     pldm_entity_association_tree* bmcEntityTree,
     pldm::host_effecters::HostEffecterParser* hostEffecterParser,
     pldm::InstanceIdDb& instanceIdDb,
     pldm::requester::Handler<pldm::requester::Request>* handler,
-    pldm::responder::oem_platform::Handler* oemPlatformHandler,
-    pldm::responder::oem_utils::Handler* oemUtilsHandler,
     pldm::host_associations::HostAssociationsParser* associationsParser) :
-    mctp_fd(mctp_fd), mctp_eid(mctp_eid), event(event), repo(repo),
+    mctp_eid(mctp_eid), event(event), repo(repo),
     stateSensorHandler(eventsJsonsDir), entityTree(entityTree),
-    bmcEntityTree(bmcEntityTree), hostEffecterParser(hostEffecterParser),
-    instanceIdDb(instanceIdDb), handler(handler),
-    associationsParser(associationsParser),
-    oemPlatformHandler(oemPlatformHandler),
-    entityMaps(parseEntityMap(ENTITY_MAP_JSON)),
-    oemUtilsHandler(oemUtilsHandler)
+    hostEffecterParser(hostEffecterParser), instanceIdDb(instanceIdDb),
+    handler(handler), associationsParser(associationsParser),
+    entityMaps(parseEntityMap(ENTITY_MAP_JSON))
+// bmcEntityTree(bmcEntityTree), hostEffecterParser(hostEffecterParser),
 {
     isHostOff = false;
     isHostRunning = false;
@@ -118,70 +112,69 @@ HostPDRHandler::HostPDRHandler(
         pldm::utils::DBusHandler::getBus(),
         propertiesChanged("/xyz/openbmc_project/state/host0",
                           "xyz.openbmc_project.State.Host"),
-        [this, repo, entityTree, bmcEntityTree,
-         oemPlatformHandler](sdbusplus::message_t& msg) {
-        DbusChangedProps props{};
-        std::string intf;
-        msg.read(intf, props);
-        const auto itr = props.find("CurrentHostState");
-        if (itr != props.end())
-        {
-            pldm::utils::PropertyValue value = itr->second;
-            auto propVal = std::get<std::string>(value);
-            if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
+        [this, repo, entityTree, bmcEntityTree](sdbusplus::message_t& msg) {
+            DbusChangedProps props{};
+            std::string intf;
+            msg.read(intf, props);
+            const auto itr = props.find("CurrentHostState");
+            if (itr != props.end())
             {
-                if (oemPlatformHandler)
+                pldm::utils::PropertyValue value = itr->second;
+                auto propVal = std::get<std::string>(value);
+                if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
                 {
-                    oemPlatformHandler->startStopTimer(false);
-                }
-                // Delete all the remote terminus information
-                std::erase_if(tlPDRInfo, [](const auto& item) {
-                    const auto& [key, value] = item;
-                    return key != TERMINUS_HANDLE;
-                });
-                // when the host is powered off, set the availability
-                // state of all the dbus objects to false
-                this->setPresenceFrus();
-                pldm_pdr_remove_remote_pdrs(repo);
-                pldm_entity_association_tree_destroy_root(entityTree);
-                pldm_entity_association_tree_copy_root(bmcEntityTree,
-                                                       entityTree);
-                this->sensorMap.clear();
-                this->isHostPdrModified = false;
-                this->responseReceived = false;
-                this->mergedHostParents = false;
-                this->stateSensorPDRs.clear();
-                fruRecordSetPDRs.clear();
-                isHostOff = true;
-                isHostRunning = false;
-                this->sensorIndex = stateSensorPDRs.begin();
-                this->modifiedCounter = 0;
+                    if (oemPlatformHandler)
+                    {
+                        oemPlatformHandler->startStopTimer(false);
+                    }
+                    // Delete all the remote terminus information
+                    std::erase_if(tlPDRInfo, [](const auto& item) {
+                        const auto& [key, value] = item;
+                        return key != TERMINUS_HANDLE;
+                    });
+                    // when the host is powered off, set the availability
+                    // state of all the dbus objects to false
+                    this->setPresenceFrus();
+                    pldm_pdr_remove_remote_pdrs(repo);
+                    pldm_entity_association_tree_destroy_root(entityTree);
+                    pldm_entity_association_tree_copy_root(bmcEntityTree,
+                                                           entityTree);
+                    this->sensorMap.clear();
+                    this->isHostPdrModified = false;
+                    this->responseReceived = false;
+                    this->mergedHostParents = false;
+                    this->stateSensorPDRs.clear();
+                    fruRecordSetPDRs.clear();
+                    isHostOff = true;
+                    isHostRunning = false;
+                    this->sensorIndex = stateSensorPDRs.begin();
+                    this->modifiedCounter = 0;
 
-                // After a power off , the remote nodes will be deleted
-                // from the entity association tree, making the nodes point
-                // to junk values, so set them to nullptr
-                for (const auto& element : this->objPathMap)
+                    // After a power off , the remote nodes will be deleted
+                    // from the entity association tree, making the nodes point
+                    // to junk values, so set them to nullptr
+                    for (const auto& element : this->objPathMap)
+                    {
+                        pldm_entity obj{};
+                        this->objPathMap[element.first] = obj;
+                    }
+                }
+                else if (propVal ==
+                         "xyz.openbmc_project.State.Host.HostState.Running")
                 {
-                    pldm_entity obj{};
-                    this->objPathMap[element.first] = obj;
+                    isHostRunning = true;
+                    isHostOff = false;
+                    if (oemPlatformHandler)
+                    {
+                        oemPlatformHandler->handleBootTypesAtPowerOn();
+                    }
+                }
+                else
+                {
+                    isHostRunning = false;
                 }
             }
-            else if (propVal ==
-                     "xyz.openbmc_project.State.Host.HostState.Running")
-            {
-                isHostRunning = true;
-                isHostOff = false;
-                if (oemPlatformHandler)
-                {
-                    oemPlatformHandler->handleBootTypesAtPowerOn();
-                }
-            }
-            else
-            {
-                isHostRunning = false;
-            }
-        }
-    });
+        });
 }
 
 void HostPDRHandler::setPresenceFrus()
@@ -226,8 +219,8 @@ void HostPDRHandler::getHostPDR(uint32_t nextRecordHandle)
 {
     pdrFetchEvent.reset();
 
-    std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
-                                    PLDM_GET_PDR_REQ_BYTES);
+    std::vector<uint8_t> requestMsg(
+        sizeof(pldm_msg_hdr) + PLDM_GET_PDR_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
     uint32_t recordHandle{};
     if (!nextRecordHandle && (!modifiedPDRRecordHandles.empty()) &&
@@ -247,9 +240,9 @@ void HostPDRHandler::getHostPDR(uint32_t nextRecordHandle)
     }
     auto instanceId = instanceIdDb.next(mctp_eid);
 
-    auto rc = encode_get_pdr_req(instanceId, recordHandle, 0,
-                                 PLDM_GET_FIRSTPART, UINT16_MAX, 0, request,
-                                 PLDM_GET_PDR_REQ_BYTES);
+    auto rc =
+        encode_get_pdr_req(instanceId, recordHandle, 0, PLDM_GET_FIRSTPART,
+                           UINT16_MAX, 0, request, PLDM_GET_PDR_REQ_BYTES);
     if (rc != PLDM_SUCCESS)
     {
         instanceIdDb.free(mctp_eid, instanceId);
@@ -261,7 +254,7 @@ void HostPDRHandler::getHostPDR(uint32_t nextRecordHandle)
     rc = handler->registerRequest(
         mctp_eid, instanceId, PLDM_PLATFORM, PLDM_GET_PDR,
         std::move(requestMsg),
-        std::move(std::bind_front(&HostPDRHandler::processHostPDRs, this)));
+        std::bind_front(&HostPDRHandler::processHostPDRs, this));
     if (rc)
     {
         error(
@@ -364,7 +357,7 @@ void HostPDRHandler::mergeEntityAssociations(
     {
         // Adding the remote range PDRs to the repo before merging it
         uint32_t handle = record_handle;
-        pldm_pdr_add_check(repo, pdr.data(), size, true, 0xFFFF, &handle);
+        pldm_pdr_add(repo, pdr.data(), size, true, 0xFFFF, &handle);
     }
 
     pldm_entity_association_pdr_extract(pdr.data(), pdr.size(), &numEntities,
@@ -417,7 +410,7 @@ void HostPDRHandler::mergeEntityAssociations(
         pldm_find_entity_ref_in_tree(entityTree, entities[0], &node);
         if (node == nullptr)
         {
-            error("Failed to find referrence of the entity in the tree");
+            error("Failed to find reference of the entity in the tree");
         }
 
         else
@@ -432,14 +425,14 @@ void HostPDRHandler::mergeEntityAssociations(
                     terminus_handle = terminusHandle;
                 }
             }
-
             if ((isHostUp() || (terminus_handle & 0x8000)) &&
                 oemPlatformHandler)
             {
                 auto record = oemPlatformHandler->fetchLastBMCRecord(repo);
 
-                uint32_t record_handle = pldm_pdr_get_record_handle(repo,
-                                                                    record);
+                uint32_t record_handle =
+                    pldm_pdr_get_record_handle(repo, record);
+
                 int rc =
                     pldm_entity_association_pdr_add_from_node_with_record_handle(
                         node, repo, &entities, numEntities, true,
@@ -452,18 +445,22 @@ void HostPDRHandler::mergeEntityAssociations(
             }
             else
             {
-                auto record = oemPlatformHandler->fetchLastBMCRecord(repo);
-
-                uint32_t record_handle = pldm_pdr_get_record_handle(repo,
-                                                                    record);
-                int rc =
-                    pldm_entity_association_pdr_add_from_node_with_record_handle(
-                        node, repo, &entities, numEntities, true,
-                        terminus_handle, (record_handle + 1));
-                if (rc)
+                if (oemPlatformHandler)
                 {
-                    error("Failed to add entity association PDR from node:{RC}",
-                          "RC", rc);
+                    auto record = oemPlatformHandler->fetchLastBMCRecord(repo);
+
+                    uint32_t record_handle =
+                        pldm_pdr_get_record_handle(repo, record);
+                    int rc =
+                        pldm_entity_association_pdr_add_from_node_with_record_handle(
+                            node, repo, &entities, numEntities, true,
+                            terminus_handle, (record_handle + 1));
+                    if (rc)
+                    {
+                        error(
+                            "Failed to add entity association PDR from node:{RC}",
+                            "RC", rc);
+                    }
                 }
             }
         }
@@ -545,9 +542,9 @@ void HostPDRHandler::sendPDRRepositoryChgEvent(std::vector<uint8_t>&& pdrTypes,
         return;
     }
     auto instanceId = instanceIdDb.next(mctp_eid);
-    std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
-                                    PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES +
-                                    actualSize);
+    std::vector<uint8_t> requestMsg(
+        sizeof(pldm_msg_hdr) + PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES +
+        actualSize);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
     rc = encode_platform_event_message_req(
         instanceId, 1, TERMINUS_ID, PLDM_PDR_REPOSITORY_CHG_EVENT,
@@ -562,8 +559,9 @@ void HostPDRHandler::sendPDRRepositoryChgEvent(std::vector<uint8_t>&& pdrTypes,
         return;
     }
 
-    auto platformEventMessageResponseHandler =
-        [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
+    auto platformEventMessageResponseHandler = [](mctp_eid_t /*eid*/,
+                                                  const pldm_msg* response,
+                                                  size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             error(
@@ -618,9 +616,8 @@ void HostPDRHandler::parseStateSensorPDRs()
     }
 }
 
-void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
-                                     const pldm_msg* response,
-                                     size_t respMsgLen)
+void HostPDRHandler::processHostPDRs(
+    mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen)
 {
     static bool merged = false;
     uint32_t nextRecordHandle{};
@@ -783,8 +780,8 @@ void HostPDRHandler::processHostPDRs(mctp_eid_t /*eid*/,
                     {
                         pldm_delete_by_record_handle(repo, rh, true);
 
-                        rc = pldm_pdr_add_check(repo, pdr.data(), respCount,
-                                                true, pdrTerminusHandle, &rh);
+                        rc = pldm_pdr_add(repo, pdr.data(), respCount, true,
+                                          pdrTerminusHandle, &rh);
                         if (rc)
                         {
                             throw std::runtime_error(
@@ -927,7 +924,7 @@ void HostPDRHandler::_processPDRRepoChgEvent(
     }
     deferredPDRRepoChgEvent.reset();
     this->sendPDRRepositoryChgEvent(
-        std::move(std::vector<uint8_t>(1, PLDM_PDR_ENTITY_ASSOCIATION)),
+        std::vector<uint8_t>(1, PLDM_PDR_ENTITY_ASSOCIATION),
         FORMAT_IS_PDR_HANDLES);
 }
 
@@ -952,8 +949,8 @@ void HostPDRHandler::setHostFirmwareCondition()
 {
     responseReceived = false;
     auto instanceId = instanceIdDb.next(mctp_eid);
-    std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
-                                    PLDM_GET_VERSION_REQ_BYTES);
+    std::vector<uint8_t> requestMsg(
+        sizeof(pldm_msg_hdr) + PLDM_GET_VERSION_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
     auto rc = encode_get_version_req(instanceId, 0, PLDM_GET_FIRSTPART,
                                      PLDM_BASE, request);
@@ -975,7 +972,7 @@ void HostPDRHandler::setHostFirmwareCondition()
             return;
         }
         info("Getting the response code '{RC}'", "RC", lg2::hex,
-             static_cast<uint16_t>(response->payload[0]));
+             response->payload[0]);
         this->responseReceived = true;
     };
     rc = handler->registerRequest(mctp_eid, instanceId, PLDM_BASE,
@@ -1055,9 +1052,11 @@ void HostPDRHandler::_setHostSensorState()
                         "xyz.openbmc_project.PLDM.Error.SetHostSensorState.EncodeStateSensorFail");
                     return;
                 }
-                auto getStateSensorReadingRespHandler =
-                    [=, this](mctp_eid_t /*eid*/, const pldm_msg* response,
-                              size_t respMsgLen) {
+                auto getStateSensorReadingRespHandler = [=, this](
+                                                            mctp_eid_t /*eid*/,
+                                                            const pldm_msg*
+                                                                response,
+                                                            size_t respMsgLen) {
                     if (response == nullptr || !respMsgLen)
                     {
                         error(
@@ -1160,8 +1159,8 @@ void HostPDRHandler::_setHostSensorState()
                                 "SENSOR_ID", sensorId);
                             return;
                         }
-                        const auto& [containerId, entityType,
-                                     entityInstance] = entityInfo;
+                        const auto& [containerId, entityType, entityInstance] =
+                            entityInfo;
                         auto stateSetId = stateSetIds[sensorOffset];
                         pldm::responder::events::StateSensorEntry
                             stateSensorEntry{containerId,    entityType,
@@ -1214,9 +1213,10 @@ void HostPDRHandler::getFRURecordTableMetadataByRemote()
         return;
     }
 
-    auto getFruRecordTableMetadataResponseHandler =
-        [this](mctp_eid_t /*eid*/, const pldm_msg* response,
-               size_t respMsgLen) {
+    auto getFruRecordTableMetadataResponseHandler = [this](mctp_eid_t /*eid*/,
+                                                           const pldm_msg*
+                                                               response,
+                                                           size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             error(
@@ -1271,8 +1271,8 @@ void HostPDRHandler::getFRURecordTableByRemote(uint16_t& totalTableRecords)
     }
 
     auto instanceId = instanceIdDb.next(mctp_eid);
-    std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
-                                    PLDM_GET_FRU_RECORD_TABLE_REQ_BYTES);
+    std::vector<uint8_t> requestMsg(
+        sizeof(pldm_msg_hdr) + PLDM_GET_FRU_RECORD_TABLE_REQ_BYTES);
 
     // send the getFruRecordTable command
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
@@ -1288,9 +1288,10 @@ void HostPDRHandler::getFRURecordTableByRemote(uint16_t& totalTableRecords)
         return;
     }
 
-    auto getFruRecordTableResponseHandler =
-        [totalTableRecords, this](mctp_eid_t /*eid*/, const pldm_msg* response,
-                                  size_t respMsgLen) {
+    auto getFruRecordTableResponseHandler = [totalTableRecords,
+                                             this](mctp_eid_t /*eid*/,
+                                                   const pldm_msg* response,
+                                                   size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             error("Failed to receive response for the get fru record table");
@@ -1323,7 +1324,7 @@ void HostPDRHandler::getFRURecordTableByRemote(uint16_t& totalTableRecords)
         {
             fruRecordData.clear();
 
-            error("Failed to parse fru recrod data format.");
+            error("Failed to parse fru record data format.");
             return;
         }
 
@@ -1358,8 +1359,8 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
 {
     auto mctpEid = getMctpEID(tid);
     auto instanceId = instanceIdDb.next(mctpEid);
-    std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
-                                    PLDM_GET_STATE_SENSOR_READINGS_REQ_BYTES);
+    std::vector<uint8_t> requestMsg(
+        sizeof(pldm_msg_hdr) + PLDM_GET_STATE_SENSOR_READINGS_REQ_BYTES);
 
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
     bitfield8_t bf;
@@ -1374,10 +1375,12 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
         return;
     }
 
-    auto getStateSensorReadingsResponseHandler =
-        [this, path, type, instance, containerId, stateSetId, mctpEid,
-         sensorId](mctp_eid_t /*eid*/, const pldm_msg* response,
-                   size_t respMsgLen) {
+    auto getStateSensorReadingsResponseHandler = [this, path, type, instance,
+                                                  containerId, stateSetId,
+                                                  mctpEid, sensorId](
+                                                     mctp_eid_t /*eid*/,
+                                                     const pldm_msg* response,
+                                                     size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             error(
@@ -1584,6 +1587,7 @@ void HostPDRHandler::setAvailabilityState(const std::string& path)
 
 void HostPDRHandler::createDbusObjects()
 {
+    // Creating and Refreshing dbus hosted by remote PLDM entity Fru PDRs
     error("Refreshing dbus hosted by pldm Started");
 
     objMapIndex = objPathMap.begin();
@@ -1775,8 +1779,8 @@ void HostPDRHandler::setOperationStatus()
             pldm::pdr::EntityInfo entityInfo{};
             pldm::pdr::CompositeSensorStates compositeSensorStates{};
             std::vector<pldm::pdr::StateSetId> stateSetIds{};
-            std::tie(entityInfo, compositeSensorStates,
-                     stateSetIds) = sensorMapIndex->second;
+            std::tie(entityInfo, compositeSensorStates, stateSetIds) =
+                sensorMapIndex->second;
             const auto& [containerId, entityType, entityInstance] = entityInfo;
 
             if (node.entity_type == entityType &&
@@ -1864,8 +1868,8 @@ std::string HostPDRHandler::getParentChassis(const std::string& frupath)
 
 void HostPDRHandler::setRecordPresent(uint32_t recordHandle)
 {
-    pldm_entity recordEntity = pldm_get_entity_from_record_handle(repo,
-                                                                  recordHandle);
+    pldm_entity recordEntity =
+        pldm_get_entity_from_record_handle(repo, recordHandle);
     for (const auto& [path, dbusEntity] : objPathMap)
     {
         if (dbusEntity.entity_type == recordEntity.entity_type &&

@@ -4,8 +4,8 @@
 
 #include <libpldm/base.h>
 #include <libpldm/oem/ibm/file_io.h>
-#include <stdint.h>
 
+#include <cstdint>
 #include <iostream>
 
 namespace pldm
@@ -16,9 +16,8 @@ using namespace ibm_pfw_sms;
 namespace responder
 {
 
-uint32_t SmsMenuHandler::readVecContent(std::vector<char>& inputVec,
-                                        const uint32_t startIdx,
-                                        const uint32_t endIdx)
+uint32_t SmsMenuHandler::readVecContent(
+    std::vector<char>& inputVec, const uint32_t startIdx, const uint32_t endIdx)
 {
     uint32_t size = 0;
     constexpr auto bitPos = 8;
@@ -74,8 +73,8 @@ int SmsMenuHandler::write(const char* buffer, uint32_t /*offset*/,
     // Read the size of User Name which is the content of first four bytes
     auto userNameLen = readVecContent(smsBuf, 0, sizeof(uint32_t));
 
-    // Read the size of Password/Old Password which is the content of four bytes
-    // after User Name
+    // Read the size of Password/Old Password which is the content of four
+    // bytes after User Name
     auto userPassLen =
         readVecContent(smsBuf, sizeof(uint32_t) + userNameLen,
                        sizeof(uint32_t) + userNameLen + sizeof(uint32_t));
@@ -91,8 +90,8 @@ int SmsMenuHandler::write(const char* buffer, uint32_t /*offset*/,
     }
 
     // Split the vector to retrieve the User Name
-    auto result = vecSplit(smsBuf, sizeof(uint32_t),
-                           sizeof(uint32_t) + userNameLen);
+    auto result =
+        vecSplit(smsBuf, sizeof(uint32_t), sizeof(uint32_t) + userNameLen);
     std::string unameStr(result.begin(), result.end());
 
     // Split the vector to retrieve the Password/Old Password
@@ -129,8 +128,8 @@ int SmsMenuHandler::write(const char* buffer, uint32_t /*offset*/,
         authenticate(unameStr, passStr, authenticated, passwordChangeRequired,
                      operationAllowed);
 
-        metaDataObj.fileMetaData1 = (authenticated) ? PLDM_AUTHENTICATED
-                                                    : PLDM_NOT_AUTHENTICATED;
+        metaDataObj.fileMetaData1 =
+            (authenticated) ? PLDM_AUTHENTICATED : PLDM_NOT_AUTHENTICATED;
 
         if (passwordChangeRequired)
         {
@@ -139,8 +138,8 @@ int SmsMenuHandler::write(const char* buffer, uint32_t /*offset*/,
     }
     else if (smsMenuType == PLDM_FILE_TYPE_USER_PASSWORD_CHANGE)
     {
-        changePassRc = changePassword(unameStr, passStr, newPassStr,
-                                      operationAllowed);
+        changePassRc =
+            changePassword(unameStr, passStr, newPassStr, operationAllowed);
         if (changePassRc == PASSWORD_CHANGE_SUCCESSFUL)
         {
             metaDataObj.fileMetaData1 = PLDM_PASSWORD_CHANGED;

@@ -25,10 +25,10 @@ static constexpr auto resDumpStatus =
     "xyz.openbmc_project.Common.Progress.OperationStatus.Failed";
 
 DbusToFileHandler::DbusToFileHandler(
-    int mctp_fd, uint8_t mctp_eid, pldm::InstanceIdDb* instanceIdDb,
+    int /* mctp_fd */, uint8_t mctp_eid, pldm::InstanceIdDb* instanceIdDb,
     sdbusplus::message::object_path resDumpCurrentObjPath,
     pldm::requester::Handler<pldm::requester::Request>* handler) :
-    mctp_fd(mctp_fd), mctp_eid(mctp_eid), instanceIdDb(instanceIdDb),
+    mctp_eid(mctp_eid), instanceIdDb(instanceIdDb),
     resDumpCurrentObjPath(resDumpCurrentObjPath), handler(handler)
 {}
 
@@ -41,8 +41,8 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
         return;
     }
     auto instanceId = instanceIdDb->next(mctp_eid);
-    std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
-                                    PLDM_NEW_FILE_REQ_BYTES);
+    std::vector<uint8_t> requestMsg(
+        sizeof(pldm_msg_hdr) + PLDM_NEW_FILE_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
     // Need to revisit this logic at the time of multiple resource dump support
 
@@ -55,9 +55,9 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
     info(
         "File name in sendNewFileAvailableCmd that we encode new_file_req is {FILENAME}",
         "FILENAME", filename);
-    auto rc = encode_new_file_req(instanceId,
-                                  PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS,
-                                  fileHandle, fileSize, request);
+    auto rc =
+        encode_new_file_req(instanceId, PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS,
+                            fileHandle, fileSize, request);
     if (rc != PLDM_SUCCESS)
     {
         instanceIdDb->free(mctp_eid, instanceId);
@@ -80,7 +80,7 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
         {
             error(
                 "Failed to decode new file available response or remote terminus returned error, response code '{RC}' and completion code '{CC}'",
-                "RC", rc, "CC", static_cast<unsigned>(completionCode));
+                "RC", rc, "CC", completionCode);
             reportResourceDumpFailure("DecodeNewFileResp");
         }
     };
@@ -96,10 +96,12 @@ void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
     }
 }
 
-void DbusToFileHandler::reportResourceDumpFailure(std::string str)
+void DbusToFileHandler::reportResourceDumpFailure(const std::string_view& str)
 {
-    std::string s = "xyz.openbmc_project.PLDM.Error.ReportResourceDumpFail." +
-                    str;
+    std::string s = "xyz.openbmc_project.PLDM.Error.ReportResourceDumpFail.";
+    s += str;
+
+    pldm::utils::reportError(s.c_str());
 
     pldm::utils::reportError(s.c_str());
     PropertyValue value{resDumpStatus};
@@ -267,8 +269,8 @@ void DbusToFileHandler::newChapDataFileAvailable(
                         fs::perms::others_read | fs::perms::owner_write);
     }
 
-    fs::path chapFilePath = std::string(chapDataDirPath) +
-                            std::string("chapsecret");
+    fs::path chapFilePath =
+        std::string(chapDataDirPath) + std::string("chapsecret");
     uint32_t fileHandle = atoi(fs::path((std::string)chapFilePath).c_str());
     std::ofstream fileHandleFd;
     fileHandleFd.open(chapFilePath, std::ios::out | std::ofstream::binary);
@@ -332,9 +334,8 @@ void DbusToFileHandler::newLicFileAvailable(const std::string& licenseStr)
     newFileAvailableSendToHost(fileSize, 1, PLDM_FILE_TYPE_COD_LICENSE_KEY);
 }
 
-void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
-                                                   const uint32_t fileHandle,
-                                                   const uint16_t type)
+void DbusToFileHandler::newFileAvailableSendToHost(
+    const uint32_t fileSize, const uint32_t fileHandle, const uint16_t type)
 {
     if (instanceIdDb == NULL)
     {
@@ -342,12 +343,12 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
         return;
     }
     auto instanceId = instanceIdDb->next(mctp_eid);
-    std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
-                                    PLDM_NEW_FILE_REQ_BYTES);
+    std::vector<uint8_t> requestMsg(
+        sizeof(pldm_msg_hdr) + PLDM_NEW_FILE_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
 
-    auto rc = encode_new_file_req(instanceId, type, fileHandle, fileSize,
-                                  request);
+    auto rc =
+        encode_new_file_req(instanceId, type, fileHandle, fileSize, request);
     if (rc != PLDM_SUCCESS)
     {
         instanceIdDb->free(mctp_eid, instanceId);
@@ -355,8 +356,9 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
               "RC", rc);
         return;
     }
-    auto newFileAvailableRespHandler =
-        [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
+    auto newFileAvailableRespHandler = [](mctp_eid_t /*eid*/,
+                                          const pldm_msg* response,
+                                          size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             error(
@@ -369,7 +371,7 @@ void DbusToFileHandler::newFileAvailableSendToHost(const uint32_t fileSize,
         {
             error(
                 "Failed to decode new file available response for vmi or remote terminus returned error, response code '{RC}' and completion code '{CC}'",
-                "RC", rc, "CC", static_cast<unsigned>(completionCode));
+                "RC", rc, "CC", completionCode);
             pldm::utils::reportError(
                 "xyz.openbmc_project.PLDM.Error.DecodeNewFileResponseFail");
         }
@@ -407,8 +409,8 @@ void DbusToFileHandler::sendFileAckWithMetaDataToHost(
         return;
     }
     auto instanceId = instanceIdDb->next(mctp_eid);
-    std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
-                                    PLDM_FILE_ACK_WITH_META_DATA_REQ_BYTES);
+    std::vector<uint8_t> requestMsg(
+        sizeof(pldm_msg_hdr) + PLDM_FILE_ACK_WITH_META_DATA_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
 
     auto rc = encode_file_ack_with_meta_data_req(
@@ -423,9 +425,9 @@ void DbusToFileHandler::sendFileAckWithMetaDataToHost(
         return;
     }
 
-    auto fileAckWithMetaDataRespHandler = [this](mctp_eid_t /*eid*/,
-                                                 const pldm_msg* response,
-                                                 size_t respMsgLen) {
+    auto fileAckWithMetaDataRespHandler = [](mctp_eid_t /*eid*/,
+                                             const pldm_msg* response,
+                                             size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             error("Failed to receive response for FileAckWithMetaData command");

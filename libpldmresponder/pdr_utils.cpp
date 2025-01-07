@@ -35,8 +35,8 @@ pldm_pdr* Repo::getPdr() const
 RecordHandle Repo::addRecord(const PdrEntry& pdrEntry)
 {
     uint32_t handle = pdrEntry.handle.recordHandle;
-    int rc = pldm_pdr_add_check(repo, pdrEntry.data, pdrEntry.size, false,
-                                TERMINUS_HANDLE, &handle);
+    int rc = pldm_pdr_add(repo, pdrEntry.data, pdrEntry.size, false,
+                          TERMINUS_HANDLE, &handle);
     if (rc)
     {
         // pldm_pdr_add() assert()ed on failure to add PDR
@@ -49,9 +49,9 @@ const pldm_pdr_record* Repo::getFirstRecord(PdrEntry& pdrEntry)
 {
     constexpr uint32_t firstNum = 0;
     uint8_t* pdrData = nullptr;
-    auto record = pldm_pdr_find_record(getPdr(), firstNum, &pdrData,
-                                       &pdrEntry.size,
-                                       &pdrEntry.handle.nextRecordHandle);
+    auto record =
+        pldm_pdr_find_record(getPdr(), firstNum, &pdrData, &pdrEntry.size,
+                             &pdrEntry.handle.nextRecordHandle);
     if (record)
     {
         pdrEntry.data = pdrData;
@@ -64,9 +64,9 @@ const pldm_pdr_record* Repo::getNextRecord(const pldm_pdr_record* currRecord,
                                            PdrEntry& pdrEntry)
 {
     uint8_t* pdrData = nullptr;
-    auto record = pldm_pdr_get_next_record(getPdr(), currRecord, &pdrData,
-                                           &pdrEntry.size,
-                                           &pdrEntry.handle.nextRecordHandle);
+    auto record =
+        pldm_pdr_get_next_record(getPdr(), currRecord, &pdrData, &pdrEntry.size,
+                                 &pdrEntry.handle.nextRecordHandle);
     if (record)
     {
         pdrEntry.data = pdrData;
@@ -210,8 +210,8 @@ std::tuple<TerminusHandle, SensorID, SensorInfo>
                            std::move(sensorInfo));
 }
 
-std::vector<FruRecordDataFormat> parseFruRecordTable(const uint8_t* fruData,
-                                                     size_t fruLen)
+std::vector<FruRecordDataFormat>
+    parseFruRecordTable(const uint8_t* fruData, size_t fruLen)
 {
     // Refer: DSP0257_1.0.0 Table 2
     // 7: uint16_t(FRU Record Set Identifier), uint8_t(FRU Record Type),
@@ -240,23 +240,24 @@ std::vector<FruRecordDataFormat> parseFruRecordTable(const uint8_t* fruData,
 
         index += 5;
 
-        std::ranges::for_each(std::views::iota(0, (int)record->num_fru_fields),
-                              [fruData, &fru, &index](int) {
-            auto tlv =
-                reinterpret_cast<const pldm_fru_record_tlv*>(fruData + index);
-            FruTLV frutlv;
-            frutlv.fruFieldType = tlv->type;
-            frutlv.fruFieldLen = tlv->length;
-            frutlv.fruFieldValue.resize(tlv->length);
-            for (const auto& i : std::views::iota(0, (int)tlv->length))
-            {
-                memcpy(frutlv.fruFieldValue.data() + i, tlv->value + i, 1);
-            }
-            fru.fruTLV.push_back(frutlv);
+        std::ranges::for_each(
+            std::views::iota(0, (int)record->num_fru_fields),
+            [fruData, &fru, &index](int) {
+                auto tlv = reinterpret_cast<const pldm_fru_record_tlv*>(
+                    fruData + index);
+                FruTLV frutlv;
+                frutlv.fruFieldType = tlv->type;
+                frutlv.fruFieldLen = tlv->length;
+                frutlv.fruFieldValue.resize(tlv->length);
+                for (const auto& i : std::views::iota(0, (int)tlv->length))
+                {
+                    memcpy(frutlv.fruFieldValue.data() + i, tlv->value + i, 1);
+                }
+                fru.fruTLV.push_back(frutlv);
 
-            // 2: 1byte FRU Field Type, 1byte FRU Field Length
-            index += fruFieldTypeLength + (unsigned)tlv->length;
-        });
+                // 2: 1byte FRU Field Type, 1byte FRU Field Length
+                index += fruFieldTypeLength + (unsigned)tlv->length;
+            });
 
         frus.push_back(fru);
     }

@@ -21,8 +21,8 @@ class LicenseEntry : public LicIntf
     ~LicenseEntry() = default;
     LicenseEntry(const LicenseEntry&) = delete;
     LicenseEntry& operator=(const LicenseEntry&) = delete;
-    LicenseEntry(LicenseEntry&&) = default;
-    LicenseEntry& operator=(LicenseEntry&&) = default;
+    LicenseEntry(LicenseEntry&&) = delete;
+    LicenseEntry& operator=(LicenseEntry&&) = delete;
 
     LicenseEntry(sdbusplus::bus_t& bus, const std::string& objPath) :
         LicIntf(bus, objPath.c_str()), path(objPath)

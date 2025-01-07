@@ -160,9 +160,6 @@ class BIOSConfig
     pldm::utils::DBusHandler* const dbusHandler;
     BaseBIOSTable baseBIOSTableMaps;
 
-    /** @brief socket descriptor to communicate to host */
-    int fd;
-
     /** @brief MCTP EID of host firmware */
     uint8_t eid;
 
@@ -235,11 +232,12 @@ class BIOSConfig
                         propertiesChanged(dBusMap->objectPath,
                                           dBusMap->interface),
                         [this, biosAttrIndex](sdbusplus::message_t& msg) {
-                    DbusChObjProperties props;
-                    std::string iface;
-                    msg.read(iface, props);
-                    processBiosAttrChangeNotification(props, biosAttrIndex);
-                }));
+                            DbusChObjProperties props;
+                            std::string iface;
+                            msg.read(iface, props);
+                            processBiosAttrChangeNotification(props,
+                                                              biosAttrIndex);
+                        }));
 
                 biosAttrMatch.push_back(
                     std::make_unique<sdbusplus::bus::match_t>(
@@ -247,17 +245,17 @@ class BIOSConfig
                         interfacesAdded() + argNpath(0, dBusMap->objectPath),
                         [this, biosAttrIndex, interface = dBusMap->interface](
                             sdbusplus::message_t& msg) {
-                    sdbusplus::message::object_path path;
-                    DbusIfacesAdded interfaces;
+                            sdbusplus::message::object_path path;
+                            DbusIfacesAdded interfaces;
 
-                    msg.read(path, interfaces);
-                    auto ifaceIt = interfaces.find(interface);
-                    if (ifaceIt != interfaces.end())
-                    {
-                        processBiosAttrChangeNotification(ifaceIt->second,
-                                                          biosAttrIndex);
-                    }
-                }));
+                            msg.read(path, interfaces);
+                            auto ifaceIt = interfaces.find(interface);
+                            if (ifaceIt != interfaces.end())
+                            {
+                                processBiosAttrChangeNotification(
+                                    ifaceIt->second, biosAttrIndex);
+                            }
+                        }));
             }
         }
         catch (const std::exception& e)

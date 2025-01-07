@@ -1,12 +1,12 @@
 libpldmresponder_deps = [
-  phosphor_dbus_interfaces,
-  phosphor_logging_dep,
-  nlohmann_json_dep,
-  sdbusplus,
-  sdeventplus,
-  libpldm_dep,
-  libpldmutils,
-  cereal_dep
+    phosphor_dbus_interfaces,
+    phosphor_logging_dep,
+    nlohmann_json_dep,
+    sdbusplus,
+    sdeventplus,
+    libpldm_dep,
+    libpldmutils,
+    cereal_dep,
 ]
 
 sources = [
@@ -27,7 +27,7 @@ sources = [
   '../host-bmc/host_pdr_handler.cpp',
   '../host-bmc/utils.cpp',
   '../host-bmc/dbus_to_event_handler.cpp',
-  '../host-bmc/dbus_to_host_effecters.cpp',
+  '../host-bmc/dbus_to_terminus_effecters.cpp',
   '../host-bmc/host_associations_parser.cpp',
   '../host-bmc/host_condition.cpp',
   '../host-bmc/utils.cpp',
@@ -83,6 +83,7 @@ if get_option('oem-ibm').allowed()
     '../oem/ibm/libpldmresponder/file_io_type_pcie.cpp',
     '../oem/ibm/libpldmresponder/file_io_type_lic.cpp',
     '../oem/ibm/pfw-sms-utils/pfw_sms_menu.cpp',
+    '../oem/ibm/host-bmc/host_lamp_test.cpp',
     '../oem/ibm/libpldmresponder/file_io_type_smsmenu.cpp',
   ]
   libpam = cpp.find_library('pam', required: true)
@@ -90,18 +91,20 @@ if get_option('oem-ibm').allowed()
 endif
 
 libpldmresponder = library(
-  'pldmresponder',
-  sources,
-  version: meson.project_version(),
-  include_directories:include_directories(responder_headers),
-  dependencies: libpldmresponder_deps,
-  install: true)
+    'pldmresponder',
+    sources,
+    version: meson.project_version(),
+    include_directories: include_directories(responder_headers),
+    dependencies: libpldmresponder_deps,
+    install: true,
+)
 
 libpldmresponder_dep = declare_dependency(
-  include_directories:include_directories(responder_headers),
-  link_with: libpldmresponder)
+    include_directories: include_directories(responder_headers),
+    link_with: libpldmresponder,
+)
 
 if get_option('tests').allowed()
-  subdir('test')
+    subdir('test')
 endif
 

@@ -2,6 +2,7 @@
 
 #include <libpldm/pdr.h>
 #include <libpldm/pldm_types.h>
+#include <linux/mctp.h>
 
 #include <phosphor-logging/lg2.hpp>
 #include <xyz/openbmc_project/Common/error.hpp>
@@ -26,10 +27,9 @@ namespace pldm
 namespace utils
 {
 
-std::vector<std::vector<uint8_t>> findStateEffecterPDR(uint8_t /*tid*/,
-                                                       uint16_t entityID,
-                                                       uint16_t stateSetId,
-                                                       const pldm_pdr* repo)
+std::vector<std::vector<uint8_t>>
+    findStateEffecterPDR(uint8_t /*tid*/, uint16_t entityID,
+                         uint16_t stateSetId, const pldm_pdr* repo)
 {
     uint8_t* outData = nullptr;
     uint32_t size{};
@@ -79,10 +79,9 @@ std::vector<std::vector<uint8_t>> findStateEffecterPDR(uint8_t /*tid*/,
     return pdrs;
 }
 
-std::vector<std::vector<uint8_t>> findStateSensorPDR(uint8_t /*tid*/,
-                                                     uint16_t entityID,
-                                                     uint16_t stateSetId,
-                                                     const pldm_pdr* repo)
+std::vector<std::vector<uint8_t>>
+    findStateSensorPDR(uint8_t /*tid*/, uint16_t entityID, uint16_t stateSetId,
+                       const pldm_pdr* repo)
 {
     uint8_t* outData = nullptr;
     uint32_t size{};
@@ -160,6 +159,17 @@ uint8_t readHostEID()
     return eid;
 }
 
+bool isValidEID(eid mctpEid)
+{
+    if (mctpEid == MCTP_ADDR_NULL || mctpEid < MCTP_START_VALID_EID ||
+        mctpEid == MCTP_ADDR_ANY)
+    {
+        return false;
+    }
+
+    return true;
+}
+
 uint8_t getNumPadBytes(uint32_t data)
 {
     uint8_t pad;
@@ -191,9 +201,8 @@ bool uintToDate(uint64_t data, uint16_t* year, uint8_t* month, uint8_t* day,
     return true;
 }
 
-std::optional<std::vector<set_effecter_state_field>>
-    parseEffecterData(const std::vector<uint8_t>& effecterData,
-                      uint8_t effecterCount)
+std::optional<std::vector<set_effecter_state_field>> parseEffecterData(
+    const std::vector<uint8_t>& effecterData, uint8_t effecterCount)
 {
     std::vector<set_effecter_state_field> stateField;
 
@@ -304,8 +313,8 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
 {
     auto setDbusValue = [&dBusMap, this](const auto& variant) {
         auto& bus = getBus();
-        auto service = getService(dBusMap.objectPath.c_str(),
-                                  dBusMap.interface.c_str());
+        auto service =
+            getService(dBusMap.objectPath.c_str(), dBusMap.interface.c_str());
         auto method = bus.new_method_call(
             service.c_str(), dBusMap.objectPath.c_str(), dbusProperties, "Set");
         method.append(dBusMap.interface.c_str(), dBusMap.propertyName.c_str(),
@@ -376,8 +385,8 @@ PropertyValue DBusHandler::getDbusPropertyVariant(
 {
     auto& bus = DBusHandler::getBus();
     auto service = getService(objPath, dbusInterface);
-    auto method = bus.new_method_call(service.c_str(), objPath, dbusProperties,
-                                      "Get");
+    auto method =
+        bus.new_method_call(service.c_str(), objPath, dbusProperties, "Get");
     method.append(dbusInterface, dbusProp);
     return bus.call(method, dbusTimeout).unpack<PropertyValue>();
 }
@@ -392,14 +401,13 @@ ObjectValueTree DBusHandler::getManagedObj(const char* service,
     return bus.call(method).unpack<ObjectValueTree>();
 }
 
-PropertyMap
-    DBusHandler::getDbusPropertiesVariant(const char* serviceName,
-                                          const char* objPath,
-                                          const char* dbusInterface) const
+PropertyMap DBusHandler::getDbusPropertiesVariant(
+    const char* serviceName, const char* objPath,
+    const char* dbusInterface) const
 {
     auto& bus = DBusHandler::getBus();
-    auto method = bus.new_method_call(serviceName, objPath, dbusProperties,
-                                      "GetAll");
+    auto method =
+        bus.new_method_call(serviceName, objPath, dbusProperties, "GetAll");
     method.append(dbusInterface);
     return bus.call(method, dbusTimeout).unpack<PropertyMap>();
 }
@@ -544,8 +552,8 @@ uint16_t findStateSensorId(const pldm_pdr* pdrRepo, uint8_t tid,
             {
                 return sensorPdr->sensor_id;
             }
-            possible_states_start += possibleStateSize + sizeof(setId) +
-                                     sizeof(possibleStateSize);
+            possible_states_start +=
+                possibleStateSize + sizeof(setId) + sizeof(possibleStateSize);
         }
     }
     return PLDM_INVALID_EFFECTER_ID;
@@ -575,8 +583,8 @@ std::string toString(const struct variable_field& var)
     }
 
     std::string str(reinterpret_cast<const char*>(var.ptr), var.length);
-    std::replace_if(str.begin(), str.end(),
-                    [](const char& c) { return !isprint(c); }, ' ');
+    std::replace_if(
+        str.begin(), str.end(), [](const char& c) { return !isprint(c); }, ' ');
     return str;
 }
 
@@ -594,8 +602,8 @@ std::vector<std::string> split(std::string_view srcStr, std::string_view delim,
         if (!trimStr.empty())
         {
             dstStr.remove_prefix(dstStr.find_first_not_of(trimStr));
-            dstStr.remove_suffix(dstStr.size() - 1 -
-                                 dstStr.find_last_not_of(trimStr));
+            dstStr.remove_suffix(
+                dstStr.size() - 1 - dstStr.find_last_not_of(trimStr));
         }
 
         if (!dstStr.empty())
@@ -659,9 +667,80 @@ void setFruPresence(const std::string& fruObjPath, bool present)
     }
 }
 
-std::vector<std::vector<pldm::pdr::Pdr_t>>
-    getStateSensorPDRsByType(uint8_t /*tid*/, uint16_t entityType,
-                             const pldm_pdr* repo)
+std::string_view trimNameForDbus(std::string& name)
+{
+    std::replace(name.begin(), name.end(), ' ', '_');
+    auto nullTerminatorPos = name.find('\0');
+    if (nullTerminatorPos != std::string::npos)
+    {
+        name.erase(nullTerminatorPos);
+    }
+    return name;
+}
+
+bool dbusPropValuesToDouble(const std::string_view& type,
+                            const pldm::utils::PropertyValue& value,
+                            double* doubleValue)
+{
+    if (!dbusValueNumericTypeNames.contains(type))
+    {
+        return false;
+    }
+
+    if (!doubleValue)
+    {
+        return false;
+    }
+
+    try
+    {
+        if (type == "uint8_t")
+        {
+            *doubleValue = static_cast<double>(std::get<uint8_t>(value));
+        }
+        else if (type == "int16_t")
+        {
+            *doubleValue = static_cast<double>(std::get<int16_t>(value));
+        }
+        else if (type == "uint16_t")
+        {
+            *doubleValue = static_cast<double>(std::get<uint16_t>(value));
+        }
+        else if (type == "int32_t")
+        {
+            *doubleValue = static_cast<double>(std::get<int32_t>(value));
+        }
+        else if (type == "uint32_t")
+        {
+            *doubleValue = static_cast<double>(std::get<uint32_t>(value));
+        }
+        else if (type == "int64_t")
+        {
+            *doubleValue = static_cast<double>(std::get<int64_t>(value));
+        }
+        else if (type == "uint64_t")
+        {
+            *doubleValue = static_cast<double>(std::get<uint64_t>(value));
+        }
+        else if (type == "double")
+        {
+            *doubleValue = static_cast<double>(std::get<double>(value));
+        }
+        else
+        {
+            return false;
+        }
+    }
+    catch (const std::exception& e)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+std::vector<std::vector<pldm::pdr::Pdr_t>> getStateSensorPDRsByType(
+    uint8_t /*tid*/, uint16_t entityType, const pldm_pdr* repo)
 {
     uint8_t* outData = nullptr;
     uint32_t size{};
@@ -708,10 +787,9 @@ std::vector<std::vector<pldm::pdr::Pdr_t>>
     return pdrs;
 }
 
-std::vector<pldm::pdr::SensorID> findSensorIds(const pldm_pdr* pdrRepo,
-                                               uint8_t tid, uint16_t entityType,
-                                               uint16_t entityInstance,
-                                               uint16_t containerId)
+std::vector<pldm::pdr::SensorID>
+    findSensorIds(const pldm_pdr* pdrRepo, uint8_t tid, uint16_t entityType,
+                  uint16_t entityInstance, uint16_t containerId)
 {
     std::vector<uint16_t> sensorIDs;
 
@@ -738,18 +816,17 @@ std::vector<pldm::pdr::SensorID> findSensorIds(const pldm_pdr* pdrRepo,
                     uint16_t id = sensorPdr->sensor_id;
                     sensorIDs.emplace_back(std::move(id));
                 }
-                possible_states_start += possibleStateSize +
-                                         sizeof(possibleStates->state_set_id) +
-                                         sizeof(possibleStateSize);
+                possible_states_start +=
+                    possibleStateSize + sizeof(possibleStates->state_set_id) +
+                    sizeof(possibleStateSize);
             }
         }
     }
     return sensorIDs;
 }
 
-std::vector<std::vector<pldm::pdr::Pdr_t>>
-    getStateEffecterPDRsByType(uint8_t /*tid*/, uint16_t entityType,
-                               const pldm_pdr* repo)
+std::vector<std::vector<pldm::pdr::Pdr_t>> getStateEffecterPDRsByType(
+    uint8_t /*tid*/, uint16_t entityType, const pldm_pdr* repo)
 {
     uint8_t* outData = nullptr;
     uint32_t size{};
@@ -826,9 +903,9 @@ std::vector<pldm::pdr::EffecterID>
                     uint16_t id = effecterPdr->effecter_id;
                     effecterIDs.emplace_back(std::move(id));
                 }
-                possible_states_start += possibleStateSize +
-                                         sizeof(possibleStates->state_set_id) +
-                                         sizeof(possibleStateSize);
+                possible_states_start +=
+                    possibleStateSize + sizeof(possibleStates->state_set_id) +
+                    sizeof(possibleStateSize);
             }
         }
     }
@@ -889,9 +966,9 @@ void setBiosAttr(const BiosAttributeList& biosAttrList)
         {
             auto service = pldm::utils::DBusHandler().getService(
                 biosConfigPath, biosConfigIntf);
-            auto method = bus.new_method_call(service.c_str(), biosConfigPath,
-                                              SYSTEMD_PROPERTY_INTERFACE,
-                                              "Set");
+            auto method =
+                bus.new_method_call(service.c_str(), biosConfigPath,
+                                    SYSTEMD_PROPERTY_INTERFACE, "Set");
             method.append(
                 biosConfigIntf, "PendingAttributes",
                 std::variant<PendingAttributesType>(pendingAttributes));

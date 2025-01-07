@@ -91,16 +91,14 @@ class FruImpl
     FruImpl(const std::string& configPath,
             const std::filesystem::path& fruMasterJsonPath, pldm_pdr* pdrRepo,
             pldm_entity_association_tree* entityTree,
-            pldm_entity_association_tree* bmcEntityTree,
-            pldm::responder::oem_fru::Handler* oemFruHandler,
-            Requester& requester,
+            pldm_entity_association_tree* bmcEntityTree, Requester& requester,
             pldm::requester::Handler<pldm::requester::Request>* handler,
-            uint8_t mctp_eid, sdeventplus::Event& event,
+            uint8_t mctp_eid, sdeventplus::Event& /*event*/,
             pldm::state_sensor::DbusToPLDMEvent* dbusToPLDMEventHandler) :
         parser(configPath, fruMasterJsonPath), pdrRepo(pdrRepo),
         entityTree(entityTree), bmcEntityTree(bmcEntityTree),
-        oemFruHandler(oemFruHandler), requester(requester), handler(handler),
-        mctp_eid(mctp_eid), event(event),
+        requester(requester), handler(handler),
+        mctp_eid(mctp_eid), // event(event),
         dbusToPLDMEventHandler(dbusToPLDMEventHandler), oemUtilsHandler(nullptr)
     {
         startStateSensorId = 0;
@@ -244,6 +242,15 @@ class FruImpl
      */
     int setFRUTable(const std::vector<uint8_t>& fruData);
 
+    /* @brief Method to set the oem platform handler in fru handler class
+     *
+     * @param[in] handler - oem fru handler
+     */
+    inline void setOemFruHandler(pldm::responder::oem_fru::Handler* handler)
+    {
+        oemFruHandler = handler;
+    }
+
     /* @brief Send a PLDM event to host firmware containing a list of record
      *        handles of PDRs that the host firmware has to fetch.
      *
@@ -300,11 +307,10 @@ class FruImpl
     pldm_pdr* pdrRepo;
     pldm_entity_association_tree* entityTree;
     pldm_entity_association_tree* bmcEntityTree;
-    pldm::responder::oem_fru::Handler* oemFruHandler;
+    pldm::responder::oem_fru::Handler* oemFruHandler = nullptr;
     Requester& requester;
     pldm::requester::Handler<pldm::requester::Request>* handler;
     uint8_t mctp_eid;
-    sdeventplus::Event& event;
     pldm::state_sensor::DbusToPLDMEvent* dbusToPLDMEventHandler;
 
     std::map<dbus::ObjectPath, pldm_entity> objToEntityNode{};
@@ -424,36 +430,33 @@ class Handler : public CmdHandler
     Handler(const std::string& configPath,
             const std::filesystem::path& fruMasterJsonPath, pldm_pdr* pdrRepo,
             pldm_entity_association_tree* entityTree,
-            pldm_entity_association_tree* bmcEntityTree,
-            pldm::responder::oem_fru::Handler* oemFruHandler,
-            Requester& requester,
+            pldm_entity_association_tree* bmcEntityTree, Requester& requester,
             pldm::requester::Handler<pldm::requester::Request>* handler,
             uint8_t mctp_eid, sdeventplus::Event& event,
             pldm::state_sensor::DbusToPLDMEvent* dbusToPLDMEventHandler) :
         impl(configPath, fruMasterJsonPath, pdrRepo, entityTree, bmcEntityTree,
-             oemFruHandler, requester, handler, mctp_eid, event,
-             dbusToPLDMEventHandler)
+             requester, handler, mctp_eid, event, dbusToPLDMEventHandler)
     {
         handlers.emplace(
             PLDM_GET_FRU_RECORD_TABLE_METADATA,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
-            return this->getFRURecordTableMetadata(request, payloadLength);
-        });
+                return this->getFRURecordTableMetadata(request, payloadLength);
+            });
         handlers.emplace(
             PLDM_GET_FRU_RECORD_TABLE,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
-            return this->getFRURecordTable(request, payloadLength);
-        });
+                return this->getFRURecordTable(request, payloadLength);
+            });
         handlers.emplace(
             PLDM_GET_FRU_RECORD_BY_OPTION,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
-            return this->getFRURecordByOption(request, payloadLength);
-        });
+                return this->getFRURecordByOption(request, payloadLength);
+            });
         handlers.emplace(
             PLDM_SET_FRU_RECORD_TABLE,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
-            return this->setFRURecordTable(request, payloadLength);
-        });
+                return this->setFRURecordTable(request, payloadLength);
+            });
     }
 
     /** @brief Handler for Get FRURecordTableMetadata
@@ -522,6 +525,15 @@ class Handler : public CmdHandler
      *  @return PLDM response message
      */
     Response setFRURecordTable(const pldm_msg* request, size_t payloadLength);
+
+    /* @brief Method to set the oem platform handler in fru handler class
+     *
+     * @param[in] handler - oem fru handler
+     */
+    void setOemFruHandler(pldm::responder::oem_fru::Handler* handler)
+    {
+        impl.setOemFruHandler(handler);
+    }
 
     void setStatePDRParams(
         const std::vector<fs::path> pdrJsonsDir, uint16_t nextSensorId,

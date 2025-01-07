@@ -22,17 +22,15 @@ class DumpHandler : public FileHandler
         FileHandler(fileHandle), dumpType(fileType)
     {}
 
-    virtual void writeFromMemory(uint32_t offset, uint32_t length,
-                                 uint64_t address,
-                                 oem_platform::Handler* /*oemPlatformHandler*/,
-                                 SharedAIORespData& sharedAIORespDataobj,
-                                 sdeventplus::Event& event);
+    virtual void writeFromMemory(
+        uint32_t offset, uint32_t length, uint64_t address,
+        oem_platform::Handler* /*oemPlatformHandler*/,
+        SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event);
 
-    virtual void readIntoMemory(uint32_t offset, uint32_t length,
-                                uint64_t address,
-                                oem_platform::Handler* /*oemPlatformHandler*/,
-                                SharedAIORespData& sharedAIORespDataobj,
-                                sdeventplus::Event& event);
+    virtual void readIntoMemory(
+        uint32_t offset, uint32_t length, uint64_t address,
+        oem_platform::Handler* /*oemPlatformHandler*/,
+        SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event);
 
     virtual int read(uint32_t offset, uint32_t& length, Response& response,
                      oem_platform::Handler* /*oemPlatformHandler*/);
@@ -45,17 +43,14 @@ class DumpHandler : public FileHandler
 
     virtual int fileAck(uint8_t fileStatus);
 
-    virtual int newFileAvailableWithMetaData(uint64_t length,
-                                             uint32_t metaDataValue1,
-                                             uint32_t /*metaDataValue2*/,
-                                             uint32_t /*metaDataValue3*/,
-                                             uint32_t /*metaDataValue4*/);
+    virtual int newFileAvailableWithMetaData(
+        uint64_t length, uint32_t metaDataValue1, uint32_t /*metaDataValue2*/,
+        uint32_t /*metaDataValue3*/, uint32_t /*metaDataValue4*/);
 
-    virtual int fileAckWithMetaData(uint8_t /*fileStatus*/,
-                                    uint32_t metaDataValue1,
-                                    uint32_t metaDataValue2,
-                                    uint32_t /*metaDataValue3*/,
-                                    uint32_t /*metaDataValue4*/);
+    virtual int fileAckWithMetaData(
+        uint8_t /*fileStatus*/, uint32_t metaDataValue1,
+        uint32_t metaDataValue2, uint32_t /*metaDataValue3*/,
+        uint32_t /*metaDataValue4*/);
 
     std::string findDumpObjPath(uint32_t fileHandle);
     std::string getOffloadUri(uint32_t fileHandle);

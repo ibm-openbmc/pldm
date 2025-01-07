@@ -1,7 +1,7 @@
 #pragma once
 
 #include "host-bmc/dbus/type.hpp"
-#include "host-bmc/dbus_to_host_effecters.hpp"
+#include "host-bmc/dbus_to_terminus_effecters.hpp"
 #include "libpldmresponder/oem_handler.hpp"
 #include "oem/ibm/requester/dbus_to_file_handler.hpp"
 
@@ -83,7 +83,7 @@ int setupUnixSocket(const std::string& socketInterface);
  *  @param[in] sock - unix socket
  *  @param[in] buf -  data buffer
  *  @param[in] blockSize - size of data to write
- *  @return   on success retruns  0
+ *  @return   on success returns  0
  *            on failure returns -1
 
  */
@@ -107,6 +107,86 @@ bool checkIfIBMFru(const std::string& objPath);
  *  @return   on success returns nlohmann::json object
  */
 Json convertBinFileToJson(const fs::path& path);
+
+/** @brief Converts a json data in to a binary file
+ *  This function converts the json data to a binary json(bson)
+ *  format and copies it to specified destination file.
+ *
+ *  @param[in] jsonData - nlohmann json data
+ *  @param[in] path     - destination path to store the bson data
+ *
+ *  @return   None
+ */
+void convertJsonToBinaryFile(const Json& jsonData, const fs::path& path);
+
+/** @brief Clear License Status
+ *  This function clears all the license status to "Unknown" during
+ *  reset reload operation or when host is coming down to off state.
+ *  During the genesis mode, it skips the license status update.
+ *
+ *  @return   None
+ */
+void clearLicenseStatus();
+
+/** @brief Create or update the d-bus license data
+ *  This function creates or updates the d-bus license details. If the input
+ *  input flag is 1, then new license data will be created and if the the input
+ *  flag is 2 license status will be cleared.
+ *
+ *  @param[in] flag - input flag, 1 : create and 2 : clear
+ *
+ *  @return   on success returns PLDM_SUCCESS
+ *            on failure returns -1
+ */
+int createOrUpdateLicenseDbusPaths(const uint8_t& flag);
+
+/** @brief Create or update the license bjects
+ *  This function creates or updates the license objects as per the data passed
+ *  from host.
+ *
+ *  @return   on success returns PLDM_SUCCESS
+ *            on failure returns -1
+ */
+int createOrUpdateLicenseObjs();
+
+/** @brief host ChapData Interface
+ *  @param[in] dbusToFilehandlerObj - ref object to raise NewFileAvailable
+ * request
+ */
+void hostChapDataIntf(
+    pldm::responder::oem_fileio::Handler* dbusToFilehandlerObj);
+
+/** @brief Split the vector according to the start and end index and return
+ *  back the resultant vector
+ *  @param[in] inputVec - input vector
+ *  @param[in] startIdx - start index
+ *  @param[in] endIdx - end index
+ *  @return  the resultant split vector
+ */
+std::vector<char> vecSplit(const std::vector<char>& inputVec,
+                           const uint32_t startIdx, const uint32_t endIdx);
+/** @brief host PCIE Topology Interface
+ *  @param[in] mctp_eid - MCTP Endpoint ID
+ *  @param[in] hostEffecterParser - Pointer to host effecter parser
+ */
+
+void hostPCIETopologyIntf(
+    uint8_t mctp_eid,
+    pldm::host_effecters::HostEffecterParser* hostEffecterParser);
+
+std::pair<std::string, std::string>
+    getSlotAndAdapter(const std::string& portLocationCode);
+
+/** @brief Fetch D-Bus object path based on location details and the type of
+ * Inventory Item
+ *
+ *  @param[in] locationCode - property value of LocationCode
+ *  @param[in] inventoryItemType - inventory item type
+ *
+ *  @return std::string - the D-Bus object path
+ */
+std::string getObjectPathByLocationCode(const std::string& locationCode,
+                                        const std::string& inventoryItemType);
 
 /** @brief Converts a json data in to a binary file
  *  This function converts the json data to a binary json(bson)

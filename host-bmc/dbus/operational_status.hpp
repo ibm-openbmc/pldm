@@ -22,8 +22,8 @@ class OperationalStatus : public OperationalStatusIntf
     ~OperationalStatus() = default;
     OperationalStatus(const OperationalStatus&) = delete;
     OperationalStatus& operator=(const OperationalStatus&) = delete;
-    OperationalStatus(OperationalStatus&&) = default;
-    OperationalStatus& operator=(OperationalStatus&&) = default;
+    OperationalStatus(OperationalStatus&&) = delete;
+    OperationalStatus& operator=(OperationalStatus&&) = delete;
 
     OperationalStatus(sdbusplus::bus_t& bus, const std::string& objPath) :
         OperationalStatusIntf(bus, objPath.c_str()), path(objPath)

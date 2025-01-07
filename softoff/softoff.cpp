@@ -69,7 +69,7 @@ SoftPowerOff::SoftPowerOff(sdbusplus::bus_t& bus, sd_event* event,
             if (rc != PLDM_SUCCESS)
             {
                 error("Failed to get Sensor PDRs, response code '{RC}'", "RC",
-                      lg2::hex, static_cast<int>(rc));
+                      lg2::hex, rc);
                 hasError = true;
                 return;
             }
@@ -157,8 +157,8 @@ void SoftPowerOff::hostSoftOffComplete(sdbusplus::message_t& msg)
 
 Json SoftPowerOff::parseConfig()
 {
-    fs::path softoffConfigJson(fs::path(SOFTOFF_CONFIG_JSON) /
-                               "softoff_config.json");
+    fs::path softoffConfigJson(
+        fs::path(SOFTOFF_CONFIG_JSON) / "softoff_config.json");
 
     if (!fs::exists(softoffConfigJson) || fs::is_empty(softoffConfigJson))
     {
@@ -259,8 +259,8 @@ int SoftPowerOff::getSensorInfo(pldm::pdr::EntityType& entityType,
                 sensorOffset = offset;
                 break;
             }
-            possibleStatesStart += possibleStateSize + sizeof(setId) +
-                                   sizeof(possibleStateSize);
+            possibleStatesStart +=
+                possibleStateSize + sizeof(setId) + sizeof(possibleStateSize);
         }
     }
     catch (const sdbusplus::exception_t& e)
@@ -299,9 +299,9 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
         effecterState = PLDM_SW_TERM_GRACEFUL_SHUTDOWN_REQUESTED;
     }
 
-    std::array<uint8_t, sizeof(pldm_msg_hdr) + sizeof(effecterID) +
-                            sizeof(effecterCount) +
-                            sizeof(set_effecter_state_field)>
+    std::array<uint8_t,
+               sizeof(pldm_msg_hdr) + sizeof(effecterID) +
+                   sizeof(effecterCount) + sizeof(set_effecter_state_field)>
         requestMsg{};
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
     set_effecter_state_field stateField{PLDM_REQUEST_SET, effecterState};
@@ -313,7 +313,7 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
         instanceIdDb.free(pldmTID, instanceID);
         error(
             "Failed to encode set state effecter states request message, response code '{RC}'",
-            "RC", lg2::hex, static_cast<int>(rc));
+            "RC", lg2::hex, rc);
         return PLDM_ERROR;
     }
 
@@ -333,8 +333,8 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
                std::chrono::seconds{1}, std::move(timerCallback));
 
     // Add a callback to handle EPOLLIN on fd
-    auto callback = [=, &pldmTransport, this](IO& io, int fd,
-                                              uint32_t revents) mutable {
+    auto callback = [=, &pldmTransport,
+                     this](IO& io, int fd, uint32_t revents) mutable {
         if (fd != pldmTransport.getEventSource())
         {
             return;
@@ -354,12 +354,12 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
         {
             error(
                 "Failed to receive pldm data during soft-off, response code '{RC}'",
-                "RC", static_cast<int>(rc));
+                "RC", rc);
             return;
         }
 
-        std::unique_ptr<void, decltype(std::free)*> responseMsgPtr{responseMsg,
-                                                                   std::free};
+        std::unique_ptr<void, decltype(std::free)*> responseMsgPtr{
+            responseMsg, std::free};
 
         // We've got the response meant for the PLDM request msg that was
         // sent out
@@ -380,7 +380,7 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
         if (response->payload[0] != PLDM_SUCCESS)
         {
             error("Getting the wrong response, response code '{RC}'", "RC",
-                  (unsigned)response->payload[0]);
+                  response->payload[0]);
             exit(-1);
         }
 
@@ -426,7 +426,7 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
         instanceIdDb.free(pldmTID, instanceID);
         error(
             "Failed to send message/receive response, response code '{RC}' and error - {ERROR}",
-            "RC", static_cast<int>(rc), "ERROR", errno);
+            "RC", rc, "ERROR", errno);
         return PLDM_ERROR;
     }
     std::vector<uint8_t> requestbuffer(requestMsg.begin(), requestMsg.end());

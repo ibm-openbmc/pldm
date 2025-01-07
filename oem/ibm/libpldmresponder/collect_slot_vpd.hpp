@@ -41,10 +41,10 @@ class SlotHandler
     ~SlotHandler() = default;
     SlotHandler(const SlotHandler&) = delete;
     SlotHandler& operator=(const SlotHandler&) = delete;
-    SlotHandler(SlotHandler&&) = default;
-    SlotHandler& operator=(SlotHandler&&) = default;
+    SlotHandler(SlotHandler&&) = delete;
+    SlotHandler& operator=(SlotHandler&&) = delete;
 
-    /** @brief Constructors the slot enable object
+    /** @brief SlotHandler Constructor
      *
      * @param[in] event - reference for the main event loop
      * @param[in] repo - pointer to the BMC's Primary PDR repo
@@ -56,39 +56,42 @@ class SlotHandler
         pdrRepo(repo)
     {
         fruPresenceMatch = nullptr;
-        current_on_going_slot_entity.entity_type = 0;
-        current_on_going_slot_entity.entity_instance_num = 0;
-        current_on_going_slot_entity.entity_container_id = 0;
+        currentOnGoingSlotEntity.entity_type = 0;
+        currentOnGoingSlotEntity.entity_instance_num = 0;
+        currentOnGoingSlotEntity.entity_container_id = 0;
     }
 
     /** @brief Method to be called when enabling a Slot for ADD/REMOVE/REPLACE
      *  @param[in] effecterID - The effecter ID of the effecter that is set from
-     * host
+     *                          host
      *  @param[in] fruAssociationMap - the dbus path to pldm entity stored while
-     * creating the pldm fru records
+     *                                 creating the pldm fru records
      *  @param[in] stateFieldValue - the current Effecter stateFieldValue
      */
     void enableSlot(uint16_t effecterId,
                     const AssociatedEntityMap& fruAssociationMap,
-                    uint8_t stateFiledValue);
+                    uint8_t stateFieldValue);
 
-    /** @brief Method to used for fetching the slot sensor value
+    /** @brief Method to be used for fetching the slot sensor value
      *  @param[in] slotObjectPath - the dbus object path for slot object
      *  @return - returns the sensor state for the respective slot sensor
      */
     uint8_t fetchSlotSensorState(const std::string& slotObjectPath);
 
-    /** @brief Method to set the oem platform handler in CodeUpdate class */
+    /** @brief Method to set the oem platform handler in SlotHandler class
+     *  @param[in] handler - pointer to the oem platform handler
+     */
     void setOemPlatformHandler(pldm::responder::oem_platform::Handler* handler);
 
   private:
-    /** @brief call back method called when the timer is expired
+    /** @brief call back method called when the timer is expired. This handler
+     *  is called when the change of state cannot be made for a slot.
      */
     void timeOutHandler();
 
     /** @brief Abstracted method for obtaining the entityID from effecterID
-     *  @param[in]  effecterID - The effecterID of the BMC effeter
-     *  @return - reutrn the pldm entity ID for the given effecter ID
+     *  @param[in]  effecterID - The effecterID of the BMC effecter
+     *  @return - pldm entity ID for the given effecter ID
      */
     pldm_entity getEntityIDfromEffecterID(uint16_t effecterID);
 
@@ -110,17 +113,17 @@ class SlotHandler
         getAdapterObjPath(const std::string& slotObjPath);
 
     /** @brief Method to call VPD collection & VPD removal API's
-     *  @param[in] adapterObjectPath - The adapter dbus object path
+     *  @param[in] adapterObjectPath - The adapter D-Bus object path
      *  @param[in] stateFieldvalue - The current stateField value from set
-     * Effecter call
+     *                               effecter call
      */
     void callVPDManager(const std::string& adapterObjPath,
-                        uint8_t stateFiledValue);
+                        uint8_t stateFieldValue);
 
     /** @brief Method to create a matcher to catch the property change signal
-     *  @param[in] adapterObjectPath - The adapter dbus object path
+     *  @param[in] adapterObjectPath - The adapter D-Bus object path
      *  @param[in] stateFieldvalue - The current stateField value from set
-     * Effecter call
+     *                               effecter call
      *  @param[in] entity - the current slot pldm entity under operation
      */
     void createPresenceMatch(const std::string& adapterObjectPath,
@@ -129,18 +132,16 @@ class SlotHandler
 
     /** @brief Method to process the Property change signal from Preset Property
      *  @param[in] presentValue - The current value of present Value
-     *  @param[in] adapterObjectPath - The adapter dbus object path
      *  @param[in] stateFieldvalue - The current stateField value from set
-     * Effecter call
+     *                               effecter call
      *  @param[in] entity - the current slot pldm entity under operation
      */
-    void processPropertyChangeFromVPD(bool presentValue,
-                                      const std::string& adapterObjectPath,
-                                      uint8_t stateFieldvalue,
-                                      const pldm_entity& entity);
+    void processPresentPropertyChange(
+        bool presentValue, uint8_t stateFieldvalue, const pldm_entity& entity);
 
-    /** @brief Method to find the Present State from DBUS
+    /** @brief Get the sensor state from D-Bus
      *  @param[in] adapterObjectPath - reference of the Adapter dbus object path
+     *  @return - Boolean value of sensor state
      */
 
     bool fetchSensorStateFromDbus(const std::string& adapterObjectPath);
@@ -157,20 +158,20 @@ class SlotHandler
                               uint8_t sensorOffset, uint8_t eventState,
                               uint8_t prevEventState);
 
-    pldm::responder::oem_platform::Handler*
-        oemPlatformHandler; //!< oem platform handler
+    pldm::responder::oem_platform::Handler* oemPlatformHandler =
+        nullptr; //!< oem platform handler
 
     /** @brief pointer to tha matcher for Present State for adapter object*/
-    std::unique_ptr<sdbusplus::bus::match::match> fruPresenceMatch;
+    std::unique_ptr<sdbusplus::bus::match_t> fruPresenceMatch;
 
-    /** @brief Timer used for Slot VPD Collection Operetation */
+    /** @brief Timer used for Slot VPD Collection operation */
     sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic> timer;
 
     /** @brief pointer to BMC's primary PDR repo */
     const pldm_pdr* pdrRepo;
 
     /** @brief variable to store the current slot entity under operation */
-    pldm_entity current_on_going_slot_entity;
+    pldm_entity currentOnGoingSlotEntity;
 };
 
 } // namespace responder

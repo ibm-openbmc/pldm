@@ -3,7 +3,7 @@
 #include "common/instance_id.hpp"
 #include "common/types.hpp"
 #include "common/utils.hpp"
-#include "dbus_to_host_effecters.hpp"
+#include "dbus_to_terminus_effecters.hpp"
 #include "host_associations_parser.hpp"
 #include "libpldmresponder/event_parser.hpp"
 #include "libpldmresponder/oem_handler.hpp"
@@ -99,8 +99,6 @@ class HostPDRHandler
         pldm::host_effecters::HostEffecterParser* hostEffecterParser,
         pldm::InstanceIdDb& instanceIdDb,
         pldm::requester::Handler<pldm::requester::Request>* handler,
-        pldm::responder::oem_platform::Handler* oemPlatformHandler,
-        pldm::responder::oem_utils::Handler* oemUtilsHandler,
         pldm::host_associations::HostAssociationsParser* associationsParser);
 
     /** @brief fetch PDRs from host firmware. See @class.
@@ -125,7 +123,7 @@ class HostPDRHandler
      *
      *  @param[in] entry - TerminusID and SensorID
      *
-     *  @return SensorInfo corresponding to the input paramter SensorEntry
+     *  @return SensorInfo corresponding to the input parameter SensorEntry
      *          throw std::out_of_range exception if not found
      */
     const pdr::SensorInfo& lookupSensorInfo(const SensorEntry& entry) const
@@ -186,6 +184,16 @@ class HostPDRHandler
      */
     uint8_t modifiedCounter = 0;
 
+    /* @brief Method to set the oem platform handler in host pdr handler class
+     *
+     * @param[in] handler - oem platform handler
+     */
+    inline void
+        setOemPlatformHandler(pldm::responder::oem_platform::Handler* handler)
+    {
+        oemPlatformHandler = handler;
+    }
+
     /** @brief map that captures various terminus information **/
     TLPDRMap tlPDRInfo;
 
@@ -229,10 +237,9 @@ class HostPDRHandler
      *  @param[in] size - size of input PDR record in bytes
      *  @param[in] record_handle - record handle of the PDR
      */
-    void
-        mergeEntityAssociations(const std::vector<uint8_t>& pdr,
-                                [[maybe_unused]] const uint32_t& size,
-                                [[maybe_unused]] const uint32_t& record_handle);
+    void mergeEntityAssociations(
+        const std::vector<uint8_t>& pdr, [[maybe_unused]] const uint32_t& size,
+        [[maybe_unused]] const uint32_t& record_handle);
 
     /** @brief process the Host's PDR and add to BMC's PDR repo
      *  @param[in] eid - MCTP id of Host
@@ -311,11 +318,10 @@ class HostPDRHandler
      *  @param[in] path       - object path
      *  @param[in] stateSetId - state set Id
      */
-    void getPresentStateBySensorReadigs(const pldm::pdr::TerminusID& tid,
-                                        uint16_t sensorId, uint16_t type,
-                                        uint16_t instance, uint16_t containerId,
-                                        const std::string& path,
-                                        pldm::pdr::StateSetId stateSetId);
+    void getPresentStateBySensorReadigs(
+        const pldm::pdr::TerminusID& tid, uint16_t sensorId, uint16_t type,
+        uint16_t instance, uint16_t containerId, const std::string& path,
+        pldm::pdr::StateSetId stateSetId);
 
     /** @brief Set the OperationalStatus interface
      *  @return
@@ -356,8 +362,6 @@ class HostPDRHandler
      */
     std::optional<uint16_t> getRSI(const pldm_entity& entity);
 
-    /** @brief fd of MCTP communications socket */
-    int mctp_fd;
     /** @brief MCTP EID of host firmware */
     uint8_t mctp_eid;
     /** @brief reference of main event loop of pldmd, primarily used to schedule
@@ -378,7 +382,7 @@ class HostPDRHandler
     pldm_entity_association_tree* entityTree;
 
     /** @brief Pointer to BMC's entity association tree */
-    pldm_entity_association_tree* bmcEntityTree;
+    // pldm_entity_association_tree* bmcEntityTree;
 
     /** @brief Pointer to host effecter parser */
     pldm::host_effecters::HostEffecterParser* hostEffecterParser;
@@ -440,7 +444,7 @@ class HostPDRHandler
     std::vector<responder::pdr_utils::FruRecordDataFormat> fruRecordData;
 
     /** @OEM platform handler */
-    pldm::responder::oem_platform::Handler* oemPlatformHandler;
+    pldm::responder::oem_platform::Handler* oemPlatformHandler = nullptr;
 
     /** @brief entityID and entity name is only loaded once
      */

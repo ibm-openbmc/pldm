@@ -2,7 +2,7 @@
 
 #include "libpldm/pdr.h"
 
-#include "../dbus_to_host_effecters.hpp"
+#include "../dbus_to_terminus_effecters.hpp"
 #include "common/utils.hpp"
 
 #include <sdbusplus/bus.hpp>
@@ -26,8 +26,8 @@ class LEDGroup : public AssertedIntf
     ~LEDGroup() = default;
     LEDGroup(const LEDGroup&) = delete;
     LEDGroup& operator=(const LEDGroup&) = delete;
-    LEDGroup(LEDGroup&&) = default;
-    LEDGroup& operator=(LEDGroup&&) = default;
+    LEDGroup(LEDGroup&&) = delete;
+    LEDGroup& operator=(LEDGroup&&) = delete;
 
     LEDGroup(sdbusplus::bus_t& bus, const std::string& objPath,
              pldm::host_effecters::HostEffecterParser* hostEffecterParser,

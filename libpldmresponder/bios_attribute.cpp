@@ -17,12 +17,12 @@ namespace bios
 BIOSAttribute::BIOSAttribute(const Json& entry,
                              DBusHandler* const dbusHandler) :
     name(entry.at("attribute_name")), readOnly(false),
-    displayName(entry.at("displayName")), helpText(entry.at("helpText")),
+    displayName(entry.at("display_name")), helpText(entry.at("help_text")),
     dbusHandler(dbusHandler)
 {
     try
     {
-        readOnly = entry.at("readOnly");
+        readOnly = entry.at("read_only");
     }
     catch (const std::exception&)
     {
@@ -40,7 +40,7 @@ BIOSAttribute::BIOSAttribute(const Json& entry,
     }
     catch (const std::exception&)
     {
-        // No action required, dBusMap whill have no value
+        // No action required, dBusMap will have no value
     }
 }
 

@@ -37,7 +37,7 @@ BIOSIntegerAttribute::BIOSIntegerAttribute(const Json& entry,
     if (rc != PLDM_SUCCESS)
     {
         error(
-            "Wrong field for integer attribute '{ATTRIBUTE}', error '{ERROR}', lower bound '{LOW_BOUND}', upper bound '{UPPER_BOUND}', default value '{DEFAULT_VALUE}' and scalar increament '{SCALAR_INCREMENT}'",
+            "Wrong field for integer attribute '{ATTRIBUTE}', error '{ERROR}', lower bound '{LOW_BOUND}', upper bound '{UPPER_BOUND}', default value '{DEFAULT_VALUE}' and scalar increment '{SCALAR_INCREMENT}'",
             "ATTRIBUTE", attr, "ERROR", errmsg, "LOW_BOUND",
             integerInfo.lowerBound, "UPPER_BOUND", integerInfo.upperBound,
             "DEFAULT_VALUE", integerInfo.defaultValue, "SCALAR_INCREMENT",
@@ -112,8 +112,8 @@ void BIOSIntegerAttribute::constructEntry(
         integerInfo.scalarIncrement,  integerInfo.defaultValue,
     };
 
-    auto attrTableEntry = table::attribute::constructIntegerEntry(attrTable,
-                                                                  &info);
+    auto attrTableEntry =
+        table::attribute::constructIntegerEntry(attrTable, &info);
 
     auto [attrHandle, attrType,
           _] = table::attribute::decodeHeader(attrTableEntry);
@@ -223,8 +223,8 @@ void BIOSIntegerAttribute::generateAttributeEntry(
     const std::variant<int64_t, std::string>& attributevalue,
     Table& attrValueEntry)
 {
-    attrValueEntry.resize(sizeof(pldm_bios_attr_val_table_entry) +
-                          sizeof(int64_t) - 1);
+    attrValueEntry.resize(
+        sizeof(pldm_bios_attr_val_table_entry) + sizeof(int64_t) - 1);
 
     auto entry = reinterpret_cast<pldm_bios_attr_val_table_entry*>(
         attrValueEntry.data());

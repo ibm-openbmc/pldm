@@ -95,9 +95,8 @@ void CustomDBus::implementCableInterface(const std::string& path)
 {
     if (!cable.contains(path))
     {
-        cable.emplace(
-            path, std::make_unique<Cable>(pldm::utils::DBusHandler::getBus(),
-                                          path.c_str()));
+        cable.emplace(path, std::make_unique<Cable>(
+                                pldm::utils::DBusHandler::getBus(), path));
     }
 }
 
@@ -151,11 +150,10 @@ void CustomDBus::implementChassisInterface(const std::string& path)
 
 void CustomDBus::implementPCIeSlotInterface(const std::string& path)
 {
-    if (pcieSlot.find(path) == pcieSlot.end())
+    if (!pcieSlot.contains(path))
     {
-        pcieSlot.emplace(
-            path, std::make_unique<PCIeSlot>(pldm::utils::DBusHandler::getBus(),
-                                             path.c_str()));
+        pcieSlot.emplace(path, std::make_unique<PCIeSlot>(
+                                   pldm::utils::DBusHandler::getBus(), path));
     }
 }
 
@@ -174,10 +172,11 @@ void CustomDBus::setSlotProperties(const std::string& path,
 void CustomDBus::setSlotType(const std::string& path,
                              const std::string& slotType)
 {
-    auto slottype = pldm::dbus::PCIeSlot::convertSlotTypesFromString(slotType);
+    auto typeOfSlot =
+        pldm::dbus::PCIeSlot::convertSlotTypesFromString(slotType);
     if (pcieSlot.contains(path))
     {
-        pcieSlot.at(path)->slotType(slottype);
+        pcieSlot.at(path)->slotType(typeOfSlot);
     }
 }
 
@@ -185,9 +184,8 @@ void CustomDBus::implementPCIeDeviceInterface(const std::string& path)
 {
     if (!pcieDevice.contains(path))
     {
-        pcieDevice.emplace(
-            path, std::make_unique<PCIeDevice>(
-                      pldm::utils::DBusHandler::getBus(), path.c_str()));
+        pcieDevice.emplace(path, std::make_unique<PCIeDevice>(
+                                     pldm::utils::DBusHandler::getBus(), path));
     }
 }
 
@@ -231,9 +229,8 @@ void CustomDBus::implementAssetInterface(const std::string& path)
 {
     if (!asset.contains(path))
     {
-        asset.emplace(
-            path, std::make_unique<Asset>(pldm::utils::DBusHandler::getBus(),
-                                          path.c_str()));
+        asset.emplace(path, std::make_unique<Asset>(
+                                pldm::utils::DBusHandler::getBus(), path));
     }
 }
 
@@ -329,10 +326,10 @@ void CustomDBus::setAsserted(
 {
     if (!ledGroup.contains(path))
     {
-        ledGroup.emplace(
-            path, std::make_unique<LEDGroup>(pldm::utils::DBusHandler::getBus(),
-                                             path.c_str(), hostEffecterParser,
-                                             entity, mctpEid));
+        ledGroup.emplace(path,
+                         std::make_unique<LEDGroup>(
+                             pldm::utils::DBusHandler::getBus(), path.c_str(),
+                             hostEffecterParser, entity, mctpEid));
     }
 
     ledGroup.at(path)->setStateEffecterStatesFlag(isTriggerStateEffecterStates);
@@ -373,8 +370,8 @@ void CustomDBus::setAssociations(const std::string& path, AssociationsObj assoc)
         for (const auto& association : assoc)
         {
             if (std::find(currentAssociations.begin(),
-                          currentAssociations.end(),
-                          association) != currentAssociations.end())
+                          currentAssociations.end(), association) !=
+                currentAssociations.end())
             {
                 // association is present in current associations
                 // do nothing
@@ -461,9 +458,9 @@ void CustomDBus::implementBoard(const std::string& path)
 {
     if (!board.contains(path))
     {
-        board.emplace(
-            path, std::make_unique<Board>(pldm::utils::DBusHandler::getBus(),
-                                          path.c_str()));
+        board.emplace(path,
+                      std::make_unique<Board>(
+                          pldm::utils::DBusHandler::getBus(), path.c_str()));
     }
 }
 
@@ -471,9 +468,9 @@ void CustomDBus::implementGlobalInterface(const std::string& path)
 {
     if (!global.contains(path))
     {
-        global.emplace(
-            path, std::make_unique<Global>(pldm::utils::DBusHandler::getBus(),
-                                           path.c_str()));
+        global.emplace(path,
+                       std::make_unique<Global>(
+                           pldm::utils::DBusHandler::getBus(), path.c_str()));
     }
 }
 

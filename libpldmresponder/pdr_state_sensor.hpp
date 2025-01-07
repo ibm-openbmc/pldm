@@ -45,8 +45,7 @@ void generateStateSensorPDR(const DBusInterface& dBusIntf, const Json& json,
             {
                 error(
                     "Malformed PDR JSON return pdrEntry; no state set info for state sensor pdr '{STATE_SENSOR_PDR}'",
-                    "STATE_SENSOR_PDR",
-                    static_cast<int>(PLDM_STATE_SENSOR_PDR));
+                    "STATE_SENSOR_PDR", PLDM_STATE_SENSOR_PDR);
                 throw InternalFailure();
             }
             pdrSize += sizeof(state_sensor_possible_states) -
@@ -105,8 +104,8 @@ void generateStateSensorPDR(const DBusInterface& dBusIntf, const Json& json,
                 // mentioned in the json, and add this entity to the
                 // parents entity assocation PDR
 
-                std::string parent_entity_path = e.value("parent_entity_path",
-                                                         "");
+                std::string parent_entity_path =
+                    e.value("parent_entity_path", "");
                 if (parent_entity_path != "" &&
                     associatedEntityMap.contains(parent_entity_path))
                 {
@@ -184,8 +183,8 @@ void generateStateSensorPDR(const DBusInterface& dBusIntf, const Json& json,
 
         pldm::responder::pdr_utils::DbusMappings dbusMappings{};
         pldm::responder::pdr_utils::DbusValMaps dbusValMaps{};
-        uint8_t* start = entry.data() + sizeof(pldm_state_sensor_pdr) -
-                         sizeof(uint8_t);
+        uint8_t* start =
+            entry.data() + sizeof(pldm_state_sensor_pdr) - sizeof(uint8_t);
         for (const auto& sensor : sensors)
         {
             auto set = sensor.value("set", empty);
@@ -219,8 +218,8 @@ void generateStateSensorPDR(const DBusInterface& dBusIntf, const Json& json,
             pldm::utils::DBusMapping dbusMapping{};
             try
             {
-                auto service = dBusIntf.getService(objectPath.c_str(),
-                                                   interface.c_str());
+                auto service =
+                    dBusIntf.getService(objectPath.c_str(), interface.c_str());
 
                 dbusMapping = pldm::utils::DBusMapping{
                     objectPath, interface, propertyName, propertyType};

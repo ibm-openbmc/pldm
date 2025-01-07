@@ -23,8 +23,8 @@ class VRM : public ItemVRM
     ~VRM() = default;
     VRM(const VRM&) = delete;
     VRM& operator=(const VRM&) = delete;
-    VRM(VRM&&) = default;
-    VRM& operator=(VRM&&) = default;
+    VRM(VRM&&) = delete;
+    VRM& operator=(VRM&&) = delete;
 
     VRM(sdbusplus::bus_t& bus, const std::string& objPath) :
         ItemVRM(bus, objPath.c_str())

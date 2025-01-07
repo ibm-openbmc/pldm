@@ -21,8 +21,8 @@ class PowerSupply : public ItemPowerSupply
     ~PowerSupply() = default;
     PowerSupply(const PowerSupply&) = delete;
     PowerSupply& operator=(const PowerSupply&) = delete;
-    PowerSupply(PowerSupply&&) = default;
-    PowerSupply& operator=(PowerSupply&&) = default;
+    PowerSupply(PowerSupply&&) = delete;
+    PowerSupply& operator=(PowerSupply&&) = delete;
 
     PowerSupply(sdbusplus::bus_t& bus, const std::string& objPath) :
         ItemPowerSupply(bus, objPath.c_str())

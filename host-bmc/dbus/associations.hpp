@@ -25,8 +25,8 @@ class Associations : public AssociationsIntf
     ~Associations() = default;
     Associations(const Associations&) = delete;
     Associations& operator=(const Associations&) = delete;
-    Associations(Associations&&) = default;
-    Associations& operator=(Associations&&) = default;
+    Associations(Associations&&) = delete;
+    Associations& operator=(Associations&&) = delete;
 
     Associations(sdbusplus::bus_t& bus, const std::string& objPath,
                  const std::map<std::string, PropertiesVariant>& vals) :

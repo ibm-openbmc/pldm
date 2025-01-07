@@ -23,8 +23,8 @@ class Fan : public ItemFan
     ~Fan() = default;
     Fan(const Fan&) = delete;
     Fan& operator=(const Fan&) = delete;
-    Fan(Fan&&) = default;
-    Fan& operator=(Fan&&) = default;
+    Fan(Fan&&) = delete;
+    Fan& operator=(Fan&&) = delete;
 
     Fan(sdbusplus::bus_t& bus, const std::string& objPath) :
         ItemFan(bus, objPath.c_str())

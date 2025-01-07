@@ -164,7 +164,7 @@ class Handler
         {
             error(
                 "Register request for EID '{EID}' is using InstanceID '{INSTANCEID}'",
-                "EID", (unsigned)eid, "INSTANCEID", (unsigned)instanceId);
+                "EID", eid, "INSTANCEID", instanceId);
             return PLDM_ERROR;
         }
 
@@ -196,9 +196,9 @@ class Handler
             return PLDM_ERROR;
         }
 
-        handlers.emplace(key, std::make_tuple(std::move(request),
-                                              std::move(responseHandler),
-                                              std::move(timer)));
+        handlers.emplace(
+            key, std::make_tuple(std::move(request), std::move(responseHandler),
+                                 std::move(timer)));
         return rc;
     }
 
@@ -216,7 +216,7 @@ class Handler
                         size_t respMsgLen)
     {
         RequestKey key{eid, instanceId, type, command};
-        if (handlers.contains(key))
+        if (handlers.contains(key) && !removeRequestContainer.contains(key))
         {
             auto& [request, responseHandler, timerInstance] = handlers[key];
             request->stop();
@@ -225,7 +225,7 @@ class Handler
             {
                 error(
                     "Failed to stop the instance ID expiry timer, response code '{RC}'",
-                    "RC", static_cast<int>(rc));
+                    "RC", rc);
             }
             responseHandler(eid, response, respMsgLen);
             instanceIdDb.free(key.eid, key.instanceId);

@@ -128,7 +128,6 @@ class Handler : public oem_platform::Handler
         slotHandler(slotHandler), platformHandler(nullptr), mctp_fd(mctp_fd),
         mctp_eid(mctp_eid), instanceIdDb(instanceIdDb), event(event),
         pdrRepo(repo), handler(handler), bmcEntityTree(bmcEntityTree),
-        hostEffecterParser(hostEffecterParser),
         timer(event, std::bind(std::mem_fn(&Handler::setSurvTimer), this,
                                HYPERVISOR_TID, false)),
         hostTransitioningToOff(true)
@@ -154,87 +153,88 @@ class Handler : public oem_platform::Handler
             propertiesChanged("/xyz/openbmc_project/state/host0",
                               "xyz.openbmc_project.State.Host"),
             [this](sdbusplus::message_t& msg) {
-            pldm::utils::DbusChangedProps props{};
-            std::string intf;
-            msg.read(intf, props);
-            const auto itr = props.find("CurrentHostState");
-            if (itr != props.end())
-            {
-                pldm::utils::PropertyValue value = itr->second;
-                auto propVal = std::get<std::string>(value);
-                if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
+                pldm::utils::DbusChangedProps props{};
+                std::string intf;
+                msg.read(intf, props);
+                const auto itr = props.find("CurrentHostState");
+                if (itr != props.end())
                 {
-                    hostOff = true;
-                    setEventReceiverCnt = 0;
-                    disableWatchDogTimer();
-                    startStopTimer(false);
-                    pldm::responder::utils::clearLicenseStatus();
+                    pldm::utils::PropertyValue value = itr->second;
+                    auto propVal = std::get<std::string>(value);
+                    if (propVal ==
+                        "xyz.openbmc_project.State.Host.HostState.Off")
+                    {
+                        hostOff = true;
+                        setEventReceiverCnt = 0;
+                        disableWatchDogTimer();
+                        startStopTimer(false);
+                        pldm::responder::utils::clearLicenseStatus();
+                    }
+                    else if (propVal ==
+                             "xyz.openbmc_project.State.Host.HostState.Running")
+                    {
+                        hostOff = false;
+                        hostTransitioningToOff = false;
+                    }
+                    else if (
+                        propVal ==
+                        "xyz.openbmc_project.State.Host.HostState.TransitioningToOff")
+                    {
+                        hostTransitioningToOff = true;
+                    }
                 }
-                else if (propVal ==
-                         "xyz.openbmc_project.State.Host.HostState.Running")
-                {
-                    hostOff = false;
-                    hostTransitioningToOff = false;
-                }
-                else if (
-                    propVal ==
-                    "xyz.openbmc_project.State.Host.HostState.TransitioningToOff")
-                {
-                    hostTransitioningToOff = true;
-                }
-            }
-        });
+            });
 
         powerStateOffMatch = std::make_unique<sdbusplus::bus::match::match>(
             pldm::utils::DBusHandler::getBus(),
             propertiesChanged("/xyz/openbmc_project/state/chassis0",
                               "xyz.openbmc_project.State.Chassis"),
             [this](sdbusplus::message_t& msg) {
-            pldm::utils::DbusChangedProps props{};
-            std::string intf;
-            msg.read(intf, props);
-            const auto itr = props.find("CurrentPowerState");
-            if (itr != props.end())
-            {
-                pldm::utils::PropertyValue value = itr->second;
-                auto propVal = std::get<std::string>(value);
-                if (propVal ==
-                    "xyz.openbmc_project.State.Chassis.PowerState.Off")
+                pldm::utils::DbusChangedProps props{};
+                std::string intf;
+                msg.read(intf, props);
+                const auto itr = props.find("CurrentPowerState");
+                if (itr != props.end())
                 {
-                    startStopTimer(false);
-                    handleBootTypesAtChassisOff();
-
-                    static constexpr auto searchpath =
-                        "/xyz/openbmc_project/inventory/system/chassis/motherboard";
-                    int depth = 0;
-                    std::vector<std::string> powerInterface = {
-                        "xyz.openbmc_project.State.Decorator.PowerState"};
-                    pldm::utils::GetSubTreeResponse response =
-                        pldm::utils::DBusHandler().getSubtree(searchpath, depth,
-                                                              powerInterface);
-                    for (const auto& [objPath, serviceMap] : response)
+                    pldm::utils::PropertyValue value = itr->second;
+                    auto propVal = std::get<std::string>(value);
+                    if (propVal ==
+                        "xyz.openbmc_project.State.Chassis.PowerState.Off")
                     {
-                        pldm::utils::DBusMapping dbusMapping{
-                            objPath,
-                            "xyz.openbmc_project.State.Decorator.PowerState",
-                            "PowerState", "string"};
-                        value =
-                            "xyz.openbmc_project.State.Decorator.PowerState.State.Off";
-                        try
+                        startStopTimer(false);
+                        handleBootTypesAtChassisOff();
+
+                        static constexpr auto searchpath =
+                            "/xyz/openbmc_project/inventory/system/chassis/motherboard";
+                        int depth = 0;
+                        std::vector<std::string> powerInterface = {
+                            "xyz.openbmc_project.State.Decorator.PowerState"};
+                        pldm::utils::GetSubTreeResponse response =
+                            pldm::utils::DBusHandler().getSubtree(
+                                searchpath, depth, powerInterface);
+                        for (const auto& [objPath, serviceMap] : response)
                         {
-                            pldm::utils::DBusHandler().setDbusProperty(
-                                dbusMapping, value);
-                        }
-                        catch (const std::exception& e)
-                        {
-                            error(
-                                "Unable to set the slot power state to Off error - {ERROR}",
-                                "ERROR", e);
+                            pldm::utils::DBusMapping dbusMapping{
+                                objPath,
+                                "xyz.openbmc_project.State.Decorator.PowerState",
+                                "PowerState", "string"};
+                            value =
+                                "xyz.openbmc_project.State.Decorator.PowerState.State.Off";
+                            try
+                            {
+                                pldm::utils::DBusHandler().setDbusProperty(
+                                    dbusMapping, value);
+                            }
+                            catch (const std::exception& e)
+                            {
+                                error(
+                                    "Unable to set the slot power state to Off error - {ERROR}",
+                                    "ERROR", e);
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
 
         platformSAIMatch = std::make_unique<sdbusplus::bus::match_t>(
             pldm::utils::DBusHandler::getBus(),
@@ -242,15 +242,15 @@ class Handler : public oem_platform::Handler
                 "/xyz/openbmc_project/led/groups/partition_system_attention_indicator",
                 "xyz.openbmc_project.Led.Group"),
             [this](sdbusplus::message_t& msg) {
-            pldm::utils::DbusChangedProps props{};
-            std::string intf;
-            msg.read(intf, props);
-            const auto itr = props.find("Asserted");
-            if (itr != props.end())
-            {
-                processSAIUpdate();
-            }
-        });
+                pldm::utils::DbusChangedProps props{};
+                std::string intf;
+                msg.read(intf, props);
+                const auto itr = props.find("Asserted");
+                if (itr != props.end())
+                {
+                    processSAIUpdate();
+                }
+            });
 
         partitionSAIMatch = std::make_unique<sdbusplus::bus::match_t>(
             pldm::utils::DBusHandler::getBus(),
@@ -258,75 +258,77 @@ class Handler : public oem_platform::Handler
                 "/xyz/openbmc_project/led/groups/platform_system_attention_indicator",
                 "xyz.openbmc_project.Led.Group"),
             [this](sdbusplus::message_t& msg) {
-            pldm::utils::DbusChangedProps props{};
-            std::string intf;
-            msg.read(intf, props);
-            const auto itr = props.find("Asserted");
-            if (itr != props.end())
-            {
-                processSAIUpdate();
-            }
-        });
+                pldm::utils::DbusChangedProps props{};
+                std::string intf;
+                msg.read(intf, props);
+                const auto itr = props.find("Asserted");
+                if (itr != props.end())
+                {
+                    processSAIUpdate();
+                }
+            });
+
         updateBIOSMatch = std::make_unique<sdbusplus::bus::match::match>(
             pldm::utils::DBusHandler::getBus(),
             propertiesChanged("/xyz/openbmc_project/bios_config/manager",
                               "xyz.openbmc_project.BIOSConfig.Manager"),
-            [this, codeUpdate](sdbusplus::message_t& msg) {
-            constexpr auto propertyName = "PendingAttributes";
-            using Value =
-                std::variant<std::string, PendingAttributes, BaseBIOSTable>;
-            using Properties = std::map<pldm::utils::DbusProp, Value>;
-            Properties props{};
-            std::string intf;
-            msg.read(intf, props);
-            auto valPropMap = props.find(propertyName);
-            if (valPropMap == props.end())
-            {
-                return;
-            }
-
-            PendingAttributes pendingAttributes =
-                std::get<PendingAttributes>(valPropMap->second);
-            for (auto it : pendingAttributes)
-            {
-                if (it.first == "fw_boot_side")
+            [codeUpdate](sdbusplus::message_t& msg) {
+                constexpr auto propertyName = "PendingAttributes";
+                using Value =
+                    std::variant<std::string, PendingAttributes, BaseBIOSTable>;
+                using Properties = std::map<pldm::utils::DbusProp, Value>;
+                Properties props{};
+                std::string intf;
+                msg.read(intf, props);
+                auto valPropMap = props.find(propertyName);
+                if (valPropMap == props.end())
                 {
-                    auto& [attributeType, attributevalue] = it.second;
-                    std::string nextBootSideAttr =
-                        std::get<std::string>(attributevalue);
-                    std::string nextBootSide =
-                        (nextBootSideAttr == "Perm" ? Pside : Tside);
-                    codeUpdate->setNextBootSide(nextBootSide);
+                    return;
                 }
-            }
-        });
+
+                PendingAttributes pendingAttributes =
+                    std::get<PendingAttributes>(valPropMap->second);
+                for (auto it : pendingAttributes)
+                {
+                    if (it.first == "fw_boot_side")
+                    {
+                        auto& [attributeType, attributevalue] = it.second;
+                        std::string nextBootSideAttr =
+                            std::get<std::string>(attributevalue);
+                        std::string nextBootSide =
+                            (nextBootSideAttr == "Perm" ? Pside : Tside);
+                        codeUpdate->setNextBootSide(nextBootSide);
+                    }
+                }
+            });
         stateManagerMatch = std::make_unique<sdbusplus::bus::match::match>(
             pldm::utils::DBusHandler::getBus(),
             sdbusplus::bus::match::rules::interfacesAdded() +
                 sdbusplus::bus::match::rules::argNpath(
                     0, "/xyz/openbmc_project/state/host0"),
             [this](sdbusplus::message::message& msg) {
-            sdbusplus::message::object_path path;
-            std::map<std::string, std::map<std::string, dbus::Value>>
-                interfaces;
-            msg.read(path, interfaces);
+                sdbusplus::message::object_path path;
+                std::map<std::string, std::map<std::string, dbus::Value>>
+                    interfaces;
+                msg.read(path, interfaces);
 
-            if (!interfaces.contains("xyz.openbmc_project.State.Host"))
-            {
-                return;
-            }
+                if (!interfaces.contains("xyz.openbmc_project.State.Host"))
+                {
+                    return;
+                }
 
-            const auto& properties =
-                interfaces.at("xyz.openbmc_project.State.Host");
+                const auto& properties =
+                    interfaces.at("xyz.openbmc_project.State.Host");
 
-            if (!properties.contains("RestartCause"))
-            {
-                return;
-            }
+                if (!properties.contains("RestartCause"))
+                {
+                    return;
+                }
 
-            restartCause = std::get<std::string>(properties.at("RestartCause"));
-            setBootTypesBiosAttr(restartCause);
-        });
+                restartCause =
+                    std::get<std::string>(properties.at("RestartCause"));
+                setBootTypesBiosAttr(restartCause);
+            });
     }
 
     int oemSetNumericEffecterValueHandler(

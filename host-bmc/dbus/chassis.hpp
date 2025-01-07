@@ -23,8 +23,8 @@ class ItemChassis : public ItemChassisIntf
     ~ItemChassis() = default;
     ItemChassis(const ItemChassis&) = delete;
     ItemChassis& operator=(const ItemChassis&) = delete;
-    ItemChassis(ItemChassis&&) = default;
-    ItemChassis& operator=(ItemChassis&&) = default;
+    ItemChassis(ItemChassis&&) = delete;
+    ItemChassis& operator=(ItemChassis&&) = delete;
 
     ItemChassis(sdbusplus::bus_t& bus, const std::string& objPath) :
         ItemChassisIntf(bus, objPath.c_str())

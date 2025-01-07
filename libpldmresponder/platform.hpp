@@ -14,10 +14,10 @@
 #include <libpldm/pdr.h>
 #include <libpldm/platform.h>
 #include <libpldm/states.h>
-#include <stdint.h>
 
 #include <phosphor-logging/lg2.hpp>
 
+#include <cstdint>
 #include <map>
 
 PHOSPHOR_LOG2_USING;
@@ -57,7 +57,6 @@ class Handler : public CmdHandler
             pldm::state_sensor::DbusToPLDMEvent* dbusToPLDMEventHandler,
             fru::Handler* fruHandler,
             pldm_entity_association_tree* bmcEntityTree,
-            pldm::responder::oem_platform::Handler* oemPlatformHandler,
             pldm::responder::platform_config::Handler* platformConfigHandler,
             pldm::requester::Handler<pldm::requester::Request>* handler,
             sdeventplus::Event& event, bool buildPDRLazily = false,
@@ -66,7 +65,6 @@ class Handler : public CmdHandler
         hostPDRHandler(hostPDRHandler),
         dbusToPLDMEventHandler(dbusToPLDMEventHandler), fruHandler(fruHandler),
         bmcEntityTree(bmcEntityTree), dBusIntf(dBusIntf),
-        oemPlatformHandler(oemPlatformHandler),
         platformConfigHandler(platformConfigHandler), handler(handler),
         event(event), pdrJsonDir(pdrJsonDir), pdrCreated(false),
         pdrJsonsDir({pdrJsonDir})
@@ -81,47 +79,48 @@ class Handler : public CmdHandler
         handlers.emplace(
             PLDM_GET_PDR,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
-            return this->getPDR(request, payloadLength);
-        });
+                return this->getPDR(request, payloadLength);
+            });
         handlers.emplace(
             PLDM_SET_NUMERIC_EFFECTER_VALUE,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
-            return this->setNumericEffecterValue(request, payloadLength);
-        });
+                return this->setNumericEffecterValue(request, payloadLength);
+            });
         handlers.emplace(
             PLDM_GET_NUMERIC_EFFECTER_VALUE,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
-            return this->getNumericEffecterValue(request, payloadLength);
-        });
+                return this->getNumericEffecterValue(request, payloadLength);
+            });
         handlers.emplace(
             PLDM_SET_STATE_EFFECTER_STATES,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
-            return this->setStateEffecterStates(request, payloadLength);
-        });
+                return this->setStateEffecterStates(request, payloadLength);
+            });
         handlers.emplace(
             PLDM_PLATFORM_EVENT_MESSAGE,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
-            return this->platformEventMessage(request, payloadLength);
-        });
+                return this->platformEventMessage(request, payloadLength);
+            });
         handlers.emplace(
             PLDM_GET_STATE_SENSOR_READINGS,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
-            return this->getStateSensorReadings(request, payloadLength);
-        });
+                return this->getStateSensorReadings(request, payloadLength);
+            });
 
         // Default handler for PLDM Events
         eventHandlers[PLDM_SENSOR_EVENT].emplace_back(
             [this](const pldm_msg* request, size_t payloadLength,
                    uint8_t formatVersion, uint8_t tid, size_t eventDataOffset) {
-            return this->sensorEvent(request, payloadLength, formatVersion, tid,
-                                     eventDataOffset);
-        });
+                return this->sensorEvent(request, payloadLength, formatVersion,
+                                         tid, eventDataOffset);
+            });
         eventHandlers[PLDM_PDR_REPOSITORY_CHG_EVENT].emplace_back(
             [this](const pldm_msg* request, size_t payloadLength,
                    uint8_t formatVersion, uint8_t tid, size_t eventDataOffset) {
-            return this->pldmPDRRepositoryChgEvent(
-                request, payloadLength, formatVersion, tid, eventDataOffset);
-        });
+                return this->pldmPDRRepositoryChgEvent(
+                    request, payloadLength, formatVersion, tid,
+                    eventDataOffset);
+            });
 
         // Additional OEM event handlers for PLDM events, append it to the
         // standard handlers
@@ -149,20 +148,21 @@ class Handler : public CmdHandler
             propertiesChanged("/xyz/openbmc_project/state/host0",
                               "xyz.openbmc_project.State.Host"),
             [this](sdbusplus::message::message& msg) {
-            DbusChangedProps props{};
-            std::string intf;
-            msg.read(intf, props);
-            const auto itr = props.find("CurrentHostState");
-            if (itr != props.end())
-            {
-                utils::PropertyValue value = itr->second;
-                auto propVal = std::get<std::string>(value);
-                if (propVal == "xyz.openbmc_project.State.Host.HostState.Off")
+                DbusChangedProps props{};
+                std::string intf;
+                msg.read(intf, props);
+                const auto itr = props.find("CurrentHostState");
+                if (itr != props.end())
                 {
-                    clearMexObj = true;
+                    utils::PropertyValue value = itr->second;
+                    auto propVal = std::get<std::string>(value);
+                    if (propVal ==
+                        "xyz.openbmc_project.State.Host.HostState.Off")
+                    {
+                        clearMexObj = true;
+                    }
                 }
-            }
-        });
+            });
     }
 
     pdr_utils::Repo& getRepo()
@@ -234,6 +234,16 @@ class Handler : public CmdHandler
      *
      */
     EventMap eventHandlers;
+
+    /* @brief Method to set the oem platform handler in platform handler class
+     *
+     * @param[in] handler - oem platform handler
+     */
+    inline void
+        setOemPlatformHandler(pldm::responder::oem_platform::Handler* handler)
+    {
+        oemPlatformHandler = handler;
+    }
 
     /** @brief Handler for GetPDR
      *
@@ -336,7 +346,7 @@ class Handler : public CmdHandler
      *  @param[in] stateField - The state field data for each of the states,
      * equal to composite effecter count in number
      *  @return - Success or failure in setting the states. Returns failure in
-     * terms of PLDM completion codes if atleast one state fails to be set
+     * terms of PLDM completion codes if at least one state fails to be set
      */
     template <class DBusInterface>
     int setStateEffecterStatesHandler(
@@ -375,8 +385,8 @@ class Handler : public CmdHandler
             if (pdr->effecter_id != effecterId)
             {
                 pdr = nullptr;
-                pdrRecord = stateEffecterPDRs.getNextRecord(pdrRecord,
-                                                            pdrEntry);
+                pdrRecord =
+                    stateEffecterPDRs.getNextRecord(pdrRecord, pdrEntry);
                 continue;
             }
 
@@ -386,8 +396,8 @@ class Handler : public CmdHandler
             {
                 error(
                     "The requester sent wrong composite effecter count '{COMPOSITE_EFFECTER_COUNT}' for the effecter ID '{EFFECTERID}'.",
-                    "COMPOSITE_EFFECTER_COUNT", (unsigned)compEffecterCnt,
-                    "EFFECTERID", (unsigned)effecterId);
+                    "COMPOSITE_EFFECTER_COUNT", compEffecterCnt, "EFFECTERID",
+                    effecterId);
                 return PLDM_ERROR_INVALID_DATA;
             }
             break;
@@ -401,15 +411,15 @@ class Handler : public CmdHandler
         int rc = PLDM_SUCCESS;
         try
         {
-            const auto& [dbusMappings,
-                         dbusValMaps] = effecterDbusObjMaps.at(effecterId);
+            const auto& [dbusMappings, dbusValMaps] =
+                effecterDbusObjMaps.at(effecterId);
             for (uint8_t currState = 0; currState < compEffecterCnt;
                  ++currState)
             {
                 std::vector<StateSetNum> allowed{};
                 // computation is based on table 79 from DSP0248 v1.1.1
-                uint8_t bitfieldIndex = stateField[currState].effecter_state /
-                                        8;
+                uint8_t bitfieldIndex =
+                    stateField[currState].effecter_state / 8;
                 uint8_t bit = stateField[currState].effecter_state -
                               (8 * bitfieldIndex);
                 if (states->possible_states_size < bitfieldIndex ||
@@ -417,10 +427,10 @@ class Handler : public CmdHandler
                 {
                     error(
                         "Invalid state set value for effecter ID '{EFFECTERID}', effecter state '{EFFECTER_STATE}', composite effecter ID '{COMPOSITE_EFFECTER_ID}' and path '{PATH}'.",
-                        "EFFECTERID", (unsigned)effecterId, "EFFECTER_STATE",
-                        (unsigned)stateField[currState].effecter_state,
-                        "COMPOSITE_EFFECTER_COUNT", (unsigned)currState, "PATH",
-                        dbusMappings[currState].objectPath.c_str());
+                        "EFFECTERID", effecterId, "EFFECTER_STATE",
+                        stateField[currState].effecter_state,
+                        "COMPOSITE_EFFECTER_COUNT", currState, "PATH",
+                        dbusMappings[currState].objectPath);
                     rc = PLDM_PLATFORM_SET_EFFECTER_UNSUPPORTED_SENSORSTATE;
                     break;
                 }
@@ -443,7 +453,7 @@ class Handler : public CmdHandler
                             "Failed to set property '{PROPERTY}' of interface '{INTERFACE}' at path '{PATH}', error - {ERROR}",
                             "PROPERTY", dbusMapping.propertyName, "DBUS_INTF",
                             dbusMapping.interface, "DBUS_OBJ_PATH",
-                            dbusMapping.objectPath.c_str(), "ERROR", e);
+                            dbusMapping.objectPath, "ERROR", e);
                         return PLDM_ERROR;
                     }
                 }
@@ -460,7 +470,7 @@ class Handler : public CmdHandler
         {
             error(
                 "The effecter ID '{EFFECTERID}' does not exist, error - {ERROR}.",
-                "EFFECTERID", (unsigned)effecterId, "ERROR", e);
+                "EFFECTERID", effecterId, "ERROR", e);
         }
 
         return rc;
@@ -525,7 +535,7 @@ class Handler : public CmdHandler
     fru::Handler* fruHandler;
     pldm_entity_association_tree* bmcEntityTree;
     const pldm::utils::DBusHandler* dBusIntf;
-    pldm::responder::oem_platform::Handler* oemPlatformHandler;
+    pldm::responder::oem_platform::Handler* oemPlatformHandler = nullptr;
     pldm::responder::platform_config::Handler* platformConfigHandler;
     pldm::requester::Handler<pldm::requester::Request>* handler;
     sdeventplus::Event& event;
@@ -557,12 +567,11 @@ class Handler : public CmdHandler
  *  @return true if the effecter is OEM. All out parameters are invalid
  *                  for a non OEM effecter
  */
-bool isOemNumericEffecter(Handler& handler, uint16_t effecterId,
-                          uint16_t& entityType, uint16_t& entityInstance,
-                          uint8_t& effecterDataSize,
-                          uint16_t& effecterSemanticId,
-                          real32_t& effecterOffset,
-                          real32_t& effecterResolution);
+bool isOemNumericEffecter(
+    Handler& handler, uint16_t effecterId, uint16_t& entityType,
+    uint16_t& entityInstance, uint8_t& effecterDataSize,
+    uint16_t& effecterSemanticId, real32_t& effecterOffset,
+    real32_t& effecterResolution);
 
 /** @brief Function to check if a sensor falls in OEM range
  *         A sensor is considered to be oem if either of entity

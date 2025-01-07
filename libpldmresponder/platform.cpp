@@ -91,26 +91,26 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
          [this](const DBusHandler& dBusIntf, const auto& json,
                 RepoInterface& repo,
                 pldm_entity_association_tree* bmcEntityTree) {
-        pdr_state_effecter::generateStateEffecterPDR<pldm::utils::DBusHandler,
-                                                     Handler>(
-            dBusIntf, json, *this, repo, bmcEntityTree);
-    }},
+             pdr_state_effecter::generateStateEffecterPDR<
+                 pldm::utils::DBusHandler, Handler>(dBusIntf, json, *this, repo,
+                                                    bmcEntityTree);
+         }},
         {PLDM_NUMERIC_EFFECTER_PDR,
          [this](const DBusHandler& dBusIntf, const auto& json,
                 RepoInterface& repo,
                 pldm_entity_association_tree* bmcEntityTree) {
-        pdr_numeric_effecter::generateNumericEffecterPDR<
-            pldm::utils::DBusHandler, Handler>(dBusIntf, json, *this, repo,
-                                               bmcEntityTree);
-    }},
+             pdr_numeric_effecter::generateNumericEffecterPDR<
+                 pldm::utils::DBusHandler, Handler>(dBusIntf, json, *this, repo,
+                                                    bmcEntityTree);
+         }},
         {PLDM_STATE_SENSOR_PDR,
          [this](const DBusHandler& dBusIntf, const auto& json,
                 RepoInterface& repo,
                 pldm_entity_association_tree* bmcEntityTree) {
-        pdr_state_sensor::generateStateSensorPDR<pldm::utils::DBusHandler,
-                                                 Handler>(dBusIntf, json, *this,
-                                                          repo, bmcEntityTree);
-    }}};
+             pdr_state_sensor::generateStateSensorPDR<pldm::utils::DBusHandler,
+                                                      Handler>(
+                 dBusIntf, json, *this, repo, bmcEntityTree);
+         }}};
 
     Type pdrType{};
     for (const auto& directory : dir)
@@ -136,8 +136,8 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
                         for (const auto& sensor : sensorPDRs)
                         {
                             pdrType = sensor.value("pdrType", 0);
-                            generateHandlers.at(pdrType)(dBusIntf, sensor, repo,
-                                                         bmcEntityTree);
+                            generateHandlers.at(
+                                pdrType)(dBusIntf, sensor, repo, bmcEntityTree);
                         }
                     }
                 }
@@ -176,7 +176,7 @@ void Handler::generate(const pldm::utils::DBusHandler& dBusIntf,
 
 Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
 {
-    if (oemPlatformHandler != nullptr)
+    if (oemPlatformHandler)
     {
         auto rc = oemPlatformHandler->checkBMCState();
         if (rc != PLDM_SUCCESS)
@@ -345,9 +345,9 @@ Response Handler::setStateEffecterStates(const pldm_msg* request,
         return CmdHandler::ccOnlyResponse(request, PLDM_ERROR_INVALID_LENGTH);
     }
 
-    int rc = decode_set_state_effecter_states_req(request, payloadLength,
-                                                  &effecterId, &compEffecterCnt,
-                                                  stateField.data());
+    int rc = decode_set_state_effecter_states_req(
+        request, payloadLength, &effecterId, &compEffecterCnt,
+        stateField.data());
 
     if (rc != PLDM_SUCCESS)
     {
@@ -426,8 +426,8 @@ Response Handler::platformEventMessage(const pldm_msg* request,
             const auto& handlers = eventHandlers.at(eventClass);
             for (const auto& handler : handlers)
             {
-                auto rc = handler(request, payloadLength, formatVersion, tid,
-                                  offset);
+                auto rc =
+                    handler(request, payloadLength, formatVersion, tid, offset);
                 if (rc != PLDM_SUCCESS)
                 {
                     return CmdHandler::ccOnlyResponse(request, rc);
@@ -462,8 +462,8 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
     uint16_t sensorId{};
     uint8_t eventClass{};
     size_t eventClassDataOffset{};
-    auto eventData = reinterpret_cast<const uint8_t*>(request->payload) +
-                     eventDataOffset;
+    auto eventData =
+        reinterpret_cast<const uint8_t*>(request->payload) + eventDataOffset;
     auto eventDataSize = payloadLength - eventDataOffset;
 
     auto rc = decode_sensor_event_data(eventData, eventDataSize, &sensorId,
@@ -475,8 +475,8 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
 
     auto eventClassData = reinterpret_cast<const uint8_t*>(request->payload) +
                           eventDataOffset + eventClassDataOffset;
-    auto eventClassDataSize = payloadLength - eventDataOffset -
-                              eventClassDataOffset;
+    auto eventClassDataSize =
+        payloadLength - eventDataOffset - eventClassDataOffset;
 
     if (eventClass == PLDM_STATE_SENSOR_STATE)
     {
@@ -544,12 +544,13 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
         }
 
         const auto& [containerId, entityType, entityInstance] = entityInfo;
-        events::StateSensorEntry stateSensorEntry{containerId,
-                                                  entityType,
-                                                  entityInstance,
-                                                  sensorOffset,
-                                                  stateSetIds[sensorOffset],
-                                                  false};
+        events::StateSensorEntry stateSensorEntry{
+            containerId,
+            entityType,
+            entityInstance,
+            sensorOffset,
+            stateSetIds[sensorOffset],
+            false};
         return hostPDRHandler->handleStateSensorEvent(
             stateSetIds, stateSensorEntry, eventState);
     }
@@ -561,10 +562,9 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
     return PLDM_SUCCESS;
 }
 
-int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
-                                       size_t payloadLength,
-                                       uint8_t /*formatVersion*/, uint8_t tid,
-                                       size_t eventDataOffset)
+int Handler::pldmPDRRepositoryChgEvent(
+    const pldm_msg* request, size_t payloadLength, uint8_t /*formatVersion*/,
+    uint8_t tid, size_t eventDataOffset)
 {
     info("Got a repo change event from tid: {TID}", "TID", tid);
     uint8_t eventDataFormat{};
@@ -572,8 +572,8 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
     size_t dataOffset{};
     uint8_t eventDataOperation{};
 
-    auto eventData = reinterpret_cast<const uint8_t*>(request->payload) +
-                     eventDataOffset;
+    auto eventData =
+        reinterpret_cast<const uint8_t*>(request->payload) + eventDataOffset;
     auto eventDataSize = payloadLength - eventDataOffset;
 
     auto rc = decode_pldm_pdr_repository_chg_event_data(
@@ -620,8 +620,8 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                 }
 
                 rc = getPDRRecordHandles(
-                    reinterpret_cast<const ChangeEntry*>(changeRecordData +
-                                                         dataOffset),
+                    reinterpret_cast<const ChangeEntry*>(
+                        changeRecordData + dataOffset),
                     changeRecordDataSize - dataOffset,
                     static_cast<size_t>(numberOfChangeEntries),
                     pdrRecordHandles);
@@ -631,8 +631,9 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
                     return rc;
                 }
             }
-            changeRecordData += dataOffset +
-                                (numberOfChangeEntries * sizeof(ChangeEntry));
+
+            changeRecordData +=
+                dataOffset + (numberOfChangeEntries * sizeof(ChangeEntry));
             changeRecordDataSize -=
                 dataOffset + (numberOfChangeEntries * sizeof(ChangeEntry));
         }
@@ -676,10 +677,9 @@ int Handler::pldmPDRRepositoryChgEvent(const pldm_msg* request,
     return PLDM_SUCCESS;
 }
 
-int Handler::getPDRRecordHandles(const ChangeEntry* changeEntryData,
-                                 size_t changeEntryDataSize,
-                                 size_t numberOfChangeEntries,
-                                 PDRRecordHandles& pdrRecordHandles)
+int Handler::getPDRRecordHandles(
+    const ChangeEntry* changeEntryData, size_t changeEntryDataSize,
+    size_t numberOfChangeEntries, PDRRecordHandles& pdrRecordHandles)
 {
     if (numberOfChangeEntries > (changeEntryDataSize / sizeof(ChangeEntry)))
     {
@@ -731,11 +731,11 @@ Response Handler::getNumericEffecterValue(const pldm_msg* request,
     // PresentValue (uint8|sint8|uint16|sint16|uint32|sint32 )
     // Size of PendingValue and PresentValue calculated based on size is
     // provided in effecter data size
-    size_t responsePayloadLength = sizeof(completionCode) +
-                                   sizeof(effecterDataSize) +
-                                   sizeof(effecterOperationalState) +
-                                   getEffecterDataSize(effecterDataSize) +
-                                   getEffecterDataSize(effecterDataSize);
+    size_t responsePayloadLength =
+        sizeof(completionCode) + sizeof(effecterDataSize) +
+        sizeof(effecterOperationalState) +
+        getEffecterDataSize(effecterDataSize) +
+        getEffecterDataSize(effecterDataSize);
 
     Response response(responsePayloadLength + sizeof(pldm_msg_hdr));
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
@@ -757,8 +757,8 @@ Response Handler::getNumericEffecterValue(const pldm_msg* request,
 Response Handler::setNumericEffecterValue(const pldm_msg* request,
                                           size_t payloadLength)
 {
-    Response response(sizeof(pldm_msg_hdr) +
-                      PLDM_SET_NUMERIC_EFFECTER_VALUE_RESP_BYTES);
+    Response response(
+        sizeof(pldm_msg_hdr) + PLDM_SET_NUMERIC_EFFECTER_VALUE_RESP_BYTES);
     uint16_t effecterId{};
     uint8_t effecterDataSize{};
     uint8_t effecterValue[4] = {};
@@ -797,9 +797,9 @@ Response Handler::setNumericEffecterValue(const pldm_msg* request,
     else
     {
         rc = platform_numeric_effecter::setNumericEffecterValueHandler<
-            pldm::utils::DBusHandler, Handler>(dBusIntf, *this, effecterId,
-                                               effecterDataSize, effecterValue,
-                                               sizeof(effecterValue));
+            pldm::utils::DBusHandler, Handler>(
+            dBusIntf, *this, effecterId, effecterDataSize, effecterValue,
+            sizeof(effecterValue));
     }
 
     return ccOnlyResponse(request, rc);
@@ -825,7 +825,7 @@ void Handler::generateTerminusLocatorPDR(Repo& repo)
         sizeof(pldm_terminus_locator_type_mctp_eid);
     auto locatorValue = reinterpret_cast<pldm_terminus_locator_type_mctp_eid*>(
         pdr->terminus_locator_value);
-    locatorValue->eid = BmcMctpEid;
+    locatorValue->eid = pldm::BmcMctpEid;
 
     PdrEntry pdrEntry{};
     pdrEntry.data = pdrBuffer.data();
@@ -872,7 +872,7 @@ Response Handler::getStateSensorReadings(const pldm_msg* request,
 
     if (isOemStateSensor(*this, sensorId, sensorRearmCount, comSensorCnt,
                          entityType, entityInstance, stateSetId, containerId) &&
-        oemPlatformHandler != nullptr && !sensorDbusObjMaps.contains(sensorId))
+        oemPlatformHandler && !sensorDbusObjMaps.contains(sensorId))
     {
         rc = oemPlatformHandler->getOemStateSensorReadingsHandler(
             entityType, entityInstance, containerId, stateSetId, comSensorCnt,
@@ -891,13 +891,13 @@ Response Handler::getStateSensorReadings(const pldm_msg* request,
         return ccOnlyResponse(request, rc);
     }
 
-    Response response(sizeof(pldm_msg_hdr) +
-                      PLDM_GET_STATE_SENSOR_READINGS_MIN_RESP_BYTES +
-                      sizeof(get_sensor_state_field) * comSensorCnt);
+    Response response(
+        sizeof(pldm_msg_hdr) + PLDM_GET_STATE_SENSOR_READINGS_MIN_RESP_BYTES +
+        sizeof(get_sensor_state_field) * comSensorCnt);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
-    rc = encode_get_state_sensor_readings_resp(request->hdr.instance_id, rc,
-                                               comSensorCnt, stateField.data(),
-                                               responsePtr);
+    rc = encode_get_state_sensor_readings_resp(
+        request->hdr.instance_id, rc, comSensorCnt, stateField.data(),
+        responsePtr);
     if (rc != PLDM_SUCCESS)
     {
         return ccOnlyResponse(request, rc);
@@ -913,12 +913,11 @@ void Handler::_processPostGetPDRActions(sdeventplus::source::EventBase&
     dbusToPLDMEventHandler->listenSensorEvent(pdrRepo, sensorDbusObjMaps);
 }
 
-bool isOemNumericEffecter(Handler& handler, uint16_t effecterId,
-                          uint16_t& entityType, uint16_t& entityInstance,
-                          uint8_t& effecterDataSize,
-                          uint16_t& effecterSemanticId,
-                          real32_t& effecterOffset,
-                          real32_t& effecterResolution)
+bool isOemNumericEffecter(
+    Handler& handler, uint16_t effecterId, uint16_t& entityType,
+    uint16_t& entityInstance, uint8_t& effecterDataSize,
+    uint16_t& effecterSemanticId, real32_t& effecterOffset,
+    real32_t& effecterResolution)
 {
     pldm_numeric_effecter_value_pdr* pdr = nullptr;
 
@@ -1094,8 +1093,8 @@ bool isOemStateEffecter(Handler& handler, uint16_t effecterId,
         {
             error(
                 "The requester sent wrong composite effecter count '{COMPOSITE_EFFECTER_COUNT}' for the effecter ID '{EFFECTERID}'.",
-                "COMPOSITE_EFFECTER_COUNT", (uint16_t)compEffecterCnt,
-                "EFFECTERID", effecterId);
+                "COMPOSITE_EFFECTER_COUNT", compEffecterCnt, "EFFECTERID",
+                effecterId);
             return false;
         }
 
@@ -1119,14 +1118,14 @@ bool isOemStateEffecter(Handler& handler, uint16_t effecterId,
 
 void Handler::setEventReceiver()
 {
-    std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
-                                    PLDM_SET_EVENT_RECEIVER_REQ_BYTES);
+    std::vector<uint8_t> requestMsg(
+        sizeof(pldm_msg_hdr) + PLDM_SET_EVENT_RECEIVER_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
     auto instanceId = instanceIdDb->next(eid);
     uint8_t eventMessageGlobalEnable =
         PLDM_EVENT_MESSAGE_GLOBAL_ENABLE_ASYNC_KEEP_ALIVE;
     uint8_t transportProtocolType = PLDM_TRANSPORT_PROTOCOL_TYPE_MCTP;
-    uint8_t eventReceiverAddressInfo = pldm::responder::pdr::BmcMctpEid;
+    uint8_t eventReceiverAddressInfo = pldm::BmcMctpEid;
     uint16_t heartbeatTimer = HEARTBEAT_TIMEOUT;
 
     auto rc = encode_set_event_receiver_req(
@@ -1141,8 +1140,9 @@ void Handler::setEventReceiver()
         return;
     }
 
-    auto processSetEventReceiverResponse =
-        [](mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen) {
+    auto processSetEventReceiverResponse = [](mctp_eid_t /*eid*/,
+                                              const pldm_msg* response,
+                                              size_t respMsgLen) {
         if (response == nullptr || !respMsgLen)
         {
             error("Failed to receive response for setEventReceiver command");
@@ -1156,7 +1156,7 @@ void Handler::setEventReceiver()
         {
             error(
                 "Failed to decode setEventReceiver command, response code '{RC}' and completion code '{CC}'",
-                "RC", rc, "CC", (unsigned)completionCode);
+                "RC", rc, "CC", completionCode);
         }
     };
     rc = handler->registerRequest(

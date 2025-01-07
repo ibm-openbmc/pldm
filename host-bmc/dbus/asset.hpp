@@ -24,8 +24,8 @@ class Asset : public ItemAsset
     ~Asset() = default;
     Asset(const Asset&) = delete;
     Asset& operator=(const Asset&) = delete;
-    Asset(Asset&&) = default;
-    Asset& operator=(Asset&&) = default;
+    Asset(Asset&&) = delete;
+    Asset& operator=(Asset&&) = delete;
 
     Asset(sdbusplus::bus_t& bus, const std::string& objPath) :
         ItemAsset(bus, objPath.c_str())

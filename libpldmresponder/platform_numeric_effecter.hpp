@@ -7,11 +7,11 @@
 
 #include <libpldm/platform.h>
 #include <libpldm/states.h>
-#include <math.h>
-#include <stdint.h>
 
 #include <phosphor-logging/lg2.hpp>
 
+#include <cmath>
+#include <cstdint>
 #include <map>
 #include <optional>
 
@@ -184,10 +184,9 @@ std::pair<int, std::optional<pldm::utils::PropertyValue>>
  *  @return std::pair<int, std::optional<PropertyValue>> - rc:Success or
  *          failure, PropertyValue: The value to be set
  */
-std::pair<int, std::optional<pldm::utils::PropertyValue>>
-    convertToDbusValue(const pldm_numeric_effecter_value_pdr* pdr,
-                       uint8_t effecterDataSize, uint8_t* effecterValue,
-                       std::string propertyType)
+std::pair<int, std::optional<pldm::utils::PropertyValue>> convertToDbusValue(
+    const pldm_numeric_effecter_value_pdr* pdr, uint8_t effecterDataSize,
+    uint8_t* effecterValue, std::string propertyType)
 {
     if (effecterDataSize == PLDM_EFFECTER_DATA_SIZE_UINT8)
     {
@@ -242,14 +241,13 @@ std::pair<int, std::optional<pldm::utils::PropertyValue>>
  *  @param[in] effecterValueLength - The setting value length of numeric
  *              effecter being requested.
  *  @return - Success or failure in setting the states. Returns failure in
- * terms of PLDM completion codes if atleast one state fails to be set
+ * terms of PLDM completion codes if at least one state fails to be set
  */
 template <class DBusInterface, class Handler>
-int setNumericEffecterValueHandler(const DBusInterface& dBusIntf,
-                                   Handler& handler, uint16_t effecterId,
-                                   uint8_t effecterDataSize,
-                                   uint8_t* effecterValue,
-                                   size_t effecterValueLength)
+int setNumericEffecterValueHandler(
+    const DBusInterface& dBusIntf, Handler& handler, uint16_t effecterId,
+    uint8_t effecterDataSize, uint8_t* effecterValue,
+    size_t effecterValueLength)
 {
     constexpr auto effecterValueArrayLength = 4;
     pldm_numeric_effecter_value_pdr* pdr = nullptr;
@@ -302,8 +300,8 @@ int setNumericEffecterValueHandler(const DBusInterface& dBusIntf,
 
     try
     {
-        const auto& [dbusMappings,
-                     dbusValMaps] = handler.getDbusObjMaps(effecterId);
+        const auto& [dbusMappings, dbusValMaps] =
+            handler.getDbusObjMaps(effecterId);
         pldm::utils::DBusMapping dbusMapping{
             dbusMappings[0].objectPath, dbusMappings[0].interface,
             dbusMappings[0].propertyName, dbusMappings[0].propertyType};
@@ -324,8 +322,8 @@ int setNumericEffecterValueHandler(const DBusInterface& dBusIntf,
             error(
                 "Failed to set property '{PROPERTY}', interface '{INTERFACE}' and path '{PATH}', error - {ERROR}",
                 "PROPERTY", dbusMapping.propertyName, "INTERFACE",
-                dbusMapping.interface, "PATH", dbusMapping.objectPath.c_str(),
-                "ERROR", e);
+                dbusMapping.interface, "PATH", dbusMapping.objectPath, "ERROR",
+                e);
             return PLDM_ERROR;
         }
     }
@@ -344,7 +342,7 @@ int setNumericEffecterValueHandler(const DBusInterface& dBusIntf,
  *  @param[in] PropertyValue - D-Bus Value
  *  @param[in] effecterDataSize - effecter value size.
  *  @param[in,out] responsePtr - Response of getNumericEffecterValue.
- *  @param[in] responsePayloadLength - reponse length.
+ *  @param[in] responsePayloadLength - response length.
  *  @param[in] instanceId - instance id for response
  *
  *  @return PLDM_SUCCESS/PLDM_ERROR
@@ -427,17 +425,15 @@ int getEffecterValue(T propertyValue, uint8_t effecterDataSize,
  *  @param[in] PropertyValue - Variant contains the D-Bus Value
  *  @param[in] effecterDataSize - effecter value size.
  *  @param[in,out] responsePtr - Response of getNumericEffecterValue.
- *  @param[in] responsePayloadLength - reponse length.
+ *  @param[in] responsePayloadLength - response length.
  *  @param[in] instanceId - instance id for response
  *
  *  @return PLDM_SUCCESS/PLDM_ERROR
  */
-int getNumericEffecterValueHandler(const std::string& propertyType,
-                                   pldm::utils::PropertyValue propertyValue,
-                                   uint8_t effecterDataSize,
-                                   pldm_msg* responsePtr,
-                                   size_t responsePayloadLength,
-                                   uint8_t instanceId)
+int getNumericEffecterValueHandler(
+    const std::string& propertyType, pldm::utils::PropertyValue propertyValue,
+    uint8_t effecterDataSize, pldm_msg* responsePtr,
+    size_t responsePayloadLength, uint8_t instanceId)
 {
     if (propertyType == "uint8_t")
     {
@@ -537,8 +533,8 @@ int getNumericEffecterData(const DBusInterface& dBusIntf, Handler& handler,
     pldm::utils::DBusMapping dbusMapping{};
     try
     {
-        const auto& [dbusMappings,
-                     dbusValMaps] = handler.getDbusObjMaps(effecterId);
+        const auto& [dbusMappings, dbusValMaps] =
+            handler.getDbusObjMaps(effecterId);
         if (dbusMappings.size() > 0)
         {
             dbusMapping = {
@@ -559,9 +555,8 @@ int getNumericEffecterData(const DBusInterface& dBusIntf, Handler& handler,
             "EFFECTERID", effecterId, "ERROR", e);
         error(
             "Dbus Details path [{PATH}], interface [{INTERFACE}] and  property [{PROPERTY}]",
-            "PATH", dbusMapping.objectPath.c_str(), "INTERFACE",
-            dbusMapping.interface.c_str(), "PROPERTY",
-            dbusMapping.propertyName.c_str());
+            "PATH", dbusMapping.objectPath, "INTERFACE", dbusMapping.interface,
+            "PROPERTY", dbusMapping.propertyName);
         return PLDM_ERROR;
     }
 

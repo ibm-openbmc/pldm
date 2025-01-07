@@ -5,7 +5,6 @@
 
 #include <libpldm/base.h>
 #include <libpldm/platform.h>
-#include <stdio.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/un.h>
@@ -17,6 +16,7 @@
 #include <xyz/openbmc_project/Inventory/Item/Connector/client.hpp>
 #include <xyz/openbmc_project/ObjectMapper/client.hpp>
 
+#include <cstdio>
 #include <fstream>
 
 PHOSPHOR_LOG2_USING;
@@ -57,8 +57,8 @@ int setupUnixSocket(const std::string& socketInterface)
     struct sockaddr_un addr;
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
-    size_t interfaceLength = strnlen(socketInterface.c_str(),
-                                     sizeof(addr.sun_path));
+    size_t interfaceLength =
+        strnlen(socketInterface.c_str(), sizeof(addr.sun_path));
 
     if (interfaceLength == sizeof(addr.sun_path))
     {

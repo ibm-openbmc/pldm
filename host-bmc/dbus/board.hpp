@@ -23,8 +23,8 @@ class Board : public ItemBoard
     ~Board() = default;
     Board(const Board&) = delete;
     Board& operator=(const Board&) = delete;
-    Board(Board&&) = default;
-    Board& operator=(Board&&) = default;
+    Board(Board&&) = delete;
+    Board& operator=(Board&&) = delete;
 
     Board(sdbusplus::bus_t& bus, const std::string& objPath) :
         ItemBoard(bus, objPath.c_str())

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common/utils.hpp"
+#include "host-bmc/dbus_to_event_handler.hpp"
 #include "libpldmresponder/pdr.hpp"
 #include "pdr_utils.hpp"
 #include "pldmd/handler.hpp"
@@ -55,7 +56,7 @@ uint8_t getStateSensorEventState(
     {
         error(
             "Failed to get state sensor event state from dbus interface '{PATH}', error - {ERROR}.",
-            "PATH", dbusMapping.objectPath.c_str(), "ERROR", e);
+            "PATH", dbusMapping.objectPath, "ERROR", e);
     }
 
     return PLDM_SENSOR_UNKNOWN;
@@ -75,7 +76,7 @@ uint8_t getStateSensorEventState(
  *  @param[out] stateField - The state field data for each of the states,
  *              equal to composite sensor count in number
  *  @return - Success or failure in setting the states. Returns failure in
- * terms of PLDM completion codes if atleast one state fails to be set
+ * terms of PLDM completion codes if at least one state fails to be set
  */
 template <class DBusInterface, class Handler>
 int getStateSensorReadingsHandler(

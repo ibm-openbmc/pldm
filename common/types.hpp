@@ -1,10 +1,9 @@
 #pragma once
 
-#include <stdint.h>
-
 #include <sdbusplus/message/types.hpp>
 
 #include <bitset>
+#include <cstdint>
 #include <map>
 #include <set>
 #include <string>
@@ -15,16 +14,44 @@
 namespace pldm
 {
 
+using Availability = bool;
 using eid = uint8_t;
 using UUID = std::string;
 using Request = std::vector<uint8_t>;
 using Response = std::vector<uint8_t>;
 using Command = uint8_t;
 
+/** @brief MCTP Endpoint Medium type in string
+ *         Reserved for future purpose
+ */
+
 using MctpMedium = std::string;
+/** @brief Type definition of MCTP Network Index.
+ *         uint32_t is used as defined in MCTP Endpoint D-Bus Interface
+ */
 using NetworkId = uint32_t;
+
+/** @brief Type definition of MCTP interface information between two endpoints.
+ *         eid : Endpoint EID in byte. Defined to match with MCTP D-Bus
+ *               interface
+ *         UUID : Endpoint UUID which is used to different the endpoints
+ *         MctpMedium: Endpoint MCTP Medium info (Resersed)
+ *         NetworkId: MCTP network index
+ */
 using MctpInfo = std::tuple<eid, UUID, MctpMedium, NetworkId>;
+
+/** @brief Type defined for list of MCTP interface information
+ */
 using MctpInfos = std::vector<MctpInfo>;
+
+/**
+ * In `Table 2 - Special endpoint IDs` of DSP0236.
+ * EID from 1 to 7 is reserved EID. So the start valid EID is 8
+ */
+#define MCTP_START_VALID_EID 8
+constexpr uint8_t BmcMctpEid = 8;
+
+#define PLDM_PLATFORM_GETPDR_MAX_RECORD_BYTES 1024
 
 namespace dbus
 {

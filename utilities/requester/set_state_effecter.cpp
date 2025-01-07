@@ -22,9 +22,9 @@ int main(int argc, char** argv)
 
     // Encode PLDM Request message
     uint8_t effecterCount = 1;
-    std::array<uint8_t, sizeof(pldm_msg_hdr) + sizeof(effecterId) +
-                            sizeof(effecterCount) +
-                            sizeof(set_effecter_state_field)>
+    std::array<uint8_t,
+               sizeof(pldm_msg_hdr) + sizeof(effecterId) +
+                   sizeof(effecterCount) + sizeof(set_effecter_state_field)>
         requestMsg{};
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
     set_effecter_state_field stateField{PLDM_REQUEST_SET, state};
@@ -56,7 +56,7 @@ int main(int argc, char** argv)
     pldm_msg* response = reinterpret_cast<pldm_msg*>(responseMsg);
     info(
         "Done! Got the response for PLDM send receive message request, response code '{RC}'",
-        "RC", lg2::hex, static_cast<uint16_t>(response->payload[0]));
+        "RC", lg2::hex, response->payload[0]);
     free(responseMsg);
 
     return 0;

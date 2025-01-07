@@ -6,15 +6,18 @@ deps = [
     sdbusplus,
     phosphor_dbus_interfaces,
     phosphor_logging_dep,
-    ]
+]
 
-source = ['main.cpp','softoff.cpp']
+source = ['main.cpp', 'softoff.cpp']
 
-executable('pldm-softpoweroff',source,
-           implicit_include_directories: false,
-           dependencies: deps,
-           install: true,
-           install_dir: get_option('bindir'))
+executable(
+    'pldm-softpoweroff',
+    source,
+    implicit_include_directories: false,
+    dependencies: deps,
+    install: true,
+    install_dir: get_option('bindir'),
+)
 
 if get_option('systemd').allowed()
      filesystem.copyfile(

@@ -21,8 +21,8 @@ class DecoratorRevision : public DecoratorRevisionIntf
     ~DecoratorRevision() = default;
     DecoratorRevision(const DecoratorRevision&) = delete;
     DecoratorRevision& operator=(const DecoratorRevision&) = delete;
-    DecoratorRevision(DecoratorRevision&&) = default;
-    DecoratorRevision& operator=(DecoratorRevision&&) = default;
+    DecoratorRevision(DecoratorRevision&&) = delete;
+    DecoratorRevision& operator=(DecoratorRevision&&) = delete;
 
     DecoratorRevision(sdbusplus::bus_t& bus, const std::string& objPath) :
         DecoratorRevisionIntf(bus, objPath.c_str()), path(objPath)

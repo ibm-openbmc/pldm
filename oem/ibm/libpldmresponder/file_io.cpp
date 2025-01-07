@@ -98,8 +98,8 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
                 "transferHostDataToSocket : Received interrupt during dump DMA transfer. Skipping Unmap");
         }
     };
-    std::unique_ptr<void, decltype(mmapCleanup)> vgaMemPtr(vgaMemDump,
-                                                           mmapCleanup);
+    std::unique_ptr<void, decltype(mmapCleanup)> vgaMemPtr(
+        vgaMemDump, mmapCleanup);
 
     AspeedXdmaOp xdmaOp;
     xdmaOp.upstream = 0;
@@ -110,7 +110,7 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
     {
         rc = -errno;
         error(
-            "Failed to execute the DMA operation for transfering remote terminus data to socket at address '{ADDRESS}' and length '{LENGTH}' with response code '{RC}'",
+            "Failed to execute the DMA operation for transferring remote terminus data to socket at address '{ADDRESS}' and length '{LENGTH}' with response code '{RC}'",
             "RC", rc, "ADDRESS", address, "LENGTH", length);
         return rc;
     }
@@ -121,7 +121,7 @@ int DMA::transferHostDataToSocket(int fd, uint32_t length, uint64_t address)
         rc = -errno;
         close(fd);
         error(
-            "Failed to write to Unix socket, closing socket for transfering remote terminus data to socket with response code '{RC}'",
+            "Failed to write to Unix socket, closing socket for transferring remote terminus data to socket with response code '{RC}'",
             "RC", rc);
         return rc;
     }
@@ -298,11 +298,10 @@ void encodeWriteResponseHandler(uint8_t instance_id, uint8_t completion_code,
     }
 }
 
-void encodeGetFileResponseHandler(uint8_t instance_id, uint8_t completion_code,
-                                  uint32_t next_transfer_handle,
-                                  uint8_t transfer_flag,
-                                  const uint8_t* table_data, size_t table_size,
-                                  struct pldm_msg* msg)
+void encodeGetFileResponseHandler(
+    uint8_t instance_id, uint8_t completion_code, uint32_t next_transfer_handle,
+    uint8_t transfer_flag, const uint8_t* table_data, size_t table_size,
+    struct pldm_msg* msg)
 {
     int rc = encode_get_file_table_resp(instance_id, completion_code,
                                         next_transfer_handle, transfer_flag,
@@ -600,8 +599,8 @@ Response Handler::getFileTable(const pldm_msg* request, size_t payloadLength)
     uint8_t transferFlag = 0;
     uint8_t tableType = 0;
 
-    Response response(sizeof(pldm_msg_hdr) +
-                      PLDM_GET_FILE_TABLE_MIN_RESP_BYTES);
+    Response response(
+        sizeof(pldm_msg_hdr) + PLDM_GET_FILE_TABLE_MIN_RESP_BYTES);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
 
     if (payloadLength != PLDM_GET_FILE_TABLE_REQ_BYTES)
@@ -840,8 +839,8 @@ Response Handler::writeFile(const pldm_msg* request, size_t payloadLength)
         return response;
     }
 
-    auto fileDataPos = reinterpret_cast<const char*>(request->payload) +
-                       fileDataOffset;
+    auto fileDataPos =
+        reinterpret_cast<const char*>(request->payload) + fileDataOffset;
 
     std::ofstream stream(value.fsPath,
                          std::ios::in | std::ios::out | std::ios::binary);
@@ -880,9 +879,9 @@ Response Handler::rwFileByTypeIntoMemory(
     uint32_t offset{};
     uint32_t length{};
     uint64_t address{};
-    auto rc = decode_rw_file_by_type_memory_req(request, payloadLength,
-                                                &fileType, &fileHandle, &offset,
-                                                &length, &address);
+    auto rc = decode_rw_file_by_type_memory_req(
+        request, payloadLength, &fileType, &fileHandle, &offset, &length,
+        &address);
     if (rc != PLDM_SUCCESS)
     {
         error(
@@ -918,9 +917,9 @@ Response Handler::rwFileByTypeIntoMemory(
                                           responsePtr);
         return response;
     }
-    sharedAIORespDataobj =
-        SharedAIORespData({request->hdr.instance_id, cmd, handler, fileType,
-                           sharedAIORespDataobj.respInterface});
+    sharedAIORespDataobj = SharedAIORespData(
+        {request->hdr.instance_id, cmd, handler, fileType,
+         sharedAIORespDataobj.respInterface});
     sdeventplus::Event event = sdeventplus::Event::get_default();
     if (cmd == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY)
     {
@@ -1234,8 +1233,8 @@ Response Handler::newFileAvailable(const pldm_msg* request,
 
     rc = handler->newFileAvailable(length);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
-    int responseCode = encode_new_file_resp(request->hdr.instance_id, rc,
-                                            responsePtr);
+    int responseCode =
+        encode_new_file_resp(request->hdr.instance_id, rc, responsePtr);
     if (responseCode != PLDM_SUCCESS)
     {
         error(
@@ -1298,8 +1297,8 @@ Response Handler::newFileAvailableWithMetaData(const pldm_msg* request,
 Response Handler::fileAckWithMetaData(const pldm_msg* request,
                                       size_t payloadLength)
 {
-    Response response(sizeof(pldm_msg_hdr) +
-                      PLDM_FILE_ACK_WITH_META_DATA_RESP_BYTES);
+    Response response(
+        sizeof(pldm_msg_hdr) + PLDM_FILE_ACK_WITH_META_DATA_RESP_BYTES);
 
     if (payloadLength != PLDM_FILE_ACK_WITH_META_DATA_REQ_BYTES)
     {

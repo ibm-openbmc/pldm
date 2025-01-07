@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../dbus_to_host_effecters.hpp"
+#include "../dbus_to_terminus_effecters.hpp"
 #include "asset.hpp"
 #include "associations.hpp"
 #include "availability.hpp"
@@ -39,7 +39,9 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
+#include <unordered_map>
 
 namespace pldm
 {
@@ -81,7 +83,7 @@ class CustomDBus
 
     /** @brief Get the LocationCode property
      *
-     *  @param[in] path  - The object path
+     *  @param[in] path - The object path
      *
      *  @return std::optional<std::string> - The value of the LocationCode
      *          property

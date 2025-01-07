@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../dbus_to_host_effecters.hpp"
+#include "../dbus_to_terminus_effecters.hpp"
 #include "serialize.hpp"
 
 #ifdef OEM_IBM
@@ -27,8 +27,8 @@ class Link : public Itemlink
     ~Link() = default;
     Link(const Link&) = delete;
     Link& operator=(const Link&) = delete;
-    Link(Link&&) = default;
-    Link& operator=(Link&&) = default;
+    Link(Link&&) = delete;
+    Link& operator=(Link&&) = delete;
 
     Link(sdbusplus::bus_t& bus, const std::string& objPath,
          pldm::host_effecters::HostEffecterParser* hostEffecterParser,

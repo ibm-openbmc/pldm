@@ -86,8 +86,8 @@ void appendPadAndChecksum(Table& table)
     size_t payloadSize = table.size();
     table.resize(payloadSize + pldm_bios_table_pad_checksum_size(payloadSize));
     // No validation of return value as preconditions are satisfied
-    pldm_bios_table_append_pad_checksum_check(table.data(), table.size(),
-                                              &payloadSize);
+    pldm_bios_table_append_pad_checksum(table.data(), table.size(),
+                                        &payloadSize);
 }
 
 namespace string
@@ -102,21 +102,21 @@ std::string decodeString(const pldm_bios_string_table_entry* entry)
     auto strLength = pldm_bios_table_string_entry_decode_string_length(entry);
     std::vector<char> buffer(strLength + 1 /* sizeof '\0' */);
     // Preconditions are upheld therefore no error check necessary
-    pldm_bios_table_string_entry_decode_string_check(entry, buffer.data(),
-                                                     buffer.size());
+    pldm_bios_table_string_entry_decode_string(entry, buffer.data(),
+                                               buffer.size());
     return std::string(buffer.data(), buffer.data() + strLength);
 }
-const pldm_bios_string_table_entry* constructEntry(Table& table,
-                                                   const std::string& str)
+const pldm_bios_string_table_entry*
+    constructEntry(Table& table, const std::string& str)
 {
     auto tableSize = table.size();
     auto entryLength = pldm_bios_table_string_entry_encode_length(str.length());
     table.resize(tableSize + entryLength);
     // Preconditions are upheld therefore no error check necessary
-    pldm_bios_table_string_entry_encode_check(
-        table.data() + tableSize, entryLength, str.c_str(), str.length());
-    return reinterpret_cast<pldm_bios_string_table_entry*>(table.data() +
-                                                           tableSize);
+    pldm_bios_table_string_entry_encode(table.data() + tableSize, entryLength,
+                                        str.c_str(), str.length());
+    return reinterpret_cast<pldm_bios_string_table_entry*>(
+        table.data() + tableSize);
 }
 
 } // namespace string
@@ -131,50 +131,48 @@ TableHeader decodeHeader(const pldm_bios_attr_table_entry* entry)
     return {attrHandle, attrType, stringHandle};
 }
 
-const pldm_bios_attr_table_entry* findByHandle(const Table& table,
-                                               uint16_t handle)
+const pldm_bios_attr_table_entry*
+    findByHandle(const Table& table, uint16_t handle)
 {
     return pldm_bios_table_attr_find_by_handle(table.data(), table.size(),
                                                handle);
 }
 
-const pldm_bios_attr_table_entry* findByStringHandle(const Table& table,
-                                                     uint16_t handle)
+const pldm_bios_attr_table_entry*
+    findByStringHandle(const Table& table, uint16_t handle)
 {
     return pldm_bios_table_attr_find_by_string_handle(table.data(),
                                                       table.size(), handle);
 }
 
-const pldm_bios_attr_table_entry*
-    constructStringEntry(Table& table,
-                         pldm_bios_table_attr_entry_string_info* info)
+const pldm_bios_attr_table_entry* constructStringEntry(
+    Table& table, pldm_bios_table_attr_entry_string_info* info)
 {
     auto entryLength =
         pldm_bios_table_attr_entry_string_encode_length(info->def_length);
 
     auto tableSize = table.size();
     table.resize(tableSize + entryLength, 0);
-    int rc = pldm_bios_table_attr_entry_string_encode_check(
-        table.data() + tableSize, entryLength, info);
+    int rc = pldm_bios_table_attr_entry_string_encode(table.data() + tableSize,
+                                                      entryLength, info);
     if (rc != PLDM_SUCCESS)
     {
         error("Failed to encode BIOS table string entry, response code '{RC}'",
               "RC", rc);
         throw std::runtime_error("Failed to encode BIOS table string entry");
     }
-    return reinterpret_cast<pldm_bios_attr_table_entry*>(table.data() +
-                                                         tableSize);
+    return reinterpret_cast<pldm_bios_attr_table_entry*>(
+        table.data() + tableSize);
 }
 
-const pldm_bios_attr_table_entry*
-    constructIntegerEntry(Table& table,
-                          pldm_bios_table_attr_entry_integer_info* info)
+const pldm_bios_attr_table_entry* constructIntegerEntry(
+    Table& table, pldm_bios_table_attr_entry_integer_info* info)
 {
     auto entryLength = pldm_bios_table_attr_entry_integer_encode_length();
     auto tableSize = table.size();
     table.resize(tableSize + entryLength, 0);
-    int rc = pldm_bios_table_attr_entry_integer_encode_check(
-        table.data() + tableSize, entryLength, info);
+    int rc = pldm_bios_table_attr_entry_integer_encode(table.data() + tableSize,
+                                                       entryLength, info);
     if (rc != PLDM_SUCCESS)
     {
         error(
@@ -183,8 +181,8 @@ const pldm_bios_attr_table_entry*
         throw std::runtime_error(
             "Failed to encode BIOS attribute table integer entry");
     }
-    return reinterpret_cast<pldm_bios_attr_table_entry*>(table.data() +
-                                                         tableSize);
+    return reinterpret_cast<pldm_bios_attr_table_entry*>(
+        table.data() + tableSize);
 }
 
 StringField decodeStringEntry(const pldm_bios_attr_table_entry* entry)
@@ -193,7 +191,7 @@ StringField decodeStringEntry(const pldm_bios_attr_table_entry* entry)
     auto minLength = pldm_bios_table_attr_entry_string_decode_min_length(entry);
     auto maxLength = pldm_bios_table_attr_entry_string_decode_max_length(entry);
     uint16_t defLength;
-    int rc = pldm_bios_table_attr_entry_string_decode_def_string_length_check(
+    int rc = pldm_bios_table_attr_entry_string_decode_def_string_length(
         entry, &defLength);
     if (rc != PLDM_SUCCESS)
     {
@@ -230,17 +228,17 @@ const pldm_bios_attr_table_entry*
     auto tableSize = table.size();
     table.resize(tableSize + entryLength, 0);
     // Preconditions are upheld therefore no error check necessary
-    pldm_bios_table_attr_entry_enum_encode_check(table.data() + tableSize,
-                                                 entryLength, info);
+    pldm_bios_table_attr_entry_enum_encode(table.data() + tableSize,
+                                           entryLength, info);
 
-    return reinterpret_cast<pldm_bios_attr_table_entry*>(table.data() +
-                                                         tableSize);
+    return reinterpret_cast<pldm_bios_attr_table_entry*>(
+        table.data() + tableSize);
 }
 
 EnumField decodeEnumEntry(const pldm_bios_attr_table_entry* entry)
 {
     uint8_t pvNum;
-    int rc = pldm_bios_table_attr_entry_enum_decode_pv_num_check(entry, &pvNum);
+    int rc = pldm_bios_table_attr_entry_enum_decode_pv_num(entry, &pvNum);
     if (rc != PLDM_SUCCESS)
     {
         error(
@@ -251,11 +249,10 @@ EnumField decodeEnumEntry(const pldm_bios_attr_table_entry* entry)
     }
     std::vector<uint16_t> pvHdls(pvNum, 0);
     // Preconditions are upheld therefore no error check necessary
-    pldm_bios_table_attr_entry_enum_decode_pv_hdls_check(entry, pvHdls.data(),
-                                                         pvNum);
+    pldm_bios_table_attr_entry_enum_decode_pv_hdls(entry, pvHdls.data(), pvNum);
     // Preconditions are upheld therefore no error check necessary
     uint8_t defNum;
-    pldm_bios_table_attr_entry_enum_decode_def_num_check(entry, &defNum);
+    pldm_bios_table_attr_entry_enum_decode_def_num(entry, &defNum);
     std::vector<uint8_t> defIndices(defNum, 0);
     pldm_bios_table_attr_entry_enum_decode_def_indices(entry, defIndices.data(),
                                                        defIndices.size());
@@ -277,8 +274,8 @@ TableHeader decodeHeader(const pldm_bios_attr_val_table_entry* entry)
 std::string decodeStringEntry(const pldm_bios_attr_val_table_entry* entry)
 {
     variable_field currentString{};
-    pldm_bios_table_attr_value_entry_string_decode_string(entry,
-                                                          &currentString);
+    pldm_bios_table_attr_value_entry_string_decode_string(
+        entry, &currentString);
     return std::string(currentString.ptr,
                        currentString.ptr + currentString.length);
 }
@@ -298,16 +295,15 @@ std::vector<uint8_t>
     return currHdls;
 }
 
-const pldm_bios_attr_val_table_entry*
-    constructStringEntry(Table& table, uint16_t attrHandle, uint8_t attrType,
-                         const std::string& str)
+const pldm_bios_attr_val_table_entry* constructStringEntry(
+    Table& table, uint16_t attrHandle, uint8_t attrType, const std::string& str)
 {
     auto strLen = str.size();
     auto entryLength =
         pldm_bios_table_attr_value_entry_encode_string_length(strLen);
     auto tableSize = table.size();
     table.resize(tableSize + entryLength);
-    int rc = pldm_bios_table_attr_value_entry_encode_string_check(
+    int rc = pldm_bios_table_attr_value_entry_encode_string(
         table.data() + tableSize, entryLength, attrHandle, attrType, strLen,
         str.c_str());
     if (rc != PLDM_SUCCESS)
@@ -318,20 +314,18 @@ const pldm_bios_attr_val_table_entry*
         throw std::runtime_error(
             "Failed to encode BIOS attribute table string entry");
     }
-    return reinterpret_cast<pldm_bios_attr_val_table_entry*>(table.data() +
-                                                             tableSize);
+    return reinterpret_cast<pldm_bios_attr_val_table_entry*>(
+        table.data() + tableSize);
 }
 
-const pldm_bios_attr_val_table_entry* constructIntegerEntry(Table& table,
-                                                            uint16_t attrHandle,
-                                                            uint8_t attrType,
-                                                            uint64_t value)
+const pldm_bios_attr_val_table_entry* constructIntegerEntry(
+    Table& table, uint16_t attrHandle, uint8_t attrType, uint64_t value)
 {
     auto entryLength = pldm_bios_table_attr_value_entry_encode_integer_length();
 
     auto tableSize = table.size();
     table.resize(tableSize + entryLength);
-    int rc = pldm_bios_table_attr_value_entry_encode_integer_check(
+    int rc = pldm_bios_table_attr_value_entry_encode_integer(
         table.data() + tableSize, entryLength, attrHandle, attrType, value);
     if (rc != PLDM_SUCCESS)
     {
@@ -341,8 +335,8 @@ const pldm_bios_attr_val_table_entry* constructIntegerEntry(Table& table,
         throw std::runtime_error(
             "Failed to encode BIOS attribute table integery entry");
     }
-    return reinterpret_cast<pldm_bios_attr_val_table_entry*>(table.data() +
-                                                             tableSize);
+    return reinterpret_cast<pldm_bios_attr_val_table_entry*>(
+        table.data() + tableSize);
 }
 
 const pldm_bios_attr_val_table_entry*
@@ -353,7 +347,7 @@ const pldm_bios_attr_val_table_entry*
         handleIndices.size());
     auto tableSize = table.size();
     table.resize(tableSize + entryLength);
-    int rc = pldm_bios_table_attr_value_entry_encode_enum_check(
+    int rc = pldm_bios_table_attr_value_entry_encode_enum(
         table.data() + tableSize, entryLength, attrHandle, attrType,
         handleIndices.size(), handleIndices.data());
     if (rc != PLDM_SUCCESS)
@@ -364,8 +358,8 @@ const pldm_bios_attr_val_table_entry*
         throw std::runtime_error(
             "Failed to encode BIOS attribute table enum entry");
     }
-    return reinterpret_cast<pldm_bios_attr_val_table_entry*>(table.data() +
-                                                             tableSize);
+    return reinterpret_cast<pldm_bios_attr_val_table_entry*>(
+        table.data() + tableSize);
 }
 
 std::optional<Table> updateTable(const Table& table, const void* entry,

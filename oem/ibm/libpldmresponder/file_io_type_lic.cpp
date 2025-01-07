@@ -5,10 +5,10 @@
 #include "common/utils.hpp"
 
 #include <libpldm/oem/ibm/file_io.h>
-#include <stdint.h>
 
 #include <phosphor-logging/lg2.hpp>
 
+#include <cstdint>
 #include <iostream>
 
 PHOSPHOR_LOG2_USING;
@@ -19,7 +19,6 @@ using namespace pldm::responder::utils;
 using namespace pldm::utils;
 using Json = nlohmann::json;
 const Json emptyJson{};
-const std::vector<Json> emptyJsonList{};
 
 namespace responder
 {
@@ -172,11 +171,10 @@ int LicenseHandler::read(uint32_t offset, uint32_t& length, Response& response,
     return PLDM_SUCCESS;
 }
 
-int LicenseHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
-                                        uint32_t metaDataValue1,
-                                        uint32_t /*metaDataValue2*/,
-                                        uint32_t /*metaDataValue3*/,
-                                        uint32_t /*metaDataValue4*/)
+int LicenseHandler::fileAckWithMetaData(
+    uint8_t /*fileStatus*/, uint32_t metaDataValue1,
+    uint32_t /*metaDataValue2*/, uint32_t /*metaDataValue3*/,
+    uint32_t /*metaDataValue4*/)
 {
     DBusMapping dbusMapping;
     dbusMapping.objectPath = "/com/ibm/license";

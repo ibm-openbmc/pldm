@@ -9,7 +9,6 @@
 #include <libpldm/pdr.h>
 #include <libpldm/platform.h>
 #include <libpldm/utils.h>
-#include <stdint.h>
 #include <systemd/sd-bus.h>
 #include <unistd.h>
 
@@ -19,6 +18,7 @@
 #include <xyz/openbmc_project/Logging/Entry/server.hpp>
 #include <xyz/openbmc_project/ObjectMapper/client.hpp>
 
+#include <cstdint>
 #include <deque>
 #include <exception>
 #include <filesystem>
@@ -37,6 +37,15 @@ namespace pldm
 {
 namespace utils
 {
+
+const std::set<std::string_view> dbusValueTypeNames = {
+    "bool",    "uint8_t",  "int16_t",         "uint16_t",
+    "int32_t", "uint32_t", "int64_t",         "uint64_t",
+    "double",  "string",   "vector<uint8_t>", "vector<string>"};
+const std::set<std::string_view> dbusValueNumericTypeNames = {
+    "uint8_t",  "int16_t", "uint16_t", "int32_t",
+    "uint32_t", "int64_t", "uint64_t", "double"};
+
 namespace fs = std::filesystem;
 using Json = nlohmann::json;
 constexpr bool Tx = true;
@@ -69,7 +78,7 @@ uint8_t getNumPadBytes(uint32_t data);
  *  @param[out] hour - number of hours in dec
  *  @param[out] min - number of minutes in dec
  *  @param[out] sec - number of seconds in dec
- *  @return true if decode success, false if decode faild
+ *  @return true if decode success, false if decode failed
  */
 bool uintToDate(uint64_t data, uint16_t* year, uint8_t* month, uint8_t* day,
                 uint8_t* hour, uint8_t* min, uint8_t* sec);
@@ -82,9 +91,8 @@ bool uintToDate(uint64_t data, uint16_t* year, uint8_t* month, uint8_t* day,
  *  @return[out] parse success and get a valid set_effecter_state_field
  *               structure, return nullopt means parse failed
  */
-std::optional<std::vector<set_effecter_state_field>>
-    parseEffecterData(const std::vector<uint8_t>& effecterData,
-                      uint8_t effecterCount);
+std::optional<std::vector<set_effecter_state_field>> parseEffecterData(
+    const std::vector<uint8_t>& effecterData, uint8_t effecterCount);
 
 /**
  *  @brief creates an error log
@@ -288,8 +296,8 @@ class DBusHandler : public DBusHandlerInterface
     auto getDbusProperty(const char* objPath, const char* dbusProp,
                          const char* dbusInterface)
     {
-        auto VariantValue = getDbusPropertyVariant(objPath, dbusProp,
-                                                   dbusInterface);
+        auto VariantValue =
+            getDbusPropertyVariant(objPath, dbusProp, dbusInterface);
         return std::get<Property>(VariantValue);
     }
 
@@ -351,6 +359,17 @@ inline std::string findParent(const std::string& dbusObj)
  */
 uint8_t readHostEID();
 
+/** @brief Validate the MCTP EID of MCTP endpoint
+ *         In `Table 2 - Special endpoint IDs` of DSP0236. EID 0 is NULL_EID.
+ *         EID from 1 to 7 is reserved EID. EID 0xFF is broadcast EID.
+ *         Those are invalid EID of one MCTP Endpoint.
+ *
+ * @param[in] eid - MCTP EID
+ *
+ * @return true if the MCTP EID is valid otherwise return false.
+ */
+bool isValidEID(eid mctpEid);
+
 /** @brief Convert a value in the JSON to a D-Bus property value
  *
  *  @param[in] type - type of the D-Bus property
@@ -368,10 +387,8 @@ PropertyValue jsonEntryToDbusVal(std::string_view type,
  *  @param[in] repo - pointer to BMC's primary PDR repo.
  *  @return array[array[uint8_t]] - StateEffecterPDRs
  */
-std::vector<std::vector<uint8_t>> findStateEffecterPDR(uint8_t tid,
-                                                       uint16_t entityID,
-                                                       uint16_t stateSetId,
-                                                       const pldm_pdr* repo);
+std::vector<std::vector<uint8_t>> findStateEffecterPDR(
+    uint8_t tid, uint16_t entityID, uint16_t stateSetId, const pldm_pdr* repo);
 /** @brief Find State Sensor PDR
  *  @param[in] tid - PLDM terminus ID.
  *  @param[in] entityID - entity that can be associated with PLDM State set.
@@ -379,10 +396,8 @@ std::vector<std::vector<uint8_t>> findStateEffecterPDR(uint8_t tid,
  *  @param[in] repo - pointer to BMC's primary PDR repo.
  *  @return array[array[uint8_t]] - StateSensorPDRs
  */
-std::vector<std::vector<uint8_t>> findStateSensorPDR(uint8_t tid,
-                                                     uint16_t entityID,
-                                                     uint16_t stateSetId,
-                                                     const pldm_pdr* repo);
+std::vector<std::vector<uint8_t>> findStateSensorPDR(
+    uint8_t tid, uint16_t entityID, uint16_t stateSetId, const pldm_pdr* repo);
 
 /** @brief Find sensor id from a state sensor PDR
  *
@@ -492,6 +507,28 @@ bool checkIfLogicalBitSet(const uint16_t& containerId);
  */
 void setFruPresence(const std::string& fruObjPath, bool present);
 
+/** @brief Trim `\0` in string and replace ` ` by `_` to use name in D-Bus
+ *         object path
+ *
+ *  @param[in] name - the input string
+ *
+ *  @return the result string
+ */
+std::string_view trimNameForDbus(std::string& name);
+
+/** @brief Convert the number type D-Bus Value to the double
+ *
+ *  @param[in] type - string type should in dbusValueNumericTypeNames list
+ *  @param[in] value - DBus PropertyValue variant
+ *  @param[out] doubleValue - response value
+ *
+ *  @return true if data type is corrected and converting is successful
+ *          otherwise return false.
+ */
+bool dbusPropValuesToDouble(const std::string_view& type,
+                            const pldm::utils::PropertyValue& value,
+                            double* doubleValue);
+
 /** @brief Method to find all state effecter PDRs
  *
  *  @param[in] tid - Terminus ID
@@ -500,9 +537,8 @@ void setFruPresence(const std::string& fruObjPath, bool present);
  *
  *  @return vector of vector of all state effecter PDRs
  */
-std::vector<std::vector<pldm::pdr::Pdr_t>>
-    getStateEffecterPDRsByType(uint8_t /*tid*/, uint16_t entityType,
-                               const pldm_pdr* repo);
+std::vector<std::vector<pldm::pdr::Pdr_t>> getStateEffecterPDRsByType(
+    uint8_t /*tid*/, uint16_t entityType, const pldm_pdr* repo);
 
 /** @brief Method to find all state sensor PDRs
  *
@@ -512,9 +548,8 @@ std::vector<std::vector<pldm::pdr::Pdr_t>>
  *
  *  @return vector of vector of all state sensor PDRs
  */
-std::vector<std::vector<pldm::pdr::Pdr_t>>
-    getStateSensorPDRsByType(uint8_t /*tid*/, uint16_t entityType,
-                             const pldm_pdr* repo);
+std::vector<std::vector<pldm::pdr::Pdr_t>> getStateSensorPDRsByType(
+    uint8_t /*tid*/, uint16_t entityType, const pldm_pdr* repo);
 
 /** @brief method to find sensor IDs based on the pldm_entity
  *
@@ -540,11 +575,9 @@ std::vector<pldm::pdr::SensorID>
  *
  *  @return vector of all effecter IDs
  */
-std::vector<pldm::pdr::EffecterID> findEffecterIds(const pldm_pdr* pdrRepo,
-                                                   uint8_t /*tid*/,
-                                                   uint16_t entityType,
-                                                   uint16_t entityInstance,
-                                                   uint16_t containerId);
+std::vector<pldm::pdr::EffecterID> findEffecterIds(
+    const pldm_pdr* pdrRepo, uint8_t /*tid*/, uint16_t entityType,
+    uint16_t entityInstance, uint16_t containerId);
 
 /** @brief Method to get the value from a bios attribute
  *

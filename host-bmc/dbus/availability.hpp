@@ -21,8 +21,8 @@ class Availability : public AvailabilityIntf
     ~Availability() = default;
     Availability(const Availability&) = delete;
     Availability& operator=(const Availability&) = delete;
-    Availability(Availability&&) = default;
-    Availability& operator=(Availability&&) = default;
+    Availability(Availability&&) = delete;
+    Availability& operator=(Availability&&) = delete;
 
     Availability(sdbusplus::bus_t& bus, const std::string& objPath) :
         AvailabilityIntf(bus, objPath.c_str()), path(objPath)

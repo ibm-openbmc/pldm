@@ -7,13 +7,13 @@
 
 #include <libpldm/base.h>
 #include <libpldm/oem/ibm/file_io.h>
-#include <stdint.h>
 #include <systemd/sd-bus.h>
 #include <unistd.h>
 
 #include <phosphor-logging/lg2.hpp>
 #include <sdbusplus/server.hpp>
 
+#include <cstdint>
 #include <exception>
 #include <filesystem>
 #include <type_traits>
@@ -88,8 +88,8 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
 
     if (dumpType == PLDM_FILE_TYPE_BMC_DUMP)
     {
-        curDumpEntryPath = (std::string)bmcDumpObjPath + "/" +
-                           std::to_string(fileHandle);
+        curDumpEntryPath =
+            (std::string)bmcDumpObjPath + "/" + std::to_string(fileHandle);
         info("BMC dump entry path is {DUMPENTRY}", "DUMPENTRY",
              curDumpEntryPath);
     }
@@ -213,8 +213,8 @@ int DumpHandler::newFileAvailable(uint64_t length)
 
     try
     {
-        auto service = pldm::utils::DBusHandler().getService(notifyObjPath,
-                                                             dumpInterface);
+        auto service =
+            pldm::utils::DBusHandler().getService(notifyObjPath, dumpInterface);
         auto method = bus.new_method_call(service.c_str(), notifyObjPath,
                                           dumpInterface, "NotifyDump");
         method.append(fileHandle, length, notifyDumpType, 0);
@@ -484,11 +484,10 @@ int DumpHandler::fileAck(uint8_t fileStatus)
     return PLDM_ERROR;
 }
 
-void DumpHandler::readIntoMemory(uint32_t offset, uint32_t length,
-                                 uint64_t address,
-                                 oem_platform::Handler* /*oemPlatformHandler*/,
-                                 SharedAIORespData& sharedAIORespDataobj,
-                                 sdeventplus::Event& event)
+void DumpHandler::readIntoMemory(
+    uint32_t offset, uint32_t length, uint64_t address,
+    oem_platform::Handler* /*oemPlatformHandler*/,
+    SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event)
 {
     auto path = findDumpObjPath(fileHandle);
     if ((dumpType == PLDM_FILE_TYPE_DUMP) ||
@@ -570,11 +569,9 @@ int DumpHandler::read(uint32_t offset, uint32_t& length, Response& response,
     return readFile(resDumpRequestDirPath, offset, length, response);
 }
 
-int DumpHandler::newFileAvailableWithMetaData(uint64_t length,
-                                              uint32_t metaDataValue1,
-                                              uint32_t /*metaDataValue2*/,
-                                              uint32_t /*metaDataValue3*/,
-                                              uint32_t /*metaDataValue4*/)
+int DumpHandler::newFileAvailableWithMetaData(
+    uint64_t length, uint32_t metaDataValue1, uint32_t /*metaDataValue2*/,
+    uint32_t /*metaDataValue3*/, uint32_t /*metaDataValue4*/)
 {
     info("File handle in newFileAvailableWithMetaData is {FILEHANDLE}",
          "FILEHANDLE", fileHandle);
@@ -592,8 +589,8 @@ int DumpHandler::newFileAvailableWithMetaData(uint64_t length,
 
     try
     {
-        auto service = pldm::utils::DBusHandler().getService(notifyObjPath,
-                                                             dumpInterface);
+        auto service =
+            pldm::utils::DBusHandler().getService(notifyObjPath, dumpInterface);
         auto method = bus.new_method_call(service.c_str(), notifyObjPath,
                                           dumpInterface, "NotifyDump");
         method.append(fileHandle, length, notifyDumpType, metaDataValue1);
@@ -612,11 +609,9 @@ int DumpHandler::newFileAvailableWithMetaData(uint64_t length,
     return PLDM_SUCCESS;
 }
 
-int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
-                                     uint32_t metaDataValue1,
-                                     uint32_t metaDataValue2,
-                                     uint32_t /*metaDataValue3*/,
-                                     uint32_t /*metaDataValue4*/)
+int DumpHandler::fileAckWithMetaData(
+    uint8_t /*fileStatus*/, uint32_t metaDataValue1, uint32_t metaDataValue2,
+    uint32_t /*metaDataValue3*/, uint32_t /*metaDataValue4*/)
 {
     info("File Handle in fileAckWithMetaData is {FILEHANDLE}", "FILEHANDLE",
          fileHandle);
@@ -669,8 +664,8 @@ int DumpHandler::fileAckWithMetaData(uint8_t /*fileStatus*/,
             fileHandle |= dumpIdPrefix;
             std::string idStr = std::format("{:08X}", fileHandle);
 
-            dbusMapping.objectPath = "/xyz/openbmc_project/dump/system/entry/" +
-                                     idStr;
+            dbusMapping.objectPath =
+                "/xyz/openbmc_project/dump/system/entry/" + idStr;
             dbusMapping.interface = "com.ibm.Dump.Entry.Resource";
             dbusMapping.propertyName = "Token";
             dbusMapping.propertyType = "uint32_t";

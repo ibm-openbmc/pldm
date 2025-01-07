@@ -138,8 +138,8 @@ class LidHandler : public FileHandler
             auto sensorId =
                 oemIbmPlatformHandler->codeUpdate->getMarkerLidSensor();
             using namespace pldm::responder::oem_ibm_platform;
-            auto markerLidDirPath = fs::path(LID_STAGING_DIR) / "lid" /
-                                    markerLidName;
+            auto markerLidDirPath =
+                fs::path(LID_STAGING_DIR) / "lid" / markerLidName;
             uint8_t validateStatus = VALID;
             try
             {
@@ -171,11 +171,10 @@ class LidHandler : public FileHandler
         }
     }
 
-    virtual void writeFromMemory(uint32_t offset, uint32_t length,
-                                 uint64_t address,
-                                 oem_platform::Handler* oemPlatformHandler,
-                                 SharedAIORespData& sharedAIORespDataobj,
-                                 sdeventplus::Event& event)
+    virtual void writeFromMemory(
+        uint32_t offset, uint32_t length, uint64_t address,
+        oem_platform::Handler* oemPlatformHandler,
+        SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event)
     {
         moemPlatformHandler = oemPlatformHandler;
         if (oemPlatformHandler != nullptr)
@@ -251,11 +250,10 @@ class LidHandler : public FileHandler
         return rc;
     }
 
-    virtual void readIntoMemory(uint32_t offset, uint32_t length,
-                                uint64_t address,
-                                oem_platform::Handler* oemPlatformHandler,
-                                SharedAIORespData& sharedAIORespDataobj,
-                                sdeventplus::Event& event)
+    virtual void readIntoMemory(
+        uint32_t offset, uint32_t length, uint64_t address,
+        oem_platform::Handler* oemPlatformHandler,
+        SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event)
     {
         if (constructLIDPath(oemPlatformHandler))
         {
@@ -384,11 +382,10 @@ class LidHandler : public FileHandler
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
 
-    virtual int fileAckWithMetaData(uint8_t /*fileStatus*/,
-                                    uint32_t /*metaDataValue1*/,
-                                    uint32_t /*metaDataValue2*/,
-                                    uint32_t /*metaDataValue3*/,
-                                    uint32_t /*metaDataValue4*/)
+    virtual int fileAckWithMetaData(
+        uint8_t /*fileStatus*/, uint32_t /*metaDataValue1*/,
+        uint32_t /*metaDataValue2*/, uint32_t /*metaDataValue3*/,
+        uint32_t /*metaDataValue4*/)
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
@@ -404,11 +401,10 @@ class LidHandler : public FileHandler
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
 
-    virtual int newFileAvailableWithMetaData(uint64_t /*length*/,
-                                             uint32_t /*metaDataValue1*/,
-                                             uint32_t /*metaDataValue2*/,
-                                             uint32_t /*metaDataValue3*/,
-                                             uint32_t /*metaDataValue4*/)
+    virtual int newFileAvailableWithMetaData(
+        uint64_t /*length*/, uint32_t /*metaDataValue1*/,
+        uint32_t /*metaDataValue2*/, uint32_t /*metaDataValue3*/,
+        uint32_t /*metaDataValue4*/)
     {
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }

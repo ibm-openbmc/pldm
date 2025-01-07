@@ -32,7 +32,7 @@ namespace platform_state_effecter
  *  @param[in] stateField - The state field data for each of the states,
  * equal to composite effecter count in number
  *  @return - Success or failure in setting the states. Returns failure in
- * terms of PLDM completion codes if atleast one state fails to be set
+ * terms of PLDM completion codes if at least one state fails to be set
  */
 template <class DBusInterface, class Handler>
 int setStateEffecterStatesHandler(
@@ -97,8 +97,8 @@ int setStateEffecterStatesHandler(
     int rc = PLDM_SUCCESS;
     try
     {
-        const auto& [dbusMappings,
-                     dbusValMaps] = handler.getDbusObjMaps(effecterId);
+        const auto& [dbusMappings, dbusValMaps] =
+            handler.getDbusObjMaps(effecterId);
         if (dbusMappings.empty() || dbusValMaps.empty())
         {
             error("DbusMappings for effecter ID '{EFFECTER_ID}' is missing",
@@ -125,7 +125,7 @@ int setStateEffecterStatesHandler(
                     "EFFECTER_ID", effecterId, "EFFECTER_STATE",
                     stateField[currState].effecter_state,
                     "COMPOSITE_EFFECTER_ID", currState, "PATH",
-                    dbusMappings[currState].objectPath.c_str(), "RC", rc);
+                    dbusMappings[currState].objectPath, "RC", rc);
                 break;
             }
             const DBusMapping& dbusMapping = dbusMappings[currState];
@@ -145,8 +145,8 @@ int setStateEffecterStatesHandler(
                     error(
                         "Failed to set property '{PROPERTY}', interface '{INTERFACE}' and path '{PATH}', error - '{ERROR}'",
                         "PROPERTY", dbusMapping.propertyName, "INTERFACE",
-                        dbusMapping.interface, "PATH",
-                        dbusMapping.objectPath.c_str(), "ERROR", e);
+                        dbusMapping.interface, "PATH", dbusMapping.objectPath,
+                        "ERROR", e);
                     return PLDM_ERROR;
                 }
             }

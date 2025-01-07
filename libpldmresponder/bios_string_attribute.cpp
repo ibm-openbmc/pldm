@@ -33,8 +33,9 @@ BIOSStringAttribute::BIOSStringAttribute(const Json& entry,
 
     stringInfo.minLength = entry.at("minimum_string_length");
     stringInfo.maxLength = entry.at("maximum_string_length");
-    stringInfo.defLength = entry.at("default_string_length");
     stringInfo.defString = entry.at("default_string");
+    stringInfo.defLength =
+        static_cast<uint16_t>((stringInfo.defString).length());
 
     pldm_bios_table_attr_entry_string_info info = {
         0,
@@ -107,8 +108,8 @@ void BIOSStringAttribute::constructEntry(
         stringInfo.defString.data(),
     };
 
-    auto attrTableEntry = table::attribute::constructStringEntry(attrTable,
-                                                                 &info);
+    auto attrTableEntry =
+        table::attribute::constructStringEntry(attrTable, &info);
     auto [attrHandle, attrType,
           _] = table::attribute::decodeHeader(attrTableEntry);
 
@@ -159,8 +160,8 @@ void BIOSStringAttribute::generateAttributeEntry(
     std::string value = std::get<std::string>(attributevalue);
     uint16_t len = value.size();
 
-    attrValueEntry.resize(sizeof(pldm_bios_attr_val_table_entry) +
-                          sizeof(uint16_t) + len - 1);
+    attrValueEntry.resize(
+        sizeof(pldm_bios_attr_val_table_entry) + sizeof(uint16_t) + len - 1);
 
     auto entry = reinterpret_cast<pldm_bios_attr_val_table_entry*>(
         attrValueEntry.data());

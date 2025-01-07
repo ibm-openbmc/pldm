@@ -7,7 +7,9 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <format>
 #include <map>
+#include <memory>
 #include <ranges>
 
 #ifdef OEM_IBM
@@ -43,9 +45,28 @@ static const std::map<uint8_t, std::string> sensorOpState{
     {PLDM_SENSOR_UNAVAILABLE, "Sensor Unavailable"},
     {PLDM_SENSOR_STATUSUNKOWN, "Sensor Status Unknown"},
     {PLDM_SENSOR_FAILED, "Sensor Failed"},
-    {PLDM_SENSOR_INITIALIZING, "Sensor Sensor Intializing"},
+    {PLDM_SENSOR_INITIALIZING, "Sensor Sensor Initializing"},
     {PLDM_SENSOR_SHUTTINGDOWN, "Sensor Shutting down"},
     {PLDM_SENSOR_INTEST, "Sensor Intest"}};
+
+const std::map<uint8_t, std::string> effecterOpState{
+    {EFFECTER_OPER_STATE_ENABLED_UPDATEPENDING,
+     "Effecter Enabled Update Pending"},
+    {EFFECTER_OPER_STATE_ENABLED_NOUPDATEPENDING,
+     "Effecter Enabled No Update Pending"},
+    {EFFECTER_OPER_STATE_DISABLED, "Effecter Disabled"},
+    {EFFECTER_OPER_STATE_UNAVAILABLE, "Effecter Unavailable"},
+    {EFFECTER_OPER_STATE_STATUSUNKNOWN, "Effecter Status Unknown"},
+    {EFFECTER_OPER_STATE_FAILED, "Effecter Failed"},
+    {EFFECTER_OPER_STATE_INITIALIZING, "Effecter Initializing"},
+    {EFFECTER_OPER_STATE_SHUTTINGDOWN, "Effecter Shutting Down"},
+    {EFFECTER_OPER_STATE_INTEST, "Effecter In Test"}};
+
+std::string getEffecterOpState(uint8_t state)
+{
+    return effecterOpState.contains(state) ? effecterOpState.at(state)
+                                           : std::to_string(state);
+}
 
 std::vector<std::unique_ptr<CommandInterface>> commands;
 
@@ -66,7 +87,9 @@ class GetPDR : public CommandInterface
     using CommandInterface::CommandInterface;
 
     explicit GetPDR(const char* type, const char* name, CLI::App* app) :
-        CommandInterface(type, name, app)
+        CommandInterface(type, name, app), dataTransferHandle(0),
+        operationFlag(PLDM_GET_FIRSTPART), requestCount(UINT16_MAX),
+        recordChangeNumber(0), nextPartRequired(false)
     {
         auto pdrOptionGroup = app->add_option_group(
             "Required Option",
@@ -77,14 +100,15 @@ class GetPDR : public CommandInterface
             "eg: The recordHandle value for the PDR to be retrieved and 0 "
             "means get first PDR in the repository.");
         pdrRecType = "";
-        pdrOptionGroup->add_option("-t, --type", pdrRecType,
-                                   "retrieve all PDRs of the requested type\n"
-                                   "supported types:\n"
-                                   "[terminusLocator, stateSensor, "
-                                   "numericEffecter, stateEffecter, "
-                                   "compactNumericSensor, sensorauxname, "
-                                   "efffecterAuxName, numericsensor, "
-                                   "EntityAssociation, fruRecord, ... ]");
+        pdrOptionGroup->add_option(
+            "-t, --type", pdrRecType,
+            "retrieve all PDRs of the requested type\n"
+            "supported types:\n"
+            "[terminusLocator, stateSensor, "
+            "numericEffecter, stateEffecter, "
+            "compactNumericSensor, sensorauxname, "
+            "efffecterAuxName, numericsensor, "
+            "EntityAssociation, fruRecord, ... ]");
 
         getPDRGroupOption = pdrOptionGroup->add_option(
             "-i, --terminusID", pdrTerminus,
@@ -161,15 +185,15 @@ class GetPDR : public CommandInterface
                 // recordHandle is updated to nextRecord when
                 // CommandInterface::exec() is successful.
                 // In case of any error, return.
-                if (recordHandle == prevRecordHandle)
+                if (recordHandle == prevRecordHandle && !nextPartRequired)
                 {
                     return;
                 }
 
                 // check for circular references.
-                auto result = recordsSeen.emplace(recordHandle,
-                                                  prevRecordHandle);
-                if (!result.second)
+                auto result =
+                    recordsSeen.emplace(recordHandle, prevRecordHandle);
+                if (!result.second && !nextPartRequired)
                 {
                     std::cerr
                         << "Record handle " << recordHandle
@@ -191,26 +215,29 @@ class GetPDR : public CommandInterface
         }
         else
         {
-            CommandInterface::exec();
+            do
+            {
+                CommandInterface::exec();
+            } while (nextPartRequired);
         }
     }
 
     std::pair<int, std::vector<uint8_t>> createRequestMsg() override
     {
-        std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
-                                        PLDM_GET_PDR_REQ_BYTES);
+        std::vector<uint8_t> requestMsg(
+            sizeof(pldm_msg_hdr) + PLDM_GET_PDR_REQ_BYTES);
         auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
 
-        auto rc = encode_get_pdr_req(instanceId, recordHandle, 0,
-                                     PLDM_GET_FIRSTPART, UINT16_MAX, 0, request,
-                                     PLDM_GET_PDR_REQ_BYTES);
+        auto rc = encode_get_pdr_req(
+            instanceId, recordHandle, dataTransferHandle, operationFlag,
+            requestCount, recordChangeNumber, request, PLDM_GET_PDR_REQ_BYTES);
         return {rc, requestMsg};
     }
 
     void parseResponseMsg(pldm_msg* responsePtr, size_t payloadLength) override
     {
         uint8_t completionCode = 0;
-        uint8_t recordData[UINT16_MAX] = {0};
+        uint8_t respRecordData[UINT16_MAX] = {0};
         uint32_t nextRecordHndl = 0;
         uint32_t nextDataTransferHndl = 0;
         uint8_t transferFlag = 0;
@@ -219,20 +246,21 @@ class GetPDR : public CommandInterface
 
         auto rc = decode_get_pdr_resp(
             responsePtr, payloadLength, &completionCode, &nextRecordHndl,
-            &nextDataTransferHndl, &transferFlag, &respCnt, recordData,
-            sizeof(recordData), &transferCRC);
+            &nextDataTransferHndl, &transferFlag, &respCnt, respRecordData,
+            sizeof(respRecordData), &transferCRC);
 
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
             std::cerr << "Response Message Error: "
                       << "rc=" << rc << ",cc=" << (int)completionCode
                       << std::endl;
+            nextPartRequired = false;
             return;
         }
 
         if (optTIDSet && !handleFound)
         {
-            terminusHandle = getTerminusHandle(recordData, pdrTerminus);
+            terminusHandle = getTerminusHandle(respRecordData, pdrTerminus);
             if (terminusHandle.has_value())
             {
                 recordHandle = 0;
@@ -244,11 +272,33 @@ class GetPDR : public CommandInterface
                 return;
             }
         }
-
         else
         {
-            printPDRMsg(nextRecordHndl, respCnt, recordData, terminusHandle);
-            recordHandle = nextRecordHndl;
+            recordData.insert(recordData.end(), respRecordData,
+                              respRecordData + respCnt);
+
+            // End or StartAndEnd
+            if (transferFlag == PLDM_PLATFORM_TRANSFER_END ||
+                transferFlag == PLDM_PLATFORM_TRANSFER_START_AND_END)
+            {
+                printPDRMsg(nextRecordHndl, respCnt, recordData.data(),
+                            terminusHandle);
+                nextPartRequired = false;
+                recordHandle = nextRecordHndl;
+                dataTransferHandle = 0;
+                recordChangeNumber = 0;
+                operationFlag = PLDM_GET_FIRSTPART;
+                recordData.clear();
+            }
+            else
+            {
+                nextPartRequired = true;
+                dataTransferHandle = nextDataTransferHndl;
+                struct pldm_pdr_hdr* pdr_hdr =
+                    reinterpret_cast<struct pldm_pdr_hdr*>(respRecordData);
+                recordChangeNumber = pdr_hdr->record_change_num;
+                operationFlag = PLDM_GET_NEXTPART;
+            }
         }
     }
 
@@ -672,9 +722,8 @@ class GetPDR : public CommandInterface
         }
     }
 
-    std::vector<std::string>
-        getStateSetPossibleStateNames(uint16_t stateId,
-                                      const std::vector<uint8_t>& value)
+    std::vector<std::string> getStateSetPossibleStateNames(
+        uint16_t stateId, const std::vector<uint8_t>& value)
     {
         std::vector<std::string> data{};
 
@@ -911,12 +960,12 @@ class GetPDR : public CommandInterface
             ptr += sizeof(uint8_t);
             for (auto j : std::views::iota(0, (int)nameStringCount))
             {
-                std::string nameLanguageTagKey = sPrefix + std::to_string(j) +
-                                                 "_nameLanguageTag" +
-                                                 std::to_string(i);
-                std::string entityAuxNameKey = sPrefix + std::to_string(j) +
-                                               "_entityAuxName" +
-                                               std::to_string(i);
+                std::string nameLanguageTagKey =
+                    sPrefix + std::to_string(j) + "_nameLanguageTag" +
+                    std::to_string(i);
+                std::string entityAuxNameKey =
+                    sPrefix + std::to_string(j) + "_entityAuxName" +
+                    std::to_string(i);
                 std::string nameLanguageTag(reinterpret_cast<const char*>(ptr),
                                             0, PLDM_STR_UTF_8_MAX_LEN);
                 ptr += nameLanguageTag.size() + sizeof(nullTerminator);
@@ -1076,8 +1125,8 @@ class GetPDR : public CommandInterface
         output["containerID"] = pdr->container_id;
         output["effecterSemanticID"] = pdr->effecter_semantic_id;
         output["effecterInit"] = effecterInit[pdr->effecter_init];
-        output["effecterDescriptionPDR"] = (pdr->has_description_pdr ? true
-                                                                     : false);
+        output["effecterDescriptionPDR"] =
+            (pdr->has_description_pdr ? true : false);
         output["compositeEffecterCount"] =
             unsigned(pdr->composite_effecter_count);
 
@@ -1223,8 +1272,8 @@ class GetPDR : public CommandInterface
                                ordered_json& output)
     {
         struct pldm_numeric_sensor_value_pdr pdr;
-        int rc = decode_numeric_sensor_pdr_data(data, (size_t)data_length,
-                                                &pdr);
+        int rc =
+            decode_numeric_sensor_pdr_data(data, (size_t)data_length, &pdr);
         if (rc != PLDM_SUCCESS)
         {
             std::cerr << "Failed to get numeric sensor PDR" << std::endl;
@@ -1514,8 +1563,6 @@ class GetPDR : public CommandInterface
                 printNumericSensorPDR(data, respCnt, output);
                 break;
             case PLDM_SENSOR_AUXILIARY_NAMES_PDR:
-                printAuxNamePDR(data, output);
-                break;
             case PLDM_EFFECTER_AUXILIARY_NAMES_PDR:
                 printAuxNamePDR(data, output);
                 break;
@@ -1546,6 +1593,12 @@ class GetPDR : public CommandInterface
     std::optional<uint16_t> terminusHandle;
     bool handleFound = false;
     CLI::Option* getPDRGroupOption = nullptr;
+    uint32_t dataTransferHandle;
+    uint8_t operationFlag;
+    uint16_t requestCount;
+    uint16_t recordChangeNumber;
+    std::vector<uint8_t> recordData;
+    bool nextPartRequired;
 };
 
 class SetStateEffecter : public CommandInterface
@@ -1843,12 +1896,12 @@ class GetSensorReading : public CommandInterface
 
     std::pair<int, std::vector<uint8_t>> createRequestMsg() override
     {
-        std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr) +
-                                        PLDM_GET_SENSOR_READING_REQ_BYTES);
+        std::vector<uint8_t> requestMsg(
+            sizeof(pldm_msg_hdr) + PLDM_GET_SENSOR_READING_REQ_BYTES);
         auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
 
-        auto rc = encode_get_sensor_reading_req(instanceId, sensorId, rearm,
-                                                request);
+        auto rc =
+            encode_get_sensor_reading_req(instanceId, sensorId, rearm, request);
 
         return {rc, requestMsg};
     }
@@ -1880,15 +1933,15 @@ class GetSensorReading : public CommandInterface
         }
 
         ordered_json output;
-        output["sensorDataSize"] = getSensorState(sensorDataSize,
-                                                  &sensorDataSz);
+        output["sensorDataSize"] =
+            getSensorState(sensorDataSize, &sensorDataSz);
         output["sensorOperationalState"] =
             getSensorState(sensorOperationalState, &sensorOpState);
         output["sensorEventMessageEnable"] =
             getSensorState(sensorEventMessageEnable, &sensorEventMsgEnable);
         output["presentState"] = getSensorState(presentState, &sensorPresState);
-        output["previousState"] = getSensorState(previousState,
-                                                 &sensorPresState);
+        output["previousState"] =
+            getSensorState(previousState, &sensorPresState);
         output["eventState"] = getSensorState(eventState, &sensorPresState);
 
         switch (sensorDataSize)
@@ -1974,6 +2027,75 @@ class GetSensorReading : public CommandInterface
     }
 };
 
+class GetStateEffecterStates : public CommandInterface
+{
+  public:
+    ~GetStateEffecterStates() = default;
+    GetStateEffecterStates() = delete;
+    GetStateEffecterStates(const GetStateEffecterStates&) = delete;
+    GetStateEffecterStates(GetStateEffecterStates&&) = default;
+    GetStateEffecterStates& operator=(const GetStateEffecterStates&) = delete;
+    GetStateEffecterStates& operator=(GetStateEffecterStates&&) = delete;
+
+    explicit GetStateEffecterStates(const char* type, const char* name,
+                                    CLI::App* app) :
+        CommandInterface(type, name, app)
+    {
+        app->add_option(
+               "-i, --effecter_id", effecter_id,
+               "Effecter ID that is used to identify and access the effecter")
+            ->required();
+    }
+
+    std::pair<int, std::vector<uint8_t>> createRequestMsg() override
+    {
+        std::vector<uint8_t> requestMsg(
+            sizeof(pldm_msg_hdr) + PLDM_GET_STATE_EFFECTER_STATES_REQ_BYTES);
+        auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+
+        auto rc = encode_get_state_effecter_states_req(
+            instanceId, effecter_id, request,
+            PLDM_GET_STATE_EFFECTER_STATES_REQ_BYTES);
+
+        return {rc, requestMsg};
+    }
+
+    void parseResponseMsg(pldm_msg* responsePtr, size_t payloadLength) override
+    {
+        struct pldm_get_state_effecter_states_resp resp;
+        auto rc = decode_get_state_effecter_states_resp(responsePtr,
+                                                        payloadLength, &resp);
+
+        if (rc || resp.completion_code != PLDM_SUCCESS)
+        {
+            std::cerr << "Response Message Error: "
+                      << "rc=" << rc << ",cc="
+                      << static_cast<int>(resp.completion_code) << std::endl;
+            return;
+        }
+        ordered_json output;
+        auto comp_effecter_count = static_cast<int>(resp.comp_effecter_count);
+        output["compositeEffecterCount"] = comp_effecter_count;
+
+        for (auto i : std::views::iota(0, comp_effecter_count))
+        {
+            output[std::format("effecterOpState[{}])", i)] =
+                getEffecterOpState(resp.field[i].effecter_op_state);
+
+            output[std::format("pendingState[{}]", i)] =
+                resp.field[i].pending_state;
+
+            output[std::format("presentState[{}]", i)] =
+                resp.field[i].present_state;
+        }
+
+        pldmtool::helper::DisplayInJson(output);
+    }
+
+  private:
+    uint16_t effecter_id;
+};
+
 class GetNumericEffecterValue : public CommandInterface
 {
   public:
@@ -2026,16 +2148,15 @@ class GetNumericEffecterValue : public CommandInterface
         if (rc != PLDM_SUCCESS || completionCode != PLDM_SUCCESS)
         {
             std::cerr << "Response Message Error: "
-                      << "rc=" << rc
-                      << ",cc=" << static_cast<int>(completionCode)
-                      << std::endl;
+                      << "rc=" << rc << ",cc="
+                      << static_cast<int>(completionCode) << std::endl;
             return;
         }
 
         ordered_json output;
         output["effecterDataSize"] = static_cast<int>(effecterDataSize);
         output["effecterOperationalState"] =
-            getOpState(effecterOperationalState);
+            getEffecterOpState(effecterOperationalState);
 
         switch (effecterDataSize)
         {
@@ -2100,32 +2221,6 @@ class GetNumericEffecterValue : public CommandInterface
 
   private:
     uint16_t effecterId;
-
-    static inline const std::map<uint8_t, std::string> numericEffecterOpState{
-        {EFFECTER_OPER_STATE_ENABLED_UPDATEPENDING,
-         "Effecter Enabled Update Pending"},
-        {EFFECTER_OPER_STATE_ENABLED_NOUPDATEPENDING,
-         "Effecter Enabled No Update Pending"},
-        {EFFECTER_OPER_STATE_DISABLED, "Effecter Disabled"},
-        {EFFECTER_OPER_STATE_UNAVAILABLE, "Effecter Unavailable"},
-        {EFFECTER_OPER_STATE_STATUSUNKNOWN, "Effecter Status Unknown"},
-        {EFFECTER_OPER_STATE_FAILED, "Effecter Failed"},
-        {EFFECTER_OPER_STATE_INITIALIZING, "Effecter Initializing"},
-        {EFFECTER_OPER_STATE_SHUTTINGDOWN, "Effecter Shutting Down"},
-        {EFFECTER_OPER_STATE_INTEST, "Effecter In Test"}};
-
-    std::string getOpState(uint8_t state)
-    {
-        auto typeString = std::to_string(state);
-        try
-        {
-            return numericEffecterOpState.at(state);
-        }
-        catch (const std::out_of_range& e)
-        {
-            return typeString;
-        }
-    }
 };
 
 void registerCommand(CLI::App& app)
@@ -2133,8 +2228,8 @@ void registerCommand(CLI::App& app)
     auto platform = app.add_subcommand("platform", "platform type command");
     platform->require_subcommand(1);
 
-    auto getPDR = platform->add_subcommand("GetPDR",
-                                           "get platform descriptor records");
+    auto getPDR =
+        platform->add_subcommand("GetPDR", "get platform descriptor records");
     commands.push_back(std::make_unique<GetPDR>("platform", "getPDR", getPDR));
 
     auto setStateEffecterStates = platform->add_subcommand(
@@ -2161,6 +2256,11 @@ void registerCommand(CLI::App& app)
         "GetSensorReading", "get the numeric sensor reading");
     commands.push_back(std::make_unique<GetSensorReading>(
         "platform", "getSensorReading", getSensorReading));
+
+    auto getStateEffecterStates = platform->add_subcommand(
+        "GetStateEffecterStates", "get the state effecter states");
+    commands.push_back(std::make_unique<GetStateEffecterStates>(
+        "platform", "getStateEffecterStates", getStateEffecterStates));
 }
 
 void parseGetPDROption()

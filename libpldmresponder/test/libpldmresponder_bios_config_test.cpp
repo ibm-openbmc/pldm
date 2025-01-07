@@ -27,17 +27,13 @@ using ::testing::Throw;
 class TestBIOSConfig : public ::testing::Test
 {
   public:
-    static void SetUpTestCase() // will execute once at the begining of all
+    static void SetUpTestCase() // will execute once at the beginning of all
                                 // TestBIOSConfig objects
     {
         char tmpdir[] = "/tmp/BIOSTables.XXXXXX";
         tableDir = fs::path(mkdtemp(tmpdir));
 
-        std::vector<fs::path> paths = {
-            "./bios_jsons/string_attrs.json",
-            "./bios_jsons/integer_attrs.json",
-            "./bios_jsons/enum_attrs.json",
-        };
+        std::vector<fs::path> paths = {"./bios_jsons/bios_attrs.json"};
 
         for (const auto& path : paths)
         {
@@ -102,25 +98,26 @@ TEST_F(TestBIOSConfig, buildTablesTest)
     EXPECT_TRUE(attrTable);
     EXPECT_TRUE(attrValueTable);
 
-    std::set<std::string> expectedStrings = {"HMCManagedState",
-                                             "On",
-                                             "Off",
-                                             "FWBootSide",
-                                             "Perm",
-                                             "Temp",
-                                             "InbandCodeUpdate",
-                                             "Allowed",
-                                             "Allowed",
-                                             "NotAllowed",
-                                             "CodeUpdatePolicy",
-                                             "Concurrent",
-                                             "Disruptive",
-                                             "VDD_AVSBUS_RAIL",
-                                             "SBE_IMAGE_MINIMUM_VALID_ECS",
-                                             "INTEGER_INVALID_CASE",
-                                             "str_example1",
-                                             "str_example2",
-                                             "str_example3"};
+    std::set<std::string> expectedStrings = {
+        "HMCManagedState",
+        "On",
+        "Off",
+        "FWBootSide",
+        "Perm",
+        "Temp",
+        "InbandCodeUpdate",
+        "Allowed",
+        "Allowed",
+        "NotAllowed",
+        "CodeUpdatePolicy",
+        "Concurrent",
+        "Disruptive",
+        "VDD_AVSBUS_RAIL",
+        "SBE_IMAGE_MINIMUM_VALID_ECS",
+        "INTEGER_INVALID_CASE",
+        "str_example1",
+        "str_example2",
+        "str_example3"};
     std::set<std::string> strings;
     for (auto entry : BIOSTableIter<PLDM_BIOS_STRING_TABLE>(
              stringTable->data(), stringTable->size()))
@@ -157,11 +154,10 @@ TEST_F(TestBIOSConfig, buildTablesTest)
                 EXPECT_EQ(
                     stringField.maxLength,
                     jsonEntry->at("maximum_string_length").get<uint16_t>());
-                EXPECT_EQ(
-                    stringField.defLength,
-                    jsonEntry->at("default_string_length").get<uint16_t>());
                 EXPECT_EQ(stringField.defString,
                           jsonEntry->at("default_string").get<std::string>());
+                EXPECT_EQ(stringField.defLength,
+                          (stringField.defString).length());
                 break;
             }
             case PLDM_BIOS_INTEGER:
@@ -211,8 +207,8 @@ TEST_F(TestBIOSConfig, buildTablesTest)
              attrValueTable->data(), attrValueTable->size()))
     {
         auto header = table::attribute_value::decodeHeader(entry);
-        auto attrEntry = table::attribute::findByHandle(*attrTable,
-                                                        header.attrHandle);
+        auto attrEntry =
+            table::attribute::findByHandle(*attrTable, header.attrHandle);
         auto attrHeader = table::attribute::decodeHeader(attrEntry);
         auto attrName = biosStringTable.findString(attrHeader.stringHandle);
         auto jsonEntry = findJsonEntry(attrName);
@@ -310,7 +306,7 @@ TEST_F(TestBIOSConfig, setAttrValueFailure)
         0,   0,             /* attr handle */
         1,                  /* attr type string read-write */
         4,   0,             /* current string length */
-        'a', 'b', 'c', 'd', /* defaut value string handle index */
+        'a', 'b', 'c', 'd', /* default value string handle index */
     };
 
     uint16_t attrHandle{10};
@@ -356,7 +352,7 @@ TEST_F(TestBIOSConfig, setAttrValue)
         0,   0,             /* attr handle */
         1,                  /* attr type string read-write */
         4,   0,             /* current string length */
-        'a', 'b', 'c', 'd', /* defaut value string handle index */
+        'a', 'b', 'c', 'd', /* default value string handle index */
     };
 
     attrValueEntry[0] = attrHandle & 0xff;
@@ -373,9 +369,8 @@ TEST_F(TestBIOSConfig, setAttrValue)
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     auto attrValueTable = biosConfig.getBIOSTable(PLDM_BIOS_ATTR_VAL_TABLE);
-    auto findEntry =
-        [&attrValueTable](
-            uint16_t handle) -> const pldm_bios_attr_val_table_entry* {
+    auto findEntry = [&attrValueTable](uint16_t handle)
+        -> const pldm_bios_attr_val_table_entry* {
         for (auto entry : BIOSTableIter<PLDM_BIOS_ATTR_VAL_TABLE>(
                  attrValueTable->data(), attrValueTable->size()))
         {

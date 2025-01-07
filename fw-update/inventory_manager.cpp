@@ -20,8 +20,8 @@ void InventoryManager::discoverFDs(const std::vector<mctp_eid_t>& eids)
     for (const auto& eid : eids)
     {
         auto instanceId = instanceIdDb.next(eid);
-        Request requestMsg(sizeof(pldm_msg_hdr) +
-                           PLDM_QUERY_DEVICE_IDENTIFIERS_REQ_BYTES);
+        Request requestMsg(
+            sizeof(pldm_msg_hdr) + PLDM_QUERY_DEVICE_IDENTIFIERS_REQ_BYTES);
         auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
         auto rc = encode_query_device_identifiers_req(
             instanceId, PLDM_QUERY_DEVICE_IDENTIFIERS_REQ_BYTES, request);
@@ -30,33 +30,31 @@ void InventoryManager::discoverFDs(const std::vector<mctp_eid_t>& eids)
             instanceIdDb.free(eid, instanceId);
             error(
                 "Failed to encode query device identifiers req for endpoint ID '{EID}', response code '{RC}'",
-                "EID", unsigned(eid), "RC", rc);
+                "EID", eid, "RC", rc);
             continue;
         }
 
         rc = handler.registerRequest(
             eid, instanceId, PLDM_FWUP, PLDM_QUERY_DEVICE_IDENTIFIERS,
             std::move(requestMsg),
-            std::move(std::bind_front(&InventoryManager::queryDeviceIdentifiers,
-                                      this)));
+            std::bind_front(&InventoryManager::queryDeviceIdentifiers, this));
         if (rc)
         {
             error(
                 "Failed to send query device identifiers request for endpoint ID '{EID}', response code '{RC}'",
-                "EID", unsigned(eid), "RC", rc);
+                "EID", eid, "RC", rc);
         }
     }
 }
 
-void InventoryManager::queryDeviceIdentifiers(mctp_eid_t eid,
-                                              const pldm_msg* response,
-                                              size_t respMsgLen)
+void InventoryManager::queryDeviceIdentifiers(
+    mctp_eid_t eid, const pldm_msg* response, size_t respMsgLen)
 {
     if (response == nullptr || !respMsgLen)
     {
         error(
             "No response received for query device identifiers for endpoint ID '{EID}'",
-            "EID", unsigned(eid));
+            "EID", eid);
         return;
     }
 
@@ -72,8 +70,7 @@ void InventoryManager::queryDeviceIdentifiers(mctp_eid_t eid,
     {
         error(
             "Failed to decode query device identifiers response for endpoint ID '{EID}' and descriptor count '{DESCRIPTOR_COUNT}', response code '{RC}'",
-            "EID", unsigned(eid), "DESCRIPTOR_COUNT", descriptorCount, "RC",
-            rc);
+            "EID", eid, "DESCRIPTOR_COUNT", descriptorCount, "RC", rc);
         return;
     }
 
@@ -81,7 +78,7 @@ void InventoryManager::queryDeviceIdentifiers(mctp_eid_t eid,
     {
         error(
             "Failed to query device identifiers response for endpoint ID '{EID}', completion code '{CC}'",
-            "EID", unsigned(eid), "CC", unsigned(completionCode));
+            "EID", eid, "CC", completionCode);
         return;
     }
 
@@ -99,7 +96,7 @@ void InventoryManager::queryDeviceIdentifiers(mctp_eid_t eid,
             error(
                 "Failed to decode descriptor type {TYPE}, length {LENGTH} and value for endpoint ID '{EID}', response code '{RC}'",
                 "TYPE", descriptorType, "LENGTH", deviceIdentifiersLen, "EID",
-                unsigned(eid), "RC", rc);
+                eid, "RC", rc);
             return;
         }
 
@@ -123,7 +120,7 @@ void InventoryManager::queryDeviceIdentifiers(mctp_eid_t eid,
             {
                 error(
                     "Failed to decode vendor-defined descriptor value for endpoint ID '{EID}', response code '{RC}'",
-                    "EID", unsigned(eid), "RC", rc);
+                    "EID", eid, "RC", rc);
                 return;
             }
 
@@ -154,8 +151,8 @@ void InventoryManager::queryDeviceIdentifiers(mctp_eid_t eid,
 void InventoryManager::sendGetFirmwareParametersRequest(mctp_eid_t eid)
 {
     auto instanceId = instanceIdDb.next(eid);
-    Request requestMsg(sizeof(pldm_msg_hdr) +
-                       PLDM_GET_FIRMWARE_PARAMETERS_REQ_BYTES);
+    Request requestMsg(
+        sizeof(pldm_msg_hdr) + PLDM_GET_FIRMWARE_PARAMETERS_REQ_BYTES);
     auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
     auto rc = encode_get_firmware_parameters_req(
         instanceId, PLDM_GET_FIRMWARE_PARAMETERS_REQ_BYTES, request);
@@ -164,32 +161,30 @@ void InventoryManager::sendGetFirmwareParametersRequest(mctp_eid_t eid)
         instanceIdDb.free(eid, instanceId);
         error(
             "Failed to encode get firmware parameters req for endpoint ID '{EID}', response code '{RC}'",
-            "EID", unsigned(eid), "RC", rc);
+            "EID", eid, "RC", rc);
         return;
     }
 
     rc = handler.registerRequest(
         eid, instanceId, PLDM_FWUP, PLDM_GET_FIRMWARE_PARAMETERS,
         std::move(requestMsg),
-        std::move(
-            std::bind_front(&InventoryManager::getFirmwareParameters, this)));
+        std::bind_front(&InventoryManager::getFirmwareParameters, this));
     if (rc)
     {
         error(
             "Failed to send get firmware parameters request for endpoint ID '{EID}', response code '{RC}'",
-            "EID", unsigned(eid), "RC", rc);
+            "EID", eid, "RC", rc);
     }
 }
 
-void InventoryManager::getFirmwareParameters(mctp_eid_t eid,
-                                             const pldm_msg* response,
-                                             size_t respMsgLen)
+void InventoryManager::getFirmwareParameters(
+    mctp_eid_t eid, const pldm_msg* response, size_t respMsgLen)
 {
     if (response == nullptr || !respMsgLen)
     {
         error(
             "No response received for get firmware parameters for endpoint ID '{EID}'",
-            "EID", unsigned(eid));
+            "EID", eid);
         descriptorMap.erase(eid);
         return;
     }
@@ -206,15 +201,16 @@ void InventoryManager::getFirmwareParameters(mctp_eid_t eid,
     {
         error(
             "Failed to decode get firmware parameters response for endpoint ID '{EID}', response code '{RC}'",
-            "EID", unsigned(eid), "RC", rc);
+            "EID", eid, "RC", rc);
         return;
     }
 
     if (fwParams.completion_code)
     {
+        auto fw_param_cc = fwParams.completion_code;
         error(
             "Failed to get firmware parameters response for endpoint ID '{EID}', completion code '{CC}'",
-            "EID", unsigned(eid), "CC", unsigned(fwParams.completion_code));
+            "EID", eid, "CC", fw_param_cc);
         return;
     }
 
@@ -234,7 +230,7 @@ void InventoryManager::getFirmwareParameters(mctp_eid_t eid,
         {
             error(
                 "Failed to decode component parameter table entry for endpoint ID '{EID}', response code '{RC}'",
-                "EID", unsigned(eid), "RC", rc);
+                "EID", eid, "RC", rc);
             return;
         }
 

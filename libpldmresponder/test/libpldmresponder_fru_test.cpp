@@ -123,8 +123,8 @@ TEST(FruImpl, updateAssociationTreeTest)
 
     pldm::responder::FruImpl mockedFruHandler(
         FRU_JSONS_DIR, "./fru_jsons/fru_master/fru_master.json", pdrRepo.get(),
-        entityTree.get(), bmcEntityTree.get(), nullptr, requester, nullptr, 0x9,
-        event, nullptr);
+        entityTree.get(), bmcEntityTree.get(), requester, nullptr, 0x9, event,
+        nullptr);
 
     pldm_entity systemEntity{0x2d01, 1, 0};
     pldm_entity chassisEntity{0x2d, 1, 1};
@@ -141,8 +141,8 @@ TEST(FruImpl, updateAssociationTreeTest)
     mockedFruHandler.updateAssociationTree(
         objects, "/xyz/openbmc_project/inventory/system/chassis/motherboard");
 
-    pldm_entity_node* node = pldm_entity_association_tree_find(entityTree.get(),
-                                                               &systemEntity);
+    pldm_entity_node* node =
+        pldm_entity_association_tree_find(entityTree.get(), &systemEntity);
     EXPECT_TRUE(node != NULL);
 
     node = pldm_entity_association_tree_find(entityTree.get(), &chassisEntity);
@@ -150,8 +150,8 @@ TEST(FruImpl, updateAssociationTreeTest)
     test_pldm_entity_node* test_node = (test_pldm_entity_node*)node;
     EXPECT_TRUE((test_node->parent).entity_type == systemEntity.entity_type);
 
-    node = pldm_entity_association_tree_find(entityTree.get(),
-                                             &motherboardEntity);
+    node =
+        pldm_entity_association_tree_find(entityTree.get(), &motherboardEntity);
     ASSERT_TRUE(node != NULL);
     test_node = (test_pldm_entity_node*)node;
     EXPECT_TRUE((test_node->parent).entity_type == chassisEntity.entity_type);
@@ -193,8 +193,8 @@ TEST(FruImpl, entityByObjectPath)
     InterfaceMap iface = {{"xyz.openbmc_project.Inventory.Item.Chassis", {}}};
     pldm::responder::FruImpl mockedFruHandler(
         FRU_JSONS_DIR, "./fru_jsons/fru_master/fru_master.json", pdrRepo.get(),
-        entityTree.get(), bmcEntityTree.get(), nullptr, requester, nullptr, 0x9,
-        event, nullptr);
+        entityTree.get(), bmcEntityTree.get(), requester, nullptr, 0x9, event,
+        nullptr);
 
     // Good path
     auto entityPtr = mockedFruHandler.getEntityByObjectPath(iface);

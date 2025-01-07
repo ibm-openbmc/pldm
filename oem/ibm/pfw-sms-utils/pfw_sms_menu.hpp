@@ -73,10 +73,9 @@ void authenticate(const std::string& username, const std::string& password,
  * user
  * @return changePasswordReasonCode
  */
-enum changePasswordReasonCode changePassword(const std::string& username,
-                                             const std::string& currentPassword,
-                                             const std::string& newPassword,
-                                             bool& operationAllowed);
+enum changePasswordReasonCode changePassword(
+    const std::string& username, const std::string& currentPassword,
+    const std::string& newPassword, bool& operationAllowed);
 
 } /* namespace ibm_pfw_sms */
 

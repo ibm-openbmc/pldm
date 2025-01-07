@@ -21,8 +21,8 @@ class InventoryItem : public ItemIntf
     ~InventoryItem() = default;
     InventoryItem(const InventoryItem&) = delete;
     InventoryItem& operator=(const InventoryItem&) = delete;
-    InventoryItem(InventoryItem&&) = default;
-    InventoryItem& operator=(InventoryItem&&) = default;
+    InventoryItem(InventoryItem&&) = delete;
+    InventoryItem& operator=(InventoryItem&&) = delete;
 
     InventoryItem(sdbusplus::bus_t& bus, const std::string& objPath) :
         ItemIntf(bus, objPath.c_str()), path(objPath)

@@ -14,13 +14,13 @@
 
 #include <libpldm/base.h>
 #include <libpldm/oem/ibm/file_io.h>
-#include <stdint.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
 #include <phosphor-logging/lg2.hpp>
 #include <xyz/openbmc_project/Logging/Entry/server.hpp>
 
+#include <cstdint>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -86,10 +86,9 @@ void FileHandler::deleteAIOobjects(
     }
 }
 
-void FileHandler::transferFileData(int fd, bool upstream, uint32_t offset,
-                                   uint32_t& length, uint64_t address,
-                                   SharedAIORespData& sharedAIORespDataobj,
-                                   sdeventplus::Event& event)
+void FileHandler::transferFileData(
+    int fd, bool upstream, uint32_t offset, uint32_t& length, uint64_t address,
+    SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event)
 {
     std::shared_ptr<dma::DMA> xdmaInterface =
         std::make_shared<dma::DMA>(length);
@@ -194,8 +193,8 @@ void FileHandler::transferFileData(int fd, bool upstream, uint32_t offset,
             deleteAIOobjects(xdmaInterface, sharedAIORespDataobj);
             return;
         }
-        xdmaInterface->insertIOInstance(std::move(std::make_unique<IO>(
-            event, xdmaFd, EPOLLIN | EPOLLOUT, std::move(callback))));
+        xdmaInterface->insertIOInstance(std::make_unique<IO>(
+            event, xdmaFd, EPOLLIN | EPOLLOUT, std::move(callback)));
     }
     catch (const std::runtime_error& e)
     {
@@ -280,8 +279,8 @@ void FileHandler::transferFileDataToSocket(
                 return;
             }
         }
-        rc = wInterface->transferHostDataToSocket(fd, data.length,
-                                                  data.address);
+        rc =
+            wInterface->transferHostDataToSocket(fd, data.length, data.address);
         if (rc < 0)
         {
             error(
@@ -336,8 +335,8 @@ void FileHandler::transferFileDataToSocket(
             deleteAIOobjects(xdmaInterface, sharedAIORespDataobj);
             return;
         }
-        xdmaInterface->insertIOInstance(std::move(std::make_unique<IO>(
-            event, xdmaFd, EPOLLIN | EPOLLOUT, std::move(callback))));
+        xdmaInterface->insertIOInstance(std::make_unique<IO>(
+            event, xdmaFd, EPOLLIN | EPOLLOUT, std::move(callback)));
     }
     catch (const std::runtime_error& e)
     {
@@ -355,11 +354,10 @@ void FileHandler::transferFileDataToSocket(
     return;
 }
 
-void FileHandler::transferFileData(const fs::path& path, bool upstream,
-                                   uint32_t offset, uint32_t& length,
-                                   uint64_t address,
-                                   SharedAIORespData& sharedAIORespDataobj,
-                                   sdeventplus::Event& event)
+void FileHandler::transferFileData(
+    const fs::path& path, bool upstream, uint32_t offset, uint32_t& length,
+    uint64_t address, SharedAIORespData& sharedAIORespDataobj,
+    sdeventplus::Event& event)
 {
     bool fileExists = false;
     if (upstream)
