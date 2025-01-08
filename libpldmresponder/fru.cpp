@@ -6,6 +6,7 @@
 #endif
 
 #include <libpldm/entity.h>
+#include <libpldm/pdr.h>
 #include <libpldm/utils.h>
 #include <systemd/sd-journal.h>
 
@@ -393,8 +394,8 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
     uint16_t entityType{};
     uint16_t entityInsNum{};
     uint16_t containerId{};
-    uint32_t updateRecordHdlBmc;
-    uint32_t updateRecordHdlHost;
+    uint32_t updateRecordHdlBmc = 0;
+    uint32_t updateRecordHdlHost = 0;
     uint32_t deleteRecordHdl = 0;
     pldm_pdr_fru_record_find_by_rsi(pdrRepo, rsi, &terminusHdl, &entityType,
                                     &entityInsNum, &containerId, false);
@@ -407,10 +408,28 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
     auto removeBmcEntityRc =
         pldm_entity_association_pdr_remove_contained_entity(
             pdrRepo, &removeEntity, false, &updateRecordHdlBmc);
+    pldm::responder::pdr_utils::PdrEntry pdrEntry;
+    uint8_t* pdrData = nullptr;
+    auto record =
+        pldm_pdr_find_record(pdrRepo, updateRecordHdlBmc, &pdrData,
+                             &pdrEntry.size, &pdrEntry.handle.nextRecordHandle);
+    if (record)
+    {
+        error("Found BMC Record {REC}", "REC", updateRecordHdlBmc);
+    }
+    bmcEventDataOps = record ? PLDM_RECORDS_MODIFIED : PLDM_RECORDS_DELETED;
 
     auto removeHostEntityRc =
         pldm_entity_association_pdr_remove_contained_entity(
             pdrRepo, &removeEntity, true, &updateRecordHdlHost);
+    record =
+        pldm_pdr_find_record(pdrRepo, updateRecordHdlHost, &pdrData,
+                             &pdrEntry.size, &pdrEntry.handle.nextRecordHandle);
+    if (record)
+    {
+        error("Found Host Record {REC}", "REC", updateRecordHdlHost);
+    }
+    hostEventDataOps = record ? PLDM_RECORDS_MODIFIED : PLDM_RECORDS_DELETED;
 
     pldm_pdr_remove_fru_record_set_by_rsi(pdrRepo, rsi, false,
                                           &deleteRecordHdl);
@@ -572,9 +591,12 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
 
         pldm_entity_node* parent_node = nullptr;
         pldm_find_entity_ref_in_tree(entityTree, parent, &parent_node);
-        auto node = pldm_entity_association_tree_add(
+
+        uint16_t last_container_id = next_container_id(entityTree);
+        auto node = pldm_entity_association_tree_add_entity(
             entityTree, &entity, 0xFFFF, parent_node,
-            PLDM_ENTITY_ASSOCIAION_PHYSICAL);
+            PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true, last_container_id);
+
         pldm_entity node_entity = pldm_entity_extract(node);
         objToEntityNode[fruObjectPath] = node_entity;
         info(
@@ -594,9 +616,9 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
         pldm_find_entity_ref_in_tree(bmcEntityTree, parentEntity,
                                      &bmcTreeParentNode);
 
-        pldm_entity_association_tree_add(bmcEntityTree, &entity, 0xFFFF,
-                                         bmcTreeParentNode,
-                                         PLDM_ENTITY_ASSOCIAION_PHYSICAL);
+        pldm_entity_association_tree_add_entity(
+            bmcEntityTree, &entity, 0xFFFF, bmcTreeParentNode,
+            PLDM_ENTITY_ASSOCIAION_PHYSICAL, false, true, last_container_id);
 
         objects = DBusHandler::getManagedObj(
             "xyz.openbmc_project.Inventory.Manager", inventoryPath);
