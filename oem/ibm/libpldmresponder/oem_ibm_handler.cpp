@@ -1329,7 +1329,7 @@ int pldm::responder::oem_ibm_platform::Handler::setNumericEffecter(
         createParams[failingUnitIdParam] = (uint64_t)entityInstance;
         method.append(createParams);
 
-        auto response = bus.call(method);
+        auto response = bus.call(method, dbusTimeout);
 
         sdbusplus::message::object_path reply;
         response.read(reply);
@@ -1858,7 +1858,7 @@ void pldm::responder::oem_ibm_platform::Handler::setBitmapMethodCall(
                                 dbusInterface.c_str(), dbusMethod.c_str());
         auto val = std::get_if<std::vector<uint8_t>>(&value);
         method.append(*val);
-        bus.call_noreply(method);
+        bus.call_noreply(method, dbusTimeout);
     }
     catch (const std::exception& e)
     {
