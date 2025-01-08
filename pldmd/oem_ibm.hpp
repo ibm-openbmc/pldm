@@ -91,6 +91,7 @@ class OemIBM
         platformHandler->setOemPlatformHandler(oemPlatformHandler.get());
         baseHandler->setOemPlatformHandler(oemPlatformHandler.get());
         slotHandler->setOemPlatformHandler(oemPlatformHandler.get());
+        oemIbmFruHandler->setOemUtilsHandler(oemUtilsHandler.get());
 
         createOemIbmPlatformHandler();
         oemIbmPlatformHandler->setPlatformHandler(platformHandler);

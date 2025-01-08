@@ -971,7 +971,7 @@ void FruImpl::processFruPresenceChange(const DbusChangedProps& chProperties,
         if (fruInterface == "xyz.openbmc_project.Inventory.Item.PCIeDevice" &&
             oemUtilsHandler)
         {
-            if (pldm::responder::utils::checkIfIBMFru(fruObjPath))
+            if (oemUtilsHandler->checkIfIBMFru(fruObjPath))
             {
                 static constexpr auto portInterface =
                     "xyz.openbmc_project.Inventory.Item.Connector";

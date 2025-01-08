@@ -185,28 +185,6 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
     return 0;
 }
 
-bool checkIfIBMFru(const std::string& objPath)
-{
-    using DecoratorAsset =
-        sdbusplus::client::xyz::openbmc_project::inventory::decorator::Asset<>;
-
-    try
-    {
-        auto propVal = pldm::utils::DBusHandler().getDbusPropertyVariant(
-            objPath.c_str(), "Model", DecoratorAsset::interface);
-        const auto& model = std::get<std::string>(propVal);
-        if (!model.empty())
-        {
-            return true;
-        }
-    }
-    catch (const std::exception&)
-    {
-        return false;
-    }
-    return false;
-}
-
 Json convertBinFileToJson(const fs::path& path)
 {
     std::ifstream file(path, std::ios::in | std::ios::binary);
@@ -620,6 +598,29 @@ int pldm::responder::oem_ibm_utils::Handler::setCoreCount(
         }
     }
     return coreCount;
+}
+
+bool pldm::responder::oem_ibm_utils::Handler::checkIfIBMFru(
+    const std::string& objPath)
+{
+    using DecoratorAsset =
+        sdbusplus::client::xyz::openbmc_project::inventory::decorator::Asset<>;
+
+    try
+    {
+        auto propVal = pldm::utils::DBusHandler().getDbusPropertyVariant(
+            objPath.c_str(), "Model", DecoratorAsset::interface);
+        const auto& model = std::get<std::string>(propVal);
+        if (!model.empty())
+        {
+            return true;
+        }
+    }
+    catch (const std::exception&)
+    {
+        return false;
+    }
+    return false;
 }
 
 bool pldm::responder::oem_ibm_utils::Handler::checkModelPresence(
