@@ -145,6 +145,7 @@ HostPDRHandler::HostPDRHandler(
                     this->mergedHostParents = false;
                     this->stateSensorPDRs.clear();
                     fruRecordSetPDRs.clear();
+                    entityAuxNamesPDRs.clear();
                     isHostOff = true;
                     isHostRunning = false;
                     this->sensorIndex = stateSensorPDRs.begin();
@@ -415,16 +416,8 @@ void HostPDRHandler::mergeEntityAssociations(
 
         else
         {
-            uint16_t terminus_handle = 0;
-            for (const auto& [terminusHandle, terminusInfo] : tlPDRInfo)
-            {
-                if (std::get<0>(terminusInfo) == terminusID &&
-                    std::get<1>(terminusInfo) == mctp_eid &&
-                    std::get<2>(terminusInfo))
-                {
-                    terminus_handle = terminusHandle;
-                }
-            }
+            uint16_t terminus_handle = getRemoteTerminusHandle();
+
             if ((isHostUp() || (terminus_handle & 0x8000)) &&
                 oemPlatformHandler)
             {
@@ -757,6 +750,14 @@ void HostPDRHandler::processHostPDRs(
                     updateContainerId<pldm_numeric_effecter_value_pdr>(
                         entityTree, pdr);
                 }
+                else if (pdrHdr->type == PLDM_ENTITY_AUXILIARY_NAMES_PDR)
+                {
+                    // No PLDMTerminusHandle present for this PDR
+                    // Hence setting the remote terminus handle value
+                    pdrTerminusHandle = getRemoteTerminusHandle();
+                    entityAuxNamesPDRs.emplace_back(pdr);
+                }
+
                 // if the TLPDR is invalid update the repo accordingly
                 if (!tlValid)
                 {
@@ -876,6 +877,20 @@ void HostPDRHandler::processHostPDRs(
         }
         /*received last record*/
         this->parseStateSensorPDRs();
+
+        // Parse the entity auxiliary names pdrs
+        for (auto& pdr : entityAuxNamesPDRs)
+        {
+            auto entityNames = parseEntityAuxNamesPDR(pdr);
+            if (!entityNames)
+            {
+                error("Failed to parse entity auxilliary names PDR");
+            }
+            {
+                entityAuxiliaryNamesList.emplace_back(std::move(entityNames));
+            }
+        }
+
         this->createDbusObjects();
         if (isHostUp())
         {
@@ -1575,9 +1590,11 @@ bool HostPDRHandler::getValidity(const pldm::pdr::TerminusID& tid)
     return false;
 }
 
-void HostPDRHandler::setPresentPropertyStatus(const std::string& path)
+void HostPDRHandler::setInventoryItemProperties(const std::string& path,
+                                                const std::string& prettyName)
 {
-    CustomDBus::getCustomDBus().updateItemPresentStatus(path, true);
+    CustomDBus::getCustomDBus().updateInventoryItemProperties(
+        path, true, prettyName);
 }
 
 void HostPDRHandler::setAvailabilityState(const std::string& path)
@@ -1596,8 +1613,31 @@ void HostPDRHandler::createDbusObjects()
 
     for (const auto& entity : objPathMap)
     {
-        // update the Present Property
-        setPresentPropertyStatus(entity.first);
+        pldm_entity node_entity = entity.second;
+
+        auto pretName = fetchPrettyName(node_entity);
+        std::string prettyName;
+        if (pretName != std::nullopt)
+        {
+            if (pretName && !pretName.value().empty())
+            {
+                prettyName = static_cast<std::string>(pretName.value());
+            }
+        }
+        else
+        {
+            error("Fetching the PrettyName failed");
+        }
+
+        // Update the Present and Pretty Name Properties under Inventory
+        if (prettyName.empty())
+        {
+            setInventoryItemProperties(entity.first);
+        }
+        else
+        {
+            setInventoryItemProperties(entity.first, prettyName);
+        }
 
         // Implement & update the Availability to true
         setAvailabilityState(entity.first);
@@ -1844,6 +1884,53 @@ void HostPDRHandler::setOperationStatus()
     }
 }
 
+std::optional<std::string_view>
+    HostPDRHandler::fetchPrettyName(const pldm_entity& entity)
+{
+    if (entityAuxiliaryNamesList.empty())
+    {
+        error("Entity auxiliary names list is empty");
+        return std::nullopt;
+    }
+
+    auto it = std::find_if(
+        entityAuxiliaryNamesList.begin(), entityAuxiliaryNamesList.end(),
+        [entity](
+            const std::shared_ptr<EntityAuxiliaryNames>& entityAuxiliaryNames) {
+            const auto& [key, entityNames] = *entityAuxiliaryNames;
+            return (entityAuxiliaryNames && key.type == entity.entity_type &&
+                    key.instanceIdx == entity.entity_instance_num &&
+                    key.containerId == entity.entity_container_id &&
+                    entityNames.size());
+        });
+
+    if (it != entityAuxiliaryNamesList.end())
+    {
+        const auto& [key, entityNames] = **it;
+        if (!entityNames.size())
+        {
+            return std::nullopt;
+        }
+        return entityNames[0].second;
+    }
+
+    return std::nullopt;
+}
+
+uint16_t HostPDRHandler::getRemoteTerminusHandle()
+{
+    uint16_t terminus_handle = 0;
+    for (const auto& [terminusHandle, terminusInfo] : tlPDRInfo)
+    {
+        if (std::get<0>(terminusInfo) == terminusID &&
+            std::get<1>(terminusInfo) == mctp_eid && std::get<2>(terminusInfo))
+        {
+            terminus_handle = terminusHandle;
+        }
+    }
+    return terminus_handle;
+}
+
 std::string HostPDRHandler::getParentChassis(const std::string& frupath)
 {
     if (objPathMap.contains(frupath))
@@ -1884,7 +1971,8 @@ void HostPDRHandler::setRecordPresent(uint32_t recordHandle)
                 "ENTITY_ID", (unsigned)recordEntity.entity_container_id);
             // if the record has the same entity id, mark that dbus object as
             // not present
-            CustomDBus::getCustomDBus().updateItemPresentStatus(path, false);
+            CustomDBus::getCustomDBus().updateInventoryItemProperties(
+                path, false);
             CustomDBus::getCustomDBus().setOperationalStatus(
                 path, false, getParentChassis(path));
             // Delete the LED object path

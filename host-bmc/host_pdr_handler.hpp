@@ -327,17 +327,36 @@ class HostPDRHandler
      *  @return
      */
     void setOperationStatus();
+
+    /** @brief Fetch the pretty name if present
+     *
+     *  @param[in] entity - PLDM PDR Entity data
+     *
+     *  @return the resultant string
+     */
+    std::optional<std::string_view> fetchPrettyName(const pldm_entity& entity);
+
+    /** @brief Get the remote terminus handle
+     *
+     *  @return the remote terminus handle
+     */
+    uint16_t getRemoteTerminusHandle();
+
     /** @brief Get the Validity of a Terminus ID
      *
      *  @param[out] bool - true if valid, false otherwise
      */
     bool getValidity(const pldm::pdr::TerminusID& tid);
 
-    /** @brief Set the Present dbus Property
+    /** @brief Set the present status and pretty name dbus properties under
+     * Invenotory Manager
      *  @param[in] path     - object path
+     *  @param[in] prettyName - the pretty name of fru
+     *
      *  @return
      */
-    void setPresentPropertyStatus(const std::string& path);
+    void setInventoryItemProperties(
+        const std::string& path, const std::string& prettyName = std::string());
 
     /** @brief Set the availabilty dbus Property
      *  @param[in] path     - object path
@@ -455,6 +474,13 @@ class HostPDRHandler
 
     PDRList stateSensorPDRs;
     PDRList fruRecordSetPDRs{};
+
+    /** @brief Entity Auxiliary Name PDRs list */
+    PDRList entityAuxNamesPDRs{};
+
+    /** @brief Entity Auxiliary Names list */
+    std::vector<std::shared_ptr<pldm::hostbmc::utils::EntityAuxiliaryNames>>
+        entityAuxiliaryNamesList{};
 
     uint16_t terminusID = 0;
 

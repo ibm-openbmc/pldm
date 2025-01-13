@@ -114,8 +114,9 @@ void CustomDBus::setLinkReset(
     link.at(path)->linkReset(value);
 }
 
-void CustomDBus::updateItemPresentStatus(const std::string& path,
-                                         bool isPresent)
+void CustomDBus::updateInventoryItemProperties(
+    const std::string& path, bool isPresent,
+    const std::optional<std::string>& prettyName)
 {
     if (presentStatus.find(path) == presentStatus.end())
     {
@@ -127,14 +128,28 @@ void CustomDBus::updateItemPresentStatus(const std::string& path,
         // Hardcode the present dbus property to true
         presentStatus.at(path)->present(true);
 
-        // Set the pretty name dbus property to the filename
-        // form the dbus path object
-        presentStatus.at(path)->prettyName(ObjectPath.filename());
+        if (prettyName.has_value() && !prettyName.value().empty())
+        {
+            // Set the pretty name dbus property
+            presentStatus.at(path)->prettyName(prettyName.value());
+        }
+        else
+        {
+            // Set the pretty name dbus property to the filename
+            // form the dbus path object
+            presentStatus.at(path)->prettyName(ObjectPath.filename());
+        }
     }
     else
     {
         // object is already created
         presentStatus.at(path)->present(isPresent);
+
+        if (prettyName.has_value() && !prettyName.value().empty())
+        {
+            // Set the pretty name dbus property
+            presentStatus.at(path)->prettyName(prettyName.value());
+        }
     }
 }
 

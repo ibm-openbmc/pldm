@@ -462,7 +462,8 @@ void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
                     // There is no adapter plugged in so set the adapter present
                     // property to false
                     pldm::dbus::CustomDBus::getCustomDBus()
-                        .updateItemPresentStatus(slotAndAdapter.second, false);
+                        .updateInventoryItemProperties(slotAndAdapter.second,
+                                                       false);
                 }
                 else if (
                     linkStatus ==
@@ -472,7 +473,8 @@ void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
                     // operational, so change the present property of the
                     // adapter to true
                     pldm::dbus::CustomDBus::getCustomDBus()
-                        .updateItemPresentStatus(slotAndAdapter.second, true);
+                        .updateInventoryItemProperties(slotAndAdapter.second,
+                                                       true);
                 }
                 pldm::dbus::CustomDBus::getCustomDBus().setPCIeDeviceProps(
                     slotAndAdapter.second, linkWidth, linkSpeed[curLinkSpeed]);
@@ -810,7 +812,7 @@ void PCIeInfoHandler::setTopologyAttrsOnDbus()
             cableObjectPath.string());
 
         // Implement Inventory.Item Interface on it
-        pldm::dbus::CustomDBus::getCustomDBus().updateItemPresentStatus(
+        pldm::dbus::CustomDBus::getCustomDBus().updateInventoryItemProperties(
             cableObjectPath.string(), true);
 
         // Implement Inventory.Decorator.Asset on it
