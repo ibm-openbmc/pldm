@@ -94,6 +94,8 @@ int pldm::responder::oem_ibm_fru::Handler::processOEMFRUTable(
                 setFirmwareUAK(value);
             }
             // Increment data pointer by the size of the current TLV
+            dataSize += sizeof(pldm_fru_record_tlv) - sizeof(uint8_t) +
+                        tlv->length;
             data += sizeof(pldm_fru_record_tlv) - sizeof(uint8_t) + tlv->length;
         }
     }
