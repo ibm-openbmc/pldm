@@ -1768,6 +1768,10 @@ void HostPDRHandler::setFRUDynamicAssociations()
         for (const auto& [rightPath, rightEntity] : objPathMap)
         {
             uint16_t rightEntityType = rightEntity.entity_type;
+
+            std::string leftPath1 = leftPath.string() + "/";
+            std::string rightPath1 = rightPath.string() + "/";
+
             // if leftpath is same as rightPath
             // then both dbus objects are same, so
             // no need to create any associations
@@ -1775,8 +1779,10 @@ void HostPDRHandler::setFRUDynamicAssociations()
             {
                 continue;
             }
-            else if ((rightPath.string().find(leftPath) != std::string::npos) ||
-                     (leftPath.string().find(rightPath) != std::string::npos))
+
+            else if ((rightPath.string().find(leftPath1) !=
+                      std::string::npos) ||
+                     (leftPath.string().find(rightPath1) != std::string::npos))
             {
                 // this means left path dbus object is parent of the
                 // right path dbus object, something like this
