@@ -504,12 +504,16 @@ std::string getObjectPathByLocationCode(const std::string& locationCode,
                 if (get<std::string>(properties["LocationCode"]) ==
                     locationCode)
                 {
+                    // Return the object path for Slots/adapters withoot
+                    // checking its presence.
                     // Return the object path only if either
                     // The "xyz.openbmc_project.Inventory.Item" interface is not
                     // present or
                     // The "Present" property is not populated or it is present
                     // and its value is true
-                    if (!interfaces.contains(
+                    if ((inventoryItemType !=
+                         "xyz.openbmc_project.Inventory.Item.Connector") ||
+                        !interfaces.contains(
                             "xyz.openbmc_project.Inventory.Item") ||
                         !presentInfo.contains("Present") ||
                         get<bool>(presentInfo["Present"]))
