@@ -265,6 +265,7 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
             PLDM_ENTITY_EXTERNAL_ENVIRONMENT,
             PLDM_ENTITY_SYSTEM_CHASSIS,
         };
+        error("Deleting the dbus objects ");
         hostPDRHandler->deleteDbusObjects(types);
         pldm::serialize::Serialize::getSerialize().reSerialize(types);
     }

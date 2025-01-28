@@ -448,6 +448,16 @@ void CustomDBus::implementMotherboardInterface(const std::string& path)
     }
 }
 
+void CustomDBus::implementPanelInterface(const std::string& path)
+{
+    if (!panel.contains(path))
+    {
+        panel.emplace(path,
+                      std::make_unique<Panel>(
+                          pldm::utils::DBusHandler::getBus(), path.c_str()));
+    }
+}
+
 void CustomDBus::implementObjectEnableIface(const std::string& path, bool value)
 {
     if (!enabledStatus.contains(path))
@@ -622,6 +632,11 @@ void CustomDBus::deleteObject(const std::string& path)
     if (pcieDevice.contains(path))
     {
         pcieDevice.erase(pcieDevice.find(path));
+    }
+
+    if (panel.contains(path))
+    {
+        panel.erase(panel.find(path));
     }
 }
 
