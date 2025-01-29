@@ -24,6 +24,7 @@
 #include "location_code.hpp"
 #include "motherboard.hpp"
 #include "operational_status.hpp"
+#include "panel.hpp"
 #include "pcie_device.hpp"
 #include "pcie_slot.hpp"
 #include "pcie_topology.hpp"
@@ -439,6 +440,7 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIETopology>> pcietopology;
     std::unordered_map<ObjectPath, std::unique_ptr<Link>> link;
+    std::unordered_map<ObjectPath, std::unique_ptr<Panel>> panel;
 };
 
 } // namespace dbus

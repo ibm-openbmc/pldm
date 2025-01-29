@@ -1051,7 +1051,7 @@ int pldm::responder::oem_ibm_platform::Handler::sendEventToHost(
         if (rc || completionCode)
         {
             error(
-                "Failed to decode platform event message response for code update event with response code '{RC}' and completion code '{CC}'",
+                "Failed to decode platform event message response with response code '{RC}' and completion code '{CC}'",
                 "RC", rc, "CC", completionCode);
         }
     };

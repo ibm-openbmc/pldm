@@ -136,9 +136,6 @@ void Serialize::reSerialize(const std::vector<uint16_t>& types)
     {
         if (savedObjs.contains(type))
         {
-            info(
-                "Removing objects of type : {OBJ_TYP} from the persistent cache",
-                "OBJ_TYP", (unsigned)type);
             savedObjs.erase(savedObjs.find(type));
         }
     }

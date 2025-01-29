@@ -853,10 +853,9 @@ void HostPDRHandler::processHostPDRs(
             repo, pldm_pdr_find_last_in_range(repo, 1, 1));
         auto lastRecord = pldm_pdr_get_record_handle(
             repo, pldm_pdr_find_last_in_range(repo, 1, 0x02FFFFFF));
-        info("First Record in the repo after PDR exchange is: {FIRST_REC_HNDL}",
-             "FIRST_REC_HNDL", firstRecord);
-        info("Last Record in the repo after PDR exchange is: {LAST_REC_HNDL}",
-             "LAST_REC_HNDL", lastRecord);
+        info(
+            "First Record in the repo : {FIRST_REC_HNDL} and Last Record in the repo : {LAST_REC_HNDL}",
+            "FIRST_REC_HNDL", firstRecord, "LAST_REC_HNDL", lastRecord);
 
         for (const auto& [terminusHandle, terminusInfo] : tlPDRInfo)
         {
@@ -1624,10 +1623,6 @@ void HostPDRHandler::createDbusObjects()
                 prettyName = static_cast<std::string>(pretName.value());
             }
         }
-        else
-        {
-            error("Fetching the PrettyName failed");
-        }
 
         // Update the Present and Pretty Name Properties under Inventory
         if (prettyName.empty())
@@ -1661,8 +1656,8 @@ void HostPDRHandler::createDbusObjects()
                     entity.first);
                 break;
             case PLDM_ENTITY_CHASSIS_FRONT_PANEL_BOARD:
-                //  CustomDBus::getCustomDBus().implementPanelInterface(
-                //    entity.first);
+                CustomDBus::getCustomDBus().implementPanelInterface(
+                    entity.first);
                 break;
             case PLDM_ENTITY_FAN:
                 CustomDBus::getCustomDBus().implementFanInterface(entity.first);
@@ -1738,15 +1733,11 @@ void HostPDRHandler::deleteDbusObjects(const std::vector<uint16_t> types)
             continue;
         }
 
-        error("Deleting the dbus objects of type : {OBJ_TYP} ", "OBJ_TYP",
-              (unsigned)type);
         for (const auto& [path, entites] : savedObjs.at(type))
         {
             if (type !=
                 (PLDM_ENTITY_PROC | 0x8000)) // other than CPU core object
             {
-                info("Erasing Dbus Path from ObjectMap {DBUS_PATH}",
-                     "DBUS_PATH", path.c_str());
                 objPathMap.erase(path);
                 // Delete the Mex Led Dbus Object paths
                 auto ledGroupPath = updateLedGroupPath(path);
@@ -1895,7 +1886,6 @@ std::optional<std::string_view>
 {
     if (entityAuxiliaryNamesList.empty())
     {
-        error("Entity auxiliary names list is empty");
         return std::nullopt;
     }
 
