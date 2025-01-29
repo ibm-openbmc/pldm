@@ -555,7 +555,7 @@ int HostEffecterParser::setTerminusNumericEffecter(
     size_t payload_length = PLDM_SET_NUMERIC_EFFECTER_VALUE_MIN_REQ_BYTES - 1 +
                             getEffecterDataSize(dataSize);
     requestMsg.resize(sizeof(pldm_msg_hdr) + payload_length);
-    auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+    auto request = new (requestMsg.data()) pldm_msg;
     switch (dataSize)
     {
         case PLDM_EFFECTER_DATA_SIZE_UINT8:
@@ -674,6 +674,7 @@ int HostEffecterParser::setHostStateEffecter(
     return sendSetStateEffecterStates(mctpEid, effecterId, compEffCnt,
                                       stateField);
 }
+
 void HostEffecterParser::createHostEffecterMatch(
     const std::string& objectPath, const std::string& interface,
     size_t effecterInfoIndex, size_t dbusInfoIndex, uint16_t effecterId)
