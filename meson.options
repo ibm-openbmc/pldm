@@ -1,5 +1,4 @@
 # PLDM daemon options
-
 option('tests', type: 'feature', value: 'enabled', description: 'Build tests')
 
 option(
