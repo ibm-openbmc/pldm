@@ -285,9 +285,9 @@ class Handler : public oem_utils::Handler
      *
      *  @return int - the processor core count
      */
-    virtual int
-        setCoreCount(const pldm::utils::EntityAssociations& associations,
-                     const pldm::utils::EntityMaps entityMaps);
+    virtual int setCoreCount(
+        const pldm::utils::EntityAssociations& associations,
+        const pldm::utils::EntityMaps entityMaps);
 
     /** @brief checks if a pcie adapter is IBM specific
      *         cable card

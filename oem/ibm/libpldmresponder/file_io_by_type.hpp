@@ -307,5 +307,6 @@ std::unique_ptr<FileHandler> getHandlerByType(
 std::shared_ptr<FileHandler> getSharedHandlerByType(
     uint16_t fileType, uint32_t fileHandle, pldm::InstanceIdDb* instanceIdDb,
     pldm::requester::Handler<pldm::requester::Request>* handler);
+
 } // namespace responder
 } // namespace pldm
