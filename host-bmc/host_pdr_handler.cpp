@@ -1655,6 +1655,9 @@ void HostPDRHandler::createDbusObjects()
                 CustomDBus::getCustomDBus().implementChassisInterface(
                     entity.first);
                 CustomDBus::getCustomDBus().implementGlobalInterface(
+                break;
+            case PLDM_ENTITY_SLOT:
+                CustomDBus::getCustomDBus().implementPCIeSlotInterface(
                     entity.first);
                 break;
             case PLDM_ENTITY_POWER_SUPPLY:

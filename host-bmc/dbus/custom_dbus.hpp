@@ -9,6 +9,7 @@
 #include "chapdata.hpp"
 #include "chassis.hpp"
 #include "com/ibm/License/Entry/LicenseEntry/server.hpp"
+#include "chassis.hpp"
 #include "common/utils.hpp"
 #include "connector.hpp"
 #include "cpu_core.hpp"
@@ -415,6 +416,11 @@ class CustomDBus
      */
     void implementFanInterface(const std::string& path);
 
+    /** @brief Implement Chassis Interface
+     *  @param[in] path - the object path
+     */
+    void implementChassisInterface(const std::string& path);
+
   private:
     std::unordered_map<ObjectPath, std::unique_ptr<LocationCode>> location;
     std::unordered_map<ObjectPath, std::unique_ptr<OperationalStatus>>
@@ -432,6 +438,10 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<Board>> board;
     std::unordered_map<ObjectPath, std::unique_ptr<FabricAdapter>>
         fabricAdapter;
+    std::unordered_map<ObjectPath, std::unique_ptr<ItemChassis>> chassis;
+    std::unordered_map<ObjectPath, std::unique_ptr<PCIeDevice>> pcieDevice;
+    std::unordered_map<ObjectPath, std::unique_ptr<PCIeSlot>> pcieSlot;
+    std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
     std::unordered_map<ObjectPath, std::unique_ptr<Motherboard>> motherboard;
     std::unordered_map<ObjectPath, std::unique_ptr<ChapDatas>> chapdata;
     std::unordered_map<ObjectPath, std::unique_ptr<Availability>>
