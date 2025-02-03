@@ -184,24 +184,24 @@ class DBusHandlerInterface
 
     virtual std::string getService(const char* path,
                                    const char* interface) const = 0;
-    virtual GetSubTreeResponse
-        getSubtree(const std::string& path, int depth,
-                   const std::vector<std::string>& ifaceList) const = 0;
+    virtual GetSubTreeResponse getSubtree(
+        const std::string& path, int depth,
+        const std::vector<std::string>& ifaceList) const = 0;
 
-    virtual GetSubTreePathsResponse
-        getSubTreePaths(const std::string& objectPath, int depth,
-                        const std::vector<std::string>& ifaceList) const = 0;
+    virtual GetSubTreePathsResponse getSubTreePaths(
+        const std::string& objectPath, int depth,
+        const std::vector<std::string>& ifaceList) const = 0;
 
     virtual void setDbusProperty(const DBusMapping& dBusMap,
                                  const PropertyValue& value) const = 0;
 
-    virtual PropertyValue
-        getDbusPropertyVariant(const char* objPath, const char* dbusProp,
-                               const char* dbusInterface) const = 0;
+    virtual PropertyValue getDbusPropertyVariant(
+        const char* objPath, const char* dbusProp,
+        const char* dbusInterface) const = 0;
 
-    virtual PropertyMap
-        getDbusPropertiesVariant(const char* serviceName, const char* objPath,
-                                 const char* dbusInterface) const = 0;
+    virtual PropertyMap getDbusPropertiesVariant(
+        const char* serviceName, const char* objPath,
+        const char* dbusInterface) const = 0;
 };
 
 /**
@@ -248,9 +248,9 @@ class DBusHandler : public DBusHandlerInterface
      *
      *  @throw sdbusplus::exception_t when it fails
      */
-    GetSubTreeResponse
-        getSubtree(const std::string& path, int depth,
-                   const std::vector<std::string>& ifaceList) const override;
+    GetSubTreeResponse getSubtree(
+        const std::string& path, int depth,
+        const std::vector<std::string>& ifaceList) const override;
 
     /** @brief Get Subtree path response from the mapper
      *
@@ -275,9 +275,9 @@ class DBusHandler : public DBusHandlerInterface
      *
      *  @throw sdbusplus::exception_t when it fails
      */
-    PropertyValue
-        getDbusPropertyVariant(const char* objPath, const char* dbusProp,
-                               const char* dbusInterface) const override;
+    PropertyValue getDbusPropertyVariant(
+        const char* objPath, const char* dbusProp,
+        const char* dbusInterface) const override;
 
     /** @brief Get All properties(type: variant) from the requested dbus
      *
@@ -289,9 +289,9 @@ class DBusHandler : public DBusHandlerInterface
      *
      *  @throw sdbusplus::exception_t when it fails
      */
-    PropertyMap
-        getDbusPropertiesVariant(const char* serviceName, const char* objPath,
-                                 const char* dbusInterface) const override;
+    PropertyMap getDbusPropertiesVariant(
+        const char* serviceName, const char* objPath,
+        const char* dbusInterface) const override;
 
     /** @brief The template function to get property from the requested dbus
      *         path
@@ -619,8 +619,8 @@ void setBiosAttr(const BiosAttributeList& biosAttrList);
  *
  *  @return Fru string or nullopt.
  */
-std::optional<std::string>
-    fruFieldValuestring(const uint8_t* value, const uint8_t& length);
+std::optional<std::string> fruFieldValuestring(const uint8_t* value,
+                                               const uint8_t& length);
 
 /** @brief Convert the Fru Uint32 raw data from PLDM Fru to uint32_t
  *
