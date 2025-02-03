@@ -1711,6 +1711,8 @@ void HostPDRHandler::createDbusObjects()
                     "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.OEM");
                 CustomDBus::getCustomDBus().setLinkReset(
                     entity.first, false, hostEffecterParser, mctp_eid);
+            case PLDM_ENTITY_FAN:
+                CustomDBus::getCustomDBus().implementFanInterface(entity.first);
                 break;
             default:
                 break;

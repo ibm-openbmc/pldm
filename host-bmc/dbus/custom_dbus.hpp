@@ -22,6 +22,7 @@
 #include "license_entry.hpp"
 #include "linkreset.hpp"
 #include "location_code.hpp"
+#include "fan.hpp"
 #include "motherboard.hpp"
 #include "operational_status.hpp"
 #include "panel.hpp"
@@ -406,6 +407,13 @@ class CustomDBus
         const std::string& path, bool value,
         pldm::host_effecters::HostEffecterParser* hostEffecterParser,
         uint8_t instanceId);
+    
+    /** @brief Implement Fan Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
+    void implementFanInterface(const std::string& path);
 
   private:
     std::unordered_map<ObjectPath, std::unique_ptr<LocationCode>> location;
@@ -441,6 +449,7 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<PCIETopology>> pcietopology;
     std::unordered_map<ObjectPath, std::unique_ptr<Link>> link;
     std::unordered_map<ObjectPath, std::unique_ptr<Panel>> panel;
+    std::unordered_map<ObjectPath, std::unique_ptr<Fan>> fan;
 };
 
 } // namespace dbus
