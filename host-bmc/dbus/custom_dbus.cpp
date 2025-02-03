@@ -670,6 +670,14 @@ void CustomDBus::updateTopologyProperty(bool value)
     {
         pcietopology.at("/xyz/openbmc_project/pldm")
             ->pcIeTopologyRefresh(value);
+
+void CustomDBus::implementFanInterface(const std::string& path)
+{
+    if (!fan.contains(path))
+    {
+        fan.emplace(path,
+                    std::make_unique<Fan>(pldm::utils::DBusHandler::getBus(),
+                                          path.c_str()));
     }
 }
 
