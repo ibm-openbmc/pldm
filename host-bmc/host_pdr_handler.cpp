@@ -1602,6 +1602,11 @@ void HostPDRHandler::setInventoryItemProperties(const std::string& path,
         path, true, prettyName);
 }
 
+void HostPDRHandler::setPresentPropertyStatus(const std::string& path)
+{
+    CustomDBus::getCustomDBus().updateItemPresentStatus(path, true);
+}
+
 void HostPDRHandler::setAvailabilityState(const std::string& path)
 {
     CustomDBus::getCustomDBus().setAvailabilityState(path, true);
