@@ -1655,6 +1655,7 @@ void HostPDRHandler::createDbusObjects()
                 CustomDBus::getCustomDBus().implementChassisInterface(
                     entity.first);
                 CustomDBus::getCustomDBus().implementGlobalInterface(
+		    entity.first);
                 break;
             case PLDM_ENTITY_POWER_SUPPLY:
                 CustomDBus::getCustomDBus().implementPowerSupplyInterface(
@@ -1666,6 +1667,14 @@ void HostPDRHandler::createDbusObjects()
                 break;
             case PLDM_ENTITY_POWER_SUPPLY:
                 CustomDBus::getCustomDBus().implementPowerSupplyInterface(
+		    entity.first);
+		break;
+            case PLDM_ENTITY_CONNECTOR:
+                CustomDBus::getCustomDBus().implementConnecterInterface(
+                    entity.first);
+                break;
+            case PLDM_ENTITY_CARD:
+                CustomDBus::getCustomDBus().implementPCIeDeviceInterface(
                     entity.first);
                 break;
             case PLDM_ENTITY_CHASSIS_FRONT_PANEL_BOARD:

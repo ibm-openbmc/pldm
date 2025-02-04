@@ -431,6 +431,13 @@ class CustomDBus
      */
     void implementPowerSupplyInterface(const std::string& path);
 
+    /** @brief Implement Connector Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
+    void implementConnecterInterface(const std::string& path);
+
     /** @brief Implement Asset Interface
      *
      *  @param[in] path - The object path
@@ -490,6 +497,7 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<Link>> link;
     std::unordered_map<ObjectPath, std::unique_ptr<Panel>> panel;
     std::unordered_map<ObjectPath, std::unique_ptr<Fan>> fan;
+    std::unordered_map<ObjectPath, std::unique_ptr<Connector>> connector;
 };
 
 } // namespace dbus
