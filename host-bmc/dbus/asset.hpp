@@ -35,6 +35,7 @@ class Asset : public ItemAsset
 
     /** Set Part Number */
     std::string partNumber(std::string value) override;
+
 };
 
 } // namespace dbus
