@@ -475,6 +475,9 @@ void CustomDBus::implementFabricAdapter(const std::string& path)
     {
         fabricAdapter.emplace(
             path, std::make_unique<FabricAdapter>(
+                      pldm::utils::DBusHandler::getBus(), path.c_str()));
+    }
+}
 
 void CustomDBus::implementPowerSupplyInterface(const std::string& path)
 {

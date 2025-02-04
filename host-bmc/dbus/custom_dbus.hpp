@@ -25,6 +25,7 @@
 #include "license_entry.hpp"
 #include "linkreset.hpp"
 #include "location_code.hpp"
+#include "fabric_adapter.hpp"
 #include "fan.hpp"
 #include "motherboard.hpp"
 #include "operational_status.hpp"
@@ -438,6 +439,13 @@ class CustomDBus
      */
     void implementConnecterInterface(const std::string& path);
 
+    /** @brief Implement Fabric Adapter Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
+    void implementFabricAdapter(const std::string& path);
+
     /** @brief Implement Asset Interface
      *
      *  @param[in] path - The object path
@@ -478,6 +486,8 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<PCIeDevice>> pcieDevice;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIeSlot>> pcieSlot;
     std::unordered_map<ObjectPath, std::unique_ptr<PowerSupply>> powersupply;
+    std::unordered_map<ObjectPath, std::unique_ptr<FabricAdapter>>
+        fabricAdapter;
     std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
     std::unordered_map<ObjectPath, std::unique_ptr<Motherboard>> motherboard;
     std::unordered_map<ObjectPath, std::unique_ptr<ChapDatas>> chapdata;
