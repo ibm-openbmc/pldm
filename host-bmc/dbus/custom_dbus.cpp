@@ -475,6 +475,13 @@ void CustomDBus::implementFabricAdapter(const std::string& path)
     {
         fabricAdapter.emplace(
             path, std::make_unique<FabricAdapter>(
+
+void CustomDBus::implementPowerSupplyInterface(const std::string& path)
+{
+    if (!powersupply.contains(path))
+    {
+        powersupply.emplace(
+            path, std::make_unique<PowerSupply>(
                       pldm::utils::DBusHandler::getBus(), path.c_str()));
     }
 }
@@ -670,6 +677,8 @@ void CustomDBus::updateTopologyProperty(bool value)
     {
         pcietopology.at("/xyz/openbmc_project/pldm")
             ->pcIeTopologyRefresh(value);
+    }
+}
 
 void CustomDBus::implementFanInterface(const std::string& path)
 {
