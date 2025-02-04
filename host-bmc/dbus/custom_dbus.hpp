@@ -33,6 +33,7 @@
 #include "port.hpp"
 #include "power_supply.hpp"
 #include "vrm.hpp"
+#include "power_supply.hpp"
 
 #include <libpldm/state_set.h>
 
@@ -421,6 +422,13 @@ class CustomDBus
      */
     void implementChassisInterface(const std::string& path);
 
+    /** @brief Implement PowerSupply Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
+    void implementPowerSupplyInterface(const std::string& path);
+
   private:
     std::unordered_map<ObjectPath, std::unique_ptr<LocationCode>> location;
     std::unordered_map<ObjectPath, std::unique_ptr<OperationalStatus>>
@@ -441,6 +449,7 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<ItemChassis>> chassis;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIeDevice>> pcieDevice;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIeSlot>> pcieSlot;
+    std::unordered_map<ObjectPath, std::unique_ptr<PowerSupply>> powersupply;
     std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
     std::unordered_map<ObjectPath, std::unique_ptr<Motherboard>> motherboard;
     std::unordered_map<ObjectPath, std::unique_ptr<ChapDatas>> chapdata;
