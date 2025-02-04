@@ -690,6 +690,16 @@ void CustomDBus::implementFanInterface(const std::string& path)
     }
 }
 
+void CustomDBus::implementConnecterInterface(const std::string& path)
+{
+    if (!connector.contains(path))
+    {
+        connector.emplace(
+            path, std::make_unique<Connector>(
+                      pldm::utils::DBusHandler::getBus(), path.c_str()));
+    }
+}
+
 void CustomDBus::implementChassisInterface(const std::string& path)
 {
     if (!chassis.contains(path))
