@@ -16,6 +16,8 @@ test_sources = [
     '../dbus/enable.cpp',
     '../dbus/inventory_item.cpp',
     '../dbus/operational_status.cpp',
+    '../dbus/inventory_item.cpp',
+    '../dbus/pcie_device.cpp',
     '../dbus/pcie_slot.cpp',
     '../dbus/license_entry.cpp',
     '../dbus/location_code.cpp',

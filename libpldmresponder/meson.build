@@ -36,6 +36,7 @@ sources = [
     '../host-bmc/dbus/cable.cpp',
     '../host-bmc/dbus/chassis.cpp',
     '../host-bmc/dbus/cpu_core.cpp',
+    '../host-bmc/dbus/inventory_item.cpp',
     '../host-bmc/utils.cpp',
     '../host-bmc/dbus/custom_dbus.cpp',
     '../host-bmc/dbus/serialize.cpp',
