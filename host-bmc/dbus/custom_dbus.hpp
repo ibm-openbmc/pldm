@@ -5,6 +5,7 @@
 #include "associations.hpp"
 #include "availability.hpp"
 #include "board.hpp"
+#include "asset.hpp"
 #include "cable.hpp"
 #include "chapdata.hpp"
 #include "chassis.hpp"
@@ -429,6 +430,13 @@ class CustomDBus
      */
     void implementPowerSupplyInterface(const std::string& path);
 
+    /** @brief Implement Asset Interface
+     *
+     *  @param[in] path - The object path
+     *
+     */
+    void implementAssetInterface(const std::string& path);
+
   private:
     std::unordered_map<ObjectPath, std::unique_ptr<LocationCode>> location;
     std::unordered_map<ObjectPath, std::unique_ptr<OperationalStatus>>
@@ -436,6 +444,8 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<InventoryItem>>
         presentStatus;
     std::unordered_map<ObjectPath, std::unique_ptr<ItemChassis>> chassis;
+    std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
+    std::unordered_map<ObjectPath, std::unique_ptr<LocationIntf>> location;
     std::unordered_map<ObjectPath, std::unique_ptr<CPUCore>> cpuCore;
     std::unordered_map<ObjectPath, std::unique_ptr<Enable>> enabledStatus;
     std::unordered_map<ObjectPath, std::unique_ptr<Fan>> fan;

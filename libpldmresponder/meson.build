@@ -30,6 +30,7 @@ sources = [
     '../host-bmc/dbus_to_terminus_effecters.cpp',
     '../host-bmc/host_associations_parser.cpp',
     '../host-bmc/host_condition.cpp',
+    '../host-bmc/dbus/asset.cpp',
     '../host-bmc/dbus/custom_dbus.cpp',
     '../host-bmc/dbus/cable.cpp',
     '../host-bmc/dbus/chassis.cpp',

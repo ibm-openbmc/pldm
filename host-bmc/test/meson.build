@@ -8,6 +8,7 @@ test_sources = [
     '../dbus/associations.cpp',
     '../dbus/availability.cpp',
     '../dbus/custom_dbus.cpp',
+    '../dbus/asset.cpp',
     '../dbus/cable.cpp',
     '../dbus/chassis.cpp',
     '../dbus/cpu_core.cpp',
