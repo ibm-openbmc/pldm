@@ -1670,6 +1670,9 @@ void HostPDRHandler::createDbusObjects()
                 CustomDBus::getCustomDBus().implementPanelInterface(
                     entity.first);
                 break;
+            case PLDM_ENTITY_POWER_CONVERTER:
+                CustomDBus::getCustomDBus().implementVRMInterface(entity.first);
+                break;
             case PLDM_ENTITY_SLOT:
                 CustomDBus::getCustomDBus().implementPCIeSlotInterface(
                     entity.first);
