@@ -74,9 +74,6 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
 
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
     {
-        uint32_t dumpIdPrefix =
-            getDumpIdPrefix(PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS);
-        fileHandle |= dumpIdPrefix;
         std::string idStr = std::format("{:08X}", fileHandle);
 
         resDumpRequestDirPath = "/var/lib/pldm/resourcedump/" + idStr;
@@ -621,9 +618,6 @@ int DumpHandler::fileAckWithMetaData(
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
     {
         DBusMapping dbusMapping;
-        uint32_t dumpIdPrefix =
-            getDumpIdPrefix(PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS);
-        fileHandle |= dumpIdPrefix;
         std::string idStr = std::format("{:08X}", fileHandle);
 
         dbusMapping.objectPath = (std::string)dumpEntryObjPath + "/" + idStr;
@@ -659,9 +653,6 @@ int DumpHandler::fileAckWithMetaData(
         {
             DBusMapping dbusMapping;
 
-            uint32_t dumpIdPrefix =
-                getDumpIdPrefix(PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS);
-            fileHandle |= dumpIdPrefix;
             std::string idStr = std::format("{:08X}", fileHandle);
 
             dbusMapping.objectPath =
@@ -705,9 +696,6 @@ int DumpHandler::fileAckWithMetaData(
 
             PropertyValue value{
                 "xyz.openbmc_project.Common.Progress.OperationStatus.Failed"};
-            uint32_t dumpIdPrefix =
-                getDumpIdPrefix(PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS);
-            fileHandle |= dumpIdPrefix;
             std::string idStr = std::format("{:08X}", fileHandle);
 
             DBusMapping dbusMapping{(std::string)dumpEntryObjPath + "/" + idStr,
