@@ -6,6 +6,7 @@
 #include <phosphor-logging/lg2.hpp>
 
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -54,7 +55,8 @@ class HostAssociationsParser
      */
     void parseHostAssociations(const std::string& jsonPath);
 
-    std::map<std::pair<uint16_t, uint16_t>, std::pair<std::string, std::string>>
+    std::map<std::pair<uint16_t, uint16_t>,
+             std::tuple<bool, std::pair<std::string, std::string>>>
         associationsInfoMap;
 };
 
