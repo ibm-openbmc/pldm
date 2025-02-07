@@ -58,8 +58,12 @@ void HostAssociationsParser::parseHostAssociations(const std::string& jsonPath)
         std::string forward_association =
             entry.value("forward_association", "");
         std::string reverse_assocation = entry.value("reverse_association", "");
+        bool parentChild_assocation =
+            entry.value("parent_child_association", false);
         associationsInfoMap[std::make_pair(from_entity_type, to_entity_type)] =
-            std::make_pair(forward_association, reverse_assocation);
+            std::make_tuple(
+                parentChild_assocation,
+                std::make_pair(forward_association, reverse_assocation));
     }
 }
 
