@@ -1784,11 +1784,31 @@ void HostPDRHandler::setFRUDynamicAssociations()
                 if (associationsParser->associationsInfoMap.contains(key))
                 {
                     auto value = associationsParser->associationsInfoMap[key];
-                    // we have some associations defined for this parent type &
-                    // child type
+                    if (std::get<0>(value))
+                    {
+                        // Associatioh should be created between the
+                        // Parent and child
+                        // leftpath = /xyz/openbmc_project/system/chassis15363
+                        // rightpath =
+                        // /xyz/openbmc_project/system/chassis15363/fan1
+                        if (rightPath.parent_path().compare(leftPath) != 0 &&
+                            leftPath.parent_path().compare(rightPath) != 0)
+                        {
+                            std::cout << "Not a parent child relation "
+                                      << rightPath.string() << "\n";
+                            std::cout << " left child " << leftPath.string();
+                            continue;
+                        }
+                    }
+                    // we have some associations defined for this ancenstor and
+                    // child type leftpath =
+                    // /xyz/openbmc_project/system/chassis15363 rightpath =
+                    // /xyz/openbmc_project/system/chassis15363/Slot1/adapter1
+
                     std::vector<
                         std::tuple<std::string, std::string, std::string>>
-                        associations{{value.first, value.second, rightPath}};
+                        associations{{(std::get<1>(value)).first,
+                                      (std::get<1>(value)).second, rightPath}};
                     CustomDBus::getCustomDBus().setAssociations(leftPath,
                                                                 associations);
                 }
