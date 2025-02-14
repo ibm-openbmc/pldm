@@ -333,9 +333,9 @@ class DBusHandler : public DBusHandlerInterface
      *  @return A reference to the cached inventory objects.
      */
     template <typename ClassType>
-    static auto& getInventoryObjects()
+    static const auto getInventoryObjects()
     {
-        static ObjectValueTree object = ClassType::getManagedObj(
+        ObjectValueTree object = ClassType::getManagedObj(
             inventoryManager::interface, inventoryPath);
         return object;
     }
