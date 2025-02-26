@@ -684,13 +684,6 @@ void FruImpl::buildIndividualFRU(const std::string& fruInterface,
             pdrRepo, &entity, updatedRecordHdlHost);
         hostEventDataOps = PLDM_RECORDS_MODIFIED;
     }
-    else
-    {
-        pldm_entity_association_pdr_create_new(
-            pdrRepo, bmc_record_handle, &parent, &entity,
-            &updatedRecordHdlHost);
-        hostEventDataOps = PLDM_RECORDS_ADDED;
-    }
 
     // create the relevant state effecter and sensor PDRs for the new fru record
     std::vector<uint32_t> recordHdlList;
