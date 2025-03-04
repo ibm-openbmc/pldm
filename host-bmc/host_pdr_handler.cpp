@@ -1794,9 +1794,6 @@ void HostPDRHandler::setFRUDynamicAssociations()
                         if (rightPath.parent_path().compare(leftPath) != 0 &&
                             leftPath.parent_path().compare(rightPath) != 0)
                         {
-                            std::cout << "Not a parent child relation "
-                                      << rightPath.string() << "\n";
-                            std::cout << " left child " << leftPath.string();
                             continue;
                         }
                     }

@@ -128,6 +128,7 @@ class Handler : public oem_platform::Handler
         slotHandler(slotHandler), platformHandler(nullptr), mctp_fd(mctp_fd),
         mctp_eid(mctp_eid), instanceIdDb(instanceIdDb), event(event),
         pdrRepo(repo), handler(handler), bmcEntityTree(bmcEntityTree),
+        hostEffecterParser(hostEffecterParser),
         timer(event, std::bind(std::mem_fn(&Handler::setSurvTimer), this,
                                HYPERVISOR_TID, false)),
         hostTransitioningToOff(true)
