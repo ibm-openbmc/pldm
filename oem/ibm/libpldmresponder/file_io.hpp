@@ -789,6 +789,13 @@ class Handler : public CmdHandler
                                 {
                                     vspstring = "system";
                                 }
+                                else if (
+                                    std::get<std::string>(property.second) ==
+                                    "xyz.openbmc_project.Dump.Entry.System.SystemImpact.Disruptive")
+                                {
+                                    return; // it is a disruptive system dump,
+                                            // ignore
+                                }
                             }
                             else if (property.first == "UserChallenge")
                             {
