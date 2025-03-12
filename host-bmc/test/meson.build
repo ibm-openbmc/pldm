@@ -1,8 +1,3 @@
-host_bmc_test_src = declare_dependency(
-    sources: ['../dbus_to_terminus_effecters.cpp'],
-    include_directories: '../../requester',
-)
-
 test_sources = [
     '../utils.cpp',
     '../dbus/associations.cpp',
@@ -55,7 +50,6 @@ foreach t : tests
             dependencies: [
                 gtest,
                 gmock,
-                host_bmc_test_src,
                 libpldm_dep,
                 libpldmutils,
                 nlohmann_json_dep,
