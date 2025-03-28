@@ -203,9 +203,9 @@ class DMA
                        MAP_SHARED, xdmaFd, 0);
         if (MAP_FAILED == memAddr)
         {
-            error("Failed to get memory location with err num '{ERRNO}'",
-                  "ERRNO", errno);
-            return nullptr;
+            error(
+                "Failed to map XDMA get memory location of length {LENGTH} with err num '{ERRNO}'",
+                "LENGTH", pageAlignedLength, "ERRNO", errno);
         }
 
         return memAddr;
