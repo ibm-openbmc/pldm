@@ -92,7 +92,7 @@ int setupUnixSocket(const std::string& socketInterface)
 
     fd_set rfd;
     struct timeval tv;
-    tv.tv_sec = 1;
+    tv.tv_sec = 2;
     tv.tv_usec = 0;
 
     FD_ZERO(&rfd);
@@ -123,6 +123,14 @@ int setupUnixSocket(const std::string& socketInterface)
         }
         close(sock);
     }
+
+    if (retval == 0)
+    {
+        error(
+            "Timed out while waiting for connection on unix socket from external module");
+        close(sock);
+    }
+
     return fd;
 }
 
