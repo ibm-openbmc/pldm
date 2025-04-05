@@ -3,7 +3,6 @@
 #include "common/instance_id.hpp"
 #include "common/transport.hpp"
 #include "common/utils.hpp"
-#include "dbus_impl_requester.hpp"
 #include "fw-update/manager.hpp"
 #include "host-bmc/dbus/deserialize.hpp"
 #include "invoker.hpp"
@@ -207,8 +206,6 @@ int main(int argc, char** argv)
         bus, "/xyz/openbmc_project/sensors");
 
     InstanceIdDb instanceIdDb;
-    dbus_api::Requester dbusImplReq(bus, "/xyz/openbmc_project/pldm",
-                                    instanceIdDb);
     sdbusplus::server::manager_t inventoryManager(
         bus, "/xyz/openbmc_project/inventory");
     sdbusplus::server::manager::manager licObjManager(
