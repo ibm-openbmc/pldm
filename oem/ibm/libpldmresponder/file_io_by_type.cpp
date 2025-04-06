@@ -162,6 +162,14 @@ void FileHandler::transferFileData(
         {
             if (sharedAIORespDataobj.functionPtr != nullptr)
             {
+                rc = close(fd);
+                if (rc == -1)
+                {
+                    rc = -errno;
+                    error("Failed to close the unix FD with errno as '{ERROR_NUM}', length as '{LENGTH}', offset at '{OFFSET}' and upstream flag as '{UPSTREAM}'",
+                          "ERROR_NUM", rc, "LENGTH", length, "OFFSET", offset,
+                          "UPSTREAM", upstream);
+                }
                 rc = sharedAIORespDataobj.functionPtr->postDataTransferCallBack(
                     command == PLDM_WRITE_FILE_BY_TYPE_FROM_MEMORY,
                     data.length);

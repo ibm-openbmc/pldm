@@ -245,6 +245,17 @@ int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
                 "OFFSET", offset);
             return rc;
         }
+        
+        int retCode = fsync(fd);
+        if (retCode == -1)
+        {
+            retCode = -errno;
+            error("Failed to perform unix FD fsync of '{UPSTREAM}' data transfer between BMC and remote terminus with errno as '{RC}', length as '{LEN}' at offset '{OFFSET}'",
+                  "UPSTREAM",upstream, "RC", retCode, "LEN", length,
+                  "OFFSET", offset);
+            return retCode;
+        }
+
         responseByte = rc;
     }
 
