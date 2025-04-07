@@ -68,8 +68,10 @@ bool PCIETopology::pcIeTopologyRefresh(bool value)
     }
     else
     {
-        stateField.push_back({PLDM_REQUEST_SET, GET_PCIE_TOPOLOGY});
-        stateField1.push_back({PLDM_REQUEST_SET, GET_CABLE_INFO});
+        stateField.push_back(
+            {PLDM_REQUEST_SET, PLDM_OEM_IBM_PCIE_TOPOLOGY_GET_PCIE_TOPOLOGY});
+        stateField1.push_back(
+            {PLDM_REQUEST_SET, PLDM_OEM_IBM_PCIE_TOPOLOGY_GET_CABLE_INFO});
     }
 
     if (value && hostEffecterParser)
@@ -129,7 +131,8 @@ bool PCIETopology::savePCIeTopologyInfo(bool value)
     }
     else
     {
-        stateField.push_back({PLDM_REQUEST_SET, SAVE_PCIE_TOPLOGY});
+        stateField.push_back(
+            {PLDM_REQUEST_SET, PLDM_OEM_IBM_PCIE_TOPOLOGY_SAVE_PCIE_TOPLOGY});
     }
 
     if (value && hostEffecterParser)

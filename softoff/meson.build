@@ -20,17 +20,17 @@ executable(
 )
 
 if get_option('systemd').allowed()
-     filesystem.copyfile(
-       'services/pldmSoftPowerOff.service',
-       'pldmSoftPowerOff.service',
-      install: true,
-      install_dir: systemd_system_unit_dir
+    filesystem.copyfile(
+        'services/pldmSoftPowerOff.service',
+        'pldmSoftPowerOff.service',
+        install: true,
+        install_dir: systemd_system_unit_dir,
     )
     filesystem.copyfile(
-      'softoff',
-      'softoff',
-      install: true,
-      install_dir: join_paths(get_option('sysconfdir'), 'default')
+        'softoff',
+        'softoff',
+        install: true,
+        install_dir: join_paths(get_option('sysconfdir'), 'default'),
     )
 endif
 

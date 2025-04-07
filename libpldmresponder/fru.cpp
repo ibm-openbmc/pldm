@@ -397,8 +397,8 @@ void FruImpl::removeIndividualFRU(const std::string& fruObjPath)
     uint32_t updateRecordHdlBmc = 0;
     uint32_t updateRecordHdlHost = 0;
     uint32_t deleteRecordHdl = 0;
-    pldm_pdr_fru_record_find_by_rsi(pdrRepo, rsi, &terminusHdl, &entityType,
-                                    &entityInsNum, &containerId, false);
+    pldm_pdr_fru_record_set_find_by_rsi(pdrRepo, rsi, &terminusHdl, &entityType,
+                                        &entityInsNum, &containerId);
     removeEntity.entity_type = entityType;
     removeEntity.entity_instance_num = entityInsNum;
     removeEntity.entity_container_id = containerId;
