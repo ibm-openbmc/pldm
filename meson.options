@@ -105,19 +105,19 @@ option(
     'instance-id-expiration-interval',
     type: 'integer',
     min: 5,
-    max: 12,
-    value: 10,
+    max: 6,
+    value: 5,
     description: 'Instance ID expiration interval in seconds'
 )
 
-# Default response-time-out set to 5 seconds to facilitate a minimum retry of
-# the request of 5.
+# Default response-time-out set to 2 seconds to facilitate a minimum retry of
+# the request of 2.
 option(
     'response-time-out',
     type: 'integer',
     min: 300,
-    max: 12000,
-    value: 5000,
+    max: 4800,
+    value: 2000,
     description: '''The amount of time a requester has to wait for a response
                     message in milliseconds'''
 )
