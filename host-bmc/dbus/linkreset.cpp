@@ -16,7 +16,6 @@ namespace dbus
 
 bool Link::linkReset(bool value)
 {
-    error("CustomDBus: Got a link reset on: {PATH}", "PATH", path);
     std::vector<set_effecter_state_field> stateField;
 
     if (value ==
@@ -39,6 +38,7 @@ bool Link::linkReset(bool value)
         {
             return false;
         }
+        error("CustomDBus: Got a link reset on: {PATH}", "PATH", path);
 
         error(
             "CustomDBus: Sending a effecter call to host with effecter id: {EFF_ID}",
