@@ -1881,8 +1881,11 @@ void pldm::responder::oem_ibm_platform::Handler::modifyPDROemActions(
         if (!std::empty(pdrs))
         {
             auto bitMap = responder::pdr_utils::fetchBitMap(pdrs);
-            setBitmapMethodCall("/com/ibm/panel_app", "toggleFunctionState",
-                                "com.ibm.panel", bitMap);
+            if (!bitMap.empty())
+            {
+                setBitmapMethodCall("/com/ibm/panel_app", "toggleFunctionState",
+                                    "com.ibm.panel", bitMap);
+            }
         }
     }
 }
