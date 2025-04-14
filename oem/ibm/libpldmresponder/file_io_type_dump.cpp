@@ -92,8 +92,6 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
     }
     else if (dumpType == PLDM_FILE_TYPE_SBE_DUMP)
     {
-        uint32_t dumpIdPrefix = getDumpIdPrefix(PLDM_FILE_TYPE_SBE_DUMP);
-        fileHandle |= dumpIdPrefix;
         std::string idStr = std::format("{:08X}", fileHandle);
 
         curDumpEntryPath = (std::string)dumpEntryObjPath + "/" + idStr;
