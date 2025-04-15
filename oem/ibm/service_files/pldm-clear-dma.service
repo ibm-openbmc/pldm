@@ -1,0 +1,15 @@
+[Unit]
+Description=Ensure pldmd is not hung in DMA
+Wants=obmc-host-stopping@0.target
+After=obmc-host-stopping@0.target
+After=op-stop-instructions@0.service
+Conflicts=obmc-host-startmin@0.target
+
+[Service]
+RemainAfterExit=yes
+Type=oneshot
+ExecStart=/usr/bin/killall -SIGSTOP pldmd
+ExecStart=/usr/bin/killall -SIGCONT pldmd
+
+[Install]
+#WantedBy=obmc-host-stop@0.target
