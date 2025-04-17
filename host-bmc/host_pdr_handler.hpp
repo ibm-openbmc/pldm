@@ -12,6 +12,7 @@
 #include "utils.hpp"
 
 #include <libpldm/base.h>
+#include <libpldm/oem/ibm/state_set.h>
 #include <libpldm/platform.h>
 
 #include <sdeventplus/event.hpp>
