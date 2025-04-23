@@ -741,12 +741,6 @@ void HostPDRHandler::processHostPDRs(
                     pdrTerminusHandle =
                         extractTerminusHandle<pldm_state_effecter_pdr>(pdr);
                     updateContainerId<pldm_state_effecter_pdr>(entityTree, pdr);
-                    if (oemPlatformHandler)
-                    {
-                        oemPlatformHandler->modifyPDROemActions(
-                            (PLDM_ENTITY_CHASSIS_FRONT_PANEL_BOARD | 0x8000),
-                            PLDM_OEM_IBM_PANEL_TRIGGER_STATE);
-                    }
                 }
                 else if (pdrHdr->type == PLDM_NUMERIC_EFFECTER_PDR)
                 {
@@ -901,6 +895,12 @@ void HostPDRHandler::processHostPDRs(
         {
             info("Host is UP & Completed the PDR Exchange with host");
             this->setHostSensorState();
+            if (oemPlatformHandler)
+            {
+                oemPlatformHandler->modifyPDROemActions(
+                    (PLDM_ENTITY_CHASSIS_FRONT_PANEL_BOARD | 0x8000),
+                    PLDM_OEM_IBM_PANEL_TRIGGER_STATE);
+            }
         }
         entityAssociations.clear();
 
