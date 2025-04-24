@@ -4,12 +4,29 @@ Wants=obmc-vpnor-updatesymlinks.service
 After=obmc-vpnor-updatesymlinks.service
 Wants=obmc-flash-bios-init.service
 After=obmc-flash-bios-init.service
-ConditionPathExists=!/var/lib/phosphor-software-manager/hostfw/nvram/PHYP-NVRAM
 
 [Service]
-ExecStart=/usr/bin/create-NVRAM-file
 Type=oneshot
 RemainAfterExit=no
+ExecStart=/bin/sh -c '\
+  mkdir -p /var/lib/phosphor-software-manager/hostfw/nvram; \
+  if [ ! -f /var/lib/phosphor-software-manager/hostfw/nvram/PHYP-NVRAM ]; then \
+    NEED_CREATE=true; \
+  elif [ "$(stat -c%s /var/lib/phosphor-software-manager/hostfw/nvram/PHYP-NVRAM)" -ne $((1024 * 145408)) ]; then \
+    echo "Invalid size, recreating file"; \
+    rm -f /var/lib/phosphor-software-manager/hostfw/nvram/PHYP-NVRAM; \
+    NEED_CREATE=true; \
+  else \
+    NEED_CREATE=false; \
+  fi; \
+  if $NEED_CREATE; then \
+    if [ -f /var/lib/pldm/PHYP-NVRAM ] && [ "$(stat -c%s /var/lib/pldm/PHYP-NVRAM)" -eq $((1024 * 145408)) ]; then \
+      mv /var/lib/pldm/PHYP-NVRAM /var/lib/phosphor-software-manager/hostfw/nvram/PHYP-NVRAM; \
+    else \
+      rm -f /var/lib/pldm/PHYP-NVRAM; \
+      truncate -s $((1024 * 145408)) /var/lib/phosphor-software-manager/hostfw/nvram/PHYP-NVRAM; \
+    fi; \
+  fi'
 
 [Install]
 WantedBy=pldmd.service
