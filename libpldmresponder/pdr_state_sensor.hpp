@@ -135,7 +135,8 @@ void generateStateSensorPDR(const DBusInterface& dBusIntf, const Json& json,
 
                     uint32_t bmc_record_handle = 0;
                     auto lastLocalRecord = pldm_pdr_find_last_in_range(
-                        repo.getPdr(), BMC_PDR_START_RANGE, BMC_PDR_END_RANGE);
+                        repo.getPdr(), pldm::utils::BMC_PDR_START_RANGE,
+                        pldm::utils::BMC_PDR_END_RANGE);
                     bmc_record_handle = pldm_pdr_get_record_handle(
                         repo.getPdr(), lastLocalRecord);
                     [[maybe_unused]] uint8_t bmcEventDataOps;

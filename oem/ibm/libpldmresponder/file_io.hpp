@@ -11,7 +11,6 @@
 #include <libpldm/base.h>
 #include <libpldm/oem/ibm/file_io.h>
 #include <libpldm/oem/ibm/host.h>
-#include <stdint.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>

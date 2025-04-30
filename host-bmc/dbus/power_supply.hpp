@@ -1,5 +1,7 @@
 #pragma once
 
+#include "serialize.hpp"
+
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server.hpp>
 #include <sdbusplus/server/object.hpp>

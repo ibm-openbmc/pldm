@@ -785,7 +785,7 @@ void HostPDRHandler::processHostPDRs(
                 {
                     if ((isHostPdrModified == true) || !(modifiedCounter == 0))
                     {
-                        pldm_delete_by_record_handle(repo, rh, true);
+                        pldm_pdr_delete_by_record_handle(repo, rh, true);
 
                         rc = pldm_pdr_add(repo, pdr.data(), respCount, true,
                                           pdrTerminusHandle, &rh);
@@ -830,10 +830,10 @@ void HostPDRHandler::processHostPDRs(
                     else if ((isHostPdrModified != true) &&
                              (modifiedCounter == 0))
                     {
-                        pldm_delete_by_record_handle(repo, rh, true);
+                        pldm_pdr_delete_by_record_handle(repo, rh, true);
 
-                        rc = pldm_pdr_add_check(repo, pdr.data(), respCount,
-                                                true, pdrTerminusHandle, &rh);
+                        rc = pldm_pdr_add(repo, pdr.data(), respCount, true,
+                                          pdrTerminusHandle, &rh);
                         if (rc)
                         {
                             throw std::runtime_error(
@@ -842,8 +842,8 @@ void HostPDRHandler::processHostPDRs(
                     }
                     else
                     {
-                        rc = pldm_pdr_add_check(repo, pdr.data(), respCount,
-                                                true, pdrTerminusHandle, &rh);
+                        rc = pldm_pdr_add(repo, pdr.data(), respCount, true,
+                                          pdrTerminusHandle, &rh);
                         if (rc)
                         {
                             throw std::runtime_error("Failed to add PDR");
@@ -2022,7 +2022,7 @@ void HostPDRHandler::deletePDRFromRepo(PDRRecordHandles&& recordHandles)
         error("Record handle deleted: {REC_HANDLE}", "REC_HANDLE",
               recordHandle);
         this->setRecordPresent(recordHandle);
-        pldm_delete_by_record_handle(repo, recordHandle, true);
+        pldm_pdr_delete_by_record_handle(repo, recordHandle, true);
     }
 }
 

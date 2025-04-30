@@ -74,7 +74,7 @@ if get_option('libpldmresponder').allowed()
     conf_data.set('DBUS_TIMEOUT', get_option('dbus-timeout-value'))
     conf_data.set_quoted('PLDM_STORE_FILE', '/var/lib/pldm/pldm_store')
     conf_data.set_quoted('DBUS_JSON_FILE', '/usr/share/pldm/dbus-config.json')
-    add_project_arguments('-DLIBPLDMRESPONDER', language: ['c','cpp'])
+    add_project_arguments('-DLIBPLDMRESPONDER', language: ['c', 'cpp'])
 endif
 if get_option('softoff').allowed()
     conf_data.set(
@@ -221,14 +221,16 @@ has_cereal = cpp.has_header_symbol(
     'cereal/cereal.hpp',
     'cereal::specialize',
     dependencies: cereal_dep,
-    required: false)
+    required: false,
+)
 if not has_cereal
     cereal_opts = import('cmake').subproject_options()
     cereal_opts.add_cmake_defines({'BUILD_TESTS': 'OFF'})
     cereal_proj = import('cmake').subproject(
         'cereal',
         options: cereal_opts,
-        required: false)
+        required: false,
+    )
     assert(cereal_proj.found(), 'cereal is required')
     cereal_dep = cereal_proj.dependency('cereal')
 endif
@@ -238,14 +240,16 @@ has_cereal = cpp.has_header_symbol(
     'cereal/cereal.hpp',
     'cereal::specialize',
     dependencies: cereal_dep,
-    required: false)
+    required: false,
+)
 if not has_cereal
     cereal_opts = import('cmake').subproject_options()
     cereal_opts.add_cmake_defines({'BUILD_TESTS': 'OFF'})
     cereal_proj = import('cmake').subproject(
         'cereal',
         options: cereal_opts,
-        required: false)
+        required: false,
+    )
     assert(cereal_proj.found(), 'cereal is required')
     cereal_dep = cereal_proj.dependency('cereal')
 endif
@@ -310,7 +314,7 @@ subdir('pldmtool')
 subdir('configurations')
 
 if get_option('oem-ibm').enabled()
-  subdir('oem/ibm/pfw-sms-utils')
+    subdir('oem/ibm/pfw-sms-utils')
 endif
 
 if get_option('utilities').allowed()
