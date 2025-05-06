@@ -5,7 +5,6 @@
 #include "host-bmc/dbus_to_event_handler.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
 #include "oem_handler.hpp"
-#include "pldmd/dbus_impl_requester.hpp"
 #include "pldmd/handler.hpp"
 #include "requester/handler.hpp"
 
@@ -20,7 +19,6 @@
 #include <vector>
 
 using namespace pldm::utils;
-using namespace pldm::dbus_api;
 namespace pldm
 {
 
@@ -92,13 +90,14 @@ class FruImpl
     FruImpl(const std::string& configPath,
             const std::filesystem::path& fruMasterJsonPath, pldm_pdr* pdrRepo,
             pldm_entity_association_tree* entityTree,
-            pldm_entity_association_tree* bmcEntityTree, Requester& requester,
+            pldm_entity_association_tree* bmcEntityTree,
+            pldm::InstanceIdDb& instanceIdDb,
             pldm::requester::Handler<pldm::requester::Request>* handler,
             uint8_t mctp_eid, sdeventplus::Event& /*event*/,
             pldm::state_sensor::DbusToPLDMEvent* dbusToPLDMEventHandler) :
         parser(configPath, fruMasterJsonPath), pdrRepo(pdrRepo),
         entityTree(entityTree), bmcEntityTree(bmcEntityTree),
-        requester(requester), handler(handler),
+        instanceIdDb(instanceIdDb), handler(handler),
         mctp_eid(mctp_eid), // event(event),
         dbusToPLDMEventHandler(dbusToPLDMEventHandler), oemUtilsHandler(nullptr)
     {
@@ -309,7 +308,7 @@ class FruImpl
     pldm_entity_association_tree* entityTree;
     pldm_entity_association_tree* bmcEntityTree;
     pldm::responder::oem_fru::Handler* oemFruHandler = nullptr;
-    Requester& requester;
+    pldm::InstanceIdDb& instanceIdDb;
     pldm::requester::Handler<pldm::requester::Request>* handler;
     uint8_t mctp_eid;
     pldm::state_sensor::DbusToPLDMEvent* dbusToPLDMEventHandler;
@@ -431,12 +430,13 @@ class Handler : public CmdHandler
     Handler(const std::string& configPath,
             const std::filesystem::path& fruMasterJsonPath, pldm_pdr* pdrRepo,
             pldm_entity_association_tree* entityTree,
-            pldm_entity_association_tree* bmcEntityTree, Requester& requester,
+            pldm_entity_association_tree* bmcEntityTree,
+            pldm::InstanceIdDb& instanceIdDb,
             pldm::requester::Handler<pldm::requester::Request>* handler,
             uint8_t mctp_eid, sdeventplus::Event& event,
             pldm::state_sensor::DbusToPLDMEvent* dbusToPLDMEventHandler) :
         impl(configPath, fruMasterJsonPath, pdrRepo, entityTree, bmcEntityTree,
-             requester, handler, mctp_eid, event, dbusToPLDMEventHandler)
+             instanceIdDb, handler, mctp_eid, event, dbusToPLDMEventHandler)
     {
         handlers.emplace(
             PLDM_GET_FRU_RECORD_TABLE_METADATA,

@@ -153,16 +153,6 @@ void CustomDBus::updateInventoryItemProperties(
     }
 }
 
-void CustomDBus::implementChassisInterface(const std::string& path)
-{
-    if (chassis.find(path) == chassis.end())
-    {
-        chassis.emplace(path,
-                        std::make_unique<ItemChassis>(
-                            pldm::utils::DBusHandler::getBus(), path.c_str()));
-    }
-}
-
 void CustomDBus::implementPCIeSlotInterface(const std::string& path)
 {
     if (!pcieSlot.contains(path))
@@ -249,53 +239,13 @@ void CustomDBus::implementAssetInterface(const std::string& path)
     }
 }
 
-void CustomDBus::implementPowerSupplyInterface(const std::string& path)
-{
-    if (powersupply.find(path) == powersupply.end())
-    {
-        powersupply.emplace(
-            path, std::make_unique<PowerSupply>(
-                      pldm::utils::DBusHandler::getBus(), path.c_str()));
-    }
-}
-
-void CustomDBus::implementFanInterface(const std::string& path)
-{
-    if (fan.find(path) == fan.end())
-    {
-        fan.emplace(path,
-                    std::make_unique<Fan>(pldm::utils::DBusHandler::getBus(),
-                                          path.c_str()));
-    }
-}
-
-void CustomDBus::implementConnecterInterface(const std::string& path)
-{
-    if (connector.find(path) == connector.end())
-    {
-        connector.emplace(
-            path, std::make_unique<Connector>(
-                      pldm::utils::DBusHandler::getBus(), path.c_str()));
-    }
-}
-
 void CustomDBus::implementPortInterface(const std::string& path)
 {
-    if (port.find(path) == port.end())
+    if (!port.contains(path))
     {
         port.emplace(path,
                      std::make_unique<Port>(pldm::utils::DBusHandler::getBus(),
                                             path.c_str()));
-    }
-}
-
-void CustomDBus::implementVRMInterface(const std::string& path)
-{
-    if (vrm.find(path) == vrm.end())
-    {
-        vrm.emplace(path,
-                    std::make_unique<VRM>(pldm::utils::DBusHandler::getBus(),
-                                          path.c_str()));
     }
 }
 
@@ -476,16 +426,6 @@ void CustomDBus::implementFabricAdapter(const std::string& path)
         fabricAdapter.emplace(
             path, std::make_unique<FabricAdapter>(
                       pldm::utils::DBusHandler::getBus(), path.c_str()));
-    }
-}
-
-void CustomDBus::implementBoard(const std::string& path)
-{
-    if (!board.contains(path))
-    {
-        board.emplace(path,
-                      std::make_unique<Board>(
-                          pldm::utils::DBusHandler::getBus(), path.c_str()));
     }
 }
 
@@ -720,62 +660,6 @@ void CustomDBus::implementChassisInterface(const std::string& path)
         chassis.emplace(path,
                         std::make_unique<ItemChassis>(
                             pldm::utils::DBusHandler::getBus(), path.c_str()));
-    }
-}
-
-void CustomDBus::implementAssetInterface(const std::string& path)
-{
-    if (!asset.contains(path))
-    {
-        asset.emplace(path, std::make_unique<Asset>(
-                                pldm::utils::DBusHandler::getBus(), path));
-    }
-}
-
-void CustomDBus::setAvailabilityState(const std::string& path,
-                                      const bool& state)
-{
-    if (!availabilityState.contains(path))
-    {
-        availabilityState.emplace(
-            path, std::make_unique<Availability>(
-                      pldm::utils::DBusHandler::getBus(), path.c_str()));
-    }
-
-    availabilityState.at(path)->available(state);
-}
-
-void CustomDBus::updateItemPresentStatus(const std::string& path,
-                                         bool isPresent)
-{
-    if (!presentStatus.contains(path))
-    {
-        presentStatus.emplace(
-            path, std::make_unique<InventoryItem>(
-                      pldm::utils::DBusHandler::getBus(), path.c_str()));
-        std::filesystem::path ObjectPath(path);
-
-        // Hardcode the present dbus property to true
-        presentStatus.at(path)->present(true);
-
-        // Set the pretty name dbus property to the filename
-        // form the dbus path object
-        presentStatus.at(path)->prettyName(ObjectPath.filename());
-    }
-    else
-    {
-        // object is already created
-        presentStatus.at(path)->present(isPresent);
-    }
-}
-
-void CustomDBus::implementPanelInterface(const std::string& path)
-{
-    if (!panel.contains(path))
-    {
-        panel.emplace(path,
-                      std::make_unique<Panel>(
-                          pldm::utils::DBusHandler::getBus(), path.c_str()));
     }
 }
 

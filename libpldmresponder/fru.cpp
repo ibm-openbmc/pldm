@@ -1057,7 +1057,7 @@ void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
               "RC", static_cast<int>(rc));
         return;
     }
-    auto instanceId = requester.getInstanceId(mctp_eid);
+    auto instanceId = instanceIdDb.next(mctp_eid);
     std::vector<uint8_t> requestMsg(
         sizeof(pldm_msg_hdr) + PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES +
         actualSize);
@@ -1068,7 +1068,7 @@ void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
         actualSize + PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES);
     if (rc != PLDM_SUCCESS)
     {
-        requester.markFree(mctp_eid, instanceId);
+        instanceIdDb.free(mctp_eid, instanceId);
         error("Failed to encode_platform_event_message_req, rc = {RC}", "RC",
               static_cast<unsigned>(rc));
         return;
@@ -1461,8 +1461,8 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
     return idList;
 }
 
-uint32_t
-    FruImpl::addHotPlugRecord(pldm::responder::pdr_utils::PdrEntry pdrEntry)
+uint32_t FruImpl::addHotPlugRecord(
+    pldm::responder::pdr_utils::PdrEntry pdrEntry)
 {
     uint32_t lastHandle = 0;
     uint32_t record_handle = 0;

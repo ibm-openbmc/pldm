@@ -1601,11 +1601,6 @@ void HostPDRHandler::setInventoryItemProperties(const std::string& path,
         path, true, prettyName);
 }
 
-void HostPDRHandler::setPresentPropertyStatus(const std::string& path)
-{
-    CustomDBus::getCustomDBus().updateItemPresentStatus(path, true);
-}
-
 void HostPDRHandler::setAvailabilityState(const std::string& path)
 {
     CustomDBus::getCustomDBus().setAvailabilityState(path, true);
@@ -1659,7 +1654,7 @@ void HostPDRHandler::createDbusObjects()
                 CustomDBus::getCustomDBus().implementChassisInterface(
                     entity.first);
                 CustomDBus::getCustomDBus().implementGlobalInterface(
-		    entity.first);
+                    entity.first);
                 break;
             case PLDM_ENTITY_POWER_SUPPLY:
                 CustomDBus::getCustomDBus().implementPowerSupplyInterface(
@@ -1672,27 +1667,8 @@ void HostPDRHandler::createDbusObjects()
             case PLDM_ENTITY_POWER_CONVERTER:
                 CustomDBus::getCustomDBus().implementVRMInterface(entity.first);
                 break;
-            case PLDM_ENTITY_SLOT:
-                CustomDBus::getCustomDBus().implementPCIeSlotInterface(
-                    entity.first);
-                break;
-            case PLDM_ENTITY_POWER_SUPPLY:
-                CustomDBus::getCustomDBus().implementPowerSupplyInterface(
-		    entity.first);
-		break;
-            case PLDM_ENTITY_CONNECTOR:
-                CustomDBus::getCustomDBus().implementConnecterInterface(
-                    entity.first);
-                break;
-            case PLDM_ENTITY_BOARD:
-                CustomDBus::getCustomDBus().implementBoard(entity.first);
-                break;
             case PLDM_ENTITY_CARD:
                 CustomDBus::getCustomDBus().implementPCIeDeviceInterface(
-                    entity.first);
-                break;
-            case PLDM_ENTITY_CHASSIS_FRONT_PANEL_BOARD:
-                CustomDBus::getCustomDBus().implementPanelInterface(
                     entity.first);
                 break;
             case PLDM_ENTITY_FAN:
@@ -1701,15 +1677,6 @@ void HostPDRHandler::createDbusObjects()
             case PLDM_ENTITY_SYS_BOARD:
                 CustomDBus::getCustomDBus().implementMotherboardInterface(
                     entity.first);
-                break;
-            case PLDM_ENTITY_POWER_CONVERTER:
-                CustomDBus::getCustomDBus().implementVRMInterface(entity.first);
-                break;
-            case PLDM_ENTITY_SLOT:
-                CustomDBus::getCustomDBus().implementPCIeSlotInterface(
-                    entity.first);
-                CustomDBus::getCustomDBus().setLinkReset(
-                    entity.first, false, hostEffecterParser, mctp_eid);
                 break;
             case PLDM_ENTITY_CONNECTOR:
                 CustomDBus::getCustomDBus().implementConnecterInterface(
@@ -1722,10 +1689,6 @@ void HostPDRHandler::createDbusObjects()
             case PLDM_ENTITY_BOARD:
             case PLDM_ENTITY_MODULE:
                 CustomDBus::getCustomDBus().implementBoard(entity.first);
-                break;
-            case PLDM_ENTITY_CARD:
-                CustomDBus::getCustomDBus().implementPCIeDeviceInterface(
-                    entity.first);
                 break;
             case PLDM_ENTITY_IO_MODULE:
                 CustomDBus::getCustomDBus().implementFabricAdapter(
@@ -1741,13 +1704,6 @@ void HostPDRHandler::createDbusObjects()
                     "xyz.openbmc_project.Inventory.Item.PCIeSlot.SlotTypes.OEM");
                 CustomDBus::getCustomDBus().setLinkReset(
                     entity.first, false, hostEffecterParser, mctp_eid);
-            case PLDM_ENTITY_FAN:
-                CustomDBus::getCustomDBus().implementFanInterface(entity.first);
-                break;
-            case PLDM_ENTITY_IO_MODULE:
-                CustomDBus::getCustomDBus().implementFabricAdapter(
-                    entity.first);
-                break;
             default:
                 break;
         }
@@ -1940,8 +1896,8 @@ void HostPDRHandler::setOperationStatus()
     }
 }
 
-std::optional<std::string_view>
-    HostPDRHandler::fetchPrettyName(const pldm_entity& entity)
+std::optional<std::string_view> HostPDRHandler::fetchPrettyName(
+    const pldm_entity& entity)
 {
     if (entityAuxiliaryNamesList.empty())
     {

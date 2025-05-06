@@ -256,7 +256,7 @@ class TerminusManager
     /** @brief Reference to a Handler object that manages the request/response
      *         logic.
      */
-    // RequesterHandler& handler;
+    [[maybe_unused]] RequesterHandler& handler;
 
     /** @brief Reference to the instanceID data base from libpldm */
     pldm::InstanceIdDb& instanceIdDb;

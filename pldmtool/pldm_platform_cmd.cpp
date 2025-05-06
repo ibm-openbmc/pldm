@@ -910,7 +910,7 @@ class GetPDR : public CommandInterface
         output["containedEntityCount"] =
             static_cast<unsigned>(pdr->num_children);
 
-        pldm_entity* child = new (&pdr->children[0]) pldm_entity();
+        auto child = reinterpret_cast<pldm_entity*>(&pdr->children[0]);
         for (int i = 0; i < pdr->num_children; ++i)
         {
             output.emplace("containedEntityType[" + std::to_string(i + 1) + "]",

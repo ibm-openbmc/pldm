@@ -624,9 +624,9 @@ std::vector<std::vector<pldm::pdr::Pdr_t>> getStateSensorPDRsByType(
  *
  *  @return vector of all sensor IDs
  */
-std::vector<pldm::pdr::SensorID>
-    findSensorIds(const pldm_pdr* pdrRepo, uint8_t /*tid*/, uint16_t entityType,
-                  uint16_t entityInstance, uint16_t containerId);
+std::vector<pldm::pdr::SensorID> findSensorIds(
+    const pldm_pdr* pdrRepo, uint8_t /*tid*/, uint16_t entityType,
+    uint16_t entityInstance, uint16_t containerId);
 
 /** @brief method to find effecter IDs based on the pldm_entity
  *

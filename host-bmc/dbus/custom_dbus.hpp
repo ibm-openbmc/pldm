@@ -1,18 +1,13 @@
 #pragma once
 
-#include "../dbus_to_terminus_effecters.hpp"
 #include "asset.hpp"
 #include "associations.hpp"
-#include "availability.hpp"
-#include "board.hpp"
-#include "asset.hpp"
 #include "availability.hpp"
 #include "board.hpp"
 #include "cable.hpp"
 #include "chapdata.hpp"
 #include "chassis.hpp"
 #include "com/ibm/License/Entry/LicenseEntry/server.hpp"
-#include "chassis.hpp"
 #include "common/utils.hpp"
 #include "connector.hpp"
 #include "cpu_core.hpp"
@@ -26,18 +21,14 @@
 #include "license_entry.hpp"
 #include "linkreset.hpp"
 #include "location_code.hpp"
-#include "fabric_adapter.hpp"
-#include "fan.hpp"
-#include "inventory_item.hpp"
 #include "motherboard.hpp"
 #include "operational_status.hpp"
 #include "panel.hpp"
 #include "pcie_device.hpp"
 #include "pcie_slot.hpp"
 #include "pcie_topology.hpp"
+#include "platform-mc/dbus_to_terminus_effecters.hpp"
 #include "port.hpp"
-#include "power_supply.hpp"
-#include "vrm.hpp"
 #include "power_supply.hpp"
 #include "vrm.hpp"
 
@@ -415,81 +406,6 @@ class CustomDBus
         const std::string& path, bool value,
         pldm::host_effecters::HostEffecterParser* hostEffecterParser,
         uint8_t instanceId);
-    
-    /** @brief Implement Fan Interface
-     *
-     *  @param[in] path - The object path
-     *
-     */
-    void implementFanInterface(const std::string& path);
-
-    /** @brief Implement Chassis Interface
-     *  @param[in] path - the object path
-     */
-    void implementChassisInterface(const std::string& path);
-
-    /** @brief Implement PowerSupply Interface
-     *
-     *  @param[in] path - The object path
-     *
-     */
-    void implementPowerSupplyInterface(const std::string& path);
-
-    /** @brief Implement Connector Interface
-     *
-     *  @param[in] path - The object path
-     *
-     */
-    void implementConnecterInterface(const std::string& path);
-
-    /** @brief Implement Fabric Adapter Interface
-     *
-     *  @param[in] path - The object path
-     *
-     */
-    void implementFabricAdapter(const std::string& path);
-
-    /** @brief Implement Board Interface
-     *
-     *  @param[in] path - The object path
-     *
-     */
-    void implementBoard(const std::string& path);
-
-    /** @brief Implement Asset Interface
-     *
-     *  @param[in] path - The object path
-     *
-     */
-    void implementAssetInterface(const std::string& path);
-
-    /** @brief Set the availability state property
-     *
-     *  @param[in] path   - The object path
-     *
-     *  @param[in] state  - Availability state
-     */
-    void setAvailabilityState(const std::string& path, const bool& state);
-
-    /** @brief Set the Inventory Item property
-     *  @param[in] path - The object path
-     *  @param[in] bool - the presence of fru
-     */
-    void updateItemPresentStatus(const std::string& path, bool isPresent);
-
-    /** @brief Implement Panel Interface
-     *
-     *  @param[in] path - The object path
-     *
-     */
-    void implementPanelInterface(const std::string& path);
-
-    /** @brief Implement Voltage Regulator Module Interface
-     *
-     *  @param[in] path - The object path
-     *
-     */
-    void implementVRMInterface(const std::string& path);
 
   private:
     std::unordered_map<ObjectPath, std::unique_ptr<LocationCode>> location;
@@ -501,9 +417,6 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
     std::unordered_map<ObjectPath, std::unique_ptr<Availability>>
         availabilityState;
-    std::unordered_map<ObjectPath, std::unique_ptr<LocationIntf>> location;
-    std::unordered_map<ObjectPath, std::unique_ptr<InventoryItem>>
-        presentStatus;
     std::unordered_map<ObjectPath, std::unique_ptr<CPUCore>> cpuCore;
     std::unordered_map<ObjectPath, std::unique_ptr<Enable>> enabledStatus;
     std::unordered_map<ObjectPath, std::unique_ptr<Fan>> fan;
@@ -514,35 +427,20 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<Board>> board;
     std::unordered_map<ObjectPath, std::unique_ptr<FabricAdapter>>
         fabricAdapter;
-    std::unordered_map<ObjectPath, std::unique_ptr<ItemChassis>> chassis;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIeDevice>> pcieDevice;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIeSlot>> pcieSlot;
-    std::unordered_map<ObjectPath, std::unique_ptr<PowerSupply>> powersupply;
-    std::unordered_map<ObjectPath, std::unique_ptr<Board>> board;
-    std::unordered_map<ObjectPath, std::unique_ptr<FabricAdapter>>
-        fabricAdapter;
     std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
     std::unordered_map<ObjectPath, std::unique_ptr<Motherboard>> motherboard;
     std::unordered_map<ObjectPath, std::unique_ptr<ChapDatas>> chapdata;
-    std::unordered_map<ObjectPath, std::unique_ptr<Availability>>
-        availabilityState;
-    std::unordered_map<ObjectPath, std::unique_ptr<PCIeSlot>> pcieSlot;
     std::unordered_map<ObjectPath, std::unique_ptr<LicenseEntry>> codLic;
     std::unordered_map<ObjectPath, std::unique_ptr<Associations>> associations;
     std::unordered_map<ObjectPath, std::unique_ptr<LEDGroup>> ledGroup;
     std::unordered_map<ObjectPath, std::unique_ptr<DecoratorRevision>>
         softWareVersion;
-    std::unordered_map<ObjectPath, std::unique_ptr<PCIeDevice>> pcieDevice;
     std::unordered_map<ObjectPath, std::unique_ptr<Port>> port;
-    std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
-    std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIETopology>> pcietopology;
     std::unordered_map<ObjectPath, std::unique_ptr<Link>> link;
     std::unordered_map<ObjectPath, std::unique_ptr<Panel>> panel;
-    std::unordered_map<ObjectPath, std::unique_ptr<Fan>> fan;
-    std::unordered_map<ObjectPath, std::unique_ptr<Connector>> connector;
-    std::unordered_map<ObjectPath, std::unique_ptr<Panel>> panel;
-    std::unordered_map<ObjectPath, std::unique_ptr<VRM>> vrm;
 };
 
 } // namespace dbus

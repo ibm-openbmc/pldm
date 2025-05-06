@@ -267,8 +267,8 @@ EntityMaps parseEntityMap(const fs::path& filePath)
     return entityMaps;
 }
 
-std::shared_ptr<EntityAuxiliaryNames>
-    parseEntityAuxNamesPDR(std::vector<uint8_t>& pdrData)
+std::shared_ptr<EntityAuxiliaryNames> parseEntityAuxNamesPDR(
+    std::vector<uint8_t>& pdrData)
 {
     auto names_offset = sizeof(struct pldm_pdr_hdr) +
                         PLDM_PDR_ENTITY_AUXILIARY_NAME_PDR_MIN_LENGTH;

@@ -407,8 +407,8 @@ int createOrUpdateLicenseObjs()
 
     return rc;
 }
-std::pair<std::string, std::string>
-    getSlotAndAdapter(const std::string& portLocationCode)
+std::pair<std::string, std::string> getSlotAndAdapter(
+    const std::string& portLocationCode)
 {
     std::filesystem::path portPath =
         pldm::responder::utils::getObjectPathByLocationCode(
@@ -417,8 +417,8 @@ std::pair<std::string, std::string>
                           portPath.parent_path());
 }
 
-void
-    hostChapDataIntf(pldm::responder::oem_fileio::Handler* dbusToFilehandlerObj)
+void hostChapDataIntf(
+    pldm::responder::oem_fileio::Handler* dbusToFilehandlerObj)
 {
     CustomDBus::getCustomDBus().implementChapDataInterface(
         "/xyz/openbmc_project/pldm", dbusToFilehandlerObj);

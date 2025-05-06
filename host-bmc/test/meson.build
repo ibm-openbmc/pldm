@@ -1,3 +1,6 @@
+host_bmc_test_src = declare_dependency(
+    sources: ['../../platform-mc/dbus_to_terminus_effecters.cpp'],
+)
 test_sources = [
     '../utils.cpp',
     '../dbus/associations.cpp',
@@ -32,12 +35,7 @@ if get_option('oem-ibm').enabled()
     test_sources += '../../oem/ibm/libpldmresponder/utils.cpp'
 endif
 
-tests = [
-    'dbus_to_terminus_effecter_test',
-    'utils_test',
-    'custom_dbus_test',
-    'serialize_test',
-]
+tests = ['utils_test', 'custom_dbus_test', 'serialize_test']
 
 foreach t : tests
     test(
@@ -50,6 +48,7 @@ foreach t : tests
             dependencies: [
                 gtest,
                 gmock,
+                host_bmc_test_src,
                 libpldm_dep,
                 libpldmutils,
                 nlohmann_json_dep,

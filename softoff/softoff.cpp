@@ -310,8 +310,7 @@ int SoftPowerOff::hostSoftOff(sdeventplus::Event& event)
                    sizeof(effecterCount) + sizeof(set_effecter_state_field)>
         requestMsg{};
     auto request = new (requestMsg.data()) pldm_msg;
-    set_effecter_state_field stateField{
-        PLDM_REQUEST_SET, PLDM_SW_TERM_GRACEFUL_SHUTDOWN_REQUESTED};
+    set_effecter_state_field stateField{PLDM_REQUEST_SET, effecterState};
     instanceID = instanceIdDb.next(pldmTID);
     auto rc = encode_set_state_effecter_states_req(
         instanceID, effecterID, effecterCount, &stateField, request);
