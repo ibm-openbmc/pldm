@@ -1035,15 +1035,6 @@ class Handler : public CmdHandler
      */
     void postWriteCallBack(const uint16_t& fileType, const uint32_t& fileHandle,
                            const struct fileack_status_metadata& metaDataObj);
-    /** @brief Handler for newFileAvailableWithMetaData command
-     *
-     *  @param[in] request - PLDM request msg
-     *  @param[in] payloadLength - length of the message payload
-     *
-     *  @return PLDM response messsage
-     */
-    Response newFileAvailableWithMetaData(const pldm_msg* request,
-                                          size_t payloadLength);
 
   private:
     oem_platform::Handler* oemPlatformHandler;

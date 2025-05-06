@@ -839,9 +839,9 @@ std::vector<std::vector<pldm::pdr::Pdr_t>> getStateSensorPDRsByType(
     return pdrs;
 }
 
-std::vector<pldm::pdr::SensorID>
-    findSensorIds(const pldm_pdr* pdrRepo, uint8_t tid, uint16_t entityType,
-                  uint16_t entityInstance, uint16_t containerId)
+std::vector<pldm::pdr::SensorID> findSensorIds(
+    const pldm_pdr* pdrRepo, uint8_t tid, uint16_t entityType,
+    uint16_t entityInstance, uint16_t containerId)
 {
     std::vector<uint16_t> sensorIDs;
 
@@ -925,9 +925,9 @@ std::vector<std::vector<pldm::pdr::Pdr_t>> getStateEffecterPDRsByType(
     return pdrs;
 }
 
-std::vector<pldm::pdr::EffecterID>
-    findEffecterIds(const pldm_pdr* pdrRepo, uint8_t tid, uint16_t entityType,
-                    uint16_t entityInstance, uint16_t containerId)
+std::vector<pldm::pdr::EffecterID> findEffecterIds(
+    const pldm_pdr* pdrRepo, uint8_t tid, uint16_t entityType,
+    uint16_t entityInstance, uint16_t containerId)
 {
     std::vector<uint16_t> effecterIDs;
 
@@ -1037,8 +1037,8 @@ void setBiosAttr(const BiosAttributeList& biosAttrList)
     }
 }
 
-std::optional<std::string>
-    fruFieldValuestring(const uint8_t* value, const uint8_t& length)
+std::optional<std::string> fruFieldValuestring(const uint8_t* value,
+                                               const uint8_t& length)
 {
     if (!value || !length)
     {

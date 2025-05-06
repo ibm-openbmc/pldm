@@ -60,6 +60,7 @@ sources = [
     '../host-bmc/dbus/deserialize.cpp',
     '../host-bmc/dbus/pcie_topology.cpp',
     '../host-bmc/dbus/linkreset.cpp',
+    '../platform-mc/dbus_to_terminus_effecters.cpp',
     'event_parser.cpp',
 ]
 

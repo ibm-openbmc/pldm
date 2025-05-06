@@ -3,7 +3,6 @@
 #include "common/instance_id.hpp"
 #include "common/types.hpp"
 #include "common/utils.hpp"
-#include "pldmd/dbus_impl_requester.hpp"
 #include "platform-mc/manager.hpp"
 #include "requester/handler.hpp"
 

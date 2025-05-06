@@ -204,7 +204,6 @@ int DumpHandler::newFileAvailable(uint64_t length)
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
     {
         // Setting the Notify path for resource dump
-        notifyObjPath = resDumpObjPath;
         notifyDumpType =
             sdbusplus::common::com::ibm::dump::Notify::DumpType::Resource;
     }

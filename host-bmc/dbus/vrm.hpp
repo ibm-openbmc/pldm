@@ -31,7 +31,6 @@ class VRM : public ItemVRM
     {
         pldm::serialize::Serialize::getSerialize().serialize(objPath, "VRM");
     }
-
 };
 
 } // namespace dbus
