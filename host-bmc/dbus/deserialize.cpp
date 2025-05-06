@@ -197,8 +197,8 @@ std::unordered_map<std::string, callback> dBusInterfaceHandler{
 
 };
 
-std::pair<std::set<uint16_t>, std::set<uint16_t>>
-    getEntityTypes(const fs::path& path)
+std::pair<std::set<uint16_t>, std::set<uint16_t>> getEntityTypes(
+    const fs::path& path)
 {
     std::set<uint16_t> restoreTypes{};
     std::set<uint16_t> storeTypes{};

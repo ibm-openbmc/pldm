@@ -216,6 +216,12 @@ int main(int argc, char** argv)
     requester::Handler<requester::Request> reqHandler(&pldmTransport, event,
                                                       instanceIdDb, verbose);
     pldm::response_api::ResponseInterface respInterface;
+
+    DBusHandler dbusHandler;
+
+    std::unique_ptr<platform_mc::Manager> platformManager =
+        std::make_unique<platform_mc::Manager>(event, reqHandler, instanceIdDb);
+
 #ifdef LIBPLDMRESPONDER
     using namespace pldm::state_sensor;
     dbus_api::Host dbusImplHost(bus, "/xyz/openbmc_project/pldm");
@@ -225,7 +231,6 @@ int main(int argc, char** argv)
     {
         throw std::runtime_error("Failed to instantiate PDR repository");
     }
-    DBusHandler dbusHandler;
 
     std::unique_ptr<pldm_entity_association_tree,
                     decltype(&pldm_entity_association_tree_destroy)>
@@ -264,7 +269,8 @@ int main(int argc, char** argv)
         hostEffecterParser =
             std::make_unique<pldm::host_effecters::HostEffecterParser>(
                 &instanceIdDb, pldmTransport.getEventSource(), pdrRepo.get(),
-                &dbusHandler, HOST_JSONS_DIR, &reqHandler);
+                &dbusHandler, HOST_JSONS_DIR, &reqHandler,
+                platformManager.get());
         hostPDRHandler = std::make_shared<HostPDRHandler>(
             pldmTransport.getEventSource(), hostEID, event, pdrRepo.get(),
             EVENTS_JSONS_DIR, entityTree.get(), bmcEntityTree.get(),
@@ -281,7 +287,7 @@ int main(int argc, char** argv)
 
     auto fruHandler = std::make_unique<fru::Handler>(
         FRU_JSONS_DIR, FRU_MASTER_JSON, pdrRepo.get(), entityTree.get(),
-        bmcEntityTree.get(), dbusImplReq, &reqHandler, hostEID, event,
+        bmcEntityTree.get(), instanceIdDb, &reqHandler, hostEID, event,
         dbusToPLDMEventHandler.get());
     // fruHandler->setOemUtilsHandler(oemUtilsHandler.get());
 
@@ -355,8 +361,6 @@ int main(int argc, char** argv)
 
     std::unique_ptr<fw_update::Manager> fwManager =
         std::make_unique<fw_update::Manager>(event, reqHandler, instanceIdDb);
-    std::unique_ptr<platform_mc::Manager> platformManager =
-        std::make_unique<platform_mc::Manager>(event, reqHandler, instanceIdDb);
     std::unique_ptr<MctpDiscovery> mctpDiscoveryHandler =
         std::make_unique<MctpDiscovery>(
             bus, std::initializer_list<MctpDiscoveryHandlerIntf*>{

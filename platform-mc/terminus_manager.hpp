@@ -257,6 +257,7 @@ class TerminusManager
      *         logic.
      */
     // RequesterHandler& handler;
+    RequesterHandler& handler;
 
     /** @brief Reference to the instanceID data base from libpldm */
     pldm::InstanceIdDb& instanceIdDb;
