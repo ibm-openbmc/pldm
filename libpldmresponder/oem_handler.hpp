@@ -250,8 +250,8 @@ class Handler : public CmdHandler
      *
      *  @return std::vector<std::string> - port object paths
      */
-    virtual std::vector<std::string>
-        findPortObjects(const std::string& adapterObjPath) = 0;
+    virtual std::vector<std::string> findPortObjects(
+        const std::string& adapterObjPath) = 0;
 
     virtual ~Handler() = default;
 
@@ -279,9 +279,9 @@ class Handler : public CmdHandler
      * server
      *
      */
-    virtual void
-        newChapDataFileAvailable(const std::string& chapNameStr,
-                                 const std::string& userChallengeStr) = 0;
+    virtual void newChapDataFileAvailable(
+        const std::string& chapNameStr,
+        const std::string& userChallengeStr) = 0;
 
     virtual ~Handler() = default;
 };

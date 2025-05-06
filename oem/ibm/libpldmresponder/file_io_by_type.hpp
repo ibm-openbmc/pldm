@@ -98,9 +98,9 @@ class FileHandler
      *  @param[in] xdmaInterface - interface to transfer data between BMC and
      * Remote terminus
      */
-    virtual void
-        deleteAIOobjects(const std::shared_ptr<dma::DMA>& xdmaInterface,
-                         const SharedAIORespData& sharedAIORespDataobj);
+    virtual void deleteAIOobjects(
+        const std::shared_ptr<dma::DMA>& xdmaInterface,
+        const SharedAIORespData& sharedAIORespDataobj);
 
   public:
     /** @brief Method to write an oem file type from remote terminus memory.
@@ -165,9 +165,9 @@ class FileHandler
      *  @param[in] fileHandle - file handle
      *  @param[in] metaDataObj - file ack meta data status and values
      */
-    virtual void
-        postWriteAction(const uint16_t fileType, const uint32_t fileHandle,
-                        const struct fileack_status_metadata& metaDataObj) = 0;
+    virtual void postWriteAction(
+        const uint16_t fileType, const uint32_t fileHandle,
+        const struct fileack_status_metadata& metaDataObj) = 0;
 
     virtual int fileAck(uint8_t fileStatus) = 0;
 
@@ -202,20 +202,6 @@ class FileHandler
      */
     virtual int readFileByFd(int fd, uint32_t offset, uint32_t& length,
                              Response& response);
-    /** @brief Method to process a file ack with meta data notification from the
-     *  host. The bmc can chose to do different actions based on the file type.
-     *
-     *  @param[in] fileStatus - Status of the file transfer
-     *  @param[in] metaDataValue1 - value of meta data sent by host
-     *  @param[in] metaDataValue2 - value of meta data sent by host
-     *  @param[in] metaDataValue3 - value of meta data sent by host
-     *  @param[in] metaDataValue4 - value of meta data sent by host
-     *
-     *  @return PLDM status code
-     */
-    virtual int fileAckWithMetaData(
-        uint8_t fileStatus, uint32_t metaDataValue1, uint32_t metaDataValue2,
-        uint32_t metaDataValue3, uint32_t metaDataValue4) = 0;
 
     /** @brief Method to do the file content transfer ove DMA between host and
      *         bmc. This method is made virtual to be overridden in test case.
@@ -283,21 +269,6 @@ class FileHandler
      */
     virtual int fileAckWithMetaData(
         uint8_t fileStatus, uint32_t metaDataValue1, uint32_t metaDataValue2,
-        uint32_t metaDataValue3, uint32_t metaDataValue4) = 0;
-
-    /** @brief method to process a new file available metadata notification from
-     *  the host
-     *
-     *  @param[in] length - size of the file content to be transferred
-     *  @param[in] metaDataValue1 - value of meta data sent by host
-     *  @param[in] metaDataValue2 - value of meta data sent by host
-     *  @param[in] metaDataValue3 - value of meta data sent by host
-     *  @param[in] metaDataValue4 - value of meta data sent by host
-     *
-     *  @return PLDM status code
-     */
-    virtual int newFileAvailableWithMetaData(
-        uint64_t length, uint32_t metaDataValue1, uint32_t metaDataValue2,
         uint32_t metaDataValue3, uint32_t metaDataValue4) = 0;
 
     /** @brief Constructor to create a FileHandler object

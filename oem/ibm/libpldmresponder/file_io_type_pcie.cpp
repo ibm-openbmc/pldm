@@ -329,8 +329,8 @@ std::string PCIeInfoHandler::getMexObjectFromLocationCode(
     return "";
 }
 
-std::string
-    PCIeInfoHandler::getAdapterFromSlot(const std::string& mexSlotObject)
+std::string PCIeInfoHandler::getAdapterFromSlot(
+    const std::string& mexSlotObject)
 {
     for (const auto& [objectPath, obj] : mexObjectMap)
     {

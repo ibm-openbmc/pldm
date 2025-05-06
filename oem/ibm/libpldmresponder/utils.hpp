@@ -1,9 +1,9 @@
 #pragma once
 
 #include "host-bmc/dbus/type.hpp"
-#include "host-bmc/dbus_to_terminus_effecters.hpp"
 #include "libpldmresponder/oem_handler.hpp"
 #include "oem/ibm/requester/dbus_to_file_handler.hpp"
+#include "platform-mc/dbus_to_terminus_effecters.hpp"
 
 #include <unistd.h>
 
@@ -166,8 +166,8 @@ void hostPCIETopologyIntf(
     uint8_t mctp_eid,
     pldm::host_effecters::HostEffecterParser* hostEffecterParser);
 
-std::pair<std::string, std::string>
-    getSlotAndAdapter(const std::string& portLocationCode);
+std::pair<std::string, std::string> getSlotAndAdapter(
+    const std::string& portLocationCode);
 
 /** @brief Fetch D-Bus object path based on location details and the type of
  * Inventory Item
@@ -246,8 +246,8 @@ void hostPCIETopologyIntf(
     uint8_t mctp_eid,
     pldm::host_effecters::HostEffecterParser* hostEffecterParser);
 
-std::pair<std::string, std::string>
-    getSlotAndAdapter(const std::string& portLocationCode);
+std::pair<std::string, std::string> getSlotAndAdapter(
+    const std::string& portLocationCode);
 
 /** @brief Fetch D-Bus object path based on location details and the type of
  * Inventory Item

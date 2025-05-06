@@ -39,14 +39,6 @@ class PelHandler : public FileHandler
 
     virtual int fileAck(uint8_t fileStatus);
 
-    virtual int fileAckWithMetaData(
-        uint8_t /*fileStatus*/, uint32_t /*metaDataValue1*/,
-        uint32_t /*metaDataValue2*/, uint32_t /*metaDataValue3*/,
-        uint32_t /*metaDataValue4*/)
-    {
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
-    }
-
     /** @brief method to store a pel file in tempfs and send
      *         d-bus notification to pel daemon that it is ready for consumption
      *
@@ -79,14 +71,6 @@ class PelHandler : public FileHandler
     virtual void postWriteAction(
         const uint16_t /*fileType*/, const uint32_t /*fileHandle*/,
         const struct fileack_status_metadata& /*metaDataObj*/) {};
-
-    virtual int newFileAvailableWithMetaData(
-        uint64_t /*length*/, uint32_t /*metaDataValue1*/,
-        uint32_t /*metaDataValue2*/, uint32_t /*metaDataValue3*/,
-        uint32_t /*metaDataValue4*/)
-    {
-        return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
-    }
 
     /** @brief PelHandler destructor
      */
