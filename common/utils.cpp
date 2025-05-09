@@ -27,9 +27,14 @@ namespace pldm
 namespace utils
 {
 
-std::vector<std::vector<uint8_t>>
-    findStateEffecterPDR(uint8_t /*tid*/, uint16_t entityID,
-                         uint16_t stateSetId, const pldm_pdr* repo)
+using ObjectMapper = sdbusplus::client::xyz::openbmc_project::ObjectMapper<>;
+
+constexpr const char* MCTP_INTERFACE_CC = "au.com.codeconstruct.MCTP.Endpoint1";
+constexpr const char* MCTP_ENDPOINT_RECOVER_METHOD = "Recover";
+
+std::vector<std::vector<uint8_t>> findStateEffecterPDR(
+    uint8_t /*tid*/, uint16_t entityID, uint16_t stateSetId,
+    const pldm_pdr* repo)
 {
     uint8_t* outData = nullptr;
     uint32_t size{};
@@ -43,16 +48,15 @@ std::vector<std::vector<uint8_t>>
                                                   record, &outData, &size);
             if (record)
             {
-                auto pdr = reinterpret_cast<pldm_state_effecter_pdr*>(outData);
+                auto pdr = new (outData) pldm_state_effecter_pdr;
                 auto compositeEffecterCount = pdr->composite_effecter_count;
                 auto possible_states_start = pdr->possible_states;
 
                 for (auto effecters = 0x00; effecters < compositeEffecterCount;
                      effecters++)
                 {
-                    auto possibleStates =
-                        reinterpret_cast<state_effecter_possible_states*>(
-                            possible_states_start);
+                    auto possibleStates = new (possible_states_start)
+                        state_effecter_possible_states;
                     auto setId = possibleStates->state_set_id;
                     auto possibleStateSize =
                         possibleStates->possible_states_size;
@@ -79,9 +83,9 @@ std::vector<std::vector<uint8_t>>
     return pdrs;
 }
 
-std::vector<std::vector<uint8_t>>
-    findStateSensorPDR(uint8_t /*tid*/, uint16_t entityID, uint16_t stateSetId,
-                       const pldm_pdr* repo)
+std::vector<std::vector<uint8_t>> findStateSensorPDR(
+    uint8_t /*tid*/, uint16_t entityID, uint16_t stateSetId,
+    const pldm_pdr* repo)
 {
     uint8_t* outData = nullptr;
     uint32_t size{};
@@ -95,16 +99,15 @@ std::vector<std::vector<uint8_t>>
                                                   record, &outData, &size);
             if (record)
             {
-                auto pdr = reinterpret_cast<pldm_state_sensor_pdr*>(outData);
+                auto pdr = new (outData) pldm_state_sensor_pdr;
                 auto compositeSensorCount = pdr->composite_sensor_count;
                 auto possible_states_start = pdr->possible_states;
 
                 for (auto sensors = 0x00; sensors < compositeSensorCount;
                      sensors++)
                 {
-                    auto possibleStates =
-                        reinterpret_cast<state_sensor_possible_states*>(
-                            possible_states_start);
+                    auto possibleStates = new (possible_states_start)
+                        state_sensor_possible_states;
                     auto setId = possibleStates->state_set_id;
                     auto possibleStateSize =
                         possibleStates->possible_states_size;
@@ -248,9 +251,9 @@ std::string DBusHandler::getService(const char* path,
     return mapperResponse.begin()->first;
 }
 
-GetSubTreeResponse
-    DBusHandler::getSubtree(const std::string& searchPath, int depth,
-                            const std::vector<std::string>& ifaceList) const
+GetSubTreeResponse DBusHandler::getSubtree(
+    const std::string& searchPath, int depth,
+    const std::vector<std::string>& ifaceList) const
 {
     auto& bus = pldm::utils::DBusHandler::getBus();
     auto method = bus.new_method_call(ObjectMapper::default_service,
@@ -277,6 +280,20 @@ GetSubTreePathsResponse DBusHandler::getSubTreePaths(
 
     reply.read(paths);
     return paths;
+}
+
+GetAncestorsResponse DBusHandler::getAncestors(
+    const std::string& path, const std::vector<std::string>& ifaceList) const
+{
+    auto& bus = pldm::utils::DBusHandler::getBus();
+    auto method = bus.new_method_call(ObjectMapper::default_service,
+                                      ObjectMapper::instance_path,
+                                      ObjectMapper::interface, "GetAncestors");
+    method.append(path, ifaceList);
+    auto reply = bus.call(method, dbusTimeout);
+    GetAncestorsResponse response;
+    reply.read(response);
+    return response;
 }
 
 void reportError(const char* errorMsg)
@@ -391,6 +408,22 @@ PropertyValue DBusHandler::getDbusPropertyVariant(
     return bus.call(method, dbusTimeout).unpack<PropertyValue>();
 }
 
+GetAssociatedSubTreeResponse DBusHandler::getAssociatedSubTree(
+    const sdbusplus::message::object_path& objectPath,
+    const sdbusplus::message::object_path& subtree, int depth,
+    const std::vector<std::string>& ifaceList) const
+{
+    auto& bus = DBusHandler::getBus();
+    auto method = bus.new_method_call(
+        ObjectMapper::default_service, ObjectMapper::instance_path,
+        ObjectMapper::interface, "GetAssociatedSubTree");
+    method.append(objectPath, subtree, depth, ifaceList);
+    auto reply = bus.call(method, dbusTimeout);
+    GetAssociatedSubTreeResponse response;
+    reply.read(response);
+    return response;
+}
+
 ObjectValueTree DBusHandler::getManagedObj(const char* service,
                                            const char* rootPath)
 {
@@ -477,16 +510,15 @@ uint16_t findStateEffecterId(const pldm_pdr* pdrRepo, uint16_t entityType,
                                               record, &pdrData, &pdrSize);
         if (record && (localOrRemote ^ pldm_pdr_record_is_remote(record)))
         {
-            auto pdr = reinterpret_cast<pldm_state_effecter_pdr*>(pdrData);
+            auto pdr = new (pdrData) pldm_state_effecter_pdr;
             auto compositeEffecterCount = pdr->composite_effecter_count;
             auto possible_states_start = pdr->possible_states;
 
             for (auto effecters = 0x00; effecters < compositeEffecterCount;
                  effecters++)
             {
-                auto possibleStates =
-                    reinterpret_cast<state_effecter_possible_states*>(
-                        possible_states_start);
+                auto possibleStates = new (possible_states_start)
+                    state_effecter_possible_states;
                 auto setId = possibleStates->state_set_id;
                 auto possibleStateSize = possibleStates->possible_states_size;
 
@@ -528,6 +560,27 @@ int emitStateSensorEventSignal(uint8_t tid, uint16_t sensorId,
     return PLDM_SUCCESS;
 }
 
+void recoverMctpEndpoint(const std::string& endpointObjPath)
+{
+    auto& bus = DBusHandler::getBus();
+    try
+    {
+        std::string service = DBusHandler().getService(endpointObjPath.c_str(),
+                                                       MCTP_INTERFACE_CC);
+
+        auto method = bus.new_method_call(
+            service.c_str(), endpointObjPath.c_str(), MCTP_INTERFACE_CC,
+            MCTP_ENDPOINT_RECOVER_METHOD);
+        bus.call_noreply(method, dbusTimeout);
+    }
+    catch (const std::exception& e)
+    {
+        error(
+            "failed to make a D-Bus call to recover MCTP Endpoint, ERROR {ERR_EXCEP}",
+            "ERR_EXCEP", e);
+    }
+}
+
 uint16_t findStateSensorId(const pldm_pdr* pdrRepo, uint8_t tid,
                            uint16_t entityType, uint16_t entityInstance,
                            uint16_t containerId, uint16_t stateSetId)
@@ -535,15 +588,14 @@ uint16_t findStateSensorId(const pldm_pdr* pdrRepo, uint8_t tid,
     auto pdrs = findStateSensorPDR(tid, entityType, stateSetId, pdrRepo);
     for (auto pdr : pdrs)
     {
-        auto sensorPdr = reinterpret_cast<pldm_state_sensor_pdr*>(pdr.data());
+        auto sensorPdr = new (pdr.data()) pldm_state_sensor_pdr;
         auto compositeSensorCount = sensorPdr->composite_sensor_count;
         auto possible_states_start = sensorPdr->possible_states;
 
         for (auto sensors = 0x00; sensors < compositeSensorCount; sensors++)
         {
-            auto possibleStates =
-                reinterpret_cast<state_sensor_possible_states*>(
-                    possible_states_start);
+            auto possibleStates = new (possible_states_start)
+                state_sensor_possible_states;
             auto setId = possibleStates->state_set_id;
             auto possibleStateSize = possibleStates->possible_states_size;
             if (entityType == sensorPdr->entity_type &&
@@ -787,9 +839,9 @@ std::vector<std::vector<pldm::pdr::Pdr_t>> getStateSensorPDRsByType(
     return pdrs;
 }
 
-std::vector<pldm::pdr::SensorID>
-    findSensorIds(const pldm_pdr* pdrRepo, uint8_t tid, uint16_t entityType,
-                  uint16_t entityInstance, uint16_t containerId)
+std::vector<pldm::pdr::SensorID> findSensorIds(
+    const pldm_pdr* pdrRepo, uint8_t tid, uint16_t entityType,
+    uint16_t entityInstance, uint16_t containerId)
 {
     std::vector<uint16_t> sensorIDs;
 
@@ -873,9 +925,9 @@ std::vector<std::vector<pldm::pdr::Pdr_t>> getStateEffecterPDRsByType(
     return pdrs;
 }
 
-std::vector<pldm::pdr::EffecterID>
-    findEffecterIds(const pldm_pdr* pdrRepo, uint8_t tid, uint16_t entityType,
-                    uint16_t entityInstance, uint16_t containerId)
+std::vector<pldm::pdr::EffecterID> findEffecterIds(
+    const pldm_pdr* pdrRepo, uint8_t tid, uint16_t entityType,
+    uint16_t entityInstance, uint16_t containerId)
 {
     std::vector<uint16_t> effecterIDs;
 
@@ -983,6 +1035,32 @@ void setBiosAttr(const BiosAttributeList& biosAttrList)
             return;
         }
     }
+}
+
+std::optional<std::string> fruFieldValuestring(const uint8_t* value,
+                                               const uint8_t& length)
+{
+    if (!value || !length)
+    {
+        lg2::error("Fru data to string invalid data.");
+        return std::nullopt;
+    }
+
+    return std::string(reinterpret_cast<const char*>(value), length);
+}
+
+std::optional<uint32_t> fruFieldParserU32(const uint8_t* value,
+                                          const uint8_t& length)
+{
+    if (!value || length != sizeof(uint32_t))
+    {
+        lg2::error("Fru data to u32 invalid data.");
+        return std::nullopt;
+    }
+
+    uint32_t ret;
+    std::memcpy(&ret, value, length);
+    return ret;
 }
 
 } // namespace utils

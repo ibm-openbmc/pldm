@@ -3,11 +3,11 @@
 #include "common/instance_id.hpp"
 #include "common/types.hpp"
 #include "common/utils.hpp"
-#include "dbus_to_terminus_effecters.hpp"
 #include "host_associations_parser.hpp"
 #include "libpldmresponder/event_parser.hpp"
 #include "libpldmresponder/oem_handler.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
+#include "platform-mc/dbus_to_terminus_effecters.hpp"
 #include "requester/handler.hpp"
 #include "utils.hpp"
 
@@ -189,8 +189,8 @@ class HostPDRHandler
      *
      * @param[in] handler - oem platform handler
      */
-    inline void
-        setOemPlatformHandler(pldm::responder::oem_platform::Handler* handler)
+    inline void setOemPlatformHandler(
+        pldm::responder::oem_platform::Handler* handler)
     {
         oemPlatformHandler = handler;
     }
@@ -374,6 +374,12 @@ class HostPDRHandler
      *  @param[in] recorHandle - record handle of the PDR
      */
     void setRecordPresent(uint32_t recorHandle);
+
+    /** @brief Set the Present dbus Property
+     *  @param[in] path     - object path
+     *  @return
+     */
+    void setPresentPropertyStatus(const std::string& path);
 
     /** @brief Get FRU Record Set Identifier from FRU Record data Format
      *  @param[in] fruRecordSetPDRs - fru record set pdr

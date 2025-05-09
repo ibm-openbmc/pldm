@@ -329,8 +329,8 @@ std::string PCIeInfoHandler::getMexObjectFromLocationCode(
     return "";
 }
 
-std::string
-    PCIeInfoHandler::getAdapterFromSlot(const std::string& mexSlotObject)
+std::string PCIeInfoHandler::getAdapterFromSlot(
+    const std::string& mexSlotObject)
 {
     for (const auto& [objectPath, obj] : mexObjectMap)
     {
@@ -902,7 +902,7 @@ void PCIeInfoHandler::parseTopologyData()
 
     // memory map the topology file into pldm memory
     void* fileInMemory =
-        mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, topologyFd(), 0);
+        mmap(nullptr, sb.st_size, PROT_READ, MAP_PRIVATE, topologyFd(), 0);
     if (MAP_FAILED == fileInMemory)
     {
         error("mmap on topology file failed with error {RC}", "RC", -errno);
@@ -1146,7 +1146,7 @@ void PCIeInfoHandler::parseCableInfo()
     };
 
     void* fileInMemory =
-        mmap(NULL, sb.st_size, PROT_READ, MAP_PRIVATE, cableInfoFd(), 0);
+        mmap(nullptr, sb.st_size, PROT_READ, MAP_PRIVATE, cableInfoFd(), 0);
 
     if (MAP_FAILED == fileInMemory)
     {

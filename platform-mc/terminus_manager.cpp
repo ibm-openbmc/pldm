@@ -52,8 +52,8 @@ std::optional<pldm_tid_t> TerminusManager::toTid(const MctpInfo& mctpInfo) const
     return mctpInfoTableIt->first;
 }
 
-std::optional<pldm_tid_t>
-    TerminusManager::storeTerminusInfo(const MctpInfo& mctpInfo, pldm_tid_t tid)
+std::optional<pldm_tid_t> TerminusManager::storeTerminusInfo(
+    const MctpInfo& mctpInfo, pldm_tid_t tid)
 {
     if (tid == PLDM_TID_UNASSIGNED || tid == PLDM_TID_RESERVED)
     {
@@ -125,6 +125,29 @@ bool TerminusManager::unmapTid(const pldm_tid_t& tid)
     return true;
 }
 
+void TerminusManager::updateMctpEndpointAvailability(const MctpInfo& mctpInfo,
+                                                     Availability availability)
+{
+    mctpInfoAvailTable.insert_or_assign(mctpInfo, availability);
+
+    if (manager)
+    {
+        auto tid = toTid(mctpInfo);
+        if (tid)
+        {
+            manager->updateAvailableState(tid.value(), availability);
+        }
+    }
+}
+
+std::string TerminusManager::constructEndpointObjPath(const MctpInfo& mctpInfo)
+{
+    std::string eidStr = std::to_string(std::get<0>(mctpInfo));
+    std::string networkIDStr = std::to_string(std::get<3>(mctpInfo));
+    return std::format("{}/networks/{}/endpoints/{}", MCTPPath, networkIDStr,
+                       eidStr);
+}
+
 void TerminusManager::discoverMctpTerminus(const MctpInfos& mctpInfos)
 {
     queuedMctpInfos.emplace(mctpInfos);
@@ -144,8 +167,8 @@ void TerminusManager::discoverMctpTerminus(const MctpInfos& mctpInfos)
                 exec::default_task_context<void>(exec::inline_scheduler{}));
 }
 
-TerminiMapper::iterator
-    TerminusManager::findTerminusPtr(const MctpInfo& mctpInfo)
+TerminiMapper::iterator TerminusManager::findTerminusPtr(
+    const MctpInfo& mctpInfo)
 {
     auto foundIter = std::find_if(
         termini.begin(), termini.end(), [&](const auto& terminusPair) {
@@ -176,6 +199,7 @@ exec::task<int> TerminusManager::discoverMctpTerminusTask()
             auto it = findTerminusPtr(mctpInfo);
             if (it == termini.end())
             {
+                mctpInfoAvailTable[mctpInfo] = true;
                 co_await initMctpTerminus(mctpInfo);
             }
 
@@ -183,6 +207,7 @@ exec::task<int> TerminusManager::discoverMctpTerminusTask()
             auto tid = toTid(mctpInfo);
             if (!tid)
             {
+                mctpInfoAvailTable.erase(mctpInfo);
                 co_return PLDM_ERROR;
             }
             addedTids.push_back(tid.value());
@@ -191,10 +216,6 @@ exec::task<int> TerminusManager::discoverMctpTerminusTask()
         if (manager)
         {
             co_await manager->afterDiscoverTerminus();
-            for (const auto& tid : addedTids)
-            {
-                manager->startSensorPolling(tid);
-            }
         }
 
         queuedMctpInfos.pop();
@@ -221,6 +242,7 @@ void TerminusManager::removeMctpTerminus(const MctpInfos& mctpInfos)
 
         unmapTid(it->first);
         termini.erase(it);
+        mctpInfoAvailTable.erase(mctpInfo);
     }
 }
 
@@ -326,17 +348,19 @@ exec::task<int> TerminusManager::initMctpTerminus(const MctpInfo& mctpInfo)
     {
         lg2::error("Failed to Get PLDM Types for terminus {TID}, error {ERROR}",
                    "TID", tid, "ERROR", rc);
+        unmapTid(tid);
         co_return PLDM_ERROR;
     }
 
     try
     {
-        termini[tid] = std::make_shared<Terminus>(tid, supportedTypes);
+        termini[tid] = std::make_shared<Terminus>(tid, supportedTypes, event);
     }
     catch (const sdbusplus::exception_t& e)
     {
         lg2::error("Failed to create terminus manager for terminus {TID}",
                    "TID", tid);
+        unmapTid(tid);
         co_return PLDM_ERROR;
     }
 
@@ -350,8 +374,18 @@ exec::task<int> TerminusManager::initMctpTerminus(const MctpInfo& mctpInfo)
             type++;
             continue;
         }
+
+        ver32_t version{0xFF, 0xFF, 0xFF, 0xFF};
+        auto rc = co_await getPLDMVersion(tid, type, &version);
+        if (rc)
+        {
+            lg2::error(
+                "Failed to Get PLDM Version for terminus {TID}, PLDM Type {TYPE}, error {ERROR}",
+                "TID", tid, "TYPE", type, "ERROR", rc);
+        }
+        termini[tid]->setSupportedTypeVersions(type, version);
         std::vector<bitfield8_t> cmds(PLDM_MAX_CMDS_PER_TYPE / 8);
-        auto rc = co_await getPLDMCommands(tid, type, cmds.data());
+        rc = co_await getPLDMCommands(tid, type, version, cmds.data());
         if (rc)
         {
             lg2::error(
@@ -412,7 +446,7 @@ exec::task<int> TerminusManager::getTidOverMctp(mctp_eid_t eid, pldm_tid_t* tid)
 {
     auto instanceId = instanceIdDb.next(eid);
     Request request(sizeof(pldm_msg_hdr));
-    auto requestMsg = reinterpret_cast<pldm_msg*>(request.data());
+    auto requestMsg = new (request.data()) pldm_msg;
     auto rc = encode_get_tid_req(instanceId, requestMsg);
     if (rc)
     {
@@ -458,7 +492,7 @@ exec::task<int> TerminusManager::setTidOverMctp(mctp_eid_t eid, pldm_tid_t tid)
 {
     auto instanceId = instanceIdDb.next(eid);
     Request request(sizeof(pldm_msg_hdr) + sizeof(pldm_set_tid_req));
-    auto requestMsg = reinterpret_cast<pldm_msg*>(request.data());
+    auto requestMsg = new (request.data()) pldm_msg;
     auto rc = encode_set_tid_req(instanceId, tid, requestMsg);
     if (rc)
     {
@@ -480,7 +514,7 @@ exec::task<int> TerminusManager::setTidOverMctp(mctp_eid_t eid, pldm_tid_t tid)
         co_return rc;
     }
 
-    if (responseMsg == NULL || responseLen != PLDM_SET_TID_RESP_BYTES)
+    if (responseMsg == nullptr || responseLen != PLDM_SET_TID_RESP_BYTES)
     {
         lg2::error(
             "Failed to decode response SetTID for Endpoint ID {EID}, error {RC} ",
@@ -491,11 +525,11 @@ exec::task<int> TerminusManager::setTidOverMctp(mctp_eid_t eid, pldm_tid_t tid)
     co_return responseMsg->payload[0];
 }
 
-exec::task<int>
-    TerminusManager::getPLDMTypes(pldm_tid_t tid, uint64_t& supportedTypes)
+exec::task<int> TerminusManager::getPLDMTypes(pldm_tid_t tid,
+                                              uint64_t& supportedTypes)
 {
     Request request(sizeof(pldm_msg_hdr));
-    auto requestMsg = reinterpret_cast<pldm_msg*>(request.data());
+    auto requestMsg = new (request.data()) pldm_msg;
     auto rc = encode_get_types_req(0, requestMsg);
     if (rc)
     {
@@ -538,12 +572,11 @@ exec::task<int>
     co_return completionCode;
 }
 
-exec::task<int> TerminusManager::getPLDMCommands(pldm_tid_t tid, uint8_t type,
-                                                 bitfield8_t* supportedCmds)
+exec::task<int> TerminusManager::getPLDMCommands(
+    pldm_tid_t tid, uint8_t type, ver32_t version, bitfield8_t* supportedCmds)
 {
     Request request(sizeof(pldm_msg_hdr) + PLDM_GET_COMMANDS_REQ_BYTES);
-    auto requestMsg = reinterpret_cast<pldm_msg*>(request.data());
-    ver32_t version{0xFF, 0xFF, 0xFF, 0xFF};
+    auto requestMsg = new (request.data()) pldm_msg;
 
     auto rc = encode_get_commands_req(0, type, version, requestMsg);
     if (rc)
@@ -618,14 +651,129 @@ exec::task<int> TerminusManager::sendRecvPldmMsg(
         co_return PLDM_ERROR_NOT_READY;
     }
 
+    // There's a cost of maintaining another table to hold availability
+    // status as we can't ensure that it always synchronizes with the
+    // mctpInfoTable; std::map operator[] will insert a default of boolean
+    // which is false to the mctpInfoAvailTable if the mctpInfo key doesn't
+    // exist. Once we miss to initialize the availability of an available
+    // endpoint, it will drop all the messages to/from it.
+    if (!mctpInfoAvailTable[mctpInfo.value()])
+    {
+        co_return PLDM_ERROR_NOT_READY;
+    }
+
     auto eid = std::get<0>(mctpInfo.value());
-    auto requestMsg = reinterpret_cast<pldm_msg*>(request.data());
+    auto requestMsg = new (request.data()) pldm_msg;
     requestMsg->hdr.instance_id = instanceIdDb.next(eid);
     auto rc = co_await sendRecvPldmMsgOverMctp(eid, request, responseMsg,
                                                responseLen);
 
+    if (rc == PLDM_ERROR_NOT_READY)
+    {
+        // Call Recover() to check enpoint's availability
+        // Set endpoint's availability in mctpInfoTable to false in advance
+        // to prevent message forwarding through this endpoint while mctpd
+        // is checking the endpoint.
+        std::string endpointObjPath =
+            constructEndpointObjPath(mctpInfo.value());
+        pldm::utils::recoverMctpEndpoint(endpointObjPath);
+        updateMctpEndpointAvailability(mctpInfo.value(), false);
+    }
+
     co_return rc;
 }
 
+exec::task<int> TerminusManager::getPLDMVersion(pldm_tid_t tid, uint8_t type,
+                                                ver32_t* version)
+{
+    Request request(sizeof(pldm_msg_hdr) + PLDM_GET_VERSION_REQ_BYTES);
+    auto requestMsg = new (request.data()) pldm_msg;
+
+    auto rc =
+        encode_get_version_req(0, 0, PLDM_GET_FIRSTPART, type, requestMsg);
+    if (rc)
+    {
+        lg2::error(
+            "Failed to encode request getPLDMVersion for terminus ID {TID}, error {RC} ",
+            "TID", tid, "RC", rc);
+        co_return rc;
+    }
+
+    const pldm_msg* responseMsg = nullptr;
+    size_t responseLen = 0;
+
+    rc = co_await sendRecvPldmMsg(tid, request, &responseMsg, &responseLen);
+    if (rc)
+    {
+        lg2::error(
+            "Failed to send getPLDMVersion message for terminus {TID}, error {RC}",
+            "TID", tid, "RC", rc);
+        co_return rc;
+    }
+
+    /* Process response */
+    uint8_t completionCode = 0;
+    uint8_t transferFlag = 0;
+    uint32_t transferHandle = 0;
+    rc = decode_get_version_resp(responseMsg, responseLen, &completionCode,
+                                 &transferHandle, &transferFlag, version);
+    if (rc)
+    {
+        lg2::error(
+            "Failed to decode response getPLDMVersion for terminus ID {TID}, error {RC} ",
+            "TID", tid, "RC", rc);
+        co_return rc;
+    }
+
+    if (completionCode != PLDM_SUCCESS)
+    {
+        lg2::error(
+            "Error : getPLDMVersion for terminus ID {TID}, complete code {CC}.",
+            "TID", tid, "CC", completionCode);
+        co_return completionCode;
+    }
+
+    co_return completionCode;
+}
+
+std::optional<mctp_eid_t> TerminusManager::getActiveEidByName(
+    const std::string& terminusName)
+{
+    if (!termini.size() || terminusName.empty())
+    {
+        return std::nullopt;
+    }
+
+    for (auto& [tid, terminus] : termini)
+    {
+        if (!terminus)
+        {
+            continue;
+        }
+
+        auto tmp = terminus->getTerminusName();
+        if (!tmp || std::empty(*tmp) || *tmp != terminusName)
+        {
+            continue;
+        }
+
+        try
+        {
+            auto mctpInfo = toMctpInfo(tid);
+            if (!mctpInfo || !mctpInfoAvailTable[*mctpInfo])
+            {
+                return std::nullopt;
+            }
+
+            return std::get<0>(*mctpInfo);
+        }
+        catch (const std::exception& e)
+        {
+            return std::nullopt;
+        }
+    }
+
+    return std::nullopt;
+}
 } // namespace platform_mc
 } // namespace pldm

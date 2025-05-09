@@ -48,7 +48,7 @@ class GetDateTime : public CommandInterface
     std::pair<int, std::vector<uint8_t>> createRequestMsg() override
     {
         std::vector<uint8_t> requestMsg(sizeof(pldm_msg_hdr));
-        auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+        auto request = new (requestMsg.data()) pldm_msg;
 
         auto rc = encode_get_date_time_req(instanceId, request);
         return {rc, requestMsg};
@@ -112,7 +112,7 @@ class SetDateTime : public CommandInterface
     {
         std::vector<uint8_t> requestMsg(
             sizeof(pldm_msg_hdr) + sizeof(struct pldm_set_date_time_req));
-        auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+        auto request = new (requestMsg.data()) pldm_msg;
         uint16_t year = 0;
         uint8_t month = 0;
         uint8_t day = 0;
@@ -197,7 +197,7 @@ class GetBIOSTableHandler : public CommandInterface
     {
         std::vector<uint8_t> requestMsg(
             sizeof(pldm_msg_hdr) + PLDM_GET_BIOS_TABLE_REQ_BYTES);
-        auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+        auto request = new (requestMsg.data()) pldm_msg;
 
         auto rc = encode_get_bios_table_req(instanceId, 0, PLDM_GET_FIRSTPART,
                                             tableType, request);
@@ -218,8 +218,7 @@ class GetBIOSTableHandler : public CommandInterface
         uint8_t cc = 0, transferFlag = 0;
         uint32_t nextTransferHandle = 0;
         size_t bios_table_offset;
-        auto responsePtr =
-            reinterpret_cast<struct pldm_msg*>(responseMsg.data());
+        auto responsePtr = new (responseMsg.data()) pldm_msg;
         auto payloadLength = responseMsg.size() - sizeof(pldm_msg_hdr);
 
         rc = decode_get_bios_table_resp(responsePtr, payloadLength, &cc,
@@ -239,9 +238,9 @@ class GetBIOSTableHandler : public CommandInterface
         return std::make_optional<Table>(tableData, tableData + tableSize);
     }
 
-    const pldm_bios_attr_table_entry*
-        findAttrEntryByName(const std::string& name, const Table& attrTable,
-                            const Table& stringTable)
+    const pldm_bios_attr_table_entry* findAttrEntryByName(
+        const std::string& name, const Table& attrTable,
+        const Table& stringTable)
     {
         auto stringEntry = pldm_bios_table_string_find_by_string(
             stringTable.data(), stringTable.size(), name.c_str());
@@ -266,9 +265,9 @@ class GetBIOSTableHandler : public CommandInterface
         return nullptr;
     }
 
-    std::optional<uint16_t>
-        findAttrHandleByName(const std::string& name, const Table& attrTable,
-                             const Table& stringTable)
+    std::optional<uint16_t> findAttrHandleByName(const std::string& name,
+                                                 const Table& attrTable,
+                                                 const Table& stringTable)
     {
         auto attribute = findAttrEntryByName(name, attrTable, stringTable);
         if (attribute == nullptr)
@@ -677,10 +676,10 @@ class GetBIOSAttributeCurrentValueByHandle : public GetBIOSTableHandler
         const GetBIOSAttributeCurrentValueByHandle&) = delete;
     GetBIOSAttributeCurrentValueByHandle(
         GetBIOSAttributeCurrentValueByHandle&&) = delete;
-    GetBIOSAttributeCurrentValueByHandle&
-        operator=(const GetBIOSAttributeCurrentValueByHandle&) = delete;
-    GetBIOSAttributeCurrentValueByHandle&
-        operator=(GetBIOSAttributeCurrentValueByHandle&&) = delete;
+    GetBIOSAttributeCurrentValueByHandle& operator=(
+        const GetBIOSAttributeCurrentValueByHandle&) = delete;
+    GetBIOSAttributeCurrentValueByHandle& operator=(
+        GetBIOSAttributeCurrentValueByHandle&&) = delete;
 
     explicit GetBIOSAttributeCurrentValueByHandle(
         const char* type, const char* name, CLI::App* app) :
@@ -711,7 +710,7 @@ class GetBIOSAttributeCurrentValueByHandle : public GetBIOSTableHandler
         std::vector<uint8_t> requestMsg(
             sizeof(pldm_msg_hdr) +
             PLDM_GET_BIOS_ATTR_CURR_VAL_BY_HANDLE_REQ_BYTES);
-        auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+        auto request = new (requestMsg.data()) pldm_msg;
 
         auto rc = encode_get_bios_attribute_current_value_by_handle_req(
             instanceId, 0, PLDM_GET_FIRSTPART, *handle, request);
@@ -732,8 +731,7 @@ class GetBIOSAttributeCurrentValueByHandle : public GetBIOSTableHandler
         uint8_t cc = 0, transferFlag = 0;
         uint32_t nextTransferHandle = 0;
         struct variable_field attributeData;
-        auto responsePtr =
-            reinterpret_cast<struct pldm_msg*>(responseMsg.data());
+        auto responsePtr = new (responseMsg.data()) pldm_msg;
         auto payloadLength = responseMsg.size() - sizeof(pldm_msg_hdr);
 
         rc = decode_get_bios_attribute_current_value_by_handle_resp(
@@ -767,10 +765,10 @@ class SetBIOSAttributeCurrentValue : public GetBIOSTableHandler
     SetBIOSAttributeCurrentValue() = delete;
     SetBIOSAttributeCurrentValue(const SetBIOSAttributeCurrentValue&) = delete;
     SetBIOSAttributeCurrentValue(SetBIOSAttributeCurrentValue&&) = delete;
-    SetBIOSAttributeCurrentValue&
-        operator=(const SetBIOSAttributeCurrentValue&) = delete;
-    SetBIOSAttributeCurrentValue&
-        operator=(SetBIOSAttributeCurrentValue&&) = delete;
+    SetBIOSAttributeCurrentValue& operator=(
+        const SetBIOSAttributeCurrentValue&) = delete;
+    SetBIOSAttributeCurrentValue& operator=(SetBIOSAttributeCurrentValue&&) =
+        delete;
 
     explicit SetBIOSAttributeCurrentValue(const char* type, const char* name,
                                           CLI::App* app) :
@@ -913,8 +911,7 @@ class SetBIOSAttributeCurrentValue : public GetBIOSTableHandler
 
         rc = encode_set_bios_attribute_current_value_req(
             instanceId, 0, PLDM_START_AND_END, attrValueEntry.data(),
-            attrValueEntry.size(),
-            reinterpret_cast<pldm_msg*>(requestMsg.data()),
+            attrValueEntry.size(), new (requestMsg.data()) pldm_msg,
             requestMsg.size() - sizeof(pldm_msg_hdr));
 
         if (rc != PLDM_SUCCESS)
@@ -931,8 +928,7 @@ class SetBIOSAttributeCurrentValue : public GetBIOSTableHandler
         }
         uint8_t cc = 0;
         uint32_t nextTransferHandle = 0;
-        auto responsePtr =
-            reinterpret_cast<struct pldm_msg*>(responseMsg.data());
+        auto responsePtr = new (responseMsg.data()) pldm_msg;
         auto payloadLength = responseMsg.size() - sizeof(pldm_msg_hdr);
 
         rc = decode_set_bios_attribute_current_value_resp(
