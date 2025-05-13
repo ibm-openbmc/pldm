@@ -100,7 +100,7 @@ int setupUnixSocket(const std::string& socketInterface)
     int nfd = sock + 1;
     int fd = -1;
 
-    int retval = select(nfd, &rfd, NULL, NULL, &tv);
+    int retval = select(nfd, &rfd, nullptr, nullptr, &tv);
     if (retval < 0)
     {
         error(
@@ -112,7 +112,7 @@ int setupUnixSocket(const std::string& socketInterface)
 
     if ((retval > 0) && (FD_ISSET(sock, &rfd)))
     {
-        fd = accept(sock, NULL, NULL);
+        fd = accept(sock, nullptr, nullptr);
         if (fd < 0)
         {
             error(
@@ -151,7 +151,7 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
         FD_SET(sock, &wfd);
         int nfd = sock + 1;
 
-        int retval = select(nfd, NULL, &wfd, NULL, &tv);
+        int retval = select(nfd, nullptr, &wfd, nullptr, &tv);
         if (retval < 0)
         {
             error(
@@ -407,8 +407,8 @@ int createOrUpdateLicenseObjs()
 
     return rc;
 }
-std::pair<std::string, std::string>
-    getSlotAndAdapter(const std::string& portLocationCode)
+std::pair<std::string, std::string> getSlotAndAdapter(
+    const std::string& portLocationCode)
 {
     std::filesystem::path portPath =
         pldm::responder::utils::getObjectPathByLocationCode(
@@ -417,8 +417,8 @@ std::pair<std::string, std::string>
                           portPath.parent_path());
 }
 
-void
-    hostChapDataIntf(pldm::responder::oem_fileio::Handler* dbusToFilehandlerObj)
+void hostChapDataIntf(
+    pldm::responder::oem_fileio::Handler* dbusToFilehandlerObj)
 {
     CustomDBus::getCustomDBus().implementChapDataInterface(
         "/xyz/openbmc_project/pldm", dbusToFilehandlerObj);

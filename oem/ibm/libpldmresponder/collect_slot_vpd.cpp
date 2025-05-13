@@ -131,8 +131,8 @@ void SlotHandler::callVPDManager(const std::string& adapterObjPath,
     }
 }
 
-std::optional<std::string>
-    SlotHandler::getAdapterObjPath(const std::string& slotObjPath)
+std::optional<std::string> SlotHandler::getAdapterObjPath(
+    const std::string& slotObjPath)
 {
     static constexpr auto searchpath = "/xyz/openbmc_project/inventory";
     int depth = 0;
@@ -162,7 +162,7 @@ void SlotHandler::createPresenceMatch(const std::string& adapterObjectPath,
         propertiesChanged(adapterObjectPath,
                           "xyz.openbmc_project.Inventory.Item"),
         [this, adapterObjectPath, stateFieldValue,
-         entity](sdbusplus::message::message& msg) {
+         entity](sdbusplus::message_t& msg) {
             pldm::utils::DbusChangedProps props{};
             std::string intf;
             msg.read(intf, props);

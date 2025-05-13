@@ -90,9 +90,9 @@ class SmsMenuHandler : public FileHandler
         return PLDM_ERROR_UNSUPPORTED_PLDM_CMD;
     }
 
-    virtual void
-        postWriteAction(const uint16_t fileType, const uint32_t fileHandle,
-                        const struct fileack_status_metadata& metaDataObj);
+    virtual void postWriteAction(
+        const uint16_t fileType, const uint32_t fileHandle,
+        const struct fileack_status_metadata& metaDataObj);
 
     /** @brief Reads the contents of the input vector and returns the value back
      *  @param[in] inputVec - input vector

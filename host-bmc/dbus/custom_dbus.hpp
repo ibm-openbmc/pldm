@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../dbus_to_terminus_effecters.hpp"
 #include "asset.hpp"
 #include "associations.hpp"
 #include "availability.hpp"
@@ -28,6 +27,7 @@
 #include "pcie_device.hpp"
 #include "pcie_slot.hpp"
 #include "pcie_topology.hpp"
+#include "platform-mc/dbus_to_terminus_effecters.hpp"
 #include "port.hpp"
 #include "power_supply.hpp"
 #include "vrm.hpp"
@@ -414,6 +414,9 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<InventoryItem>>
         presentStatus;
     std::unordered_map<ObjectPath, std::unique_ptr<ItemChassis>> chassis;
+    std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
+    std::unordered_map<ObjectPath, std::unique_ptr<Availability>>
+        availabilityState;
     std::unordered_map<ObjectPath, std::unique_ptr<CPUCore>> cpuCore;
     std::unordered_map<ObjectPath, std::unique_ptr<Enable>> enabledStatus;
     std::unordered_map<ObjectPath, std::unique_ptr<Fan>> fan;
@@ -424,20 +427,17 @@ class CustomDBus
     std::unordered_map<ObjectPath, std::unique_ptr<Board>> board;
     std::unordered_map<ObjectPath, std::unique_ptr<FabricAdapter>>
         fabricAdapter;
+    std::unordered_map<ObjectPath, std::unique_ptr<PCIeDevice>> pcieDevice;
+    std::unordered_map<ObjectPath, std::unique_ptr<PCIeSlot>> pcieSlot;
+    std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
     std::unordered_map<ObjectPath, std::unique_ptr<Motherboard>> motherboard;
     std::unordered_map<ObjectPath, std::unique_ptr<ChapDatas>> chapdata;
-    std::unordered_map<ObjectPath, std::unique_ptr<Availability>>
-        availabilityState;
-    std::unordered_map<ObjectPath, std::unique_ptr<PCIeSlot>> pcieSlot;
     std::unordered_map<ObjectPath, std::unique_ptr<LicenseEntry>> codLic;
     std::unordered_map<ObjectPath, std::unique_ptr<Associations>> associations;
     std::unordered_map<ObjectPath, std::unique_ptr<LEDGroup>> ledGroup;
     std::unordered_map<ObjectPath, std::unique_ptr<DecoratorRevision>>
         softWareVersion;
-    std::unordered_map<ObjectPath, std::unique_ptr<PCIeDevice>> pcieDevice;
     std::unordered_map<ObjectPath, std::unique_ptr<Port>> port;
-    std::unordered_map<ObjectPath, std::unique_ptr<Cable>> cable;
-    std::unordered_map<ObjectPath, std::unique_ptr<Asset>> asset;
     std::unordered_map<ObjectPath, std::unique_ptr<PCIETopology>> pcietopology;
     std::unordered_map<ObjectPath, std::unique_ptr<Link>> link;
     std::unordered_map<ObjectPath, std::unique_ptr<Panel>> panel;

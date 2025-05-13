@@ -79,8 +79,8 @@ pldm::utils::EntityMaps parseEntityMap(const fs::path& filePath);
  *
  *  @return - EntityAuxiliaryNames details
  */
-std::shared_ptr<EntityAuxiliaryNames>
-    parseEntityAuxNamesPDR(std::vector<uint8_t>& pdrData);
+std::shared_ptr<EntityAuxiliaryNames> parseEntityAuxNamesPDR(
+    std::vector<uint8_t>& pdrData);
 
 } // namespace utils
 } // namespace hostbmc
