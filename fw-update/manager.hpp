@@ -40,7 +40,8 @@ class Manager : public pldm::MctpDiscoveryHandlerIntf
     explicit Manager(Event& event,
                      requester::Handler<requester::Request>& handler,
                      pldm::InstanceIdDb& instanceIdDb) :
-        inventoryMgr(handler, instanceIdDb, descriptorMap, componentInfoMap),
+        inventoryMgr(handler, instanceIdDb, descriptorMap,
+                     downstreamDescriptorMap, componentInfoMap),
         updateManager(event, handler, instanceIdDb, descriptorMap,
                       componentInfoMap)
     {}
@@ -71,6 +72,17 @@ class Manager : public pldm::MctpDiscoveryHandlerIntf
         return;
     }
 
+    /** @brief Helper function to invoke registered handlers for
+     *  updating the availability status of the MCTP endpoint
+     *
+     *  @param[in] mctpInfo - information of the target endpoint
+     *  @param[in] availability - new availability status
+     */
+    void updateMctpEndpointAvailability(const MctpInfo&, Availability)
+    {
+        return;
+    }
+
     /** @brief Handle PLDM request for the commands in the FW update
      *         specification
      *
@@ -86,9 +98,23 @@ class Manager : public pldm::MctpDiscoveryHandlerIntf
         return updateManager.handleRequest(eid, command, request, reqMsgLen);
     }
 
+    /** @brief Get Active EIDs.
+     *
+     *  @param[in] addr - MCTP address of terminus
+     *  @param[in] terminiNames - MCTP terminus name
+     */
+    std::optional<mctp_eid_t> getActiveEidByName(const std::string&)
+    {
+        return std::nullopt;
+    }
+
   private:
     /** Descriptor information of all the discovered MCTP endpoints */
     DescriptorMap descriptorMap;
+
+    /** Downstream descriptor information of all the discovered MCTP endpoints
+     */
+    DownstreamDescriptorMap downstreamDescriptorMap;
 
     /** Component information of all the discovered MCTP endpoints */
     ComponentInfoMap componentInfoMap;

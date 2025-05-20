@@ -67,6 +67,7 @@ void HostEffecterParser::parseEffecterJson(const std::string& jsonPath)
     {
         EffecterInfo effecterInfo;
         effecterInfo.mctpEid = entry.value("mctp_eid", 0xFF);
+        effecterInfo.terminusName = entry.value("terminus_name", "");
         auto jsonEffecterInfo = entry.value("effecter_info", empty);
         auto effecterId =
             jsonEffecterInfo.value("effecterID", PLDM_INVALID_EFFECTER_ID);
@@ -367,7 +368,7 @@ void HostEffecterParser::processTerminusNumericEffecterChangeNotification(
     }
 
     /* Update the current value of D-Bus interface*/
-    if (!std::isnan(val) && std::isnan(propValues.propertyValue))
+    if (std::isfinite(val) && !std::isfinite(propValues.propertyValue))
     {
         hostEffecterInfo[effecterInfoIndex]
             .dbusNumericEffecterInfo[dbusInfoIndex]
@@ -376,7 +377,7 @@ void HostEffecterParser::processTerminusNumericEffecterChangeNotification(
     }
 
     /* Bypass the setting when the current value is NA or setting value is NA */
-    if (std::isnan(propValues.propertyValue) || std::isnan(val))
+    if (!std::isfinite(propValues.propertyValue) || !std::isfinite(val))
     {
         return;
     }
@@ -540,7 +541,17 @@ int HostEffecterParser::setTerminusNumericEffecter(
     size_t effecterInfoIndex, uint16_t effecterId, uint8_t dataSize,
     double rawValue)
 {
+    std::string terminusName = hostEffecterInfo[effecterInfoIndex].terminusName;
     uint8_t& mctpEid = hostEffecterInfo[effecterInfoIndex].mctpEid;
+    if (!terminusName.empty())
+    {
+        auto tmpEid = platformManager->getActiveEidByName(terminusName);
+        if (tmpEid)
+        {
+            mctpEid = tmpEid.value();
+        }
+    }
+
     auto instanceId = instanceIdDb->next(mctpEid);
     int rc = PLDM_ERROR;
     std::vector<uint8_t> requestMsg;
@@ -555,7 +566,7 @@ int HostEffecterParser::setTerminusNumericEffecter(
     size_t payload_length = PLDM_SET_NUMERIC_EFFECTER_VALUE_MIN_REQ_BYTES - 1 +
                             getEffecterDataSize(dataSize);
     requestMsg.resize(sizeof(pldm_msg_hdr) + payload_length);
-    auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+    auto request = new (requestMsg.data()) pldm_msg;
     switch (dataSize)
     {
         case PLDM_EFFECTER_DATA_SIZE_UINT8:
@@ -668,12 +679,23 @@ int HostEffecterParser::setHostStateEffecter(
     size_t effecterInfoIndex, std::vector<set_effecter_state_field>& stateField,
     uint16_t effecterId)
 {
+    std::string terminusName = hostEffecterInfo[effecterInfoIndex].terminusName;
     uint8_t& mctpEid = hostEffecterInfo[effecterInfoIndex].mctpEid;
+    if (!terminusName.empty())
+    {
+        auto tmpEid = platformManager->getActiveEidByName(terminusName);
+        if (tmpEid)
+        {
+            mctpEid = tmpEid.value();
+        }
+    }
+
     uint8_t& compEffCnt = hostEffecterInfo[effecterInfoIndex].compEffecterCnt;
 
     return sendSetStateEffecterStates(mctpEid, effecterId, compEffCnt,
                                       stateField);
 }
+
 void HostEffecterParser::createHostEffecterMatch(
     const std::string& objectPath, const std::string& interface,
     size_t effecterInfoIndex, size_t dbusInfoIndex, uint16_t effecterId)

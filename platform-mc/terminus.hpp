@@ -1,15 +1,16 @@
 #pragma once
 
-#include "libpldm/platform.h"
-
 #include "common/types.hpp"
+#include "dbus_impl_fru.hpp"
 #include "numeric_sensor.hpp"
 #include "requester/handler.hpp"
 #include "terminus.hpp"
 
+#include <libpldm/fru.h>
+#include <libpldm/platform.h>
+
 #include <sdbusplus/server/object.hpp>
 #include <sdeventplus/event.hpp>
-#include <xyz/openbmc_project/Inventory/Item/Board/server.hpp>
 
 #include <algorithm>
 #include <bitset>
@@ -34,8 +35,6 @@ using SensorName = std::string;
 using SensorAuxiliaryNames = std::tuple<
     SensorId, SensorCnt,
     std::vector<std::vector<std::pair<NameLanguageTag, SensorName>>>>;
-using InventoryItemBoardIntf = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Inventory::Item::server::Board>;
 
 /** @struct EntityKey
  *
@@ -69,7 +68,8 @@ using EntityAuxiliaryNames = std::tuple<EntityKey, AuxiliaryNames>;
 class Terminus
 {
   public:
-    Terminus(pldm_tid_t tid, uint64_t supportedPLDMTypes);
+    Terminus(pldm_tid_t tid, uint64_t supportedPLDMTypes,
+             sdeventplus::Event& event);
 
     /** @brief Check if the terminus supports the PLDM type message
      *
@@ -111,6 +111,24 @@ class Terminus
         return true;
     }
 
+    /** @brief Set the PLDM supported type version for terminus
+     *
+     *  @param[in] type - PLDM supported types
+     *  @param[in] version - PLDM supported type version
+     *  @return success state - True if success, otherwise False
+     */
+    inline bool setSupportedTypeVersions(const uint8_t type,
+                                         const ver32_t version)
+    {
+        if (type > PLDM_MAX_TYPES || type >= supportedTypeVersions.size())
+        {
+            return false;
+        }
+        supportedTypeVersions[type] = version;
+
+        return true;
+    }
+
     /** @brief Parse the PDRs stored in the member variable, pdrs.
      */
     void parseTerminusPDRs();
@@ -122,16 +140,30 @@ class Terminus
     }
 
     /** @brief The getter to get terminus's mctp medium */
-    std::string_view getTerminusName()
+    std::optional<std::string_view> getTerminusName()
     {
+        if (terminusName.empty())
+        {
+            return std::nullopt;
+        }
         return terminusName;
     }
+
+    /** @brief Parse record data from FRU table
+     *
+     *  @param[in] fruData - pointer to FRU record table
+     *  @param[in] fruLen - FRU table length
+     */
+    void updateInventoryWithFru(const uint8_t* fruData, const size_t fruLen);
 
     /** @brief A list of PDRs fetched from Terminus */
     std::vector<std::vector<uint8_t>> pdrs{};
 
     /** @brief A flag to indicate if terminus has been initialized */
     bool initialized = false;
+
+    /** @brief maximum message buffer size the terminus can send and receive */
+    uint16_t maxBufferSize;
 
     /** @brief This value indicates the event messaging styles supported by the
      *         terminus
@@ -141,12 +173,35 @@ class Terminus
     /** @brief A list of numericSensors */
     std::vector<std::shared_ptr<NumericSensor>> numericSensors{};
 
+    /** @brief The flag indicates that the terminus FIFO contains a large
+     *         message that will require a multipart transfer via the
+     *         PollForPlatformEvent command
+     */
+    bool pollEvent;
+
+    /** @brief The sensor id is used in pollForPlatformMessage command */
+    uint16_t pollEventId;
+
+    /** @brief The dataTransferHandle from `pldmMessagePollEvent` event and will
+     *         be used as `dataTransferHandle` for pollForPlatformMessage
+     *         command.
+     */
+    uint32_t pollDataTransferHandle;
+
     /** @brief Get Sensor Auxiliary Names by sensorID
      *
      *  @param[in] id - sensor ID
      *  @return sensor auxiliary names
      */
     std::shared_ptr<SensorAuxiliaryNames> getSensorAuxiliaryNames(SensorId id);
+
+    /** @brief Get Numeric Sensor Object by sensorID
+     *
+     *  @param[in] id - sensor ID
+     *
+     *  @return sensor object
+     */
+    std::shared_ptr<NumericSensor> getSensorObject(SensorId id);
 
   private:
     /** @brief Find the Terminus Name from the Entity Auxiliary name list
@@ -169,24 +224,24 @@ class Terminus
      *  @param[in] pdrData - the response PDRs from GetPDR command
      *  @return pointer to numeric sensor info struct
      */
-    std::shared_ptr<pldm_numeric_sensor_value_pdr>
-        parseNumericSensorPDR(const std::vector<uint8_t>& pdrData);
+    std::shared_ptr<pldm_numeric_sensor_value_pdr> parseNumericSensorPDR(
+        const std::vector<uint8_t>& pdrData);
 
     /** @brief Parse the sensor Auxiliary name PDRs
      *
      *  @param[in] pdrData - the response PDRs from GetPDR command
      *  @return pointer to sensor Auxiliary name info struct
      */
-    std::shared_ptr<SensorAuxiliaryNames>
-        parseSensorAuxiliaryNamesPDR(const std::vector<uint8_t>& pdrData);
+    std::shared_ptr<SensorAuxiliaryNames> parseSensorAuxiliaryNamesPDR(
+        const std::vector<uint8_t>& pdrData);
 
     /** @brief Parse the Entity Auxiliary name PDRs
      *
      *  @param[in] pdrData - the response PDRs from GetPDR command
      *  @return pointer to Entity Auxiliary name info struct
      */
-    std::shared_ptr<EntityAuxiliaryNames>
-        parseEntityAuxiliaryNamesPDR(const std::vector<uint8_t>& pdrData);
+    std::shared_ptr<EntityAuxiliaryNames> parseEntityAuxiliaryNamesPDR(
+        const std::vector<uint8_t>& pdrData);
 
     /** @brief Construct the NumericSensor sensor class for the compact numeric
      *         PLDM sensor.
@@ -209,8 +264,8 @@ class Terminus
      *  @param[in] pdrData - the response PDRs from GetPDR command
      *  @return pointer to sensor Auxiliary name info struct
      */
-    std::shared_ptr<SensorAuxiliaryNames>
-        parseCompactNumericSensorNames(const std::vector<uint8_t>& pdrData);
+    std::shared_ptr<SensorAuxiliaryNames> parseCompactNumericSensorNames(
+        const std::vector<uint8_t>& pdrData);
 
     /** @brief Create the terminus inventory path to
      *         /xyz/openbmc_project/inventory/Item/Board/.
@@ -220,6 +275,20 @@ class Terminus
      *
      */
     bool createInventoryPath(std::string tName);
+
+    /** @brief Get sensor names from Sensor Auxiliary Names PDRs
+     *
+     *  @param[in] sensorId - Sensor ID
+     *  @param[in] isEffecter - This is an effecter, not a sensor
+     *  @return vector of sensor name strings
+     *
+     */
+    std::vector<std::string> getSensorNames(const SensorId& sensorId);
+
+    /** @brief Add the next sensor PDR to this terminus, iterated by
+     *         sensorPdrIt.
+     */
+    void addNextSensorFromPDRs();
 
     /* @brief The terminus's TID */
     pldm_tid_t tid;
@@ -237,6 +306,9 @@ class Terminus
      */
     std::vector<uint8_t> supportedCmds;
 
+    /* @brief The PLDM supported type version */
+    std::map<uint8_t, ver32_t> supportedTypeVersions;
+
     /* @brief Sensor Auxiliary Name list */
     std::vector<std::shared_ptr<SensorAuxiliaryNames>>
         sensorAuxiliaryNamesTbl{};
@@ -247,11 +319,31 @@ class Terminus
 
     /** @brief Terminus name */
     EntityName terminusName{};
-    /* @brief The pointer of iventory D-Bus interface for the terminus */
-    std::unique_ptr<InventoryItemBoardIntf> inventoryItemBoardInft = nullptr;
+    /* @brief The pointer of inventory D-Bus interface for the terminus */
+    std::unique_ptr<pldm::dbus_api::PldmEntityReq> inventoryItemBoardInft =
+        nullptr;
 
     /* @brief Inventory D-Bus object path of the terminus */
     std::string inventoryPath;
+
+    /** @brief reference of main event loop of pldmd, primarily used to schedule
+     *  work
+     */
+    sdeventplus::Event& event;
+
+    /** @brief The event source to defer sensor creation tasks to event loop*/
+    std::unique_ptr<sdeventplus::source::Defer> sensorCreationEvent;
+
+    /** @brief Numeric Sensor PDR list */
+    std::vector<std::shared_ptr<pldm_numeric_sensor_value_pdr>>
+        numericSensorPdrs{};
+
+    /** @brief Compact Numeric Sensor PDR list */
+    std::vector<std::shared_ptr<pldm_compact_numeric_sensor_pdr>>
+        compactNumericSensorPdrs{};
+
+    /** @brief Iteration to loop through sensor PDRs when adding sensors */
+    SensorId sensorPdrIt = 0;
 };
 } // namespace platform_mc
 } // namespace pldm

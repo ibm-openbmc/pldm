@@ -1337,12 +1337,11 @@ Response Handler::fileAckWithMetaData(const pldm_msg* request,
 
     rc = handler->fileAckWithMetaData(fileStatus, fileMetaData1, fileMetaData2,
                                       fileMetaData3, fileMetaData4);
-    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    auto responsePtr = new (response.data()) pldm_msg;
     encode_file_ack_with_meta_data_resp(request->hdr.instance_id, rc,
                                         responsePtr);
     return response;
 }
-
 } // namespace oem_ibm
 } // namespace responder
 } // namespace pldm

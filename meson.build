@@ -193,6 +193,9 @@ libpldm_dep = dependency(
     include_type: 'system',
 )
 
+if get_option('oem-ampere').allowed()
+    add_project_arguments('-DOEM_AMPERE', language: 'cpp')
+endif
 
 libpldmutils_headers = ['.']
 libpldmutils = library(
@@ -265,6 +268,11 @@ deps = [
     stdplus,
 ]
 
+oem_files = []
+if get_option('oem-ampere').allowed()
+    subdir('oem/ampere')
+endif
+
 if get_option('libpldmresponder').allowed()
     subdir('libpldmresponder')
     deps += [libpldmresponder_dep]
@@ -280,12 +288,16 @@ executable(
     'fw-update/device_updater.cpp',
     'fw-update/watch.cpp',
     'fw-update/update_manager.cpp',
+    'platform-mc/dbus_impl_fru.cpp',
     'platform-mc/terminus_manager.cpp',
     'platform-mc/terminus.cpp',
     'platform-mc/platform_manager.cpp',
     'platform-mc/manager.cpp',
     'platform-mc/sensor_manager.cpp',
     'platform-mc/numeric_sensor.cpp',
+    'platform-mc/event_manager.cpp',
+    'platform-mc/dbus_to_terminus_effecters.cpp',
+    oem_files,
     'requester/mctp_endpoint_discovery.cpp',
     implicit_include_directories: false,
     dependencies: deps,

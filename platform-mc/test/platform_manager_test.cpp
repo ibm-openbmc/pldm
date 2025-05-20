@@ -2,6 +2,7 @@
 #include "mock_terminus_manager.hpp"
 #include "platform-mc/platform_manager.hpp"
 #include "test/test_instance_id.hpp"
+#include "utils_test.hpp"
 
 #include <sdeventplus/event.hpp>
 
@@ -18,7 +19,7 @@ class PlatformManagerTest : public testing::Test
         reqHandler(pldmTransport, event, instanceIdDb, false,
                    std::chrono::seconds(1), 2, std::chrono::milliseconds(100)),
         mockTerminusManager(event, reqHandler, instanceIdDb, termini, nullptr),
-        platformManager(mockTerminusManager, termini)
+        platformManager(mockTerminusManager, termini, nullptr)
     {}
 
     PldmTransport* pldmTransport = nullptr;
@@ -34,10 +35,11 @@ class PlatformManagerTest : public testing::Test
 TEST_F(PlatformManagerTest, initTerminusTest)
 {
     // Add terminus
-    auto mappedTid = mockTerminusManager.mapTid(pldm::MctpInfo(10, "", "", 1));
+    auto mappedTid =
+        mockTerminusManager.mapTid(pldm::MctpInfo(10, "", "", 1, std::nullopt));
     auto tid = mappedTid.value();
     termini[tid] = std::make_shared<pldm::platform_mc::Terminus>(
-        tid, 1 << PLDM_BASE | 1 << PLDM_PLATFORM);
+        tid, 1 << PLDM_BASE | 1 << PLDM_PLATFORM, event);
     auto terminus = termini[tid];
 
     /* Set supported command by terminus */
@@ -69,7 +71,7 @@ TEST_F(PlatformManagerTest, initTerminusTest)
             0x0 // dataTransferHandleTimeout
         };
     auto rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPDRRepositoryInfoResp.data()),
+        new (getPDRRepositoryInfoResp.data()) pldm_msg,
         sizeof(getPDRRepositoryInfoResp));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
@@ -143,8 +145,8 @@ TEST_F(PlatformManagerTest, initTerminusTest)
         0,                             // fatalHigh
         0                              // fatalLow
     };
-    rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPdrResp.data()), sizeof(getPdrResp));
+    rc = mockTerminusManager.enqueueResponse(new (getPdrResp.data()) pldm_msg,
+                                             sizeof(getPdrResp));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     const size_t getPdrAuxNameRespLen = 39;
@@ -179,24 +181,31 @@ TEST_F(PlatformManagerTest, initTerminusTest)
             0x00  // Entity Name "S0"
         };
     rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPdrAuxNameResp.data()),
-        sizeof(getPdrAuxNameResp));
+        new (getPdrAuxNameResp.data()) pldm_msg, sizeof(getPdrAuxNameResp));
     EXPECT_EQ(rc, PLDM_SUCCESS);
+
+    mockTerminusManager.updateMctpEndpointAvailability(
+        pldm::MctpInfo(10, "", "", 1, std::nullopt), true);
 
     stdexec::sync_wait(platformManager.initTerminus());
     EXPECT_EQ(true, terminus->initialized);
+    EXPECT_EQ(true, terminus->doesSupportCommand(PLDM_PLATFORM, PLDM_GET_PDR));
     EXPECT_EQ(2, terminus->pdrs.size());
+    // Run event loop for a few seconds to let sensor creation
+    // defer tasks be run. May increase time when sensor num is large
+    utils::runEventLoopForSeconds(event, 1);
     EXPECT_EQ(1, terminus->numericSensors.size());
-    EXPECT_EQ("S0", terminus->getTerminusName());
+    EXPECT_EQ("S0", terminus->getTerminusName().value());
 }
 
 TEST_F(PlatformManagerTest, parseTerminusNameTest)
 {
     // Add terminus
-    auto mappedTid = mockTerminusManager.mapTid(pldm::MctpInfo(10, "", "", 1));
+    auto mappedTid =
+        mockTerminusManager.mapTid(pldm::MctpInfo(10, "", "", 1, std::nullopt));
     auto tid = mappedTid.value();
     termini[tid] = std::make_shared<pldm::platform_mc::Terminus>(
-        tid, 1 << PLDM_BASE | 1 << PLDM_PLATFORM);
+        tid, 1 << PLDM_BASE | 1 << PLDM_PLATFORM, event);
     auto terminus = termini[tid];
 
     /* Set supported command by terminus */
@@ -228,7 +237,7 @@ TEST_F(PlatformManagerTest, parseTerminusNameTest)
             0x0 // dataTransferHandleTimeout
         };
     auto rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPDRRepositoryInfoResp.data()),
+        new (getPDRRepositoryInfoResp.data()) pldm_msg,
         sizeof(getPDRRepositoryInfoResp));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
@@ -302,8 +311,8 @@ TEST_F(PlatformManagerTest, parseTerminusNameTest)
         0,                             // fatalHigh
         0                              // fatalLow
     };
-    rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPdrResp.data()), sizeof(getPdrResp));
+    rc = mockTerminusManager.enqueueResponse(new (getPdrResp.data()) pldm_msg,
+                                             sizeof(getPdrResp));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     const size_t getPdrAuxNameRespLen = 39;
@@ -338,23 +347,26 @@ TEST_F(PlatformManagerTest, parseTerminusNameTest)
             0x00  // Entity Name "S0"
         };
     rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPdrAuxNameResp.data()),
-        sizeof(getPdrAuxNameResp));
+        new (getPdrAuxNameResp.data()) pldm_msg, sizeof(getPdrAuxNameResp));
     EXPECT_EQ(rc, PLDM_SUCCESS);
+
+    mockTerminusManager.updateMctpEndpointAvailability(
+        pldm::MctpInfo(10, "", "", 1, std::nullopt), true);
 
     stdexec::sync_wait(platformManager.initTerminus());
     EXPECT_EQ(true, terminus->initialized);
     EXPECT_EQ(2, terminus->pdrs.size());
-    EXPECT_EQ("S0", terminus->getTerminusName());
+    EXPECT_EQ("S0", terminus->getTerminusName().value());
 }
 
 TEST_F(PlatformManagerTest, initTerminusDontSupportGetPDRTest)
 {
     // Add terminus
-    auto mappedTid = mockTerminusManager.mapTid(pldm::MctpInfo(10, "", "", 1));
+    auto mappedTid =
+        mockTerminusManager.mapTid(pldm::MctpInfo(10, "", "", 1, std::nullopt));
     auto tid = mappedTid.value();
     termini[tid] = std::make_shared<pldm::platform_mc::Terminus>(
-        tid, 1 << PLDM_BASE | 1 << PLDM_PLATFORM);
+        tid, 1 << PLDM_BASE | 1 << PLDM_PLATFORM, event);
     auto terminus = termini[tid];
 
     /* Set supported command by terminus */
@@ -383,7 +395,7 @@ TEST_F(PlatformManagerTest, initTerminusDontSupportGetPDRTest)
             0x0 // dataTransferHandleTimeout
         };
     auto rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPDRRepositoryInfoResp.data()),
+        new (getPDRRepositoryInfoResp.data()) pldm_msg,
         sizeof(getPDRRepositoryInfoResp));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
@@ -457,8 +469,8 @@ TEST_F(PlatformManagerTest, initTerminusDontSupportGetPDRTest)
         0,                             // fatalHigh
         0                              // fatalLow
     };
-    rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPdrResp.data()), sizeof(getPdrResp));
+    rc = mockTerminusManager.enqueueResponse(new (getPdrResp.data()) pldm_msg,
+                                             sizeof(getPdrResp));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     stdexec::sync_wait(platformManager.initTerminus());
@@ -469,13 +481,17 @@ TEST_F(PlatformManagerTest, initTerminusDontSupportGetPDRTest)
 TEST_F(PlatformManagerTest, negativeInitTerminusTest1)
 {
     // terminus doesn't Type2 support
-    auto mappedTid = mockTerminusManager.mapTid(pldm::MctpInfo(10, "", "", 1));
+    auto mappedTid =
+        mockTerminusManager.mapTid(pldm::MctpInfo(10, "", "", 1, std::nullopt));
     auto tid = mappedTid.value();
-    termini[tid] =
-        std::make_shared<pldm::platform_mc::Terminus>(tid, 1 << PLDM_BASE);
+    termini[tid] = std::make_shared<pldm::platform_mc::Terminus>(
+        tid, 1 << PLDM_BASE, event);
     auto terminus = termini[tid];
 
     stdexec::sync_wait(platformManager.initTerminus());
+    // Run event loop for a few seconds to let sensor creation
+    // defer tasks be run. May increase time when sensor num is large
+    utils::runEventLoopForSeconds(event, 1);
     EXPECT_EQ(true, terminus->initialized);
     EXPECT_EQ(0, terminus->pdrs.size());
     EXPECT_EQ(0, terminus->numericSensors.size());
@@ -484,10 +500,11 @@ TEST_F(PlatformManagerTest, negativeInitTerminusTest1)
 TEST_F(PlatformManagerTest, negativeInitTerminusTest2)
 {
     // terminus responses error
-    auto mappedTid = mockTerminusManager.mapTid(pldm::MctpInfo(10, "", "", 1));
+    auto mappedTid =
+        mockTerminusManager.mapTid(pldm::MctpInfo(10, "", "", 1, std::nullopt));
     auto tid = mappedTid.value();
     termini[tid] = std::make_shared<pldm::platform_mc::Terminus>(
-        tid, 1 << PLDM_BASE | 1 << PLDM_PLATFORM);
+        tid, 1 << PLDM_BASE | 1 << PLDM_PLATFORM, event);
     auto terminus = termini[tid];
 
     // queue getPDRRepositoryInfo response cc=PLDM_ERROR
@@ -495,7 +512,7 @@ TEST_F(PlatformManagerTest, negativeInitTerminusTest2)
     std::array<uint8_t, sizeof(pldm_msg_hdr) + getPDRRepositoryInfoLen>
         getPDRRepositoryInfoResp{0x0, 0x02, 0x50, PLDM_ERROR};
     auto rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPDRRepositoryInfoResp.data()),
+        new (getPDRRepositoryInfoResp.data()) pldm_msg,
         sizeof(getPDRRepositoryInfoResp));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
@@ -503,11 +520,14 @@ TEST_F(PlatformManagerTest, negativeInitTerminusTest2)
     const size_t getPdrRespLen = 1;
     std::array<uint8_t, sizeof(pldm_msg_hdr) + getPdrRespLen> getPdrResp{
         0x0, 0x02, 0x51, PLDM_ERROR};
-    rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPdrResp.data()), sizeof(getPdrResp));
+    rc = mockTerminusManager.enqueueResponse(new (getPdrResp.data()) pldm_msg,
+                                             sizeof(getPdrResp));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     stdexec::sync_wait(platformManager.initTerminus());
+    // Run event loop for a few seconds to let sensor creation
+    // defer tasks be run. May increase time when sensor num is large
+    utils::runEventLoopForSeconds(event, 1);
     EXPECT_EQ(true, terminus->initialized);
     EXPECT_EQ(0, terminus->pdrs.size());
     EXPECT_EQ(0, terminus->numericSensors.size());

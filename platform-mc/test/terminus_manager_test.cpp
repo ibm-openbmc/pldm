@@ -1,16 +1,17 @@
-#include "libpldm/base.h"
-#include "libpldm/bios.h"
-#include "libpldm/fru.h"
-#include "libpldm/platform.h"
-
 #include "common/instance_id.hpp"
 #include "common/types.hpp"
 #include "mock_terminus_manager.hpp"
+#include "platform-mc/platform_manager.hpp"
 #include "platform-mc/terminus_manager.hpp"
 #include "requester/handler.hpp"
 #include "requester/mctp_endpoint_discovery.hpp"
 #include "requester/request.hpp"
 #include "test/test_instance_id.hpp"
+
+#include <libpldm/base.h>
+#include <libpldm/bios.h>
+#include <libpldm/fru.h>
+#include <libpldm/platform.h>
 
 #include <sdbusplus/timer.hpp>
 #include <sdeventplus/event.hpp>
@@ -34,7 +35,8 @@ class TerminusManagerTest : public testing::Test
                    std::chrono::seconds(1), 2, std::chrono::milliseconds(100)),
         terminusManager(event, reqHandler, instanceIdDb, termini, nullptr,
                         pldm::BmcMctpEid),
-        mockTerminusManager(event, reqHandler, instanceIdDb, termini, nullptr)
+        mockTerminusManager(event, reqHandler, instanceIdDb, termini, nullptr),
+        platformManager(mockTerminusManager, termini, nullptr)
     {}
 
     PldmTransport* pldmTransport = nullptr;
@@ -44,12 +46,13 @@ class TerminusManagerTest : public testing::Test
     pldm::requester::Handler<pldm::requester::Request> reqHandler;
     pldm::platform_mc::TerminusManager terminusManager;
     pldm::platform_mc::MockTerminusManager mockTerminusManager;
+    pldm::platform_mc::PlatformManager platformManager;
     std::map<pldm_tid_t, std::shared_ptr<pldm::platform_mc::Terminus>> termini;
 };
 
 TEST_F(TerminusManagerTest, mapTidTest)
 {
-    pldm::MctpInfo mctpInfo1(8, "", "", 0);
+    pldm::MctpInfo mctpInfo1(8, "", "", 0, std::nullopt);
 
     auto mappedTid1 = terminusManager.mapTid(mctpInfo1);
     EXPECT_NE(mappedTid1, std::nullopt);
@@ -70,38 +73,38 @@ TEST_F(TerminusManagerTest, mapTidTest)
 TEST_F(TerminusManagerTest, negativeMapTidTest)
 {
     // map null EID(0) to TID
-    pldm::MctpInfo m0(0, "", "", 0);
+    pldm::MctpInfo m0(0, "", "", 0, std::nullopt);
     auto mappedTid = terminusManager.mapTid(m0);
     EXPECT_EQ(mappedTid, std::nullopt);
 
     // map broadcast EID(0xff) to TID
-    pldm::MctpInfo m1(0xff, "", "", 0);
+    pldm::MctpInfo m1(0xff, "", "", 0, std::nullopt);
     mappedTid = terminusManager.mapTid(m1);
     EXPECT_EQ(mappedTid, std::nullopt);
 
     // map EID to tid which has been assigned
-    pldm::MctpInfo m2(9, "", "", 1);
-    pldm::MctpInfo m3(10, "", "", 1);
+    pldm::MctpInfo m2(9, "", "", 1, std::nullopt);
+    pldm::MctpInfo m3(10, "", "", 1, std::nullopt);
     auto mappedTid2 = terminusManager.mapTid(m2);
     auto mappedTid3 = terminusManager.storeTerminusInfo(m3, mappedTid2.value());
     EXPECT_NE(mappedTid2, std::nullopt);
     EXPECT_EQ(mappedTid3, std::nullopt);
 
     // map two mctpInfo with same EID but different network Id
-    pldm::MctpInfo m4(12, "", "", 1);
-    pldm::MctpInfo m5(12, "", "", 2);
+    pldm::MctpInfo m4(12, "", "", 1, std::nullopt);
+    pldm::MctpInfo m5(12, "", "", 2, std::nullopt);
     auto mappedTid4 = terminusManager.mapTid(m4);
     auto mappedTid5 = terminusManager.mapTid(m5);
     EXPECT_NE(mappedTid4.value(), mappedTid5.value());
 
     // map same mctpInfo twice
-    pldm::MctpInfo m6(12, "", "", 3);
+    pldm::MctpInfo m6(12, "", "", 3, std::nullopt);
     auto mappedTid6 = terminusManager.mapTid(m6);
     auto mappedTid6_1 = terminusManager.mapTid(m6);
     EXPECT_EQ(mappedTid6.value(), mappedTid6_1.value());
 
     // look up an unmapped MctpInfo to TID
-    pldm::MctpInfo m7(1, "", "", 0);
+    pldm::MctpInfo m7(1, "", "", 0, std::nullopt);
     auto mappedTid7 = terminusManager.toTid(m7);
     EXPECT_EQ(mappedTid7, std::nullopt);
 
@@ -139,24 +142,23 @@ TEST_F(TerminusManagerTest, discoverMctpTerminusTest)
 
     std::array<uint8_t, sizeof(pldm_msg_hdr) + getTidRespLen> getTidResp0{
         0x00, 0x02, 0x02, 0x00, 0x00};
-    rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getTidResp0.data()), sizeof(getTidResp0));
+    rc = mockTerminusManager.enqueueResponse(new (getTidResp0.data()) pldm_msg,
+                                             sizeof(getTidResp0));
     EXPECT_EQ(rc, PLDM_SUCCESS);
     std::array<uint8_t, sizeof(pldm_msg_hdr) + setTidRespLen> setTidResp0{
         0x00, 0x02, 0x01, 0x00};
-    rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(setTidResp0.data()), sizeof(setTidResp0));
+    rc = mockTerminusManager.enqueueResponse(new (setTidResp0.data()) pldm_msg,
+                                             sizeof(setTidResp0));
     EXPECT_EQ(rc, PLDM_SUCCESS);
     std::array<uint8_t, sizeof(pldm_msg_hdr) + getPldmTypesRespLen>
         getPldmTypesResp0{0x00, 0x02, 0x04, 0x00, 0x01, 0x00,
                           0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPldmTypesResp0.data()),
-        sizeof(getPldmTypesResp0));
+        new (getPldmTypesResp0.data()) pldm_msg, sizeof(getPldmTypesResp0));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     pldm::MctpInfos mctpInfos{};
-    mctpInfos.emplace_back(pldm::MctpInfo(12, "", "", 1));
+    mctpInfos.emplace_back(pldm::MctpInfo(12, "", "", 1, std::nullopt));
     mockTerminusManager.discoverMctpTerminus(mctpInfos);
     EXPECT_EQ(1, termini.size());
 
@@ -166,15 +168,14 @@ TEST_F(TerminusManagerTest, discoverMctpTerminusTest)
 
     std::array<uint8_t, sizeof(pldm_msg_hdr) + getTidRespLen> getTidResp1{
         0x00, 0x02, 0x02, 0x00, 0x01};
-    rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getTidResp1.data()), sizeof(getTidResp1));
+    rc = mockTerminusManager.enqueueResponse(new (getTidResp1.data()) pldm_msg,
+                                             sizeof(getTidResp1));
+    EXPECT_EQ(rc, PLDM_SUCCESS);
+    rc = mockTerminusManager.enqueueResponse(new (setTidResp0.data()) pldm_msg,
+                                             sizeof(setTidResp0));
     EXPECT_EQ(rc, PLDM_SUCCESS);
     rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(setTidResp0.data()), sizeof(setTidResp0));
-    EXPECT_EQ(rc, PLDM_SUCCESS);
-    rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPldmTypesResp0.data()),
-        sizeof(getPldmTypesResp0));
+        new (getPldmTypesResp0.data()) pldm_msg, sizeof(getPldmTypesResp0));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     mockTerminusManager.discoverMctpTerminus(mctpInfos);
@@ -198,11 +199,11 @@ TEST_F(TerminusManagerTest, negativeDiscoverMctpTerminusTest)
     std::array<uint8_t, sizeof(pldm_msg_hdr) + getTidRespLen> getTidResp0{
         0x00, 0x02, 0x02, 0x00, PLDM_TID_RESERVED};
     auto rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getTidResp0.data()), sizeof(getTidResp0));
+        new (getTidResp0.data()) pldm_msg, sizeof(getTidResp0));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     pldm::MctpInfos mctpInfos{};
-    mctpInfos.emplace_back(pldm::MctpInfo(12, "", "", 1));
+    mctpInfos.emplace_back(pldm::MctpInfo(12, "", "", 1, std::nullopt));
     mockTerminusManager.discoverMctpTerminus(mctpInfos);
     EXPECT_EQ(0, termini.size());
 
@@ -212,11 +213,11 @@ TEST_F(TerminusManagerTest, negativeDiscoverMctpTerminusTest)
     std::array<uint8_t, sizeof(pldm_msg_hdr) + setTidRespLen> setTidResp1{
         0x00, 0x02, 0x01, PLDM_ERROR};
 
-    rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getTidResp1.data()), sizeof(getTidResp1));
+    rc = mockTerminusManager.enqueueResponse(new (getTidResp1.data()) pldm_msg,
+                                             sizeof(getTidResp1));
     EXPECT_EQ(rc, PLDM_SUCCESS);
-    rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(setTidResp1.data()), sizeof(setTidResp1));
+    rc = mockTerminusManager.enqueueResponse(new (setTidResp1.data()) pldm_msg,
+                                             sizeof(setTidResp1));
     EXPECT_EQ(rc, PLDM_SUCCESS);
     mockTerminusManager.removeMctpTerminus(mctpInfos);
     EXPECT_EQ(0, termini.size());
@@ -230,16 +231,15 @@ TEST_F(TerminusManagerTest, negativeDiscoverMctpTerminusTest)
     std::array<uint8_t, sizeof(pldm_msg_hdr) + getPldmTypesRespLen>
         getPldmTypesResp2{0x00, 0x02, 0x04, PLDM_ERROR, 0x01, 0x00,
                           0x00, 0x00, 0x00, 0x00,       0x00, 0x00};
-    rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getTidResp2.data()), sizeof(getTidResp2));
+    rc = mockTerminusManager.enqueueResponse(new (getTidResp2.data()) pldm_msg,
+                                             sizeof(getTidResp2));
     EXPECT_EQ(rc, PLDM_SUCCESS);
-    rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(setTidResp2.data()), sizeof(setTidResp2));
+    rc = mockTerminusManager.enqueueResponse(new (setTidResp2.data()) pldm_msg,
+                                             sizeof(setTidResp2));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPldmTypesResp2.data()),
-        sizeof(getPldmTypesResp2));
+        new (getPldmTypesResp2.data()) pldm_msg, sizeof(getPldmTypesResp2));
     EXPECT_EQ(rc, PLDM_SUCCESS);
     mockTerminusManager.removeMctpTerminus(mctpInfos);
     EXPECT_EQ(0, termini.size());
@@ -257,14 +257,14 @@ TEST_F(TerminusManagerTest, doesSupportTypeTest)
 
     std::array<uint8_t, sizeof(pldm_msg_hdr) + getTidRespLen> getTidResp0{
         0x00, 0x02, 0x02, 0x00, 0x00};
-    rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getTidResp0.data()), sizeof(getTidResp0));
+    rc = mockTerminusManager.enqueueResponse(new (getTidResp0.data()) pldm_msg,
+                                             sizeof(getTidResp0));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     std::array<uint8_t, sizeof(pldm_msg_hdr) + setTidRespLen> setTidResp0{
         0x00, 0x02, 0x01, 0x00};
-    rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(setTidResp0.data()), sizeof(setTidResp0));
+    rc = mockTerminusManager.enqueueResponse(new (setTidResp0.data()) pldm_msg,
+                                             sizeof(setTidResp0));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     uint8_t supportedType1Byte =
@@ -275,12 +275,11 @@ TEST_F(TerminusManagerTest, doesSupportTypeTest)
                           0x00, 0x00, 0x00, 0x00, 0x00,
                           0x00, 0x00};
     rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPldmTypesResp0.data()),
-        sizeof(getPldmTypesResp0));
+        new (getPldmTypesResp0.data()) pldm_msg, sizeof(getPldmTypesResp0));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     pldm::MctpInfos mctpInfos{};
-    mctpInfos.emplace_back(pldm::MctpInfo(12, "", "", 1));
+    mctpInfos.emplace_back(pldm::MctpInfo(12, "", "", 1, std::nullopt));
     mockTerminusManager.discoverMctpTerminus(mctpInfos);
     EXPECT_EQ(1, termini.size());
 
@@ -302,6 +301,9 @@ TEST_F(TerminusManagerTest, doesSupportCommandTest)
     const size_t setTidRespLen = PLDM_SET_TID_RESP_BYTES;
     const size_t getPldmTypesRespLen = PLDM_GET_TYPES_RESP_BYTES;
     const size_t getPldmCommandRespLen = PLDM_GET_COMMANDS_RESP_BYTES;
+    /* PLDM_GET_VERSION_RESP_BYTES does not include 4 bytes check sum */
+    const size_t getPldmVersionRespLen =
+        PLDM_GET_VERSION_RESP_BYTES + sizeof(uint32_t);
 
     // 0.discover a mctp list
     auto rc = mockTerminusManager.clearQueuedResponses();
@@ -309,14 +311,14 @@ TEST_F(TerminusManagerTest, doesSupportCommandTest)
 
     std::array<uint8_t, sizeof(pldm_msg_hdr) + getTidRespLen> getTidResp0{
         0x00, 0x02, 0x02, 0x00, 0x00};
-    rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getTidResp0.data()), sizeof(getTidResp0));
+    rc = mockTerminusManager.enqueueResponse(new (getTidResp0.data()) pldm_msg,
+                                             sizeof(getTidResp0));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     std::array<uint8_t, sizeof(pldm_msg_hdr) + setTidRespLen> setTidResp0{
         0x00, 0x02, 0x01, 0x00};
-    rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(setTidResp0.data()), sizeof(setTidResp0));
+    rc = mockTerminusManager.enqueueResponse(new (setTidResp0.data()) pldm_msg,
+                                             sizeof(setTidResp0));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     uint8_t byte0 = (1 << (PLDM_BASE % 8)) + (1 << (PLDM_PLATFORM % 8)) +
@@ -325,8 +327,18 @@ TEST_F(TerminusManagerTest, doesSupportCommandTest)
         getPldmTypesResp0{0x00, 0x02, 0x04, 0x00, byte0, 0x00,
                           0x00, 0x00, 0x00, 0x00, 0x00,  0x00};
     rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPldmTypesResp0.data()),
-        sizeof(getPldmTypesResp0));
+        new (getPldmTypesResp0.data()) pldm_msg, sizeof(getPldmTypesResp0));
+    EXPECT_EQ(rc, PLDM_SUCCESS);
+
+    /* Response GetPLDMVersion BASE, CC=0 */
+    std::array<uint8_t, sizeof(pldm_msg_hdr) + getPldmVersionRespLen>
+        getPldmVersionBaseResp0{0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+                                0x00, 0x00, 0x05, 0x00, 0xf0, 0xf1,
+                                0xf1, 0xba, 0xbe, 0x9d, 0x53};
+
+    rc = mockTerminusManager.enqueueResponse(
+        (pldm_msg*)getPldmVersionBaseResp0.data(),
+        sizeof(getPldmVersionBaseResp0));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     /* Response GetPLDMCommand BASE, CC=0,
@@ -341,10 +353,20 @@ TEST_F(TerminusManagerTest, doesSupportCommandTest)
             0x00, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00};
     rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPldmCommandBaseResp0.data()),
+        new (getPldmCommandBaseResp0.data()) pldm_msg,
         sizeof(getPldmCommandBaseResp0));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
+    /* Response GetPLDMVersion PLATFORM, CC=0 */
+    std::array<uint8_t, sizeof(pldm_msg_hdr) + getPldmVersionRespLen>
+        getPldmVersionPlatformResp0{0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+                                    0x00, 0x00, 0x05, 0x00, 0xf1, 0xf2,
+                                    0xf1, 0x4e, 0x87, 0x72, 0x79};
+
+    rc = mockTerminusManager.enqueueResponse(
+        (pldm_msg*)getPldmVersionPlatformResp0.data(),
+        sizeof(getPldmVersionPlatformResp0));
+    EXPECT_EQ(rc, PLDM_SUCCESS);
     /* Response GetPLDMCommand PLATFORM, CC=0,
      * SetEventReceiver/PlatformEventMessage/GetSensorReading/SetNumericEffecterValue/GetNumericEffecterValue/GetPDR
      */
@@ -379,10 +401,20 @@ TEST_F(TerminusManagerTest, doesSupportCommandTest)
             0x00, 0x00,  0x00,  0x00, 0x00,  0x00,   0x00,  0x00, 0x00,
             0x00, 0x00,  0x00,  0x00, 0x00,  0x00,   0x00,  0x00, 0x00};
     rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPldmCommandPlatResp0.data()),
+        new (getPldmCommandPlatResp0.data()) pldm_msg,
         sizeof(getPldmCommandPlatResp0));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
+    /* Response GetPLDMVersion BIOS, CC=0 */
+    std::array<uint8_t, sizeof(pldm_msg_hdr) + getPldmVersionRespLen>
+        getPldmVersionBiosResp0{0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+                                0x00, 0x00, 0x05, 0x00, 0xf0, 0xf0,
+                                0xf1, 0xfb, 0x8f, 0x86, 0x4a};
+
+    rc = mockTerminusManager.enqueueResponse(
+        (pldm_msg*)getPldmVersionBiosResp0.data(),
+        sizeof(getPldmVersionBiosResp0));
+    EXPECT_EQ(rc, PLDM_SUCCESS);
     /* Response GetPLDMCommand BIOS, CC=0, GetDateTime/SetDateTime */
     /* byte0 command from 1 to 7 */
     byte0 = (0 << (PLDM_GET_BIOS_TABLE % 8)) +
@@ -398,10 +430,20 @@ TEST_F(TerminusManagerTest, doesSupportCommandTest)
             0x00, 0x00, 0x00, 0x00, 0x00,  0x00,  0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00,  0x00,  0x00, 0x00};
     rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPldmCommandBiosResp0.data()),
+        new (getPldmCommandBiosResp0.data()) pldm_msg,
         sizeof(getPldmCommandBiosResp0));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
+    /* Response GetPLDMVersion FRU, CC=0 */
+    std::array<uint8_t, sizeof(pldm_msg_hdr) + getPldmVersionRespLen>
+        getPldmVersionFruResp0{0x00, 0x00, 0x03, 0x00, 0x00, 0x00,
+                               0x00, 0x00, 0x05, 0x00, 0xf1, 0xf0,
+                               0xf1, 0xcc, 0xe5, 0x44, 0x4b};
+
+    rc = mockTerminusManager.enqueueResponse(
+        (pldm_msg*)getPldmVersionFruResp0.data(),
+        sizeof(getPldmVersionFruResp0));
+    EXPECT_EQ(rc, PLDM_SUCCESS);
     /* Response GetPLDMCommand FRU, CC=0,
      * GetFRURecordTableMetadata/GetFRURecordTable */
     /* byte0 command from 1 to 7 */
@@ -418,12 +460,12 @@ TEST_F(TerminusManagerTest, doesSupportCommandTest)
             0x00, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00, 0x00,
             0x00, 0x00, 0x00, 0x00, 0x00,  0x00, 0x00, 0x00};
     rc = mockTerminusManager.enqueueResponse(
-        reinterpret_cast<pldm_msg*>(getPldmCommandFruResp0.data()),
+        new (getPldmCommandFruResp0.data()) pldm_msg,
         sizeof(getPldmCommandFruResp0));
     EXPECT_EQ(rc, PLDM_SUCCESS);
 
     pldm::MctpInfos mctpInfos{};
-    mctpInfos.emplace_back(pldm::MctpInfo(12, "", "", 1));
+    mctpInfos.emplace_back(pldm::MctpInfo(12, "", "", 1, std::nullopt));
     mockTerminusManager.discoverMctpTerminus(mctpInfos);
     EXPECT_EQ(1, termini.size());
     EXPECT_EQ(true, termini.contains(1));
@@ -497,4 +539,175 @@ TEST_F(TerminusManagerTest, doesSupportCommandTest)
                                                     PLDM_SET_FRU_RECORD_TABLE));
     EXPECT_EQ(false, termini[1]->doesSupportCommand(
                          PLDM_FRU, PLDM_GET_FRU_RECORD_BY_OPTION));
+}
+
+TEST_F(TerminusManagerTest, getActiveEidByNameTest)
+{
+    // Add terminus
+    pldm::MctpInfo mctpInfo(10, "", "", 1, std::nullopt);
+    auto mappedTid = mockTerminusManager.mapTid(mctpInfo);
+    auto tid = mappedTid.value();
+    termini[tid] = std::make_shared<pldm::platform_mc::Terminus>(
+        tid, 1 << PLDM_BASE | 1 << PLDM_PLATFORM, event);
+    auto terminus = termini[tid];
+
+    auto mappedTid1 = terminusManager.mapTid(mctpInfo);
+    EXPECT_EQ(mappedTid1, mappedTid);
+
+    auto mctpInfo1 = terminusManager.toMctpInfo(tid);
+    EXPECT_EQ(mctpInfo, mctpInfo1.value());
+
+    /* Set supported command by terminus */
+    auto size = PLDM_MAX_TYPES * (PLDM_MAX_CMDS_PER_TYPE / 8);
+    std::vector<uint8_t> pldmCmds(size);
+    uint8_t type = PLDM_PLATFORM;
+    uint8_t cmd = PLDM_GET_PDR;
+    auto idx = type * (PLDM_MAX_CMDS_PER_TYPE / 8) + (cmd / 8);
+    pldmCmds[idx] = pldmCmds[idx] | (1 << (cmd % 8));
+    cmd = PLDM_GET_PDR_REPOSITORY_INFO;
+    idx = type * (PLDM_MAX_CMDS_PER_TYPE / 8) + (cmd / 8);
+    pldmCmds[idx] = pldmCmds[idx] | (1 << (cmd % 8));
+    termini[tid]->setSupportedCommands(pldmCmds);
+
+    // queue getPDRRepositoryInfo response
+    const size_t getPDRRepositoryInfoLen =
+        PLDM_GET_PDR_REPOSITORY_INFO_RESP_BYTES;
+    std::array<uint8_t, sizeof(pldm_msg_hdr) + getPDRRepositoryInfoLen>
+        getPDRRepositoryInfoResp{
+            0x0, 0x02, 0x50, PLDM_SUCCESS,
+            0x0,                                     // repositoryState
+            0x0, 0x0,  0x0,  0x0,          0x0, 0x0, 0x0,
+            0x0, 0x0,  0x0,  0x0,          0x0, 0x0, // updateTime
+            0x0, 0x0,  0x0,  0x0,          0x0, 0x0, 0x0,
+            0x0, 0x0,  0x0,  0x0,          0x0, 0x0, // OEMUpdateTime
+            2,   0x0,  0x0,  0x0,                    // recordCount
+            0x0, 0x1,  0x0,  0x0,                    // repositorySize
+            59,  0x0,  0x0,  0x0,                    // largestRecordSize
+            0x0 // dataTransferHandleTimeout
+        };
+    auto rc = mockTerminusManager.enqueueResponse(
+        reinterpret_cast<pldm_msg*>(getPDRRepositoryInfoResp.data()),
+        sizeof(getPDRRepositoryInfoResp));
+    EXPECT_EQ(rc, PLDM_SUCCESS);
+
+    // queue getPDR responses
+    const size_t getPdrRespLen = 81;
+    std::array<uint8_t, sizeof(pldm_msg_hdr) + getPdrRespLen> getPdrResp{
+        0x0, 0x02, 0x51, PLDM_SUCCESS, 0x1, 0x0, 0x0, 0x0, // nextRecordHandle
+        0x0, 0x0, 0x0, 0x0, // nextDataTransferHandle
+        0x5,                // transferFlag
+        69, 0x0,            // responseCount
+        // numeric Sensor PDR
+        0x0, 0x0, 0x0,
+        0x0,                     // record handle
+        0x1,                     // PDRHeaderVersion
+        PLDM_NUMERIC_SENSOR_PDR, // PDRType
+        0x0,
+        0x0,                     // recordChangeNumber
+        PLDM_PDR_NUMERIC_SENSOR_PDR_FIXED_LENGTH +
+            PLDM_PDR_NUMERIC_SENSOR_PDR_VARIED_SENSOR_DATA_SIZE_MIN_LENGTH +
+            PLDM_PDR_NUMERIC_SENSOR_PDR_VARIED_RANGE_FIELD_MIN_LENGTH,
+        0,                             // dataLength
+        0,
+        0,                             // PLDMTerminusHandle
+        0x1,
+        0x0,                           // sensorID=1
+        120,
+        0,                             // entityType=Power Supply(120)
+        1,
+        0,                             // entityInstanceNumber
+        0x1,
+        0x0,                           // containerID=1
+        PLDM_NO_INIT,                  // sensorInit
+        false,                         // sensorAuxiliaryNamesPDR
+        PLDM_SENSOR_UNIT_DEGRESS_C,    // baseUint(2)=degrees C
+        1,                             // unitModifier = 1
+        0,                             // rateUnit
+        0,                             // baseOEMUnitHandle
+        0,                             // auxUnit
+        0,                             // auxUnitModifier
+        0,                             // auxRateUnit
+        0,                             // rel
+        0,                             // auxOEMUnitHandle
+        true,                          // isLinear
+        PLDM_SENSOR_DATA_SIZE_UINT8,   // sensorDataSize
+        0, 0, 0xc0,
+        0x3f,                          // resolution=1.5
+        0, 0, 0x80,
+        0x3f,                          // offset=1.0
+        0,
+        0,                             // accuracy
+        0,                             // plusTolerance
+        0,                             // minusTolerance
+        2,                             // hysteresis
+        0,                             // supportedThresholds
+        0,                             // thresholdAndHysteresisVolatility
+        0, 0, 0x80,
+        0x3f,                          // stateTransistionInterval=1.0
+        0, 0, 0x80,
+        0x3f,                          // updateInverval=1.0
+        255,                           // maxReadable
+        0,                             // minReadable
+        PLDM_RANGE_FIELD_FORMAT_UINT8, // rangeFieldFormat
+        0,                             // rangeFieldsupport
+        0,                             // nominalValue
+        0,                             // normalMax
+        0,                             // normalMin
+        0,                             // warningHigh
+        0,                             // warningLow
+        0,                             // criticalHigh
+        0,                             // criticalLow
+        0,                             // fatalHigh
+        0                              // fatalLow
+    };
+    rc = mockTerminusManager.enqueueResponse(
+        reinterpret_cast<pldm_msg*>(getPdrResp.data()), sizeof(getPdrResp));
+    EXPECT_EQ(rc, PLDM_SUCCESS);
+
+    const size_t getPdrAuxNameRespLen = 39;
+    std::array<uint8_t, sizeof(pldm_msg_hdr) + getPdrAuxNameRespLen>
+        getPdrAuxNameResp{
+            0x0, 0x02, 0x51, PLDM_SUCCESS, 0x0, 0x0, 0x0,
+            0x0,                // nextRecordHandle
+            0x0, 0x0, 0x0, 0x0, // nextDataTransferHandle
+            0x5,                // transferFlag
+            0x1b, 0x0,          // responseCount
+            // Common PDR Header
+            0x1, 0x0, 0x0,
+            0x0,                             // record handle
+            0x1,                             // PDRHeaderVersion
+            PLDM_ENTITY_AUXILIARY_NAMES_PDR, // PDRType
+            0x1,
+            0x0,                             // recordChangeNumber
+            0x11,
+            0,                               // dataLength
+            /* Entity Auxiliary Names PDR Data*/
+            3,
+            0x80, // entityType system software
+            0x1,
+            0x0,  // Entity instance number =1
+            0,
+            0,    // Overall system
+            0,    // shared Name Count one name only
+            01,   // nameStringCount
+            0x65, 0x6e, 0x00,
+            0x00, // Language Tag "en"
+            0x53, 0x00, 0x30, 0x00,
+            0x00  // Entity Name "S0"
+        };
+    rc = mockTerminusManager.enqueueResponse(
+        reinterpret_cast<pldm_msg*>(getPdrAuxNameResp.data()),
+        sizeof(getPdrAuxNameResp));
+    EXPECT_EQ(rc, PLDM_SUCCESS);
+
+    mockTerminusManager.updateMctpEndpointAvailability(mctpInfo, true);
+    terminusManager.updateMctpEndpointAvailability(mctpInfo, true);
+
+    stdexec::sync_wait(platformManager.initTerminus());
+    EXPECT_EQ(true, terminus->initialized);
+    EXPECT_EQ(2, terminus->pdrs.size());
+    EXPECT_EQ(1, termini.size());
+    EXPECT_EQ("S0", terminus->getTerminusName().value());
+    EXPECT_EQ(10, terminusManager.getActiveEidByName("S0").value());
+    EXPECT_EQ(false, terminusManager.getActiveEidByName("S1").has_value());
 }

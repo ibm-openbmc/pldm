@@ -10,6 +10,7 @@
 #include <systemd/sd-bus.h>
 #include <unistd.h>
 
+#include <com/ibm/Dump/Notify/server.hpp>
 #include <phosphor-logging/lg2.hpp>
 #include <sdbusplus/server.hpp>
 
@@ -199,9 +200,10 @@ int DumpHandler::newFileAvailable(uint64_t length)
     auto notifyObjPath = dumpObjPath;
     auto notifyDumpType =
         sdbusplus::common::com::ibm::dump::Notify::DumpType::System;
+
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
     {
-        // Setting the dump type for resource dump
+        // Setting the Notify path for resource dump
         notifyDumpType =
             sdbusplus::common::com::ibm::dump::Notify::DumpType::Resource;
     }

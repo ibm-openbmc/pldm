@@ -98,9 +98,9 @@ class FileHandler
      *  @param[in] xdmaInterface - interface to transfer data between BMC and
      * Remote terminus
      */
-    virtual void
-        deleteAIOobjects(const std::shared_ptr<dma::DMA>& xdmaInterface,
-                         const SharedAIORespData& sharedAIORespDataobj);
+    virtual void deleteAIOobjects(
+        const std::shared_ptr<dma::DMA>& xdmaInterface,
+        const SharedAIORespData& sharedAIORespDataobj);
 
   public:
     /** @brief Method to write an oem file type from remote terminus memory.
@@ -165,9 +165,9 @@ class FileHandler
      *  @param[in] fileHandle - file handle
      *  @param[in] metaDataObj - file ack meta data status and values
      */
-    virtual void
-        postWriteAction(const uint16_t fileType, const uint32_t fileHandle,
-                        const struct fileack_status_metadata& metaDataObj) = 0;
+    virtual void postWriteAction(
+        const uint16_t fileType, const uint32_t fileHandle,
+        const struct fileack_status_metadata& metaDataObj) = 0;
 
     virtual int fileAck(uint8_t fileStatus) = 0;
 
@@ -307,5 +307,6 @@ std::unique_ptr<FileHandler> getHandlerByType(
 std::shared_ptr<FileHandler> getSharedHandlerByType(
     uint16_t fileType, uint32_t fileHandle, pldm::InstanceIdDb* instanceIdDb,
     pldm::requester::Handler<pldm::requester::Request>* handler);
+
 } // namespace responder
 } // namespace pldm

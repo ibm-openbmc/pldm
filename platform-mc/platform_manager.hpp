@@ -1,10 +1,11 @@
 #pragma once
 
-#include "libpldm/platform.h"
-#include "libpldm/pldm.h"
-
 #include "terminus.hpp"
 #include "terminus_manager.hpp"
+
+#include <libpldm/fru.h>
+#include <libpldm/platform.h>
+#include <libpldm/pldm.h>
 
 #include <vector>
 
@@ -30,8 +31,8 @@ class PlatformManager
     ~PlatformManager() = default;
 
     explicit PlatformManager(TerminusManager& terminusManager,
-                             TerminiMapper& termini) :
-        terminusManager(terminusManager), termini(termini)
+                             TerminiMapper& termini, Manager* manager) :
+        terminusManager(terminusManager), termini(termini), manager(manager)
     {}
 
     /** @brief Initialize terminus which supports PLDM Type 2
@@ -71,13 +72,13 @@ class PlatformManager
      *  @param[out] transferCrc - CRC value when record data is last part of PDR
      *  @return coroutine return_value - PLDM completion code
      */
-    exec::task<int>
-        getPDR(const pldm_tid_t tid, const uint32_t recordHndl,
-               const uint32_t dataTransferHndl, const uint8_t transferOpFlag,
-               const uint16_t requestCnt, const uint16_t recordChgNum,
-               uint32_t& nextRecordHndl, uint32_t& nextDataTransferHndl,
-               uint8_t& transferFlag, uint16_t& responseCnt,
-               std::vector<uint8_t>& recordData, uint8_t& transferCrc);
+    exec::task<int> getPDR(
+        const pldm_tid_t tid, const uint32_t recordHndl,
+        const uint32_t dataTransferHndl, const uint8_t transferOpFlag,
+        const uint16_t requestCnt, const uint16_t recordChgNum,
+        uint32_t& nextRecordHndl, uint32_t& nextDataTransferHndl,
+        uint8_t& transferFlag, uint16_t& responseCnt,
+        std::vector<uint8_t>& recordData, uint8_t& transferCrc);
 
     /** @brief get PDR repository information.
      *
@@ -111,6 +112,16 @@ class PlatformManager
         pldm_event_message_global_enable eventMessageGlobalEnable,
         pldm_transport_protocol_type protocolType, uint16_t heartbeatTimer);
 
+    /** @brief  send eventMessageBufferSize
+     *  @param[in] tid - Destination TID
+     *  @param[in] receiverMaxBufferSize
+     *  @param[out] terminusBufferSize
+     *  @return coroutine return_value - PLDM completion code
+     */
+    exec::task<int> eventMessageBufferSize(pldm_tid_t tid,
+                                           uint16_t receiverMaxBufferSize,
+                                           uint16_t& terminusBufferSize);
+
     /** @brief  send eventMessageSupported
      *  @param[in] tid - Destination TID
      *  @param[in] formatVersion - version of the event format
@@ -128,11 +139,60 @@ class PlatformManager
         bitfield8_t& synchronyConfigurationSupported,
         uint8_t& numerEventClassReturned, std::vector<uint8_t>& eventClass);
 
+    /** @brief Get FRU Record Tables from remote MCTP Endpoint
+     *
+     *  @param[in] tid - Destination TID
+     *  @param[in] total - Total number of record in table
+     *  @param[out] fruData - Returned fru record table data
+     */
+    exec::task<int> getFRURecordTables(pldm_tid_t tid, const uint16_t& total,
+                                       std::vector<uint8_t>& fruData);
+
+    /** @brief Fetch FRU Record Data from terminus
+     *
+     *  @param[in] tid - Destination TID
+     *  @param[in] dataTransferHndl - Data transfer handle
+     *  @param[in] transferOpFlag - Transfer Operation Flag
+     *  @param[out] nextDataTransferHndl - Next data transfer handle
+     *  @param[out] transferFlag - Transfer flag
+     *  @param[out] responseCnt - Response count of record data
+     *  @param[out] recordData - Returned record data
+     *
+     *  @return coroutine return_value - PLDM completion code
+     */
+    exec::task<int> getFRURecordTable(
+        pldm_tid_t tid, const uint32_t dataTransferHndl,
+        const uint8_t transferOpFlag, uint32_t* nextDataTransferHndl,
+        uint8_t* transferFlag, size_t* responseCnt,
+        std::vector<uint8_t>& recordData);
+
+    /** @brief Get FRU Record Table Metadata from remote MCTP Endpoint
+     *
+     *  @param[in] tid - Destination TID
+     *  @param[out] total - Total number of record in table
+     */
+    exec::task<int> getFRURecordTableMetadata(pldm_tid_t tid, uint16_t* total);
+
+    /** @brief Parse record data from FRU table
+     *
+     *  @param[in] tid - Destination TID
+     *  @param[in] fruData - pointer to FRU record table
+     *  @param[in] fruLen - FRU table length
+     */
+    void updateInventoryWithFru(pldm_tid_t tid, const uint8_t* fruData,
+                                const size_t fruLen);
+
     /** reference of TerminusManager for sending PLDM request to terminus*/
     TerminusManager& terminusManager;
 
     /** @brief Managed termini list */
     TerminiMapper& termini;
+
+    /**
+     * @brief Pointer to the Manager instance, used for sensor polling
+     *        and other platform-level PLDM operations.
+     */
+    Manager* manager;
 };
 } // namespace platform_mc
 } // namespace pldm

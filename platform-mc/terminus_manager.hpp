@@ -2,12 +2,12 @@
 
 #include "config.h"
 
-#include "libpldm/platform.h"
-#include "libpldm/pldm.h"
-
 #include "requester/handler.hpp"
 #include "requester/mctp_endpoint_discovery.hpp"
 #include "terminus.hpp"
+
+#include <libpldm/platform.h>
+#include <libpldm/pldm.h>
 
 #include <limits>
 #include <map>
@@ -52,11 +52,12 @@ class TerminusManager
     virtual ~TerminusManager() = default;
 
     explicit TerminusManager(
-        sdeventplus::Event& /* event */, RequesterHandler& /* handler */,
+        sdeventplus::Event& event, RequesterHandler& handler,
         pldm::InstanceIdDb& instanceIdDb, TerminiMapper& termini,
         Manager* manager, mctp_eid_t localEid) :
-        instanceIdDb(instanceIdDb), termini(termini),
-        tidPool(tidPoolSize, false), manager(manager), localEid(localEid)
+        handler(handler), instanceIdDb(instanceIdDb), termini(termini),
+        tidPool(tidPoolSize, false), manager(manager), localEid(localEid),
+        event(event)
     {
         // DSP0240 v1.1.0 table-8, special value: 0,0xFF = reserved
         tidPool[0] = true;
@@ -133,8 +134,8 @@ class TerminusManager
      *
      *  @return tid - Terminus tid
      */
-    std::optional<pldm_tid_t>
-        storeTerminusInfo(const MctpInfo& mctpInfo, pldm_tid_t tid);
+    std::optional<pldm_tid_t> storeTerminusInfo(const MctpInfo& mctpInfo,
+                                                pldm_tid_t tid);
 
     /** @brief Member functions to remove the TID from the transportLayer and
      *         mctpInfo table
@@ -153,6 +154,32 @@ class TerminusManager
     {
         return localEid;
     }
+
+    /** @brief Helper function to invoke registered handlers for
+     *  updating the availability status of the MCTP endpoint
+     *
+     *  @param[in] mctpInfo - information of the target endpoint
+     *  @param[in] availability - new availability status
+     */
+    void updateMctpEndpointAvailability(const MctpInfo& mctpInfo,
+                                        Availability availability);
+
+    /** @brief Construct MCTP Endpoint object path base on the MCTP endpoint
+     *  info
+     *
+     *  @param[in] mctpInfo - information of the target endpoint
+     */
+    std::string constructEndpointObjPath(const MctpInfo& mctpInfo);
+
+    /** @brief Member functions to get the MCTP eid of active MCTP medium
+     *         interface of one terminus by terminus name
+     *
+     *  @param[in] terminusName - terminus name
+     *
+     *  @return option mctp_eid_t - the mctp eid or std::nullopt
+     */
+    std::optional<mctp_eid_t> getActiveEidByName(
+        const std::string& terminusName);
 
   private:
     /** @brief Find the terminus object pointer in termini list.
@@ -201,22 +228,35 @@ class TerminusManager
      */
     exec::task<int> getPLDMTypes(pldm_tid_t tid, uint64_t& supportedTypes);
 
+    /** @brief Send getPLDMVersion command to destination TID and then return
+     *         the version of the PLDM supported type.
+     *
+     *  @param[in] tid - Destination TID
+     *  @param[in] type - PLDM Type
+     *  @param[out] version - PLDM Type version
+     *  @return coroutine return_value - PLDM completion code
+     */
+    exec::task<int> getPLDMVersion(pldm_tid_t tid, uint8_t type,
+                                   ver32_t* version);
+
     /** @brief Send getPLDMCommands command to destination TID and then return
      *         the value of supportedCommands in reference parameter.
      *
      *  @param[in] tid - Destination TID
      *  @param[in] type - PLDM Type
+     *  @param[in] version - PLDM Type version
      *  @param[in] supportedCmds - Supported commands returned from terminus
      *                             for specific type
      *  @return coroutine return_value - PLDM completion code
      */
     exec::task<int> getPLDMCommands(pldm_tid_t tid, uint8_t type,
+                                    ver32_t version,
                                     bitfield8_t* supportedCmds);
 
     /** @brief Reference to a Handler object that manages the request/response
      *         logic.
      */
-    // RequesterHandler& handler;
+    [[maybe_unused]] RequesterHandler& handler;
 
     /** @brief Reference to the instanceID data base from libpldm */
     pldm::InstanceIdDb& instanceIdDb;
@@ -245,6 +285,14 @@ class TerminusManager
 
     /** @brief local EID */
     mctp_eid_t localEid;
+
+    /** @brief MCTP Endpoint available status mapping */
+    std::map<MctpInfo, Availability> mctpInfoAvailTable;
+
+    /** @brief reference of main event loop of pldmd, primarily used to schedule
+     *  work
+     */
+    sdeventplus::Event& event;
 };
 } // namespace platform_mc
 } // namespace pldm

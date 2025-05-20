@@ -1,13 +1,17 @@
 #pragma once
 
-#include "libpldm/platform.h"
-#include "libpldm/pldm.h"
-
 #include "common/types.hpp"
+#include "common/utils.hpp"
+
+#include <libpldm/platform.h>
+#include <libpldm/pldm.h>
 
 #include <sdbusplus/server/object.hpp>
 #include <xyz/openbmc_project/Association/Definitions/server.hpp>
+#include <xyz/openbmc_project/Inventory/Source/PLDM/Entity/server.hpp>
+#include <xyz/openbmc_project/Metric/Value/server.hpp>
 #include <xyz/openbmc_project/Sensor/Threshold/Critical/server.hpp>
+#include <xyz/openbmc_project/Sensor/Threshold/HardShutdown/server.hpp>
 #include <xyz/openbmc_project/Sensor/Threshold/Warning/server.hpp>
 #include <xyz/openbmc_project/Sensor/Value/server.hpp>
 #include <xyz/openbmc_project/State/Decorator/Availability/server.hpp>
@@ -20,13 +24,21 @@ namespace pldm
 namespace platform_mc
 {
 
+constexpr const char* SENSOR_VALUE_INTF = "xyz.openbmc_project.Sensor.Value";
+constexpr const char* METRIC_VALUE_INTF = "xyz.openbmc_project.Metric.Value";
+
 using SensorUnit = sdbusplus::xyz::openbmc_project::Sensor::server::Value::Unit;
 using ValueIntf = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Sensor::server::Value>;
+using MetricUnit = sdbusplus::xyz::openbmc_project::Metric::server::Value::Unit;
+using MetricIntf = sdbusplus::server::object_t<
+    sdbusplus::xyz::openbmc_project::Metric::server::Value>;
 using ThresholdWarningIntf = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Sensor::Threshold::server::Warning>;
 using ThresholdCriticalIntf = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Sensor::Threshold::server::Critical>;
+using ThresholdHardShutdownIntf = sdbusplus::server::object_t<
+    sdbusplus::xyz::openbmc_project::Sensor::Threshold::server::HardShutdown>;
 using OperationalStatusIntf =
     sdbusplus::server::object_t<sdbusplus::xyz::openbmc_project::State::
                                     Decorator::server::OperationalStatus>;
@@ -34,6 +46,8 @@ using AvailabilityIntf = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::State::Decorator::server::Availability>;
 using AssociationDefinitionsInft = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Association::server::Definitions>;
+using EntityIntf = sdbusplus::server::object_t<
+    sdbusplus::xyz::openbmc_project::Inventory::Source::PLDM::server::Entity>;
 
 /**
  * @brief NumericSensor
@@ -166,6 +180,52 @@ class NumericSensor
         }
     };
 
+    /** @brief Get Upper HardShutdown threshold
+     *
+     *  @return double - Upper HardShutdown threshold
+     */
+    double getThresholdUpperHardShutdown()
+    {
+        if (thresholdHardShutdownIntf)
+        {
+            return thresholdHardShutdownIntf->hardShutdownHigh();
+        }
+        else
+        {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+    };
+
+    /** @brief Get Lower HardShutdown threshold
+     *
+     *  @return double - Lower HardShutdown threshold
+     */
+    double getThresholdLowerHardShutdownl()
+    {
+        if (thresholdHardShutdownIntf)
+        {
+            return thresholdHardShutdownIntf->hardShutdownLow();
+        }
+        else
+        {
+            return std::numeric_limits<double>::quiet_NaN();
+        }
+    };
+
+    /** @brief Check if value is over threshold.
+     *
+     *  @param[in] eventType - event level in pldm::utils::Level
+     *  @param[in] direction - direction type in pldm::utils::Direction
+     *  @param[in] rawValue - sensor raw value
+     *  @param[in] newAlarm - trigger alarm true/false
+     *  @param[in] assert - event type asserted/deasserted
+     *
+     *  @return PLDM completion code
+     */
+    int triggerThresholdEvent(pldm::utils::Level eventType,
+                              pldm::utils::Direction direction, double rawValue,
+                              bool newAlarm, bool assert);
+
     /** @brief Terminus ID which the sensor belongs to */
     pldm_tid_t tid;
 
@@ -184,6 +244,9 @@ class NumericSensor
     /** @brief  sensorNameSpace */
     std::string sensorNameSpace;
 
+    /** @brief Sensor Unit */
+    SensorUnit sensorUnit;
+
   private:
     /**
      * @brief Check sensor reading if any threshold has been crossed and update
@@ -191,13 +254,37 @@ class NumericSensor
      */
     void updateThresholds();
 
+    /**
+     * @brief Update the object units based on the PDR baseUnit
+     */
+    void setSensorUnit(uint8_t baseUnit);
+
+    /** @brief Create the sensor inventory path.
+     *
+     *  @param[in] associationPath - sensor association path
+     *  @param[in] sensorName - sensor name
+     *  @param[in] entityType - sensor PDR entity type
+     *  @param[in] entityInstanceNum - sensor PDR entity instance number
+     *  @param[in] containerId - sensor PDR entity container ID
+     *
+     *  @return True when success otherwise return False
+     */
+    inline bool createInventoryPath(
+        const std::string& associationPath, const std::string& sensorName,
+        const uint16_t entityType, const uint16_t entityInstanceNum,
+        const uint16_t containerId);
+
+    std::unique_ptr<MetricIntf> metricIntf = nullptr;
     std::unique_ptr<ValueIntf> valueIntf = nullptr;
     std::unique_ptr<ThresholdWarningIntf> thresholdWarningIntf = nullptr;
     std::unique_ptr<ThresholdCriticalIntf> thresholdCriticalIntf = nullptr;
+    std::unique_ptr<ThresholdHardShutdownIntf> thresholdHardShutdownIntf =
+        nullptr;
     std::unique_ptr<AvailabilityIntf> availabilityIntf = nullptr;
     std::unique_ptr<OperationalStatusIntf> operationalStatusIntf = nullptr;
     std::unique_ptr<AssociationDefinitionsInft> associationDefinitionsIntf =
         nullptr;
+    std::unique_ptr<EntityIntf> entityIntf = nullptr;
 
     /** @brief Amount of hysteresis associated with the sensor thresholds */
     double hysteresis;
@@ -211,6 +298,7 @@ class NumericSensor
 
     /** @brief A power-of-10 multiplier for baseUnit */
     int8_t baseUnitModifier;
+    bool useMetricInterface = false;
 };
 } // namespace platform_mc
 } // namespace pldm

@@ -239,10 +239,26 @@ class Handler : public CmdHandler
      *
      * @param[in] handler - oem platform handler
      */
-    inline void
-        setOemPlatformHandler(pldm::responder::oem_platform::Handler* handler)
+    inline void setOemPlatformHandler(
+        pldm::responder::oem_platform::Handler* handler)
     {
         oemPlatformHandler = handler;
+    }
+
+    /* @brief Method to register event handlers
+     *
+     * @param[in] handler - oem event handlers
+     */
+    inline void registerEventHandlers(EventType eventId, EventHandlers handlers)
+    {
+        // Try to emplace the eventId with an empty vector if it doesn't exist
+        auto [iter,
+              inserted] = eventHandlers.try_emplace(eventId, EventHandlers{});
+
+        for (const auto& handler : handlers)
+        {
+            iter->second.emplace_back(handler);
+        }
     }
 
     /** @brief Handler for GetPDR
@@ -381,7 +397,7 @@ class Handler : public CmdHandler
         auto pdrRecord = stateEffecterPDRs.getFirstRecord(pdrEntry);
         while (pdrRecord)
         {
-            pdr = reinterpret_cast<pldm_state_effecter_pdr*>(pdrEntry.data);
+            pdr = new (pdrEntry.data) pldm_state_effecter_pdr;
             if (pdr->effecter_id != effecterId)
             {
                 pdr = nullptr;

@@ -1,8 +1,9 @@
 #include "terminus.hpp"
 
-#include "libpldm/platform.h"
-
+#include "dbus_impl_fru.hpp"
 #include "terminus_manager.hpp"
+
+#include <libpldm/platform.h>
 
 #include <common/utils.hpp>
 
@@ -13,9 +14,11 @@ namespace pldm
 namespace platform_mc
 {
 
-Terminus::Terminus(pldm_tid_t tid, uint64_t supportedTypes) :
-    initialized(false), synchronyConfigurationSupported(0), tid(tid),
-    supportedTypes(supportedTypes)
+Terminus::Terminus(pldm_tid_t tid, uint64_t supportedTypes,
+                   sdeventplus::Event& event) :
+    initialized(false), maxBufferSize(PLDM_PLATFORM_EVENT_MSG_MAX_BUFFER_SIZE),
+    synchronyConfigurationSupported(0), pollEvent(false), tid(tid),
+    supportedTypes(supportedTypes), event(event)
 {}
 
 bool Terminus::doesSupportType(uint8_t type)
@@ -91,11 +94,18 @@ bool Terminus::createInventoryPath(std::string tName)
         return false;
     }
 
+    /* inventory object is created */
+    if (inventoryItemBoardInft)
+    {
+        return false;
+    }
+
     inventoryPath = "/xyz/openbmc_project/inventory/system/board/" + tName;
     try
     {
-        inventoryItemBoardInft = std::make_unique<InventoryItemBoardIntf>(
-            utils::DBusHandler::getBus(), inventoryPath.c_str());
+        inventoryItemBoardInft =
+            std::make_unique<pldm::dbus_api::PldmEntityReq>(
+                utils::DBusHandler::getBus(), inventoryPath.c_str());
         return true;
     }
     catch (const sdbusplus::exception_t& e)
@@ -110,14 +120,9 @@ bool Terminus::createInventoryPath(std::string tName)
 
 void Terminus::parseTerminusPDRs()
 {
-    std::vector<std::shared_ptr<pldm_numeric_sensor_value_pdr>>
-        numericSensorPdrs{};
-    std::vector<std::shared_ptr<pldm_compact_numeric_sensor_pdr>>
-        compactNumericSensorPdrs{};
-
     for (auto& pdr : pdrs)
     {
-        auto pdrHdr = reinterpret_cast<pldm_pdr_hdr*>(pdr.data());
+        auto pdrHdr = new (pdr.data()) pldm_pdr_hdr;
         switch (pdrHdr->type)
         {
             case PLDM_SENSOR_AUXILIARY_NAMES_PDR:
@@ -215,22 +220,56 @@ void Terminus::parseTerminusPDRs()
 
     if (createInventoryPath(terminusName))
     {
-        lg2::error("Terminus ID {TID}: Created Inventory path.", "TID", tid);
+        lg2::error("Terminus ID {TID}: Created Inventory path {PATH}.", "TID",
+                   tid, "PATH", inventoryPath);
     }
 
-    for (auto pdr : numericSensorPdrs)
-    {
-        addNumericSensor(pdr);
-    }
-
-    for (auto pdr : compactNumericSensorPdrs)
-    {
-        addCompactNumericSensor(pdr);
-    }
+    addNextSensorFromPDRs();
 }
 
-std::shared_ptr<SensorAuxiliaryNames>
-    Terminus::getSensorAuxiliaryNames(SensorId id)
+void Terminus::addNextSensorFromPDRs()
+{
+    sensorCreationEvent.reset();
+
+    if (terminusName.empty())
+    {
+        lg2::error(
+            "Terminus ID {TID}: DOES NOT have name. Skip Adding sensors.",
+            "TID", tid);
+        return;
+    }
+
+    auto pdrIt = sensorPdrIt;
+
+    if (pdrIt < numericSensorPdrs.size())
+    {
+        const auto& pdr = numericSensorPdrs[pdrIt];
+        // Defer adding the next Numeric Sensor
+        sensorCreationEvent = std::make_unique<sdeventplus::source::Defer>(
+            event,
+            std::bind(std::mem_fn(&Terminus::addNumericSensor), this, pdr));
+    }
+    else if (pdrIt < numericSensorPdrs.size() + compactNumericSensorPdrs.size())
+    {
+        pdrIt -= numericSensorPdrs.size();
+        const auto& pdr = compactNumericSensorPdrs[pdrIt];
+        // Defer adding the next Compact Numeric Sensor
+        sensorCreationEvent = std::make_unique<sdeventplus::source::Defer>(
+            event, std::bind(std::mem_fn(&Terminus::addCompactNumericSensor),
+                             this, pdr));
+    }
+    else
+    {
+        sensorPdrIt = 0;
+        return;
+    }
+
+    // Move the iteration to the next sensor PDR
+    sensorPdrIt++;
+}
+
+std::shared_ptr<SensorAuxiliaryNames> Terminus::getSensorAuxiliaryNames(
+    SensorId id)
 {
     auto it = std::find_if(
         sensorAuxiliaryNamesTbl.begin(), sensorAuxiliaryNamesTbl.end(),
@@ -248,8 +287,8 @@ std::shared_ptr<SensorAuxiliaryNames>
     return nullptr;
 };
 
-std::shared_ptr<SensorAuxiliaryNames>
-    Terminus::parseSensorAuxiliaryNamesPDR(const std::vector<uint8_t>& pdrData)
+std::shared_ptr<SensorAuxiliaryNames> Terminus::parseSensorAuxiliaryNamesPDR(
+    const std::vector<uint8_t>& pdrData)
 {
     constexpr uint8_t nullTerminator = 0;
     auto pdr = reinterpret_cast<const struct pldm_sensor_auxiliary_names_pdr*>(
@@ -281,7 +320,7 @@ std::shared_ptr<SensorAuxiliaryNames>
             std::fill(std::begin(alignedBuffer), std::end(alignedBuffer), 0);
             if (u16NameStringLen > PLDM_STR_UTF_16_MAX_LEN)
             {
-                lg2::error("Sensor name to long.");
+                lg2::error("Sensor name too long.");
                 return nullptr;
             }
             memcpy(alignedBuffer, ptr, u16NameStringLen * sizeof(uint16_t));
@@ -303,8 +342,8 @@ std::shared_ptr<SensorAuxiliaryNames>
         pdr->sensor_id, pdr->sensor_count, std::move(sensorAuxNames));
 }
 
-std::shared_ptr<EntityAuxiliaryNames>
-    Terminus::parseEntityAuxiliaryNamesPDR(const std::vector<uint8_t>& pdrData)
+std::shared_ptr<EntityAuxiliaryNames> Terminus::parseEntityAuxiliaryNamesPDR(
+    const std::vector<uint8_t>& pdrData)
 {
     auto names_offset = sizeof(struct pldm_pdr_hdr) +
                         PLDM_PDR_ENTITY_AUXILIARY_NAME_PDR_MIN_LENGTH;
@@ -313,8 +352,7 @@ std::shared_ptr<EntityAuxiliaryNames>
     size_t decodedPdrSize =
         sizeof(struct pldm_entity_auxiliary_names_pdr) + names_size;
     auto vPdr = std::vector<char>(decodedPdrSize);
-    auto decodedPdr =
-        reinterpret_cast<struct pldm_entity_auxiliary_names_pdr*>(vPdr.data());
+    auto decodedPdr = new (vPdr.data()) pldm_entity_auxiliary_names_pdr;
 
     auto rc = decode_entity_auxiliary_names_pdr(pdrData.data(), pdrData.size(),
                                                 decodedPdr, decodedPdrSize);
@@ -366,8 +404,8 @@ std::shared_ptr<EntityAuxiliaryNames>
     return std::make_shared<EntityAuxiliaryNames>(key, nameStrings);
 }
 
-std::shared_ptr<pldm_numeric_sensor_value_pdr>
-    Terminus::parseNumericSensorPDR(const std::vector<uint8_t>& pdr)
+std::shared_ptr<pldm_numeric_sensor_value_pdr> Terminus::parseNumericSensorPDR(
+    const std::vector<uint8_t>& pdr)
 {
     const uint8_t* ptr = pdr.data();
     auto parsedPdr = std::make_shared<pldm_numeric_sensor_value_pdr>();
@@ -382,36 +420,26 @@ std::shared_ptr<pldm_numeric_sensor_value_pdr>
 void Terminus::addNumericSensor(
     const std::shared_ptr<pldm_numeric_sensor_value_pdr> pdr)
 {
-    uint16_t sensorId = pdr->sensor_id;
-    if (terminusName.empty())
+    if (!pdr)
     {
         lg2::error(
-            "Terminus ID {TID}: DOES NOT have name. Skip Adding sensors.",
+            "Terminus ID {TID}: Skip adding Numeric Sensor - invalid pointer to PDR.",
             "TID", tid);
-        return;
+        addNextSensorFromPDRs();
     }
-    std::string sensorName =
-        terminusName + "_" + "Sensor_" + std::to_string(pdr->sensor_id);
 
-    if (pdr->sensor_auxiliary_names_pdr)
+    auto sensorId = pdr->sensor_id;
+    auto sensorNames = getSensorNames(sensorId);
+
+    if (sensorNames.empty())
     {
-        auto sensorAuxiliaryNames = getSensorAuxiliaryNames(sensorId);
-        if (sensorAuxiliaryNames)
-        {
-            const auto& [sensorId, sensorCnt, sensorNames] =
-                *sensorAuxiliaryNames;
-            if (sensorCnt == 1)
-            {
-                for (const auto& [languageTag, name] : sensorNames[0])
-                {
-                    if (languageTag == "en" && !name.empty())
-                    {
-                        sensorName = terminusName + "_" + name;
-                    }
-                }
-            }
-        }
+        lg2::error(
+            "Terminus ID {TID}: Failed to get name for Numeric Sensor {SID}",
+            "TID", tid, "SID", sensorId);
+        addNextSensorFromPDRs();
     }
+
+    std::string sensorName = sensorNames.front();
 
     try
     {
@@ -426,14 +454,17 @@ void Terminus::addNumericSensor(
             "Failed to create NumericSensor. error - {ERROR} sensorname - {NAME}",
             "ERROR", e, "NAME", sensorName);
     }
+
+    addNextSensorFromPDRs();
 }
 
-std::shared_ptr<SensorAuxiliaryNames>
-    Terminus::parseCompactNumericSensorNames(const std::vector<uint8_t>& sPdr)
+std::shared_ptr<SensorAuxiliaryNames> Terminus::parseCompactNumericSensorNames(
+    const std::vector<uint8_t>& sPdr)
 {
     std::vector<std::vector<std::pair<NameLanguageTag, SensorName>>>
         sensorAuxNames{};
     AuxiliaryNames nameStrings{};
+
     auto pdr =
         reinterpret_cast<const pldm_compact_numeric_sensor_pdr*>(sPdr.data());
 
@@ -495,32 +526,26 @@ std::shared_ptr<pldm_compact_numeric_sensor_pdr>
 void Terminus::addCompactNumericSensor(
     const std::shared_ptr<pldm_compact_numeric_sensor_pdr> pdr)
 {
-    uint16_t sensorId = pdr->sensor_id;
-    if (terminusName.empty())
+    if (!pdr)
     {
         lg2::error(
-            "Terminus ID {TID}: DOES NOT have name. Skip Adding sensors.",
+            "Terminus ID {TID}: Skip adding Compact Numeric Sensor - invalid pointer to PDR.",
             "TID", tid);
-        return;
+        addNextSensorFromPDRs();
     }
-    std::string sensorName =
-        terminusName + "_" + "Sensor_" + std::to_string(pdr->sensor_id);
 
-    auto sensorAuxiliaryNames = getSensorAuxiliaryNames(sensorId);
-    if (sensorAuxiliaryNames)
+    auto sensorId = pdr->sensor_id;
+    auto sensorNames = getSensorNames(sensorId);
+
+    if (sensorNames.empty())
     {
-        const auto& [sensorId, sensorCnt, sensorNames] = *sensorAuxiliaryNames;
-        if (sensorCnt == 1)
-        {
-            for (const auto& [languageTag, name] : sensorNames[0])
-            {
-                if (languageTag == "en" && !name.empty())
-                {
-                    sensorName = terminusName + "_" + name;
-                }
-            }
-        }
+        lg2::error(
+            "Terminus ID {TID}: Failed to get name for Compact Numeric Sensor {SID}",
+            "TID", tid, "SID", sensorId);
+        addNextSensorFromPDRs();
     }
+
+    std::string sensorName = sensorNames.front();
 
     try
     {
@@ -535,6 +560,214 @@ void Terminus::addCompactNumericSensor(
             "Failed to create Compact NumericSensor. error - {ERROR} sensorname - {NAME}",
             "ERROR", e, "NAME", sensorName);
     }
+
+    addNextSensorFromPDRs();
+}
+
+std::shared_ptr<NumericSensor> Terminus::getSensorObject(SensorId id)
+{
+    if (terminusName.empty())
+    {
+        lg2::error(
+            "Terminus ID {TID}: DOES NOT have terminus name. No numeric sensor object.",
+            "TID", tid);
+        return nullptr;
+    }
+    if (!numericSensors.size())
+    {
+        lg2::error("Terminus ID {TID} name {NAME}: DOES NOT have sensor.",
+                   "TID", tid, "NAME", terminusName);
+        return nullptr;
+    }
+
+    for (auto& sensor : numericSensors)
+    {
+        if (!sensor)
+        {
+            continue;
+        }
+
+        if (sensor->sensorId == id)
+        {
+            return sensor;
+        }
+    }
+
+    return nullptr;
+}
+
+/** @brief Check if a pointer is go through end of table
+ *  @param[in] table - pointer to FRU record table
+ *  @param[in] p - pointer to each record of FRU record table
+ *  @param[in] tableSize - FRU table size
+ */
+static bool isTableEnd(const uint8_t* table, const uint8_t* p,
+                       const size_t tableSize)
+{
+    auto offset = p - table;
+    return (tableSize - offset) < sizeof(struct pldm_fru_record_data_format);
+}
+
+void Terminus::updateInventoryWithFru(const uint8_t* fruData,
+                                      const size_t fruLen)
+{
+    auto tmp = getTerminusName();
+    if (!tmp || tmp.value().empty())
+    {
+        lg2::error(
+            "Terminus ID {TID}: Failed to update Inventory with Fru Data - error : Terminus name is empty.",
+            "TID", tid);
+        return;
+    }
+
+    if (createInventoryPath(static_cast<std::string>(tmp.value())))
+    {
+        lg2::info("Terminus ID {TID}: Created Inventory path.", "TID", tid);
+    }
+
+    auto ptr = fruData;
+    while (!isTableEnd(fruData, ptr, fruLen))
+    {
+        auto record = reinterpret_cast<const pldm_fru_record_data_format*>(ptr);
+        ptr += sizeof(pldm_fru_record_data_format) -
+               sizeof(pldm_fru_record_tlv);
+
+        if (!record->num_fru_fields)
+        {
+            lg2::error(
+                "Invalid number of fields {NUM} of Record ID Type {TYPE} of terminus {TID}",
+                "NUM", record->num_fru_fields, "TYPE", record->record_type,
+                "TID", tid);
+            return;
+        }
+
+        if (record->record_type != PLDM_FRU_RECORD_TYPE_GENERAL)
+        {
+            lg2::error(
+                "Does not support Fru Record ID Type {TYPE} of terminus {TID}",
+                "TYPE", record->record_type, "TID", tid);
+
+            for ([[maybe_unused]] const auto& idx :
+                 std::views::iota(0, static_cast<int>(record->num_fru_fields)))
+            {
+                auto tlv = reinterpret_cast<const pldm_fru_record_tlv*>(ptr);
+                ptr += sizeof(pldm_fru_record_tlv) - 1 + tlv->length;
+            }
+            continue;
+        }
+        /* FRU General record type */
+        for ([[maybe_unused]] const auto& idx :
+             std::views::iota(0, static_cast<int>(record->num_fru_fields)))
+        {
+            auto tlv = reinterpret_cast<const pldm_fru_record_tlv*>(ptr);
+            std::string fruField{};
+            if (tlv->type != PLDM_FRU_FIELD_TYPE_IANA)
+            {
+                auto strOptional =
+                    pldm::utils::fruFieldValuestring(tlv->value, tlv->length);
+                if (!strOptional)
+                {
+                    ptr += sizeof(pldm_fru_record_tlv) - 1 + tlv->length;
+                    continue;
+                }
+                fruField = strOptional.value();
+
+                if (fruField.empty())
+                {
+                    ptr += sizeof(pldm_fru_record_tlv) - 1 + tlv->length;
+                    continue;
+                }
+            }
+
+            switch (tlv->type)
+            {
+                case PLDM_FRU_FIELD_TYPE_MODEL:
+                    inventoryItemBoardInft->model(fruField);
+                    break;
+                case PLDM_FRU_FIELD_TYPE_PN:
+                    inventoryItemBoardInft->partNumber(fruField);
+                    break;
+                case PLDM_FRU_FIELD_TYPE_SN:
+                    inventoryItemBoardInft->serialNumber(fruField);
+                    break;
+                case PLDM_FRU_FIELD_TYPE_MANUFAC:
+                    inventoryItemBoardInft->manufacturer(fruField);
+                    break;
+                case PLDM_FRU_FIELD_TYPE_NAME:
+                    inventoryItemBoardInft->names({fruField});
+                    break;
+                case PLDM_FRU_FIELD_TYPE_VERSION:
+                    inventoryItemBoardInft->version(fruField);
+                    break;
+                case PLDM_FRU_FIELD_TYPE_ASSET_TAG:
+                    inventoryItemBoardInft->assetTag(fruField);
+                    break;
+                case PLDM_FRU_FIELD_TYPE_VENDOR:
+                case PLDM_FRU_FIELD_TYPE_CHASSIS:
+                case PLDM_FRU_FIELD_TYPE_SKU:
+                case PLDM_FRU_FIELD_TYPE_DESC:
+                case PLDM_FRU_FIELD_TYPE_EC_LVL:
+                case PLDM_FRU_FIELD_TYPE_OTHER:
+                    break;
+                case PLDM_FRU_FIELD_TYPE_IANA:
+                    auto iana =
+                        pldm::utils::fruFieldParserU32(tlv->value, tlv->length);
+                    if (!iana)
+                    {
+                        ptr += sizeof(pldm_fru_record_tlv) - 1 + tlv->length;
+                        continue;
+                    }
+                    break;
+            }
+            ptr += sizeof(pldm_fru_record_tlv) - 1 + tlv->length;
+        }
+    }
+}
+
+std::vector<std::string> Terminus::getSensorNames(const SensorId& sensorId)
+{
+    std::vector<std::string> sensorNames;
+    std::string defaultName =
+        std::format("{}_Sensor_{}", terminusName, unsigned(sensorId));
+    // To ensure there's always a default name at offset 0
+    sensorNames.emplace_back(defaultName);
+
+    auto sensorAuxiliaryNames = getSensorAuxiliaryNames(sensorId);
+    if (!sensorAuxiliaryNames)
+    {
+        return sensorNames;
+    }
+
+    const auto& [id, sensorCount, nameMap] = *sensorAuxiliaryNames;
+    for (const unsigned int& i :
+         std::views::iota(0, static_cast<int>(sensorCount)))
+    {
+        auto sensorName = defaultName;
+        if (i > 0)
+        {
+            // Sensor name at offset 0 will be the default name
+            sensorName += "_" + std::to_string(i);
+        }
+
+        for (const auto& [languageTag, name] : nameMap[i])
+        {
+            if (languageTag == "en" && !name.empty())
+            {
+                sensorName = std::format("{}_{}", terminusName, name);
+            }
+        }
+
+        if (i >= sensorNames.size())
+        {
+            sensorNames.emplace_back(sensorName);
+        }
+        else
+        {
+            sensorNames[i] = sensorName;
+        }
+    }
+
+    return sensorNames;
 }
 
 } // namespace platform_mc

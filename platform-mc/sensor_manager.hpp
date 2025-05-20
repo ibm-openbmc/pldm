@@ -1,12 +1,12 @@
 #pragma once
 
-#include "libpldm/platform.h"
-#include "libpldm/pldm.h"
-
 #include "common/types.hpp"
 #include "requester/handler.hpp"
 #include "terminus.hpp"
 #include "terminus_manager.hpp"
+
+#include <libpldm/platform.h>
+#include <libpldm/pldm.h>
 
 #include <map>
 #include <memory>
@@ -18,6 +18,8 @@ namespace pldm
 {
 namespace platform_mc
 {
+
+using namespace pldm::pdr;
 
 /**
  * @brief SensorManager
@@ -38,11 +40,20 @@ class SensorManager
 
     explicit SensorManager(sdeventplus::Event& event,
                            TerminusManager& terminusManager,
-                           TerminiMapper& termini);
+                           TerminiMapper& termini, Manager* manager);
 
     /** @brief starting sensor polling task
      */
     void startPolling(pldm_tid_t tid);
+
+    /** @brief Helper function to start sensor polling timer
+     */
+    void startSensorPollTimer(pldm_tid_t tid);
+
+    /** @brief Helper function to set all terminus sensor as nan when the
+     *  terminus is not available for pldm request
+     */
+    void disableTerminusSensors(pldm_tid_t tid);
 
     /** @brief stopping sensor polling task
      */
@@ -108,9 +119,11 @@ class SensorManager
     /** @brief Available state for pldm request of terminus */
     std::map<pldm_tid_t, Availability> availableState;
 
-    /** @brief round robin sensor list */
-    std::map<pldm_tid_t, std::queue<std::shared_ptr<NumericSensor>>>
-        roundRobinSensors;
+    /** @brief Round robin sensor iter of terminus */
+    std::map<pldm_tid_t, SensorID> roundRobinSensorItMap;
+
+    /** @brief pointer to Manager */
+    Manager* manager;
 };
 } // namespace platform_mc
 } // namespace pldm

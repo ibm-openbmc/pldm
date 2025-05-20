@@ -13,7 +13,7 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemPanel = sdbusplus::server::object::object<
+using ItemPanel = sdbusplus::server::object_t<
     sdbusplus::xyz::openbmc_project::Inventory::Item::server::Panel>;
 
 class Panel : public ItemPanel

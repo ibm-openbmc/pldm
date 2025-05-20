@@ -31,5 +31,30 @@ exec::task<int> Manager::afterDiscoverTerminus()
     co_return rc;
 }
 
+exec::task<int> Manager::pollForPlatformEvent(
+    pldm_tid_t tid, uint16_t /* pollEventId */, uint32_t pollDataTransferHandle)
+{
+    auto it = termini.find(tid);
+    if (it != termini.end())
+    {
+        auto& terminus = it->second;
+        co_await eventManager.pollForPlatformEventTask(tid,
+                                                       pollDataTransferHandle);
+        terminus->pollEvent = false;
+    }
+    co_return PLDM_SUCCESS;
+}
+
+exec::task<int> Manager::oemPollForPlatformEvent(pldm_tid_t tid)
+{
+    for (auto& handler : pollHandlers)
+    {
+        if (handler)
+        {
+            co_await handler(tid);
+        }
+    }
+    co_return PLDM_SUCCESS;
+}
 } // namespace platform_mc
 } // namespace pldm

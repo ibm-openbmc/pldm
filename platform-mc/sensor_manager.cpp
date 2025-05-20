@@ -1,5 +1,6 @@
 #include "sensor_manager.hpp"
 
+#include "manager.hpp"
 #include "terminus_manager.hpp"
 
 #include <phosphor-logging/lg2.hpp>
@@ -13,9 +14,9 @@ namespace platform_mc
 
 SensorManager::SensorManager(sdeventplus::Event& event,
                              TerminusManager& terminusManager,
-                             TerminiMapper& termini) :
+                             TerminiMapper& termini, Manager* manager) :
     event(event), terminusManager(terminusManager), termini(termini),
-    pollingTime(SENSOR_POLLING_TIME)
+    pollingTime(SENSOR_POLLING_TIME), manager(manager)
 {}
 
 void SensorManager::startPolling(pldm_tid_t tid)
@@ -32,25 +33,20 @@ void SensorManager::startPolling(pldm_tid_t tid)
                   tid);
         return;
     }
-    // numeric sensor
-    auto terminus = termini[tid];
-    for (auto& sensor : terminus->numericSensors)
-    {
-        roundRobinSensors[tid].push(sensor);
-    }
+
+    roundRobinSensorItMap[tid] = 0;
 
     updateAvailableState(tid, true);
-
-    if (!roundRobinSensors[tid].size())
-    {
-        lg2::info("Terminus ID {TID}: no sensors to poll.", "TID", tid);
-        return;
-    }
 
     sensorPollTimers[tid] = std::make_unique<sdbusplus::Timer>(
         event.get(),
         std::bind_front(&SensorManager::doSensorPolling, this, tid));
 
+    startSensorPollTimer(tid);
+}
+
+void SensorManager::startSensorPollTimer(pldm_tid_t tid)
+{
     try
     {
         if (sensorPollTimers[tid] && !sensorPollTimers[tid]->isRunning())
@@ -70,6 +66,27 @@ void SensorManager::startPolling(pldm_tid_t tid)
     }
 }
 
+void SensorManager::disableTerminusSensors(pldm_tid_t tid)
+{
+    if (!termini.contains(tid))
+    {
+        return;
+    }
+
+    // numeric sensor
+    auto terminus = termini[tid];
+    if (!terminus)
+    {
+        return;
+    }
+
+    for (auto& sensor : terminus->numericSensors)
+    {
+        sensor->updateReading(true, false,
+                              std::numeric_limits<double>::quiet_NaN());
+    }
+}
+
 void SensorManager::stopPolling(pldm_tid_t tid)
 {
     /* Stop polling timer */
@@ -79,7 +96,7 @@ void SensorManager::stopPolling(pldm_tid_t tid)
         sensorPollTimers.erase(tid);
     }
 
-    roundRobinSensors.erase(tid);
+    roundRobinSensorItMap.erase(tid);
 
     if (doSensorPollingTaskHandles.contains(tid))
     {
@@ -180,8 +197,40 @@ exec::task<int> SensorManager::doSensorPollingTask(pldm_tid_t tid)
             co_return PLDM_SUCCESS;
         }
 
+        auto& terminus = termini[tid];
+        if (!terminus)
+        {
+            lg2::info(
+                "Terminus ID {TID} does not have a valid Terminus object {NOW}.",
+                "TID", tid, "NOW", pldm::utils::getCurrentSystemTime());
+            co_return PLDM_ERROR;
+        }
+
+        if (manager && terminus->pollEvent)
+        {
+            co_await manager->pollForPlatformEvent(
+                tid, terminus->pollEventId, terminus->pollDataTransferHandle);
+        }
+
+        if (manager && (!terminus->pollEvent))
+        {
+            co_await manager->oemPollForPlatformEvent(tid);
+        }
+
         sd_event_now(event.get(), CLOCK_MONOTONIC, &t1);
-        auto toBeUpdated = roundRobinSensors[tid].size();
+
+        auto& numericSensors = terminus->numericSensors;
+        auto toBeUpdated = numericSensors.size();
+
+        if (!roundRobinSensorItMap.contains(tid))
+        {
+            lg2::info(
+                "Terminus ID {TID} does not have a round robin sensor iteration {NOW}.",
+                "TID", tid, "NOW", pldm::utils::getCurrentSystemTime());
+            co_return PLDM_ERROR;
+        }
+        auto& sensorIt = roundRobinSensorItMap[tid];
+
         while (((t1 - t0) < pollingTimeInUsec) && (toBeUpdated > 0))
         {
             if (!getAvailableState(tid))
@@ -192,7 +241,12 @@ exec::task<int> SensorManager::doSensorPollingTask(pldm_tid_t tid)
                 co_await stdexec::just_stopped();
             }
 
-            auto sensor = roundRobinSensors[tid].front();
+            if (sensorIt >= numericSensors.size())
+            {
+                sensorIt = 0;
+            }
+
+            auto sensor = numericSensors[sensorIt];
 
             sd_event_now(event.get(), CLOCK_MONOTONIC, &t1);
             elapsed = t1 - sensor->timeStamp;
@@ -220,11 +274,8 @@ exec::task<int> SensorManager::doSensorPollingTask(pldm_tid_t tid)
             }
 
             toBeUpdated--;
-            if (roundRobinSensors.contains(tid))
-            {
-                roundRobinSensors[tid].pop();
-                roundRobinSensors[tid].push(std::move(sensor));
-            }
+            sensorIt++;
+
             sd_event_now(event.get(), CLOCK_MONOTONIC, &t1);
         }
 
@@ -234,8 +285,8 @@ exec::task<int> SensorManager::doSensorPollingTask(pldm_tid_t tid)
     co_return PLDM_SUCCESS;
 }
 
-exec::task<int>
-    SensorManager::getSensorReading(std::shared_ptr<NumericSensor> sensor)
+exec::task<int> SensorManager::getSensorReading(
+    std::shared_ptr<NumericSensor> sensor)
 {
     if (!sensor)
     {
@@ -246,7 +297,7 @@ exec::task<int>
     auto tid = sensor->tid;
     auto sensorId = sensor->sensorId;
     Request request(sizeof(pldm_msg_hdr) + PLDM_GET_SENSOR_READING_REQ_BYTES);
-    auto requestMsg = reinterpret_cast<pldm_msg*>(request.data());
+    auto requestMsg = new (request.data()) pldm_msg;
     auto rc = encode_get_sensor_reading_req(0, sensorId, false, requestMsg);
     if (rc)
     {
@@ -318,10 +369,10 @@ exec::task<int>
         case PLDM_SENSOR_ENABLED:
             break;
         case PLDM_SENSOR_DISABLED:
-            sensor->updateReading(true, false, value);
+            sensor->updateReading(false, true, value);
             co_return completionCode;
         case PLDM_SENSOR_FAILED:
-            sensor->updateReading(false, true, value);
+            sensor->updateReading(true, false, value);
             co_return completionCode;
         case PLDM_SENSOR_UNAVAILABLE:
         default:
