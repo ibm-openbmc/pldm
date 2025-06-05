@@ -315,11 +315,45 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
         auto& bus = getBus();
         auto service =
             getService(dBusMap.objectPath.c_str(), dBusMap.interface.c_str());
-        auto method = bus.new_method_call(
-            service.c_str(), dBusMap.objectPath.c_str(), dbusProperties, "Set");
-        method.append(dBusMap.interface.c_str(), dBusMap.propertyName.c_str(),
-                      variant);
-        bus.call_noreply(method, dbusTimeout);
+        if (service == "xyz.openbmc_project.Inventory.Manager")
+        {
+            ObjectValueTree objectValueTree;
+            InterfaceMap interfaceMap;
+            PropertyMap propertyMap;
+            propertyMap.emplace(dBusMap.propertyName.c_str(),
+                                std::get<0>(variant));
+            std::string objPath = dBusMap.objectPath.c_str();
+            std::string toReplace("/xyz/openbmc_project/inventory/system");
+            size_t pos = objPath.find(toReplace);
+            objPath.replace(pos, toReplace.length(), "/system");
+            interfaceMap.emplace(dBusMap.interface.c_str(), propertyMap);
+            objectValueTree.emplace(std::move(objPath),
+                                    std::move(interfaceMap));
+            auto method = bus.new_method_call(
+                service.c_str(), "/xyz/openbmc_project/inventory",
+                "xyz.openbmc_project.Inventory.Manager", "Notify");
+            method.append(std::move(objectValueTree));
+            bus.call_noreply(method, dbusTimeout);
+        }
+        else
+        {
+            auto method =
+                bus.new_method_call(service.c_str(), dBusMap.objectPath.c_str(),
+                                    dbusProperties, "Set");
+            if (dBusMap.objectPath ==
+                    "/xyz/openbmc_project/network/hypervisor/eth0/ipv4/addr0" ||
+                dBusMap.objectPath ==
+                    "/xyz/openbmc_project/network/hypervisor/eth1/ipv4/addr0")
+            {
+                info(
+                    " service :{SERV} , interface : {INTF} , path : {DBUS_OBJ_PATH}",
+                    "SERV", service.c_str(), "INTF", dBusMap.interface.c_str(),
+                    "DBUS_OBJ_PATH", dBusMap.objectPath.c_str());
+            }
+            method.append(dBusMap.interface.c_str(),
+                          dBusMap.propertyName.c_str(), variant);
+            bus.call_noreply(method, dbusTimeout);
+        }
     };
 
     if (dBusMap.propertyType == "uint8_t")
@@ -330,6 +364,24 @@ void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
     else if (dBusMap.propertyType == "bool")
     {
         std::variant<bool> v = std::get<bool>(value);
+        if (dBusMap.objectPath ==
+                "/xyz/openbmc_project/network/hypervisor/eth0/ipv4/addr0" ||
+            dBusMap.objectPath ==
+                "/xyz/openbmc_project/network/hypervisor/eth1/ipv4/addr0")
+        {
+            info(" value : {VAL}", "VAL", std::get<bool>(value));
+        }
+        if (strstr(dBusMap.objectPath.c_str(), "dimm") &&
+            (dBusMap.interface ==
+             "xyz.openbmc_project.State.Decorator.OperationalStatus"))
+        {
+            if (!std::get<bool>(value))
+            {
+                error("Guard event on DIMM : [ {DBUS_OBJ_PATH} ]",
+                      "DBUS_OBJ_PATH", dBusMap.objectPath.c_str());
+            }
+        }
+
         setDbusValue(v);
     }
     else if (dBusMap.propertyType == "int16_t")
