@@ -441,6 +441,7 @@ void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
                 service.c_str(), slotAndAdapter.second.c_str(),
                 "org.freedesktop.DBus.Properties", "Set");
             method.append(itemPCIeDevice, "LanesInUse", linkWidth);
+            bus.call_noreply(method, dbusTimeout);
 
             std::filesystem::path adapter(slotAndAdapter.second);
 
@@ -494,6 +495,7 @@ void PCIeInfoHandler::setTopologyOnSlotAndAdapter(
                     service.c_str(), slotAndAdapter.second.c_str(),
                     "org.freedesktop.DBus.Properties", "Set");
                 method.append(itemPCIeDevice, "LanesInUse", linkWidth);
+                bus.call_noreply(method, dbusTimeout);
             }
 
             std::filesystem::path adapter(slotAndAdapter.second);
