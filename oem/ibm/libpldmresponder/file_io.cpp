@@ -223,6 +223,21 @@ int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
         return rc;
     }
 
+    // Polling on xdma fd to make sure DMA operation is complete
+    // and complete data is copied into BMC memory
+    struct pollfd fds;
+    fds.fd = xdmaFd;
+    fds.events = POLLIN;
+
+    rc = poll(&fds, 1, 1000);
+    if (rc <= 0 || (fds.revents & POLLERR))
+    {
+        error(
+            "Timeout occured!! Failed to complete the DMA operation on data between BMC and remote terminus for upstream '{UPSTREAM}' of length '{LENGTH}' at address '{ADDRESS}', response code '{RC}'",
+            "RC", rc, "UPSTREAM", upstream, "ADDRESS", address, "LENGTH",
+            length);
+    }
+
     if (!upstream)
     {
         rc = lseek(fd, offset, SEEK_SET);
