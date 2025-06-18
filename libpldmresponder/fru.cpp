@@ -26,8 +26,8 @@ namespace responder
 
 constexpr auto root = "/xyz/openbmc_project/inventory/";
 
-std::optional<pldm_entity>
-    FruImpl::getEntityByObjectPath(const dbus::InterfaceMap& intfMaps)
+std::optional<pldm_entity> FruImpl::getEntityByObjectPath(
+    const dbus::InterfaceMap& intfMaps)
 {
     for (const auto& intfMap : intfMaps)
     {
@@ -820,7 +820,7 @@ void FruImpl::getFRUTable(Response& response)
     if (table.size())
     {
         tempTable = tableResize();
-        checksum = crc32(tempTable.data(), tempTable.size());
+        checksum = pldm_edac_crc32(tempTable.data(), tempTable.size());
     }
     response.resize(hdrSize + tempTable.size() + sizeof(checksum), 0);
     std::copy(tempTable.begin(), tempTable.end(), response.begin() + hdrSize);
@@ -837,7 +837,7 @@ void FruImpl::getFRURecordTableMetadata()
     if (table.size())
     {
         tempTable = tableResize();
-        checksum = crc32(tempTable.data(), tempTable.size());
+        checksum = pldm_edac_crc32(tempTable.data(), tempTable.size());
     }
 }
 
@@ -868,7 +868,7 @@ int FruImpl::getFRURecordByOption(
     }
 
     auto pads = pldm::utils::getNumPadBytes(recordTableSize);
-    crc32(fruData.data(), recordTableSize + pads);
+    pldm_edac_crc32(fruData.data(), recordTableSize + pads);
 
     auto iter = fruData.begin() + recordTableSize + pads;
     std::copy_n(reinterpret_cast<const uint8_t*>(&checksum), sizeof(checksum),
@@ -1057,7 +1057,7 @@ void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
               "RC", static_cast<int>(rc));
         return;
     }
-    auto instanceId = requester.getInstanceId(mctp_eid);
+    auto instanceId = instanceIdDb.next(mctp_eid);
     std::vector<uint8_t> requestMsg(
         sizeof(pldm_msg_hdr) + PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES +
         actualSize);
@@ -1068,7 +1068,7 @@ void FruImpl::sendPDRRepositoryChgEventbyPDRHandles(
         actualSize + PLDM_PLATFORM_EVENT_MESSAGE_MIN_REQ_BYTES);
     if (rc != PLDM_SUCCESS)
     {
-        requester.markFree(mctp_eid, instanceId);
+        instanceIdDb.free(mctp_eid, instanceId);
         error("Failed to encode_platform_event_message_req, rc = {RC}", "RC",
               static_cast<unsigned>(rc));
         return;
@@ -1461,8 +1461,8 @@ std::vector<uint32_t> FruImpl::setStatePDRParams(
     return idList;
 }
 
-uint32_t
-    FruImpl::addHotPlugRecord(pldm::responder::pdr_utils::PdrEntry pdrEntry)
+uint32_t FruImpl::addHotPlugRecord(
+    pldm::responder::pdr_utils::PdrEntry pdrEntry)
 {
     uint32_t lastHandle = 0;
     uint32_t record_handle = 0;
@@ -1493,7 +1493,7 @@ Response Handler::getFRURecordTableMetadata(const pldm_msg* request,
     Response response(sizeof(pldm_msg_hdr) +
                           PLDM_GET_FRU_RECORD_TABLE_METADATA_RESP_BYTES,
                       0);
-    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    auto responsePtr = new (response.data()) pldm_msg;
 
     impl.getFRURecordTableMetadata();
 
@@ -1522,7 +1522,7 @@ Response Handler::getFRURecordTable(const pldm_msg* request,
 
     Response response(
         sizeof(pldm_msg_hdr) + PLDM_GET_FRU_RECORD_TABLE_MIN_RESP_BYTES, 0);
-    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    auto responsePtr = new (response.data()) pldm_msg;
 
     auto rc =
         encode_get_fru_record_table_resp(request->hdr.instance_id, PLDM_SUCCESS,
@@ -1574,7 +1574,7 @@ Response Handler::getFRURecordByOption(const pldm_msg* request,
     auto respPayloadLength =
         PLDM_GET_FRU_RECORD_BY_OPTION_MIN_RESP_BYTES + fruData.size();
     Response response(sizeof(pldm_msg_hdr) + respPayloadLength, 0);
-    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    auto responsePtr = new (response.data()) pldm_msg;
 
     rc = encode_get_fru_record_by_option_resp(
         request->hdr.instance_id, PLDM_SUCCESS, 0, PLDM_START_AND_END,
@@ -1612,7 +1612,7 @@ Response Handler::setFRURecordTable(const pldm_msg* request,
 
     Response response(
         sizeof(pldm_msg_hdr) + PLDM_SET_FRU_RECORD_TABLE_RESP_BYTES);
-    struct pldm_msg* responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    struct pldm_msg* responsePtr = new (response.data()) pldm_msg;
 
     rc = encode_set_fru_record_table_resp(
         request->hdr.instance_id, PLDM_SUCCESS, 0 /* nextDataTransferHandle */,

@@ -13,7 +13,6 @@
 #include "platform_numeric_effecter.hpp"
 #include "platform_state_effecter.hpp"
 #include "platform_state_sensor.hpp"
-#include "pldmd/dbus_impl_requester.hpp"
 #include "pldmd/handler.hpp"
 #include "requester/handler.hpp"
 
@@ -290,7 +289,7 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
     {
         pdr_utils::PdrEntry e;
         auto record = pdr::getRecordByHandle(pdrRepo, recordHandle, e);
-        if (record == NULL)
+        if (record == nullptr)
         {
             return CmdHandler::ccOnlyResponse(
                 request, PLDM_PLATFORM_INVALID_RECORD_HANDLE);
@@ -308,7 +307,7 @@ Response Handler::getPDR(const pldm_msg* request, size_t payloadLength)
         response.resize(sizeof(pldm_msg_hdr) + PLDM_GET_PDR_MIN_RESP_BYTES +
                             respSizeBytes,
                         0);
-        auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+        auto responsePtr = new (response.data()) pldm_msg;
         rc = encode_get_pdr_resp(
             request->hdr.instance_id, PLDM_SUCCESS, e.handle.nextRecordHandle,
             0, PLDM_START_AND_END, respSizeBytes, recordData, 0, responsePtr);
@@ -332,7 +331,7 @@ Response Handler::setStateEffecterStates(const pldm_msg* request,
 {
     Response response(
         sizeof(pldm_msg_hdr) + PLDM_SET_STATE_EFFECTER_STATES_RESP_BYTES, 0);
-    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    auto responsePtr = new (response.data()) pldm_msg;
     uint16_t effecterId;
     uint8_t compEffecterCnt;
     constexpr auto maxCompositeEffecterCnt = 8;
@@ -425,14 +424,19 @@ Response Handler::platformEventMessage(const pldm_msg* request,
         try
         {
             const auto& handlers = eventHandlers.at(eventClass);
+            bool oneFailedHandler = false;
             for (const auto& handler : handlers)
             {
                 auto rc =
                     handler(request, payloadLength, formatVersion, tid, offset);
                 if (rc != PLDM_SUCCESS)
                 {
-                    return CmdHandler::ccOnlyResponse(request, rc);
+                    oneFailedHandler = true;
                 }
+            }
+            if (oneFailedHandler)
+            {
+                return CmdHandler::ccOnlyResponse(request, rc);
             }
         }
         catch (const std::out_of_range& e)
@@ -444,7 +448,7 @@ Response Handler::platformEventMessage(const pldm_msg* request,
     }
     Response response(
         sizeof(pldm_msg_hdr) + PLDM_PLATFORM_EVENT_MESSAGE_RESP_BYTES, 0);
-    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    auto responsePtr = new (response.data()) pldm_msg;
 
     rc = encode_platform_event_message_resp(request->hdr.instance_id, rc,
                                             PLDM_EVENT_NO_LOGGING, responsePtr);
@@ -498,7 +502,7 @@ int Handler::sensorEvent(const pldm_msg* request, size_t payloadLength,
                                    previousEventState);
 
         // If there are no HOST PDR's, there is no further action
-        if (hostPDRHandler == NULL)
+        if (hostPDRHandler == nullptr)
         {
             return PLDM_SUCCESS;
         }
@@ -735,7 +739,7 @@ Response Handler::getNumericEffecterValue(const pldm_msg* request,
         getEffecterDataSize(effecterDataSize);
 
     Response response(responsePayloadLength + sizeof(pldm_msg_hdr));
-    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    auto responsePtr = new (response.data()) pldm_msg;
 
     rc = platform_numeric_effecter::getNumericEffecterValueHandler(
         propertyType, dbusValue, effecterDataSize, responsePtr,
@@ -806,7 +810,7 @@ void Handler::generateTerminusLocatorPDR(Repo& repo)
 {
     std::vector<uint8_t> pdrBuffer(sizeof(pldm_terminus_locator_pdr));
 
-    auto pdr = reinterpret_cast<pldm_terminus_locator_pdr*>(pdrBuffer.data());
+    auto pdr = new (pdrBuffer.data()) pldm_terminus_locator_pdr;
 
     pdr->hdr.record_handle = 0;
     pdr->hdr.version = 1;
@@ -820,8 +824,8 @@ void Handler::generateTerminusLocatorPDR(Repo& repo)
     pdr->terminus_locator_type = PLDM_TERMINUS_LOCATOR_TYPE_MCTP_EID;
     pdr->terminus_locator_value_size =
         sizeof(pldm_terminus_locator_type_mctp_eid);
-    auto locatorValue = reinterpret_cast<pldm_terminus_locator_type_mctp_eid*>(
-        pdr->terminus_locator_value);
+    auto locatorValue = new (pdr->terminus_locator_value)
+        pldm_terminus_locator_type_mctp_eid;
     locatorValue->eid = pldm::BmcMctpEid;
 
     PdrEntry pdrEntry{};
@@ -891,7 +895,7 @@ Response Handler::getStateSensorReadings(const pldm_msg* request,
     Response response(
         sizeof(pldm_msg_hdr) + PLDM_GET_STATE_SENSOR_READINGS_MIN_RESP_BYTES +
         sizeof(get_sensor_state_field) * comSensorCnt);
-    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    auto responsePtr = new (response.data()) pldm_msg;
     rc = encode_get_state_sensor_readings_resp(
         request->hdr.instance_id, rc, comSensorCnt, stateField.data(),
         responsePtr);
@@ -998,8 +1002,8 @@ bool isOemStateSensor(Handler& handler, uint16_t sensorId,
     auto pdrRecord = stateSensorPDRs.getFirstRecord(pdrEntry);
     while (pdrRecord)
     {
-        pdr = reinterpret_cast<pldm_state_sensor_pdr*>(pdrEntry.data);
-        assert(pdr != NULL);
+        pdr = new (pdrEntry.data) pldm_state_sensor_pdr;
+        assert(pdr != nullptr);
         if (pdr->sensor_id != sensorId)
         {
             pdr = nullptr;
@@ -1070,8 +1074,8 @@ bool isOemStateEffecter(Handler& handler, uint16_t effecterId,
     auto pdrRecord = stateEffecterPDRs.getFirstRecord(pdrEntry);
     while (pdrRecord)
     {
-        pdr = reinterpret_cast<pldm_state_effecter_pdr*>(pdrEntry.data);
-        assert(pdr != NULL);
+        pdr = new (pdrEntry.data) pldm_state_effecter_pdr;
+        assert(pdr != nullptr);
         if (pdr->effecter_id != effecterId)
         {
             pdr = nullptr;
@@ -1117,7 +1121,7 @@ void Handler::setEventReceiver()
 {
     std::vector<uint8_t> requestMsg(
         sizeof(pldm_msg_hdr) + PLDM_SET_EVENT_RECEIVER_REQ_BYTES);
-    auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+    auto request = new (requestMsg.data()) pldm_msg;
     auto instanceId = instanceIdDb->next(eid);
     uint8_t eventMessageGlobalEnable =
         PLDM_EVENT_MESSAGE_GLOBAL_ENABLE_ASYNC_KEEP_ALIVE;

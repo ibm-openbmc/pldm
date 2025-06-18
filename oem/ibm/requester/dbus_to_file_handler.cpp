@@ -34,7 +34,7 @@ DbusToFileHandler::DbusToFileHandler(
 
 void DbusToFileHandler::sendNewFileAvailableCmd(uint64_t fileSize)
 {
-    if (instanceIdDb == NULL)
+    if (instanceIdDb == nullptr)
     {
         error(
             "Failed to send resource dump parameters as instance ID DB is not set");
@@ -337,7 +337,7 @@ void DbusToFileHandler::newLicFileAvailable(const std::string& licenseStr)
 void DbusToFileHandler::newFileAvailableSendToHost(
     const uint32_t fileSize, const uint32_t fileHandle, const uint16_t type)
 {
-    if (instanceIdDb == NULL)
+    if (instanceIdDb == nullptr)
     {
         error("Failed to send csr to remote terminus.");
         return;

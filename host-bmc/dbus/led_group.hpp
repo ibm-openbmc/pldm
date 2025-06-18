@@ -2,8 +2,8 @@
 
 #include "libpldm/pdr.h"
 
-#include "../dbus_to_terminus_effecters.hpp"
 #include "common/utils.hpp"
+#include "platform-mc/dbus_to_terminus_effecters.hpp"
 
 #include <sdbusplus/bus.hpp>
 #include <sdbusplus/server.hpp>

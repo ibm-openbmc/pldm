@@ -5,7 +5,6 @@
 #include "host-bmc/dbus_to_event_handler.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
 #include "oem_handler.hpp"
-#include "pldmd/dbus_impl_requester.hpp"
 #include "pldmd/handler.hpp"
 #include "requester/handler.hpp"
 
@@ -20,7 +19,6 @@
 #include <vector>
 
 using namespace pldm::utils;
-using namespace pldm::dbus_api;
 namespace pldm
 {
 
@@ -30,9 +28,10 @@ namespace responder
 namespace dbus
 {
 
-using Value = std::variant<bool, uint8_t, int16_t, uint16_t, int32_t, uint32_t,
-                           int64_t, uint64_t, double, std::string,
-                           std::vector<uint8_t>, std::vector<std::string>>;
+using Value =
+    std::variant<bool, uint8_t, int16_t, uint16_t, int32_t, uint32_t, int64_t,
+                 uint64_t, double, std::string, std::vector<uint8_t>,
+                 std::vector<uint64_t>, std::vector<std::string>>;
 using PropertyMap = std::map<Property, Value>;
 using InterfaceMap = std::map<Interface, PropertyMap>;
 using ObjectValueTree = std::map<sdbusplus::message::object_path, InterfaceMap>;
@@ -91,13 +90,14 @@ class FruImpl
     FruImpl(const std::string& configPath,
             const std::filesystem::path& fruMasterJsonPath, pldm_pdr* pdrRepo,
             pldm_entity_association_tree* entityTree,
-            pldm_entity_association_tree* bmcEntityTree, Requester& requester,
+            pldm_entity_association_tree* bmcEntityTree,
+            pldm::InstanceIdDb& instanceIdDb,
             pldm::requester::Handler<pldm::requester::Request>* handler,
             uint8_t mctp_eid, sdeventplus::Event& /*event*/,
             pldm::state_sensor::DbusToPLDMEvent* dbusToPLDMEventHandler) :
         parser(configPath, fruMasterJsonPath), pdrRepo(pdrRepo),
         entityTree(entityTree), bmcEntityTree(bmcEntityTree),
-        requester(requester), handler(handler),
+        instanceIdDb(instanceIdDb), handler(handler),
         mctp_eid(mctp_eid), // event(event),
         dbusToPLDMEventHandler(dbusToPLDMEventHandler), oemUtilsHandler(nullptr)
     {
@@ -199,8 +199,8 @@ class FruImpl
      *
      *  @return pldm_entity
      */
-    std::optional<pldm_entity>
-        getEntityByObjectPath(const dbus::InterfaceMap& intfMaps);
+    std::optional<pldm_entity> getEntityByObjectPath(
+        const dbus::InterfaceMap& intfMaps);
 
     /** @brief Update pldm entity to association tree
      *
@@ -308,7 +308,7 @@ class FruImpl
     pldm_entity_association_tree* entityTree;
     pldm_entity_association_tree* bmcEntityTree;
     pldm::responder::oem_fru::Handler* oemFruHandler = nullptr;
-    Requester& requester;
+    pldm::InstanceIdDb& instanceIdDb;
     pldm::requester::Handler<pldm::requester::Request>* handler;
     uint8_t mctp_eid;
     pldm::state_sensor::DbusToPLDMEvent* dbusToPLDMEventHandler;
@@ -430,12 +430,13 @@ class Handler : public CmdHandler
     Handler(const std::string& configPath,
             const std::filesystem::path& fruMasterJsonPath, pldm_pdr* pdrRepo,
             pldm_entity_association_tree* entityTree,
-            pldm_entity_association_tree* bmcEntityTree, Requester& requester,
+            pldm_entity_association_tree* bmcEntityTree,
+            pldm::InstanceIdDb& instanceIdDb,
             pldm::requester::Handler<pldm::requester::Request>* handler,
             uint8_t mctp_eid, sdeventplus::Event& event,
             pldm::state_sensor::DbusToPLDMEvent* dbusToPLDMEventHandler) :
         impl(configPath, fruMasterJsonPath, pdrRepo, entityTree, bmcEntityTree,
-             requester, handler, mctp_eid, event, dbusToPLDMEventHandler)
+             instanceIdDb, handler, mctp_eid, event, dbusToPLDMEventHandler)
     {
         handlers.emplace(
             PLDM_GET_FRU_RECORD_TABLE_METADATA,
@@ -492,8 +493,8 @@ class Handler : public CmdHandler
      *
      *  @return std::map<ObjectPath, pldm_entity>
      */
-    const pldm::responder::dbus::AssociatedEntityMap&
-        getAssociateEntityMap() const
+    const pldm::responder::dbus::AssociatedEntityMap& getAssociateEntityMap()
+        const
     {
         return impl.getAssociateEntityMap();
     }

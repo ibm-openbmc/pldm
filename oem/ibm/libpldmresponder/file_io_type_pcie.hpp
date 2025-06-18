@@ -243,11 +243,11 @@ class PCIeInfoHandler : public FileHandler
         const std::string& locationCode, uint16_t entityType);
     virtual std::string getAdapterFromSlot(const std::string& mexSlotObject);
 
-    virtual std::pair<std::string, std::string>
-        getMexSlotandAdapter(const std::filesystem::path& connector);
+    virtual std::pair<std::string, std::string> getMexSlotandAdapter(
+        const std::filesystem::path& connector);
 
-    virtual std::string
-        getDownStreamChassis(const std::string& slotOrConnecterPath);
+    virtual std::string getDownStreamChassis(
+        const std::string& slotOrConnecterPath);
     virtual void parseSpeciallink(LinkId linkId, LinkId parentLinkId);
 
     /** @brief PCIeInfoHandler destructor

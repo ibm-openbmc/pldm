@@ -8,7 +8,6 @@
 #include "libpldmresponder/pdr_utils.hpp"
 #include "libpldmresponder/platform.hpp"
 #include "oem/ibm/requester/dbus_to_file_handler.hpp"
-#include "pldmd/dbus_impl_requester.hpp"
 #include "requester/handler.hpp"
 #include "utils.hpp"
 

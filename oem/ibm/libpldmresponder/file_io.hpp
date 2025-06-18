@@ -724,7 +724,6 @@ class Handler : public CmdHandler
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
                 return this->newFileAvailable(request, payloadLength);
             });
-
         handlers.emplace(
             PLDM_NEW_FILE_AVAILABLE_WITH_META_DATA,
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
@@ -736,6 +735,13 @@ class Handler : public CmdHandler
             [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
                 return this->fileAckWithMetaData(request, payloadLength);
             });
+        handlers.emplace(
+            PLDM_NEW_FILE_AVAILABLE_WITH_META_DATA,
+            [this](pldm_tid_t, const pldm_msg* request, size_t payloadLength) {
+                return this->newFileAvailableWithMetaData(request,
+                                                          payloadLength);
+            });
+
         resDumpMatcher = std::make_unique<sdbusplus::bus::match_t>(
             pldm::utils::DBusHandler::getBus(),
             sdbusplus::bus::match::rules::interfacesAdded() +
