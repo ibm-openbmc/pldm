@@ -48,9 +48,11 @@ class DbusToFileHandler
     /** @brief Process the new resource dump request
      *  @param[in] vspString - vsp string
      *  @param[in] resDumpReqPass - resource dump password
+     *  @param[in] acfFilePath - ACF file path
      */
     void processNewResourceDump(const std::string& vspString,
-                                const std::string& resDumpReqPass);
+                                const std::string& resDumpReqPass,
+                                const std::string& acfFilePath = "");
 
     /** @brief Process the new CSR file available
      *  @param[in] csr - CSR string
@@ -106,8 +108,10 @@ class DbusToFileHandler
      */
     void reportResourceDumpFailure(const std::string_view& str);
 
-    /** @brief method to get the acf file contents */
-    std::string getAcfFileContent();
+    /** @brief method to get the acf file contents
+     * @param[in] acfDirPath ACF file path
+     */
+    std::string getAcfFileContent(const std::string& acfDirPath);
 
     /** @brief MCTP EID of host firmware */
     uint8_t mctp_eid;
