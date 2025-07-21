@@ -6,7 +6,7 @@ Wants=obmc-flash-bios-init.service
 After=obmc-flash-bios-init.service
 
 [Service]
-ExecStart=/bin/sh -c "if [ -f /var/lib/pldm/PHYP-NVRAM ]; then mv /var/lib/pldm/PHYP-NVRAM /var/lib/phosphor-software-manager/hostfw/nvram/PHYP-NVRAM; else truncate -s $((1024 * 145408)) /var/lib/phosphor-software-manager/hostfw/nvram/PHYP-NVRAM; fi"
+ExecStart=/usr/bin/create-NVRAM-file
 Type=oneshot
 RemainAfterExit=no
 
