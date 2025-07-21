@@ -751,6 +751,7 @@ class Handler : public CmdHandler
                 msg.read(path, interfaces);
                 std::string vspstring;
                 std::string userchallenge;
+                std::string acfFile;
 
                 for (const auto& interface : interfaces)
                 {
@@ -768,6 +769,11 @@ class Handler : public CmdHandler
                                 userchallenge =
                                     std::get<std::string>(property.second);
                             }
+                            else if (property.first == "AcfFile")
+                            {
+                                acfFile =
+                                    std::get<std::string>(property.second);
+                            }
                         }
                         dbusToFileHandlers
                             .emplace_back(
@@ -775,7 +781,8 @@ class Handler : public CmdHandler
                                                      DbusToFileHandler>(
                                     hostSockFd, hostEid, instanceIdDb, path,
                                     handler))
-                            ->processNewResourceDump(vspstring, userchallenge);
+                            ->processNewResourceDump(vspstring, userchallenge,
+                                                     acfFile);
                         break;
                     }
                     if (interface.first == sysDumpEntry)
