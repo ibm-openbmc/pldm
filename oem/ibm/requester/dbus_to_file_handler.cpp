@@ -119,7 +119,8 @@ void DbusToFileHandler::reportResourceDumpFailure(const std::string_view& str)
 }
 
 void DbusToFileHandler::processNewResourceDump(
-    const std::string& vspString, const std::string& resDumpReqPass)
+    const std::string& vspString, const std::string& resDumpReqPass,
+    const std::string& acfFilePath)
 {
     try
     {
@@ -193,9 +194,9 @@ void DbusToFileHandler::processNewResourceDump(
     fileFunc(resDumpReqPass);
 
     std::string str;
-    if (!resDumpReqPass.empty())
+    if (vspString != "system")
     {
-        str = getAcfFileContent();
+        str = getAcfFileContent(acfFilePath);
     }
 
     fileFunc(str);
@@ -206,10 +207,14 @@ void DbusToFileHandler::processNewResourceDump(
     sendNewFileAvailableCmd(fileSize);
 }
 
-std::string DbusToFileHandler::getAcfFileContent()
+std::string DbusToFileHandler::getAcfFileContent(const std::string& acfPath)
 {
     std::string str;
-    static constexpr auto acfDirPath = "/etc/acf/service.acf";
+    const std::string& acfDirPath =
+        acfPath.empty() ? "/etc/acf/service.acf" : acfPath;
+
+    info("Using acf file : {ACF_FILE_PATH}", "ACF_FILE_PATH", acfDirPath);
+
     if (fs::exists(acfDirPath))
     {
         std::ifstream file;
