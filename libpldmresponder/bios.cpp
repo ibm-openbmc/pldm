@@ -167,6 +167,11 @@ Response Handler::setDateTime(const pldm_msg* request, size_t payloadLength)
         "xyz.openbmc_project.Time.Synchronization";
     constexpr auto timeSyncProperty = "TimeSyncMethod";
 
+    info("Got a setDateTime command from host to configure the BMC time");
+
+    info("Current BMC time: {TIME}", "TIME",
+         pldm::utils::getCurrentSystemTime());
+
     // The time is correct on BMC when in NTP mode, so we do not want to
     // try and set the time again and cause potential time drifts.
     try
@@ -177,6 +182,7 @@ Response Handler::setDateTime(const pldm_msg* request, size_t payloadLength)
 
         if (mode == "xyz.openbmc_project.Time.Synchronization.Method.NTP")
         {
+            error("Mode in which the system is: {MODE}", "MODE", mode);
             return ccOnlyResponse(request, PLDM_SUCCESS);
         }
     }
@@ -204,6 +210,12 @@ Response Handler::setDateTime(const pldm_msg* request, size_t payloadLength)
                             std::chrono::seconds(timeSec))
                             .count();
     PropertyValue value{timeUsec};
+
+    info(
+        "The time set is : epoch={EPOCH} sec, usec={USEC} ({HR}:{MIN}:{SEC} {DAY}/{MON}/{YR})",
+        "EPOCH", timeSec, "USEC", timeUsec, "HR", hours, "MIN", minutes, "SEC",
+        seconds, "DAY", day, "MON", month, "YR", year);
+
     try
     {
         DBusMapping dbusMapping{setTimePath, setTimeInterface, timeSetPro,
