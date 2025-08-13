@@ -774,7 +774,7 @@ class Handler : public CmdHandler
                                 userchallenge =
                                     std::get<std::string>(property.second);
                             }
-                            else if (property.first == "AcfFile")
+                            else if (property.first == "ACFPath")
                             {
                                 acfFile =
                                     std::get<std::string>(property.second);
