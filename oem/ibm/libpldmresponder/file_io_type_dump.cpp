@@ -636,9 +636,9 @@ int DumpHandler::fileAckWithMetaData(
             value =
                 "com.ibm.Dump.Entry.Resource.HostResponse.ResourceSelectorInvalid";
         }
-        else if (statusCode == DumpRequestStatus::AcfFileInvalid)
+        else if (statusCode == DumpRequestStatus::AclFileInvalid)
         {
-            value = "com.ibm.Dump.Entry.Resource.HostResponse.ACFFileInvalid";
+            value = "com.ibm.Dump.Entry.Resource.HostResponse.ACLFileInvalid";
         }
         else if (statusCode == DumpRequestStatus::UserChallengeInvalid)
         {
