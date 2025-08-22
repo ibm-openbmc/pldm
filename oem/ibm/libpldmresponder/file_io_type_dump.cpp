@@ -717,6 +717,41 @@ int DumpHandler::fileAckWithMetaData(
         {
             fs::remove_all(resDumpRequestDirPath);
         }
+
+        try
+        {
+            const std::string objectPath =
+                std::string(dumpEntryObjPath) + "/" + idStr;
+
+            std::string acfPath =
+                pldm::utils::DBusHandler().getDbusProperty<std::string>(
+                    objectPath.c_str(), "ACFPath", resDumpEntry);
+
+            if (!fs::exists(acfPath))
+            {
+                error("ACF file not found: '{ACF_FILE}'", "ACF_FILE", acfPath);
+            }
+            else
+            {
+                std::error_code ec;
+                if (!fs::remove(acfPath, ec))
+                {
+                    error("Failed to delete ACF file '{ACF_FILE}': {ERROR}",
+                          "ACF_FILE", acfPath, "ERROR", ec.message());
+                }
+                else
+                {
+                    info("Successfully deleted ACF file - {ACF_FILE}",
+                         "ACF_FILE", acfPath);
+                }
+            }
+        }
+        catch (const sdbusplus::exception_t& e)
+        {
+            error(
+                "Failed to get ACFPath property for resource dump entry: {ERROR}",
+                "ERROR", e);
+        }
         return PLDM_SUCCESS;
     }
 
