@@ -78,7 +78,7 @@ class DumpHandler : public FileHandler
     enum DumpRequestStatus
     {
         Success = 0x0,
-        AcfFileInvalid = 0x1,
+        AclFileInvalid = 0x1,
         UserChallengeInvalid = 0x2,
         PermissionDenied = 0x3,
         ResourceSelectorInvalid = 0x4,
