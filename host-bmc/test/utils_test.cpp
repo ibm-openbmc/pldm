@@ -78,18 +78,18 @@ TEST(EntityAssociation, addObjectPathEntityAssociations1)
 
     ObjectPathMaps retObjectMaps = {
         {"/xyz/openbmc_project/inventory/chassis1", entities[0]},
-        {"/xyz/openbmc_project/inventory/chassis1/motherboard1", entities[1]},
-        {"/xyz/openbmc_project/inventory/chassis1/motherboard1/dcm0",
+        {"/xyz/openbmc_project/inventory/chassis1/1_motherboard1", entities[1]},
+        {"/xyz/openbmc_project/inventory/chassis1/1_motherboard1/11_dcm0",
          entities[2]},
-        {"/xyz/openbmc_project/inventory/chassis1/motherboard1/dcm0/cpu0",
+        {"/xyz/openbmc_project/inventory/chassis1/1_motherboard1/11_dcm0/110_cpu0",
          entities[4]},
-        {"/xyz/openbmc_project/inventory/chassis1/motherboard1/dcm0/cpu1",
+        {"/xyz/openbmc_project/inventory/chassis1/1_motherboard1/11_dcm0/110_cpu1",
          entities[5]},
-        {"/xyz/openbmc_project/inventory/chassis1/motherboard1/dcm1",
+        {"/xyz/openbmc_project/inventory/chassis1/1_motherboard1/11_dcm1",
          entities[3]},
-        {"/xyz/openbmc_project/inventory/chassis1/motherboard1/dcm1/cpu0",
+        {"/xyz/openbmc_project/inventory/chassis1/1_motherboard1/11_dcm1/111_cpu0",
          entities[6]},
-        {"/xyz/openbmc_project/inventory/chassis1/motherboard1/dcm1/cpu1",
+        {"/xyz/openbmc_project/inventory/chassis1/1_motherboard1/11_dcm1/111_cpu1",
          entities[7]}};
 
     ObjectPathMaps objPathMap;
