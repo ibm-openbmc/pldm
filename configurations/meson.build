@@ -41,5 +41,10 @@ if get_option('oem-ibm').allowed()
         '../oem/ibm/configurations/dbus-config.json',
         install_dir: get_option('datadir') / 'pldm',
     )
+    install_symlink(
+        'com.ibm.Hardware.Chassis.Model.Balcones',
+        pointing_to: 'com.ibm.Hardware.Chassis.Model.Bonnell',
+        install_dir: join_paths(package_datadir, 'bios'),
+    )
 endif
 
