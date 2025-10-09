@@ -335,13 +335,12 @@ void CodeUpdate::setVersions()
             DBusInterfaceAdded interfaces;
             sdbusplus::message::object_path path;
             msg.read(path, interfaces);
-            info("Software interface got added");
             for (auto& interface : interfaces)
             {
-                info("Interface is {I}", "I", interface.first);
                 if (interface.first ==
                     "xyz.openbmc_project.Software.Activation")
                 {
+                    debug("Activation interface got added");
                     auto imageInterface =
                         "xyz.openbmc_project.Software.Activation";
                     auto imageObjPath = path.str.c_str();
