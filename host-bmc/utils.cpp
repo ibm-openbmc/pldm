@@ -59,7 +59,8 @@ Entities getParentEntites(const EntityAssociations& entityAssoc)
 void addObjectPathEntityAssociations(
     const EntityAssociations& entityAssoc, pldm_entity_node* entity,
     const fs::path& path, ObjectPathMaps& objPathMap, EntityMaps entityMaps,
-    pldm::responder::oem_platform::Handler* oemPlatformHandler)
+    pldm::responder::oem_platform::Handler* oemPlatformHandler,
+    std::string chassisNum = "", std::string previousEntityInstanceNum = "")
 {
     if (entity == nullptr)
     {
@@ -67,6 +68,9 @@ void addObjectPathEntityAssociations(
     }
 
     bool found = false;
+    std::string leafNode;
+    fs::path fs_entity_path;
+
     pldm_entity node_entity = pldm_entity_extract(entity);
     if (!entityMaps.contains(node_entity.entity_type))
     {
@@ -77,6 +81,20 @@ void addObjectPathEntityAssociations(
     }
 
     std::string entityName = entityMaps.at(node_entity.entity_type);
+    std::string entityInstanceNum =
+        std::to_string(node_entity.entity_instance_num);
+
+    /*
+      If we get entity type as chassis, it means we encountered a numbered
+      chassis. We'll store it in chassisNum so that it can be used
+      later for generation of unique leaf nodes.
+    */
+    if (node_entity.entity_type == PLDM_ENTITY_SYSTEM_CHASSIS)
+    {
+        chassisNum = entityInstanceNum;
+    }
+    std::string entityNode = entityName + entityInstanceNum;
+
     for (const auto& ev : entityAssoc)
     {
         pldm_entity ev_entity = pldm_entity_extract(ev[0]);
@@ -92,12 +110,25 @@ void addObjectPathEntityAssociations(
             {
                 continue;
             }
+            /*
+              Since chassis number is present, utilise it by prepending chassis
+              number and previous entity instance id(s) to generate unique
+              leafnodes.
+            */
+            if (!chassisNum.empty() &&
+                node_entity.entity_type != PLDM_ENTITY_SYSTEM_CHASSIS)
+            {
+                leafNode = std::format("{}{}_{}", chassisNum,
+                                       previousEntityInstanceNum, entityNode);
 
-            fs::path p =
-                path /
-                fs::path{entityName +
-                         std::to_string(node_entity.entity_instance_num)};
-            std::string entity_path = p.string();
+                previousEntityInstanceNum += entityInstanceNum;
+                fs_entity_path = path / fs::path{leafNode};
+            }
+            else
+            {
+                fs_entity_path = path / fs::path{entityNode};
+            }
+            std::string entity_path = fs_entity_path.string();
             if (oemPlatformHandler)
             {
                 oemPlatformHandler->updateOemDbusPaths(entity_path);
@@ -123,9 +154,9 @@ void addObjectPathEntityAssociations(
 
             for (size_t i = 1; i < ev.size(); i++)
             {
-                addObjectPathEntityAssociations(entityAssoc, ev[i], p,
-                                                objPathMap, entityMaps,
-                                                oemPlatformHandler);
+                addObjectPathEntityAssociations(
+                    entityAssoc, ev[i], fs_entity_path, objPathMap, entityMaps,
+                    oemPlatformHandler, chassisNum, previousEntityInstanceNum);
             }
             found = true;
         }
@@ -133,9 +164,16 @@ void addObjectPathEntityAssociations(
 
     if (!found)
     {
-        std::string dbusPath =
-            path / fs::path{entityName +
-                            std::to_string(node_entity.entity_instance_num)};
+        /*
+          The final leaf nodes are created here. Using the same pattern to
+          prepend chassisNum and previous entity instance ids to these
+          leafnodes.
+        */
+        leafNode = chassisNum.empty()
+                       ? entityNode
+                       : std::format("{}{}_{}", chassisNum,
+                                     previousEntityInstanceNum, entityNode);
+        std::string dbusPath = path / leafNode;
         if (oemPlatformHandler)
         {
             oemPlatformHandler->updateOemDbusPaths(dbusPath);
@@ -190,18 +228,21 @@ void updateEntityAssociation(
         }
 
         bool found = true;
+        std::string chassisNum;
+        std::string entityNum;
         while (node)
         {
             if (!pldm_entity_is_exist_parent(node))
             {
                 break;
             }
-
             pldm_entity parent = pldm_entity_get_parent(node);
+            std::string parentEntityNum =
+                std::to_string(parent.entity_instance_num);
             try
             {
-                paths.push_back(entityMaps.at(parent.entity_type) +
-                                std::to_string(parent.entity_instance_num));
+                paths.push_back(
+                    entityMaps.at(parent.entity_type) + parentEntityNum);
             }
             catch (const std::exception& e)
             {
@@ -212,6 +253,21 @@ void updateEntityAssociation(
                 found = false;
                 break;
             }
+            /*
+              Handling the scenario when 'system1/chassis15873/motherboard3'
+              path is passed to addObjectPathEntityAssociations. So extracting
+              the entity id and chassis number directly right here.
+            */
+            if (entityNum.empty())
+            {
+                entityNum = parentEntityNum;
+            }
+
+            if (parent.entity_type == PLDM_ENTITY_SYSTEM_CHASSIS &&
+                parentEntityNum != entityNum)
+            {
+                chassisNum = parentEntityNum;
+            }
 
             node = pldm_entity_association_tree_find_with_locality(
                 entityTree, &parent, false);
@@ -221,6 +277,16 @@ void updateEntityAssociation(
         {
             continue;
         }
+        /*
+          If chassis number is populated, it means that a leaf node exists other
+          than chassis. Therefore prepend it to the leaf node present i.e
+          "chassis15873/motherboard3" will become
+          chassis15873/15873_motherboard3"
+        */
+        if (!chassisNum.empty() && !paths.empty())
+        {
+            paths.front() = std::format("{}_{}", chassisNum, paths.front());
+        }
 
         while (!paths.empty())
         {
@@ -229,7 +295,8 @@ void updateEntityAssociation(
         }
 
         addObjectPathEntityAssociations(entityAssoc, entity, path, objPathMap,
-                                        entityMaps, oemPlatformHandler);
+                                        entityMaps, oemPlatformHandler,
+                                        chassisNum, entityNum);
     }
 }
 
