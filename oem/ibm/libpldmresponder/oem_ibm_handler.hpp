@@ -3,6 +3,7 @@
 #include "collect_slot_vpd.hpp"
 #include "common/types.hpp"
 #include "common/utils.hpp"
+#include "file_table.hpp"
 #include "inband_code_update.hpp"
 #include "libpldmresponder/oem_handler.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
@@ -176,11 +177,18 @@ class Handler : public oem_platform::Handler
                         hostOff = false;
                         hostTransitioningToOff = false;
                     }
-                    else if (
-                        propVal ==
-                        "xyz.openbmc_project.State.Host.HostState.TransitioningToOff")
+                    else if (propVal ==
+                             "xyz.openbmc_project.State.Host.HostState.TransitioningToOff")
                     {
                         hostTransitioningToOff = true;
+                    }
+                    else if (propVal ==
+                             "xyz.openbmc_project.State.Host.HostState.TransitioningToRunning")
+                    {
+                        using namespace pldm::filetable;
+                        auto& fileTable=buildFileTable(FILE_TABLE_JSON);
+                        fileTable.clear();
+                        fileTable=buildFileTable(FILE_TABLE_JSON);
                     }
                 }
             });
