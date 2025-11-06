@@ -3,6 +3,7 @@
 #include "collect_slot_vpd.hpp"
 #include "common/types.hpp"
 #include "common/utils.hpp"
+#include "file_table.hpp"
 #include "inband_code_update.hpp"
 #include "libpldmresponder/oem_handler.hpp"
 #include "libpldmresponder/pdr_utils.hpp"
@@ -169,6 +170,7 @@ class Handler : public oem_platform::Handler
                         disableWatchDogTimer();
                         startStopTimer(false);
                         pldm::responder::utils::clearLicenseStatus();
+                        pldm::filetable::clearFileTable();
                     }
                     else if (propVal ==
                              "xyz.openbmc_project.State.Host.HostState.Running")
