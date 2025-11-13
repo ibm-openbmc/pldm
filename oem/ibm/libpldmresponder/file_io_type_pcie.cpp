@@ -161,6 +161,10 @@ int PCIeInfoHandler::fileAck(uint8_t /*fileStatus*/)
             }
             cables.clear();
 
+            // clears busids on all objects because only active links are
+            // updated by setTopologyAttrsOnDbus()
+            refreshAllPcieSlotBusIds();
+
             // set topology properties & host cable dbus objects
             setTopologyAttrsOnDbus();
 
@@ -1159,6 +1163,51 @@ void PCIeInfoHandler::deleteTopologyFiles()
             error("Topology file deletion failed {PCIE_PATH} : {ERR_EXCEP}",
                   "PCIE_PATH", pciePath, "ERR_EXCEP", err.what());
         }
+    }
+}
+
+void PCIeInfoHandler::refreshAllPcieSlotBusIds()
+{
+    // Only setting BusIDs/LinkIDs to 0 for objects
+    // hosted by Inventory Manager
+    constexpr auto basePath =
+        "/xyz/openbmc_project/inventory/system/chassis/motherboard";
+    constexpr auto property = "BusId";
+    constexpr auto dbusProperties = "org.freedesktop.DBus.Properties";
+
+    try
+    {
+        auto& bus = pldm::utils::DBusHandler::getBus();
+        auto subTree = pldm::utils::DBusHandler().getSubtree(basePath, 0,
+                                                             {itemPCIeSlot});
+
+        for (const auto& [objectPath, serviceMap] : subTree)
+        {
+            for (const auto& [service, interfaces] : serviceMap)
+            {
+                try
+                {
+                    auto method = bus.new_method_call(service.c_str(),
+                                                      objectPath.c_str(),
+                                                      dbusProperties, "Set");
+                    uint32_t newBusIdValue = 0;
+                    std::variant<uint32_t> value =
+                        static_cast<uint32_t>(newBusIdValue);
+                    method.append(itemPCIeSlot, property, value);
+                    bus.call_noreply(method, dbusTimeout);
+                }
+                catch (const std::exception& e)
+                {
+                    error(
+                        "Error clearing BusId for {OBJPATH} from {SERVICE}: {ERROR}",
+                        "OBJPATH", objectPath, "SERVICE", service, "ERROR", e);
+                }
+            }
+        }
+    }
+    catch (const std::exception& e)
+    {
+        error("Failed to refresh PCIeSlot BusIds: {ERR}", "ERR", e);
     }
 }
 
