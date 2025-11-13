@@ -324,6 +324,12 @@ class PCIeInfoHandler : public FileHandler
     static std::unordered_map<uint16_t, bool> receivedFiles;
 
     void deleteTopologyFiles();
+
+    /** @brief Sets bus IDs to 0 on all DBus Objects
+     *
+     *  @param[return] void
+     */
+    void refreshAllPcieSlotBusIds();
 };
 
 } // namespace responder
