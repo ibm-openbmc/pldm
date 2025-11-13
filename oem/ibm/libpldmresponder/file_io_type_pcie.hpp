@@ -290,6 +290,12 @@ class PCIeInfoHandler : public FileHandler
      *  @param[return] void
      */
     void deleteTopologyFiles();
+
+    /** @brief Sets bus IDs to 0 on all DBus Objects
+     *
+     *  @param[return] void
+     */
+    void refreshAllPcieSlotBusIds();
 };
 
 } // namespace responder
