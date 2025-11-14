@@ -195,18 +195,33 @@ int writeToUnixSocket(const int sock, const char* buf, const uint64_t blockSize)
 
 Json convertBinFileToJson(const fs::path& path)
 {
-    std::ifstream file(path, std::ios::in | std::ios::binary);
+    std::ifstream file(path, std::ios::in | std::ios::binary | std::ios::ate);
     std::streampos fileSize;
 
-    // Get the file size
-    file.seekg(0, std::ios::end);
-    fileSize = file.tellg();
+    if (!file.is_open() || (fileSize = file.tellg()) <= 0)
+    {
+        lg2::error(
+            "convertBinFileToJson: file open failed {PATH} or size {SIZE} invalid",
+            "PATH", path, "SIZE", fileSize);
+        return Json{};
+    }
     file.seekg(0, std::ios::beg);
-
-    // Read the data into vector from file and convert to json object
     std::vector<uint8_t> vJson(fileSize);
     file.read((char*)&vJson[0], fileSize);
-    return Json::from_bson(vJson);
+
+    Json result;
+    try
+    {
+        result = Json::from_bson(vJson);
+    }
+    catch (const std::exception& e)
+    {
+        lg2::error(
+            "convertBinFileToJson: JSON::from_bson failed for {PATH}, {ERR}",
+            "PATH", path, "ERR", e);
+        return Json{};
+    }
+    return result;
 }
 
 void convertJsonToBinaryFile(const Json& jsonData, const fs::path& path)
@@ -225,12 +240,22 @@ void clearLicenseStatus()
 {
     if (!fs::exists(curLicFilePath))
     {
+        lg2::error("clearLicenseStatus: license file {PATH} missing", "PATH",
+                   curLicFilePath);
         return;
     }
 
     auto data = convertBinFileToJson(curLicFilePath);
 
-    const Json empty{};
+    // Guard: check that we got an object and not null/array/primitive
+    if (!data.is_object())
+    {
+        lg2::error(
+            "clearLicenseStatus: invalid JSON format in current license file {PATH}",
+            "PATH", curLicFilePath);
+        return;
+    }
+    const Json emptyJson{};
     const std::vector<Json> emptyList{};
 
     auto entries = data.value("Licenses", emptyList);
@@ -238,7 +263,12 @@ void clearLicenseStatus()
 
     for (const auto& entry : entries)
     {
-        auto licId = entry.value("Id", empty);
+        if (!entry.is_object() || !entry.contains("Id") ||
+            !entry["Id"].is_string())
+        {
+            continue;
+        }
+        std::string licId = entry["Id"].get<std::string>();
         fs::path l_path = path / licId;
         licJsonMap.emplace(l_path, entry);
     }
