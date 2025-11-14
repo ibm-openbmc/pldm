@@ -1170,6 +1170,9 @@ void PCIeInfoHandler::refreshAllPcieSlotBusIds()
         "/xyz/openbmc_project/inventory/system/chassis/motherboard";
     constexpr auto property = "BusId";
     constexpr auto dbusProperties = "org.freedesktop.DBus.Properties";
+    auto dbusTimeout = std::chrono::duration_cast<std::chrono::microseconds>(
+                           std::chrono::seconds(DBUS_TIMEOUT))
+                           .count();
 
     try
     {
