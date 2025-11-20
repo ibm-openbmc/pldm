@@ -1678,6 +1678,12 @@ void HostPDRHandler::createDbusObjects()
                 CustomDBus::getCustomDBus().implementMotherboardInterface(
                     entity.first);
                 break;
+            case PLDM_ENTITY_SLOT:
+                CustomDBus::getCustomDBus().implementPCIeSlotInterface(
+                    entity.first);
+                CustomDBus::getCustomDBus().setLinkReset(
+                    entity.first, false, hostEffecterParser, mctp_eid);
+                break;
             case PLDM_ENTITY_CONNECTOR:
                 CustomDBus::getCustomDBus().implementConnecterInterface(
                     entity.first);
