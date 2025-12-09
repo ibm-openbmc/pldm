@@ -606,6 +606,21 @@ int DumpHandler::newFileAvailableWithMetaData(
     return PLDM_SUCCESS;
 }
 
+static void deleteTACF(std::string& targetAcfPath)
+{
+    std::error_code ec;
+    if (!fs::remove(targetAcfPath, ec))
+    {
+        error("Failed to delete ACF file '{TACF_FILE}': {ERROR}", "TACF_FILE",
+              targetAcfPath, "ERROR", ec.message());
+    }
+    else
+    {
+        info("Successfully deleted ACF file - {TACF_FILE}", "TACF_FILE",
+             targetAcfPath);
+    }
+}
+
 int DumpHandler::fileAckWithMetaData(
     uint8_t /*fileStatus*/, uint32_t metaDataValue1, uint32_t metaDataValue2,
     uint32_t /*metaDataValue3*/, uint32_t /*metaDataValue4*/)
@@ -723,27 +738,13 @@ int DumpHandler::fileAckWithMetaData(
             const std::string objectPath =
                 std::string(dumpEntryObjPath) + "/" + idStr;
 
-            std::string acfPath =
+            std::string targetAcfPath =
                 pldm::utils::DBusHandler().getDbusProperty<std::string>(
                     objectPath.c_str(), "ACFPath", resDumpEntry);
 
-            if (!fs::exists(acfPath))
+            if (!targetAcfPath.empty())
             {
-                error("ACF file not found: '{ACF_FILE}'", "ACF_FILE", acfPath);
-            }
-            else
-            {
-                std::error_code ec;
-                if (!fs::remove(acfPath, ec))
-                {
-                    error("Failed to delete ACF file '{ACF_FILE}': {ERROR}",
-                          "ACF_FILE", acfPath, "ERROR", ec.message());
-                }
-                else
-                {
-                    info("Successfully deleted ACF file - {ACF_FILE}",
-                         "ACF_FILE", acfPath);
-                }
+                deleteTACF(targetAcfPath);
             }
         }
         catch (const sdbusplus::exception_t& e)
