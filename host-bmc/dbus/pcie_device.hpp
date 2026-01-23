@@ -14,8 +14,8 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemDevice = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Inventory::Item::server::PCIeDevice>;
+using ItemDevice =
+    sdbusplus::xyz::openbmc_project::Inventory::Item::server::PCIeDevice;
 using Generations = sdbusplus::common::xyz::openbmc_project::inventory::item::
     PCIeSlot::Generations;
 
@@ -28,7 +28,6 @@ class PCIeDevice : public ItemDevice
 {
   public:
     PCIeDevice() = delete;
-    ~PCIeDevice() = default;
     PCIeDevice(const PCIeDevice&) = delete;
     PCIeDevice& operator=(const PCIeDevice&) = delete;
 
@@ -37,6 +36,11 @@ class PCIeDevice : public ItemDevice
     {
         pldm::serialize::Serialize::getSerialize().serialize(objPath,
                                                              "PCIeDevice");
+        emit_added();
+    }
+    ~PCIeDevice()
+    {
+        emit_removed();
     }
 
     /** Get lanes in use */

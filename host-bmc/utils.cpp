@@ -135,14 +135,15 @@ void addObjectPathEntityAssociations(
             }
             try
             {
-                pldm::utils::DBusHandler().getService(entity_path.c_str(),
-                                                      nullptr);
+                auto serviceName = pldm::utils::DBusHandler().getService(
+                    entity_path.c_str(), nullptr);
                 // If the entity obtained from the remote PLDM terminal is not
                 // in the MAP, or there is no auxiliary name PDR, add it
                 // directly. Otherwise, check whether the DBus service of
                 // entity_path exists, and overwrite the entity if it does not
                 // exist.
-                if (objPathMap.contains(entity_path))
+                if (objPathMap.contains(entity_path) ||
+                    serviceName == ObjectMapper::default_service)
                 {
                     objPathMap[entity_path] = node_entity;
                 }
@@ -180,8 +181,10 @@ void addObjectPathEntityAssociations(
         }
         try
         {
-            pldm::utils::DBusHandler().getService(dbusPath.c_str(), nullptr);
-            if (objPathMap.contains(dbusPath))
+            auto serviceName = pldm::utils::DBusHandler().getService(
+                dbusPath.c_str(), nullptr);
+            if (objPathMap.contains(dbusPath) ||
+                serviceName == ObjectMapper::default_service)
             {
                 objPathMap[dbusPath] = node_entity;
             }

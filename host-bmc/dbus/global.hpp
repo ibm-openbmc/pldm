@@ -13,14 +13,13 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemGlobal = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Inventory::Item::server::Global>;
+using ItemGlobal =
+    sdbusplus::xyz::openbmc_project::Inventory::Item::server::Global;
 
 class Global : public ItemGlobal
 {
   public:
     Global() = delete;
-    ~Global() = default;
     Global(const Global&) = delete;
     Global& operator=(const Global&) = delete;
     Global(Global&&) = delete;
@@ -30,6 +29,11 @@ class Global : public ItemGlobal
         ItemGlobal(bus, objPath.c_str())
     {
         pldm::serialize::Serialize::getSerialize().serialize(objPath, "Global");
+        emit_added();
+    }
+    ~Global()
+    {
+        emit_removed();
     }
 };
 
