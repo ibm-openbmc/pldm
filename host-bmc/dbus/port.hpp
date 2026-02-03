@@ -13,14 +13,13 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemPort = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Inventory::Connector::server::Port>;
+using ItemPort =
+    sdbusplus::xyz::openbmc_project::Inventory::Connector::server::Port;
 
 class Port : public ItemPort
 {
   public:
     Port() = delete;
-    ~Port() = default;
     Port(const Port&) = delete;
     Port& operator=(const Port&) = delete;
 
@@ -28,6 +27,11 @@ class Port : public ItemPort
         ItemPort(bus, objPath.c_str())
     {
         pldm::serialize::Serialize::getSerialize().serialize(objPath, "Port");
+        emit_added();
+    }
+    ~Port()
+    {
+        emit_removed();
     }
 };
 

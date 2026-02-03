@@ -22,7 +22,6 @@ class Associations : public AssociationsIntf
 {
   public:
     Associations() = delete;
-    ~Associations() = default;
     Associations(const Associations&) = delete;
     Associations& operator=(const Associations&) = delete;
     Associations(Associations&&) = delete;
@@ -31,7 +30,13 @@ class Associations : public AssociationsIntf
     Associations(sdbusplus::bus_t& bus, const std::string& objPath,
                  const std::map<std::string, PropertiesVariant>& vals) :
         AssociationsIntf(bus, objPath.c_str(), vals), path(objPath)
-    {}
+    {
+        emit_added();
+    }
+    ~Associations()
+    {
+        emit_removed();
+    }
 
     /** Get value of Associations */
     AssociationsObj associations() const override;

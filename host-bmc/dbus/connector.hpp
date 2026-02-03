@@ -13,14 +13,13 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemConnector = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Inventory::Item::server::Connector>;
+using ItemConnector =
+    sdbusplus::xyz::openbmc_project::Inventory::Item::server::Connector;
 
 class Connector : public ItemConnector
 {
   public:
     Connector() = delete;
-    ~Connector() = default;
     Connector(const Connector&) = delete;
     Connector& operator=(const Connector&) = delete;
     Connector(Connector&&) = delete;
@@ -31,6 +30,11 @@ class Connector : public ItemConnector
     {
         pldm::serialize::Serialize::getSerialize().serialize(objPath,
                                                              "Connector");
+        emit_added();
+    }
+    ~Connector()
+    {
+        emit_removed();
     }
 };
 

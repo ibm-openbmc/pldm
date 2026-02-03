@@ -17,14 +17,12 @@ namespace pldm
 {
 namespace dbus
 {
-using TopologyObj = sdbusplus::server::object_t<
-    sdbusplus::com::ibm::PLDM::server::PCIeTopology>;
+using TopologyObj = sdbusplus::com::ibm::PLDM::server::PCIeTopology;
 
 class PCIETopology : public TopologyObj
 {
   public:
     PCIETopology() = delete;
-    ~PCIETopology() = default;
     PCIETopology(const PCIETopology&) = delete;
     PCIETopology& operator=(const PCIETopology&) = delete;
     PCIETopology(PCIETopology&&) = delete;
@@ -36,7 +34,13 @@ class PCIETopology : public TopologyObj
         TopologyObj(bus, objPath.c_str()),
         hostEffecterParser(hostEffecterParser), mctpEid(mctpEid)
 
-    {}
+    {
+        emit_added();
+    }
+    ~PCIETopology()
+    {
+        emit_removed();
+    }
 
     bool pcIeTopologyRefresh(bool value) override;
 

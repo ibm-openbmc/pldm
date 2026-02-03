@@ -14,14 +14,13 @@ namespace pldm
 namespace dbus
 {
 
-using ItemAsset = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Asset>;
+using ItemAsset =
+    sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Asset;
 
 class Asset : public ItemAsset
 {
   public:
     Asset() = delete;
-    ~Asset() = default;
     Asset(const Asset&) = delete;
     Asset& operator=(const Asset&) = delete;
     Asset(Asset&&) = delete;
@@ -30,7 +29,11 @@ class Asset : public ItemAsset
     Asset(sdbusplus::bus_t& bus, const std::string& objPath) :
         ItemAsset(bus, objPath.c_str())
     {
-        // no need to save this in pldm memory
+        emit_added();
+    }
+    ~Asset()
+    {
+        emit_removed();
     }
 
     /** Set Part Number */

@@ -1742,7 +1742,6 @@ void HostPDRHandler::deleteDbusObjects(const std::vector<uint16_t> types)
             if (type !=
                 (PLDM_ENTITY_PROC | 0x8000)) // other than CPU core object
             {
-                objPathMap.erase(path);
                 // Delete the Mex Led Dbus Object paths
                 auto ledGroupPath = updateLedGroupPath(path);
                 pldm::dbus::CustomDBus::getCustomDBus().deleteObject(

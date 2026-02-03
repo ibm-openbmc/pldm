@@ -13,8 +13,8 @@ namespace pldm
 {
 namespace dbus
 {
-using CoreIntf = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Inventory::Item::server::CpuCore>;
+using CoreIntf =
+    sdbusplus::xyz::openbmc_project::Inventory::Item::server::CpuCore;
 
 /** @class CPUCore
  *  @brief This class is mapped to CPUCore properties in D-Bus interface path
@@ -24,7 +24,6 @@ class CPUCore : public CoreIntf
 {
   public:
     CPUCore() = delete;
-    ~CPUCore() = default;
     CPUCore(const CPUCore&) = delete;
     CPUCore& operator=(const CPUCore&) = delete;
     CPUCore(CPUCore&&) = delete;
@@ -34,6 +33,11 @@ class CPUCore : public CoreIntf
         CoreIntf(bus, objPath.c_str()), path(objPath)
     {
         pldm::serialize::Serialize::getSerialize().serialize(path, "CPUCore");
+        emit_added();
+    }
+    ~CPUCore()
+    {
+        emit_removed();
     }
 
     /** Get value of Microcode */
