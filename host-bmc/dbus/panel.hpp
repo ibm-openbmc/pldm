@@ -13,14 +13,13 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemPanel = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Inventory::Item::server::Panel>;
+using ItemPanel =
+    sdbusplus::xyz::openbmc_project::Inventory::Item::server::Panel;
 
 class Panel : public ItemPanel
 {
   public:
     Panel() = delete;
-    ~Panel() = default;
     Panel(const Panel&) = delete;
     Panel& operator=(const Panel&) = delete;
     Panel(Panel&&) = delete;
@@ -30,6 +29,11 @@ class Panel : public ItemPanel
         ItemPanel(bus, objPath.c_str()), path(objPath)
     {
         pldm::serialize::Serialize::getSerialize().serialize(path, "Panel");
+        emit_added();
+    }
+    ~Panel()
+    {
+        emit_removed();
     }
 
   private:

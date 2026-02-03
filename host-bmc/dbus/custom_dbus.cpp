@@ -598,6 +598,11 @@ void CustomDBus::deleteObject(const std::string& path)
     {
         panel.erase(panel.find(path));
     }
+
+    if (link.contains(path))
+    {
+        link.erase(link.find(path));
+    }
 }
 
 void CustomDBus::removeDBus(const std::vector<uint16_t> types)

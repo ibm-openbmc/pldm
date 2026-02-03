@@ -13,8 +13,7 @@ namespace pldm
 {
 namespace dbus
 {
-using ChapDataObj =
-    sdbusplus::server::object_t<sdbusplus::com::ibm::PLDM::server::ChapData>;
+using ChapDataObj = sdbusplus::com::ibm::PLDM::server::ChapData;
 
 /** @brief Hosting chapdata properties
  *
@@ -26,7 +25,6 @@ class ChapDatas : public ChapDataObj
 {
   public:
     ChapDatas() = delete;
-    ~ChapDatas() = default;
     ChapDatas(const ChapDatas&) = delete;
     ChapDatas& operator=(const ChapDatas&) = delete;
     ChapDatas(ChapDatas&&) = delete;
@@ -36,7 +34,13 @@ class ChapDatas : public ChapDataObj
               pldm::responder::oem_fileio::Handler* dbusToFilehandlerObj) :
         ChapDataObj(bus, objPath.c_str()),
         dbusToFilehandler(dbusToFilehandlerObj), path(objPath)
-    {}
+    {
+        emit_added();
+    }
+    ~ChapDatas()
+    {
+        emit_removed();
+    }
 
     std::string chapName(std::string value) override;
 

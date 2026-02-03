@@ -13,14 +13,12 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemFan = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Inventory::Item::server::Fan>;
+using ItemFan = sdbusplus::xyz::openbmc_project::Inventory::Item::server::Fan;
 
 class Fan : public ItemFan
 {
   public:
     Fan() = delete;
-    ~Fan() = default;
     Fan(const Fan&) = delete;
     Fan& operator=(const Fan&) = delete;
     Fan(Fan&&) = delete;
@@ -30,6 +28,11 @@ class Fan : public ItemFan
         ItemFan(bus, objPath.c_str())
     {
         pldm::serialize::Serialize::getSerialize().serialize(objPath, "Fan");
+        emit_added();
+    }
+    ~Fan()
+    {
+        emit_removed();
     }
 };
 

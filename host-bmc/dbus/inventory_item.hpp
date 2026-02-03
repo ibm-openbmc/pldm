@@ -11,14 +11,12 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemIntf = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Inventory::server::Item>;
+using ItemIntf = sdbusplus::xyz::openbmc_project::Inventory::server::Item;
 
 class InventoryItem : public ItemIntf
 {
   public:
     InventoryItem() = delete;
-    ~InventoryItem() = default;
     InventoryItem(const InventoryItem&) = delete;
     InventoryItem& operator=(const InventoryItem&) = delete;
     InventoryItem(InventoryItem&&) = delete;
@@ -26,7 +24,13 @@ class InventoryItem : public ItemIntf
 
     InventoryItem(sdbusplus::bus_t& bus, const std::string& objPath) :
         ItemIntf(bus, objPath.c_str()), path(objPath)
-    {}
+    {
+        emit_added();
+    }
+    ~InventoryItem()
+    {
+        emit_removed();
+    }
 
     /** Get value of PrettyName */
     std::string prettyName() const override;

@@ -13,9 +13,8 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemMotherboard =
-    sdbusplus::server::object_t<sdbusplus::xyz::openbmc_project::Inventory::
-                                    Item::Board::server::Motherboard>;
+using ItemMotherboard = sdbusplus::xyz::openbmc_project::Inventory::Item::
+    Board::server::Motherboard;
 
 /** @class Motherboard
  *  @brief This class is mapped to Inventory.Item.Board.Motherboard properties
@@ -25,7 +24,6 @@ class Motherboard : public ItemMotherboard
 {
   public:
     Motherboard() = delete;
-    ~Motherboard() = default;
     Motherboard(const Motherboard&) = delete;
     Motherboard& operator=(const Motherboard&) = delete;
     Motherboard(Motherboard&&) = delete;
@@ -36,6 +34,11 @@ class Motherboard : public ItemMotherboard
     {
         pldm::serialize::Serialize::getSerialize().serialize(path,
                                                              "Motherboard");
+        emit_added();
+    }
+    ~Motherboard()
+    {
+        emit_removed();
     }
 
   private:

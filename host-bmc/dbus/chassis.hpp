@@ -13,14 +13,13 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemChassisIntf = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Inventory::Item::server::Chassis>;
+using ItemChassisIntf =
+    sdbusplus::xyz::openbmc_project::Inventory::Item::server::Chassis;
 
 class ItemChassis : public ItemChassisIntf
 {
   public:
     ItemChassis() = delete;
-    ~ItemChassis() = default;
     ItemChassis(const ItemChassis&) = delete;
     ItemChassis& operator=(const ItemChassis&) = delete;
     ItemChassis(ItemChassis&&) = delete;
@@ -31,6 +30,11 @@ class ItemChassis : public ItemChassisIntf
     {
         pldm::serialize::Serialize::getSerialize().serialize(objPath,
                                                              "ItemChassis");
+        emit_added();
+    }
+    ~ItemChassis()
+    {
+        emit_removed();
     }
 
     /** Get value of Type */

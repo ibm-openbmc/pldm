@@ -13,14 +13,13 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemFabricAdapter = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Inventory::Item::server::FabricAdapter>;
+using ItemFabricAdapter =
+    sdbusplus::xyz::openbmc_project::Inventory::Item::server::FabricAdapter;
 
 class FabricAdapter : public ItemFabricAdapter
 {
   public:
     FabricAdapter() = delete;
-    ~FabricAdapter() = default;
     FabricAdapter(const FabricAdapter&) = delete;
     FabricAdapter& operator=(const FabricAdapter&) = delete;
     FabricAdapter(FabricAdapter&&) = delete;
@@ -31,6 +30,11 @@ class FabricAdapter : public ItemFabricAdapter
     {
         pldm::serialize::Serialize::getSerialize().serialize(objPath,
                                                              "FabricAdapter");
+        emit_added();
+    }
+    ~FabricAdapter()
+    {
+        emit_removed();
     }
 };
 

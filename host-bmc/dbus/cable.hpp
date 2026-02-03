@@ -12,8 +12,8 @@ namespace pldm
 namespace dbus
 {
 
-using ItemCable = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Inventory::Item::server::Cable>;
+using ItemCable =
+    sdbusplus::xyz::openbmc_project::Inventory::Item::server::Cable;
 
 /**
  * @class Cable
@@ -23,7 +23,6 @@ class Cable : public ItemCable
 {
   public:
     Cable() = delete;
-    ~Cable() = default;
     Cable(const Cable&) = delete;
     Cable& operator=(const Cable&) = delete;
 
@@ -31,6 +30,11 @@ class Cable : public ItemCable
         ItemCable(bus, objPath.c_str())
     {
         // cable objects does not need to be store in serialized memory
+        emit_added();
+    }
+    ~Cable()
+    {
+        emit_removed();
     }
 
     /** Get length of the cable in meters */
