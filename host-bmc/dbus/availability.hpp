@@ -11,14 +11,13 @@ namespace pldm
 {
 namespace dbus
 {
-using AvailabilityIntf = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::State::Decorator::server::Availability>;
+using AvailabilityIntf =
+    sdbusplus::xyz::openbmc_project::State::Decorator::server::Availability;
 
 class Availability : public AvailabilityIntf
 {
   public:
     Availability() = delete;
-    ~Availability() = default;
     Availability(const Availability&) = delete;
     Availability& operator=(const Availability&) = delete;
     Availability(Availability&&) = delete;
@@ -26,7 +25,13 @@ class Availability : public AvailabilityIntf
 
     Availability(sdbusplus::bus_t& bus, const std::string& objPath) :
         AvailabilityIntf(bus, objPath.c_str()), path(objPath)
-    {}
+    {
+        emit_added();
+    }
+    ~Availability()
+    {
+        emit_removed();
+    }
 
     /** Get value of Available */
     bool available() const override;

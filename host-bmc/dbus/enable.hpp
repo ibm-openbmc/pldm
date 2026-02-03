@@ -13,20 +13,24 @@ namespace pldm
 {
 namespace dbus
 {
-using EnableIface = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Object::server::Enable>;
+using EnableIface = sdbusplus::xyz::openbmc_project::Object::server::Enable;
 
 class Enable : public EnableIface
 {
   public:
     Enable() = delete;
-    ~Enable() = default;
     Enable(const Enable&) = delete;
     Enable& operator=(const Enable&) = delete;
 
     Enable(sdbusplus::bus_t& bus, const std::string& objPath) :
         EnableIface(bus, objPath.c_str()), path(objPath)
-    {}
+    {
+        emit_added();
+    }
+    ~Enable()
+    {
+        emit_removed();
+    }
 
     /** Get value of Enabled */
     bool enabled() const override;

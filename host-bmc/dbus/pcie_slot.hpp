@@ -13,8 +13,8 @@ namespace pldm
 {
 namespace dbus
 {
-using ItemSlot = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Inventory::Item::server::PCIeSlot>;
+using ItemSlot =
+    sdbusplus::xyz::openbmc_project::Inventory::Item::server::PCIeSlot;
 
 /**
  * @class PCIeSlot
@@ -24,7 +24,6 @@ class PCIeSlot : public ItemSlot
 {
   public:
     PCIeSlot() = delete;
-    ~PCIeSlot() = default;
     PCIeSlot(const PCIeSlot&) = delete;
     PCIeSlot& operator=(const PCIeSlot&) = delete;
 
@@ -33,6 +32,11 @@ class PCIeSlot : public ItemSlot
     {
         pldm::serialize::Serialize::getSerialize().serialize(objPath,
                                                              "PCIeSlot");
+        emit_added();
+    }
+    ~PCIeSlot()
+    {
+        emit_removed();
     }
 
     /** Get value of Generation */

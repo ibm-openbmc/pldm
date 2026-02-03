@@ -11,14 +11,13 @@ namespace pldm
 {
 namespace dbus
 {
-using DecoratorRevisionIntf = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Revision>;
+using DecoratorRevisionIntf =
+    sdbusplus::xyz::openbmc_project::Inventory::Decorator::server::Revision;
 
 class DecoratorRevision : public DecoratorRevisionIntf
 {
   public:
     DecoratorRevision() = delete;
-    ~DecoratorRevision() = default;
     DecoratorRevision(const DecoratorRevision&) = delete;
     DecoratorRevision& operator=(const DecoratorRevision&) = delete;
     DecoratorRevision(DecoratorRevision&&) = delete;
@@ -26,7 +25,13 @@ class DecoratorRevision : public DecoratorRevisionIntf
 
     DecoratorRevision(sdbusplus::bus_t& bus, const std::string& objPath) :
         DecoratorRevisionIntf(bus, objPath.c_str()), path(objPath)
-    {}
+    {
+        emit_added();
+    }
+    ~DecoratorRevision()
+    {
+        emit_removed();
+    }
 
     /** Get value of Version */
     std::string version() const override;

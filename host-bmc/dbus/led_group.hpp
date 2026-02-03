@@ -16,14 +16,12 @@ namespace pldm
 {
 namespace dbus
 {
-using AssertedIntf = sdbusplus::server::object_t<
-    sdbusplus::xyz::openbmc_project::Led::server::Group>;
+using AssertedIntf = sdbusplus::xyz::openbmc_project::Led::server::Group;
 
 class LEDGroup : public AssertedIntf
 {
   public:
     LEDGroup() = delete;
-    ~LEDGroup() = default;
     LEDGroup(const LEDGroup&) = delete;
     LEDGroup& operator=(const LEDGroup&) = delete;
     LEDGroup(LEDGroup&&) = delete;
@@ -32,12 +30,15 @@ class LEDGroup : public AssertedIntf
     LEDGroup(sdbusplus::bus_t& bus, const std::string& objPath,
              pldm::host_effecters::HostEffecterParser* hostEffecterParser,
              const pldm_entity entity, uint8_t mctpEid) :
-        AssertedIntf(bus, objPath.c_str(), AssertedIntf::action::defer_emit),
+        AssertedIntf(bus, objPath.c_str()),
         hostEffecterParser(hostEffecterParser), entity(entity),
         mctpEid(mctpEid), objectPath(objPath)
     {
-        // Emit deferred signal.
-        emit_object_added();
+        emit_added();
+    }
+    ~LEDGroup()
+    {
+        emit_removed();
     }
 
     /** @brief Property SET Override function
