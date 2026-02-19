@@ -63,8 +63,6 @@ uint32_t DumpHandler::getDumpIdPrefix(uint16_t dumpType)
 
 std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
 {
-    info("FileHandle in findDumpObjPath is {FILEHANDLE}", "FILEHANDLE",
-         fileHandle);
     static constexpr auto DUMP_MANAGER_BUSNAME =
         "xyz.openbmc_project.Dump.Manager";
     static constexpr auto DUMP_MANAGER_PATH = "/xyz/openbmc_project/dump";
@@ -88,8 +86,6 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
     {
         curDumpEntryPath =
             (std::string)bmcDumpObjPath + "/" + std::to_string(fileHandle);
-        info("BMC dump entry path is {DUMPENTRY}", "DUMPENTRY",
-             curDumpEntryPath);
     }
     else if (dumpType == PLDM_FILE_TYPE_SBE_DUMP)
     {
