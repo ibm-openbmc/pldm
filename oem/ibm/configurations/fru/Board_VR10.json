@@ -9,7 +9,7 @@
             "fru_field_type": 2,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VR10",
-                "property_name": "DC",
+                "property_name": "RT",
                 "property_type": "bytearray"
             }
         },
@@ -17,7 +17,7 @@
             "fru_field_type": 3,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VR10",
-                "property_name": "DR",
+                "property_name": "DC",
                 "property_type": "bytearray"
             }
         },
@@ -25,7 +25,7 @@
             "fru_field_type": 4,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VR10",
-                "property_name": "FL",
+                "property_name": "DR",
                 "property_type": "bytearray"
             }
         },
@@ -33,7 +33,7 @@
             "fru_field_type": 5,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VR10",
-                "property_name": "RT",
+                "property_name": "FL",
                 "property_type": "bytearray"
             }
         },

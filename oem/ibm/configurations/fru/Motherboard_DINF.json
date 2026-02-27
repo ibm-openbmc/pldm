@@ -20,6 +20,14 @@
                 "property_name": "RI",
                 "property_type": "bytearray"
             }
+        },
+        {
+            "fru_field_type": 4,
+            "dbus": {
+                "interface": "com.ibm.ipzvpd.DINF",
+                "property_name": "FL",
+                "property_type": "bytearray"
+            }
         }
     ]
 }
