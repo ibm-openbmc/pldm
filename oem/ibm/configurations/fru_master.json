@@ -10,6 +10,7 @@
         "xyz.openbmc_project.Inventory.Item.PowerSupply": 120,
         "xyz.openbmc_project.Inventory.Item.Battery": 121,
         "xyz.openbmc_project.Inventory.Item.Vrm": 123,
+        "xyz.openbmc_project.Inventory.Item.Cpu": 135,
         "xyz.openbmc_project.Inventory.Item.Bmc": 137,
         "xyz.openbmc_project.Inventory.Item.CpuCore": 151,
         "xyz.openbmc_project.Inventory.Item.Connector": 185,
