@@ -1644,12 +1644,6 @@ void HostPDRHandler::createDbusObjects()
 
         switch (entity.second.entity_type)
         {
-            case PLDM_ENTITY_PROC | 0x8000:
-                CustomDBus::getCustomDBus().implementCpuCoreInterface(
-                    entity.first);
-                CustomDBus::getCustomDBus().implementObjectEnableIface(
-                    entity.first, false);
-                break;
             case PLDM_ENTITY_SYSTEM_CHASSIS:
                 CustomDBus::getCustomDBus().implementChassisInterface(
                     entity.first);
@@ -1739,14 +1733,10 @@ void HostPDRHandler::deleteDbusObjects(const std::vector<uint16_t> types)
 
         for (const auto& [path, entites] : savedObjs.at(type))
         {
-            if (type !=
-                (PLDM_ENTITY_PROC | 0x8000)) // other than CPU core object
-            {
-                // Delete the Mex Led Dbus Object paths
-                auto ledGroupPath = updateLedGroupPath(path);
-                pldm::dbus::CustomDBus::getCustomDBus().deleteObject(
-                    ledGroupPath);
-            }
+            // Delete the Mex Led Dbus Object paths
+            auto ledGroupPath = updateLedGroupPath(path);
+            pldm::dbus::CustomDBus::getCustomDBus().deleteObject(ledGroupPath);
+
             pldm::dbus::CustomDBus::getCustomDBus().deleteObject(path);
         }
     }

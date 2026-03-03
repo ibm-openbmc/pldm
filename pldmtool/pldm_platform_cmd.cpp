@@ -636,6 +636,10 @@ class GetPDR : public CommandInterface
          "Intermediate State-2"},
         {PLDM_STATE_SET_ACPI_DEVICE_POWER_STATE_OFF, "Off"}};
 
+    static inline const std::map<uint8_t, std::string> setPresenceState{
+        {PLDM_STATE_SET_PRESENCE_PRESENT, "Present"},
+        {PLDM_STATE_SET_PRESENCE_NOT_PRESENT, "Not Present"}};
+
     static inline const std::map<uint16_t, const std::map<uint8_t, std::string>>
         populatePStateMaps{
             {PLDM_STATE_SET_THERMAL_TRIP, setThermalTrip},
@@ -649,6 +653,7 @@ class GetPDR : public CommandInterface
             {PLDM_STATE_SET_OPERATIONAL_RUNNING_STATUS,
              setOperationalRunningState},
             {PLDM_STATE_SET_DEVICE_POWER_STATE, setPowerDeviceState},
+            {PLDM_STATE_SET_PRESENCE, setPresenceState},
         };
 
     const std::map<std::string, uint8_t> strToPdrType = {
