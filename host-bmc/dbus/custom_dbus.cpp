@@ -415,6 +415,7 @@ void CustomDBus::implementObjectEnableIface(const std::string& path, bool value)
         enabledStatus.emplace(
             path, std::make_unique<Enable>(pldm::utils::DBusHandler::getBus(),
                                            path.c_str()));
+        enabledStatus.at(path)->enabled(value);
     }
     enabledStatus.at(path)->enabled(value);
 }
