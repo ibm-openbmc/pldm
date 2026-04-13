@@ -4,6 +4,7 @@
         "xyz.openbmc_project.Inventory.Item.Board": 60,
         "xyz.openbmc_project.Inventory.Item.PCIeDevice": 61,
         "xyz.openbmc_project.Inventory.Item.Board.Motherboard": 64,
+        "xyz.openbmc_project.Inventory.Item.Dimm": 66,
         "xyz.openbmc_project.Inventory.Item.Panel": 69,
         "xyz.openbmc_project.Inventory.Item.DiskBackplane": 73,
         "xyz.openbmc_project.Inventory.Item.Fan": 93,
@@ -15,7 +16,7 @@
         "xyz.openbmc_project.Inventory.Item.CpuCore": 151,
         "xyz.openbmc_project.Inventory.Item.Connector": 185,
         "xyz.openbmc_project.Inventory.Item.PCIeSlot": 186,
-        "xyz.openbmc_project.Inventory.Item.System": 11521,
+        "xyz.openbmc_project.Inventory.Item.System": 32813,
         "xyz.openbmc_project.Inventory.Item.Tpm": 24576
     }
 }
