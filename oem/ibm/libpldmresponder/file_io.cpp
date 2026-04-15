@@ -1,6 +1,7 @@
 #include "file_io.hpp"
 
 #include "file_io_by_type.hpp"
+#include "file_io_type_dump.hpp"
 #include "file_table.hpp"
 #include "utils.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
@@ -1244,6 +1245,12 @@ Response Handler::newFileAvailable(const pldm_msg* request,
         error("Unknown file type '{TYPE}', error - {ERROR}", "TYPE", fileType,
               "ERROR", e);
         return CmdHandler::ccOnlyResponse(request, PLDM_INVALID_FILE_TYPE);
+    }
+
+    // Initialize event loop for DumpHandler before calling newFileAvailable
+    if (fileType == PLDM_FILE_TYPE_DUMP)
+    {
+        DumpHandler::setEventLoop(event);
     }
 
     rc = handler->newFileAvailable(length);

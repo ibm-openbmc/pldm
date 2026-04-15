@@ -2,11 +2,66 @@
 
 #include "file_io_by_type.hpp"
 
+#include <sdeventplus/event.hpp>
+#include <sdeventplus/utility/timer.hpp>
+
+#include <memory>
+#include <unordered_map>
+#include <utility>
+
 namespace pldm
 {
 namespace responder
 {
 using DumpEntryInterface = std::string;
+using FileHandle = uint32_t;
+using SysDumpTimer =
+    sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic>;
+
+/** @struct SysDumpTransferData
+ *
+ *  @brief Wrapper for systemdump that owns timer and fd
+ */
+struct SysDumpTransferData
+{
+    std::unique_ptr<SysDumpTimer> timer;
+    int fd;
+
+    SysDumpTransferData(std::unique_ptr<SysDumpTimer>&& t, int f) :
+        timer(std::move(t)), fd(f)
+    {}
+
+    ~SysDumpTransferData()
+    {
+        if (fd >= 0)
+        {
+            close(fd);
+        }
+    }
+
+    // Prevent copying
+    SysDumpTransferData(const SysDumpTransferData&) = delete;
+    SysDumpTransferData& operator=(const SysDumpTransferData&) = delete;
+    SysDumpTransferData(SysDumpTransferData&& other) noexcept :
+        timer(std::move(other.timer)), fd(other.fd)
+    {
+        other.fd = -1;
+    }
+    SysDumpTransferData& operator=(SysDumpTransferData&& other) noexcept
+    {
+        if (this != &other)
+        {
+            if (fd >= 0)
+            {
+                close(fd);
+            }
+            timer = std::move(other.timer);
+            fd = other.fd;
+            other.fd = -1;
+        }
+        return *this;
+    }
+};
 
 /** @class DumpHandler
  *
@@ -16,6 +71,9 @@ using DumpEntryInterface = std::string;
 class DumpHandler : public FileHandler
 {
   public:
+    // System dump transfer timeout in minutes
+    static constexpr auto sysDumpTimeoutMinutes = 15;
+
     /** @brief DumpHandler constructor
      */
     DumpHandler(uint32_t fileHandle, uint16_t fileType) :
@@ -63,6 +121,25 @@ class DumpHandler : public FileHandler
         const uint16_t /*fileType*/, const uint32_t /*fileHandle*/,
         const struct fileack_status_metadata& /*metaDataObj*/) {};
 
+    /** @brief Set event loop for timer management
+     *  @param[in] event - Event loop reference
+     */
+    static void setEventLoop(sdeventplus::Event& event)
+    {
+        eventLoop = &event;
+    }
+
+    /** @brief Callback when dump transfer timeout expires
+     *  @param[in] fileHandle - File handle that timed out
+     */
+    static void onDumpTransferTimeout(FileHandle fileHandle);
+
+    /** @brief Initialize system dump transfer
+     *  @param[in] fileHandle - File handle for the dump transfer
+     *  @return PLDM completion code
+     */
+    static int initializeSystemDumpTransfer(FileHandle fileHandle);
+
     /** @brief DumpHandler destructor
      */
     ~DumpHandler() {}
@@ -74,6 +151,11 @@ class DumpHandler : public FileHandler
         resDumpRequestDirPath; //!< directory where the resource
                                //!< dump request parameter file is stored
     int unixFd;                //!< fd to temporarily hold the fd created.
+
+    static std::unordered_map<FileHandle, SysDumpTransferData>
+        sysDumpMap; //!< Map of fileHandle to SysDumpTransferData (timer + fd)
+                    //!< for system dumps
+    static sdeventplus::Event* eventLoop; //!< Event loop for timer management
 
     enum DumpRequestStatus
     {
