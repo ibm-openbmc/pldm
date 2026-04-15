@@ -5,6 +5,7 @@
 #include "utils.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
 
+#include <fcntl.h>
 #include <libpldm/base.h>
 #include <libpldm/oem/ibm/file_io.h>
 #include <systemd/sd-bus.h>
@@ -17,6 +18,7 @@
 #include <cstdint>
 #include <exception>
 #include <filesystem>
+#include <format>
 #include <type_traits>
 
 PHOSPHOR_LOG2_USING;
@@ -41,6 +43,13 @@ static constexpr auto bmcDumpObjPath = "/xyz/openbmc_project/dump/bmc/entry";
 // resource dumps.
 
 int DumpHandler::fd = -1;
+std::unordered_map<FileHandle, SysDumpTransferData> DumpHandler::sysDumpMap;
+sdeventplus::Event* DumpHandler::eventLoop = nullptr;
+
+// System dump file configuration
+constexpr auto sysDumpPath = "/tmp";
+constexpr auto sysDumpFilePrefix = "sysdump_";
+
 namespace fs = std::filesystem;
 
 uint32_t DumpHandler::getDumpIdPrefix(uint16_t dumpType)
@@ -203,6 +212,11 @@ int DumpHandler::newFileAvailable(uint64_t length)
         notifyDumpType =
             sdbusplus::common::com::ibm::dump::Notify::DumpType::Resource;
     }
+    else if (dumpType == PLDM_FILE_TYPE_DUMP) // for system dump start timer and
+                                              // open the file
+    {
+        return DumpHandler::initializeSystemDumpTransfer(fileHandle);
+    }
 
     try
     {
@@ -337,10 +351,33 @@ void DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
                              sharedAIORespDataobj, event);
 }
 
-int DumpHandler::write(const char* buffer, uint32_t, uint32_t& length,
+int DumpHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
                        oem_platform::Handler* /*oemPlatformHandler*/,
                        struct fileack_status_metadata& /*metaDataObj*/)
 {
+    // Write to file for PLDM_FILE_TYPE_DUMP
+    if (dumpType == PLDM_FILE_TYPE_DUMP)
+    {
+        // Check if transfer exists for this fileHandle
+        if (!sysDumpMap.contains(fileHandle))
+        {
+            error(
+                "Write rejected for system dump: no active transfer for fileHandle {HANDLE}",
+                "HANDLE", fileHandle);
+            return PLDM_ERROR;
+        }
+        int dumpFd = sysDumpMap.at(fileHandle).fd;
+        int rc = ::pwrite(dumpFd, buffer, length, offset);
+        if (rc < 0)
+        {
+            error("Failed to write to dump file, with error:{ERRNO}", "ERRNO",
+                  errno);
+            return PLDM_ERROR;
+        }
+        length = rc; // Update length with actual bytes written
+        return PLDM_SUCCESS;
+    }
+
     int rc = writeToUnixSocket(DumpHandler::fd, buffer, length);
     if (rc < 0)
     {
@@ -359,6 +396,20 @@ int DumpHandler::write(const char* buffer, uint32_t, uint32_t& length,
 
 int DumpHandler::fileAck(uint8_t fileStatus)
 {
+    if (dumpType == PLDM_FILE_TYPE_DUMP) // for system dump
+    {
+        // Check if the fileHandle exists in the map
+        if (!sysDumpMap.contains(fileHandle))
+        {
+            error(
+                "System dump transfer session does not exist for fileHandle {FILE_HANDLE}",
+                "FILE_HANDLE", fileHandle);
+            return PLDM_INVALID_FILE_HANDLE;
+        }
+        sysDumpMap.erase(fileHandle);
+        return PLDM_SUCCESS;
+    }
+
     auto path = findDumpObjPath(fileHandle);
     if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS)
     {
@@ -444,8 +495,7 @@ int DumpHandler::fileAck(uint8_t fileStatus)
             return PLDM_SUCCESS;
         }
 
-        if (dumpType == PLDM_FILE_TYPE_DUMP ||
-            dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
+        if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
         {
             PropertyValue value{true};
             DBusMapping dbusMapping{path, dumpEntry, "Offloaded", "bool"};
@@ -784,5 +834,58 @@ int DumpHandler::fileAckWithMetaData(
 
     return PLDM_ERROR;
 }
+
+int DumpHandler::initializeSystemDumpTransfer(FileHandle fileHandle)
+{
+    // Check if transfer already exists for this fileHandle
+    if (sysDumpMap.contains(fileHandle))
+    {
+        warning(
+            "Dump transfer already active for fileHandle {FILE_HANDLE}, cleaning up old transfer",
+            "FILE_HANDLE", fileHandle);
+        sysDumpMap.erase(fileHandle);
+    }
+
+    // Open file for writing system dump
+    std::string dumpFilePath =
+        std::format("{}/{}{}", sysDumpPath, sysDumpFilePrefix, fileHandle);
+    int dumpFd = open(dumpFilePath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (dumpFd < 0)
+    {
+        error("Failed to open dump file {PATH}, with error: {ERRNO}", "PATH",
+              dumpFilePath, "ERRNO", errno);
+        return PLDM_ERROR;
+    }
+    // Create timer, start it, and add to map with fd
+    try
+    {
+        auto timer = std::make_unique<SysDumpTimer>(
+            *DumpHandler::eventLoop, [fileHandle](SysDumpTimer&) {
+                DumpHandler::onDumpTransferTimeout(fileHandle);
+            });
+        timer->restart(
+            std::chrono::minutes(DumpHandler::sysDumpTimeoutMinutes));
+        sysDumpMap.emplace(fileHandle,
+                           SysDumpTransferData(std::move(timer), dumpFd));
+    }
+    catch (const std::exception& e)
+    {
+        error(
+            "Failed to create dump transfer for fileHandle {FILE_HANDLE}: {ERROR}",
+            "FILE_HANDLE", fileHandle, "ERROR", e.what());
+        close(dumpFd);
+        return PLDM_ERROR;
+    }
+    return PLDM_SUCCESS;
+}
+
+void DumpHandler::onDumpTransferTimeout(FileHandle fileHandle)
+{
+    error(
+        "System dump transfer aborted due to timeout for fileHandle {FILEHANDLE}. File may be incomplete.",
+        "FILEHANDLE", fileHandle);
+    sysDumpMap.erase(fileHandle);
+}
+
 } // namespace responder
 } // namespace pldm
