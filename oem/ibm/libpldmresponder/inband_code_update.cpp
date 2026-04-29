@@ -164,9 +164,34 @@ int CodeUpdate::setRequestedActivation()
     dbusMapping.interface = "xyz.openbmc_project.Software.Activation";
     dbusMapping.propertyName = "RequestedActivation";
     dbusMapping.propertyType = "string";
+
+    info("Calling RequestedActivation for object path: {PATH}", "PATH",
+         dbusMapping.objectPath);
+
     try
     {
         pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
+    }
+    catch (const sdbusplus::exception_t& e)
+    {
+        if (e.name() != nullptr &&
+            strcmp("org.freedesktop.DBus.Error.Timeout", e.name()) != 0)
+        {
+            // log error
+            error(
+                "Failed to set property {PROPERTY} at path '{PATH}' and interface "
+                "'{INTERFACE}', error - {ERROR}",
+                "PATH", dbusMapping.objectPath, "INTERFACE",
+                dbusMapping.interface, "PROPERTY", dbusMapping.propertyName,
+                "ERROR", e);
+            rc = PLDM_ERROR;
+        }
+        else
+        {
+            info(
+                "Timeout error for RequestedActivation at path '{PATH}' is ignored",
+                "PATH", dbusMapping.objectPath);
+        }
     }
     catch (const std::exception& e)
     {
