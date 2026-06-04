@@ -611,7 +611,6 @@ void HostPDRHandler::parseStateSensorPDRs()
 void HostPDRHandler::processHostPDRs(
     mctp_eid_t /*eid*/, const pldm_msg* response, size_t respMsgLen)
 {
-    static bool merged = false;
     uint32_t nextRecordHandle{};
     uint8_t tlEid = 0;
     bool tlValid = true;
@@ -688,7 +687,6 @@ void HostPDRHandler::processHostPDRs(
             if (pdrHdr->type == PLDM_PDR_ENTITY_ASSOCIATION)
             {
                 this->mergeEntityAssociations(pdr, respCount, rh);
-                merged = true;
             }
             else
             {
@@ -905,16 +903,14 @@ void HostPDRHandler::processHostPDRs(
 
         mergedHostParents = false;
 
-        if (merged)
-        {
-            merged = false;
-            deferredPDRRepoChgEvent =
-                std::make_unique<sdeventplus::source::Defer>(
-                    event,
-                    std::bind(
-                        std::mem_fn((&HostPDRHandler::_processPDRRepoChgEvent)),
-                        this, std::placeholders::_1));
-        }
+        // Removed the precondition of checking the status of merging the entity
+        // association PDRs before sending the repo change event to host. This
+        // is to support scenarios where host is not creating any entity
+        // association PDRs
+        deferredPDRRepoChgEvent = std::make_unique<sdeventplus::source::Defer>(
+            event,
+            std::bind(std::mem_fn((&HostPDRHandler::_processPDRRepoChgEvent)),
+                      this, std::placeholders::_1));
     }
     else
     {
