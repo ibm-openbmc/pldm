@@ -147,6 +147,134 @@
                         "property_name": "ScheduledTime",
                         "property_type": "uint64_t"
                     }
+                },
+                {
+                    "entity_path": "/xyz/openbmc_project/inventory/system/chassis1/motherboard/mcm",
+                    "base_unit": 67,
+                    "rate_unit": 0,
+                    "effecter_resolutioninit": 1,
+                    "effecter_data_size": 2,
+                    "range_field_format": 3,
+                    "min_settable": 1,
+                    "max_settable": 32,
+                    "dbus": {
+                        "path": "/xyz/openbmc_project/inventory/system/chassis1/motherboard/mcm",
+                        "interface": "xyz.openbmc_project.Inventory.Item.Cpu",
+                        "property_name": "CoreCount",
+                        "property_type": "uint16_t"
+                    }
+                },
+                {
+                    "entity_path": "/xyz/openbmc_project/inventory/system/chassis2/motherboard/mcm",
+                    "base_unit": 67,
+                    "rate_unit": 0,
+                    "effecter_resolutioninit": 1,
+                    "effecter_data_size": 2,
+                    "range_field_format": 3,
+                    "min_settable": 1,
+                    "max_settable": 32,
+                    "dbus": {
+                        "path": "/xyz/openbmc_project/inventory/system/chassis2/motherboard/mcm",
+                        "interface": "xyz.openbmc_project.Inventory.Item.Cpu",
+                        "property_name": "CoreCount",
+                        "property_type": "uint16_t"
+                    }
+                },
+                {
+                    "entity_path": "/xyz/openbmc_project/inventory/system/chassis3/motherboard/mcm",
+                    "base_unit": 67,
+                    "rate_unit": 0,
+                    "effecter_resolutioninit": 1,
+                    "effecter_data_size": 2,
+                    "range_field_format": 3,
+                    "min_settable": 1,
+                    "max_settable": 32,
+                    "dbus": {
+                        "path": "/xyz/openbmc_project/inventory/system/chassis3/motherboard/mcm",
+                        "interface": "xyz.openbmc_project.Inventory.Item.Cpu",
+                        "property_name": "CoreCount",
+                        "property_type": "uint16_t"
+                    }
+                },
+                {
+                    "entity_path": "/xyz/openbmc_project/inventory/system/chassis4/motherboard/mcm",
+                    "base_unit": 67,
+                    "rate_unit": 0,
+                    "effecter_resolutioninit": 1,
+                    "effecter_data_size": 2,
+                    "range_field_format": 3,
+                    "min_settable": 1,
+                    "max_settable": 32,
+                    "dbus": {
+                        "path": "/xyz/openbmc_project/inventory/system/chassis4/motherboard/mcm",
+                        "interface": "xyz.openbmc_project.Inventory.Item.Cpu",
+                        "property_name": "CoreCount",
+                        "property_type": "uint16_t"
+                    }
+                },
+                {
+                    "entity_path": "/xyz/openbmc_project/inventory/system/chassis5/motherboard/mcm",
+                    "base_unit": 67,
+                    "rate_unit": 0,
+                    "effecter_resolutioninit": 1,
+                    "effecter_data_size": 2,
+                    "range_field_format": 3,
+                    "min_settable": 1,
+                    "max_settable": 32,
+                    "dbus": {
+                        "path": "/xyz/openbmc_project/inventory/system/chassis5/motherboard/mcm",
+                        "interface": "xyz.openbmc_project.Inventory.Item.Cpu",
+                        "property_name": "CoreCount",
+                        "property_type": "uint16_t"
+                    }
+                },
+                {
+                    "entity_path": "/xyz/openbmc_project/inventory/system/chassis6/motherboard/mcm",
+                    "base_unit": 67,
+                    "rate_unit": 0,
+                    "effecter_resolutioninit": 1,
+                    "effecter_data_size": 2,
+                    "range_field_format": 3,
+                    "min_settable": 1,
+                    "max_settable": 32,
+                    "dbus": {
+                        "path": "/xyz/openbmc_project/inventory/system/chassis6/motherboard/mcm",
+                        "interface": "xyz.openbmc_project.Inventory.Item.Cpu",
+                        "property_name": "CoreCount",
+                        "property_type": "uint16_t"
+                    }
+                },
+                {
+                    "entity_path": "/xyz/openbmc_project/inventory/system/chassis7/motherboard/mcm",
+                    "base_unit": 67,
+                    "rate_unit": 0,
+                    "effecter_resolutioninit": 1,
+                    "effecter_data_size": 2,
+                    "range_field_format": 3,
+                    "min_settable": 1,
+                    "max_settable": 32,
+                    "dbus": {
+                        "path": "/xyz/openbmc_project/inventory/system/chassis7/motherboard/mcm",
+                        "interface": "xyz.openbmc_project.Inventory.Item.Cpu",
+                        "property_name": "CoreCount",
+                        "property_type": "uint16_t"
+                    }
+                },
+                {
+                    "entity_path": "/xyz/openbmc_project/inventory/system/chassis8/motherboard/mcm",
+                    "base_unit": 67,
+                    "rate_unit": 0,
+                    "effecter_resolutioninit": 1,
+                    "effecter_data_size": 2,
+                    "range_field_format": 3,
+                    "min_settable": 1,
+                    "max_settable": 32,
+                    "dbus": {
+                        "path": "/xyz/openbmc_project/inventory/system/chassis8/motherboard/mcm",
+                        "interface": "xyz.openbmc_project.Inventory.Item.Cpu",
+                        "property_name": "CoreCount",
+                        "property_type": "uint16_t"
+                    }
                 }
             ]
         }
