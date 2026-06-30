@@ -21,12 +21,44 @@ uint32_t SmsMenuHandler::readVecContent(
 {
     uint32_t size = 0;
     constexpr auto bitPos = 8;
-    std::vector<char> userPassLenArr(inputVec.begin() + startIdx,
-                                     inputVec.begin() + endIdx);
-    for (uint32_t idx = 0; idx < bitPos; idx++)
+    constexpr auto bytesPerUint32 = sizeof(uint32_t);
+
+    // Validate indices
+    if (endIdx <= startIdx || (endIdx - startIdx) < bytesPerUint32)
     {
-        size |= (uint32_t)userPassLenArr[idx] << bitPos * idx;
+        error(
+            "Invalid indices for readVecContent: startIdx={START}, endIdx={END}",
+            "START", startIdx, "END", endIdx);
+        return 0;
     }
+
+    // Validate endIdx
+    if (endIdx > inputVec.size())
+    {
+        error("endIdx {END} exceeds vector size {SIZE}", "END", endIdx, "SIZE",
+              inputVec.size());
+        return 0;
+    }
+
+    // Validate that we can safely read bytesPerUint32 bytes starting
+    // from startIdx
+    if (startIdx + bytesPerUint32 > inputVec.size())
+    {
+        error(
+            "startIdx {START} + bytesPerUint32 {BYTES} exceeds vector size {SIZE}",
+            "START", startIdx, "BYTES", bytesPerUint32, "SIZE",
+            inputVec.size());
+        return 0;
+    }
+
+    // Read 4 bytes to construct uint32_t
+    for (uint32_t idx = 0; idx < bytesPerUint32; idx++)
+    {
+        size |= static_cast<uint32_t>(
+                    static_cast<uint8_t>(inputVec[startIdx + idx]))
+                << (bitPos * idx);
+    }
+
     return size;
 }
 
@@ -72,12 +104,22 @@ int SmsMenuHandler::write(const char* buffer, uint32_t /*offset*/,
 
     // Read the size of User Name which is the content of first four bytes
     auto userNameLen = readVecContent(smsBuf, 0, sizeof(uint32_t));
+    if (!userNameLen)
+    {
+        error("SMS Menu username is empty");
+        return PLDM_ERROR;
+    }
 
     // Read the size of Password/Old Password which is the content of four
     // bytes after User Name
     auto userPassLen =
         readVecContent(smsBuf, sizeof(uint32_t) + userNameLen,
                        sizeof(uint32_t) + userNameLen + sizeof(uint32_t));
+    if (!userPassLen)
+    {
+        error("SMS Menu user password is empty");
+        return PLDM_ERROR;
+    }
     if (smsMenuType == PLDM_FILE_TYPE_USER_PASSWORD_CHANGE)
     {
         // Read the size of New Password which is the content of four bytes
@@ -87,6 +129,11 @@ int SmsMenuHandler::write(const char* buffer, uint32_t /*offset*/,
             sizeof(uint32_t) + userNameLen + sizeof(uint32_t) + userPassLen,
             sizeof(uint32_t) + userNameLen + sizeof(uint32_t) + userPassLen +
                 sizeof(uint32_t));
+        if (!userNewPassLen)
+        {
+            error("SMS Menu new user password is empty");
+            return PLDM_ERROR;
+        }
     }
 
     // Split the vector to retrieve the User Name
