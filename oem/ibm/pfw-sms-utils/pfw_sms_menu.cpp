@@ -80,15 +80,17 @@ static int pamConversationFunction(
                 {
                     return PAM_BUF_ERR; // *authenticated = false
                 }
-                pfw_sms_appdata_ptr->reasonCode =
-                    PASSWORD_CHANGE_SUCCESSFUL; // working assumption
-                response_ptr[msg_index]->resp = local_userpass;
+                // Removing this assumption code as this is overwriting the
+                // actual error codes
+                // pfw_sms_appdata_ptr->reasonCode =
+                //    PASSWORD_CHANGE_SUCCESSFUL; // working assumption
+                (*response_ptr)[msg_index].resp = local_userpass;
                 break;
             case PAM_PROMPT_ECHO_ON:
                 // This is not expected
                 // Allocate a response for PAM to free().  Note that PAM
                 // uses malloc/calloc/strdup style memory management.
-                response_ptr[msg_index]->resp = ::strdup("Unexpected");
+                (*response_ptr)[msg_index].resp = ::strdup("Unexpected");
                 break;
             case PAM_ERROR_MSG:
                 // fall through
@@ -269,7 +271,13 @@ enum changePasswordReasonCode changePassword(
     {
         pam_end(pamHandle, retval); // ignore retval
         // Return the specific reason gathered from the conversation function
-        return appdata.reasonCode;
+        if (appdata.reasonCode != PASSWORD_CHANGE_FAILED_UNKNOWN_REASON)
+        {
+            return appdata.reasonCode;
+        }
+
+        // Password quality check failed with unknown reason
+        return PASSWORD_CHANGE_FAILED_UNKNOWN_REASON;
     }
 
     pam_end(pamHandle, retval); // ignore the return value
