@@ -603,6 +603,8 @@ class GetPDR : public CommandInterface
          "Graceful Restart Requested"}};
 
     static inline const std::map<uint8_t, std::string> setAvailability{
+        {PLDM_STATE_SET_AVAILABILITY_ENABLED, "Enabled"},
+        {PLDM_STATE_SET_AVAILABILITY_DISABLED, "Disabled"},
         {PLDM_STATE_SET_AVAILABILITY_REBOOTING, "Rebooting"}};
 
     static inline const std::map<uint8_t, std::string> setHealthState{
