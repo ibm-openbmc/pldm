@@ -4,7 +4,7 @@
             "pdrType": 11,
             "entries": [
                 {
-                    "entity_path": "/xyz/openbmc_project/inventory/system/chassis",
+                    "entity_path": "/xyz/openbmc_project/inventory/system",
                     "effecters": [
                         {
                             "set": {
