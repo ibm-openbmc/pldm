@@ -6,7 +6,7 @@
 #include <sdeventplus/utility/timer.hpp>
 
 #include <memory>
-#include <unordered_map>
+#include <optional>
 #include <utility>
 
 namespace pldm
@@ -72,7 +72,9 @@ class DumpHandler : public FileHandler
 {
   public:
     // System dump transfer timeout in minutes
-    static constexpr auto sysDumpTimeoutMinutes = 15;
+    // timout 60 minutes to accomadate large user initiated dumps(~15GB)
+    // timeout value can be reduced at a later time
+    static constexpr auto sysDumpTimeoutMinutes = 60;
 
     /** @brief DumpHandler constructor
      */
@@ -152,9 +154,11 @@ class DumpHandler : public FileHandler
                                //!< dump request parameter file is stored
     int unixFd;                //!< fd to temporarily hold the fd created.
 
-    static std::unordered_map<FileHandle, SysDumpTransferData>
-        sysDumpMap; //!< Map of fileHandle to SysDumpTransferData (timer + fd)
-                    //!< for system dumps
+    //!< Active system dump transfer — at most one at a time.
+    //!< Empty optional means no transfer is in progress.
+    static std::optional<FileHandle> sysDumpHandle;
+    static std::unique_ptr<SysDumpTransferData>
+        sysDumpTransfer; //!< Owned transfer data for the active system dump
     static sdeventplus::Event* eventLoop; //!< Event loop for timer management
 
     enum DumpRequestStatus

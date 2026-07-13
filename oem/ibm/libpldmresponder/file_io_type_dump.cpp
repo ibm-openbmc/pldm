@@ -43,7 +43,8 @@ static constexpr auto bmcDumpObjPath = "/xyz/openbmc_project/dump/bmc/entry";
 // resource dumps.
 
 int DumpHandler::fd = -1;
-std::unordered_map<FileHandle, SysDumpTransferData> DumpHandler::sysDumpMap;
+std::optional<FileHandle> DumpHandler::sysDumpHandle;
+std::unique_ptr<SysDumpTransferData> DumpHandler::sysDumpTransfer;
 sdeventplus::Event* DumpHandler::eventLoop = nullptr;
 
 // System dump file configuration
@@ -358,15 +359,16 @@ int DumpHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
     // Write to file for PLDM_FILE_TYPE_DUMP
     if (dumpType == PLDM_FILE_TYPE_DUMP)
     {
-        // Check if transfer exists for this fileHandle
-        if (!sysDumpMap.contains(fileHandle))
+        bool isActiveTransfer = sysDumpHandle.has_value() &&
+                                sysDumpHandle.value() == fileHandle;
+        if (!isActiveTransfer)
         {
             error(
                 "Write rejected for system dump: no active transfer for fileHandle {HANDLE}",
                 "HANDLE", fileHandle);
             return PLDM_ERROR;
         }
-        int dumpFd = sysDumpMap.at(fileHandle).fd;
+        int dumpFd = sysDumpTransfer->fd;
         int rc = ::pwrite(dumpFd, buffer, length, offset);
         if (rc < 0)
         {
@@ -398,15 +400,17 @@ int DumpHandler::fileAck(uint8_t fileStatus)
 {
     if (dumpType == PLDM_FILE_TYPE_DUMP) // for system dump
     {
-        // Check if the fileHandle exists in the map
-        if (!sysDumpMap.contains(fileHandle))
+        bool isActiveTransfer = sysDumpHandle.has_value() &&
+                                sysDumpHandle.value() == fileHandle;
+        if (!isActiveTransfer)
         {
             error(
                 "System dump transfer session does not exist for fileHandle {FILE_HANDLE}",
                 "FILE_HANDLE", fileHandle);
             return PLDM_INVALID_FILE_HANDLE;
         }
-        sysDumpMap.erase(fileHandle);
+        sysDumpTransfer.reset();
+        sysDumpHandle.reset();
         return PLDM_SUCCESS;
     }
 
@@ -837,13 +841,14 @@ int DumpHandler::fileAckWithMetaData(
 
 int DumpHandler::initializeSystemDumpTransfer(FileHandle fileHandle)
 {
-    // Check if transfer already exists for this fileHandle
-    if (sysDumpMap.contains(fileHandle))
+    // Enforce one-at-a-time: reject a new request while any transfer is active.
+    if (sysDumpHandle)
     {
-        warning(
-            "Dump transfer already active for fileHandle {FILE_HANDLE}, cleaning up old transfer",
-            "FILE_HANDLE", fileHandle);
-        sysDumpMap.erase(fileHandle);
+        error(
+            "System dump transfer already active for fileHandle {ACTIVE_HANDLE},"
+            " rejecting new request for {FILE_HANDLE}",
+            "ACTIVE_HANDLE", *sysDumpHandle, "FILE_HANDLE", fileHandle);
+        return PLDM_ERROR;
     }
 
     // Open file for writing system dump
@@ -856,7 +861,7 @@ int DumpHandler::initializeSystemDumpTransfer(FileHandle fileHandle)
               dumpFilePath, "ERRNO", errno);
         return PLDM_ERROR;
     }
-    // Create timer, start it, and add to map with fd
+    // Create timer, start it, and store as the single active transfer
     try
     {
         auto timer = std::make_unique<SysDumpTimer>(
@@ -865,8 +870,9 @@ int DumpHandler::initializeSystemDumpTransfer(FileHandle fileHandle)
             });
         timer->restart(
             std::chrono::minutes(DumpHandler::sysDumpTimeoutMinutes));
-        sysDumpMap.emplace(fileHandle,
-                           SysDumpTransferData(std::move(timer), dumpFd));
+        sysDumpTransfer =
+            std::make_unique<SysDumpTransferData>(std::move(timer), dumpFd);
+        sysDumpHandle = fileHandle;
     }
     catch (const std::exception& e)
     {
@@ -884,7 +890,8 @@ void DumpHandler::onDumpTransferTimeout(FileHandle fileHandle)
     error(
         "System dump transfer aborted due to timeout for fileHandle {FILEHANDLE}. File may be incomplete.",
         "FILEHANDLE", fileHandle);
-    sysDumpMap.erase(fileHandle);
+    sysDumpTransfer.reset();
+    sysDumpHandle.reset();
 }
 
 } // namespace responder
