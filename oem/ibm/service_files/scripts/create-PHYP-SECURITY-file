@@ -1,0 +1,36 @@
+#!/bin/sh
+mkdir -p /var/lib/phosphor-software-manager/hostfw/nvram
+PHYP_SECURITY=/var/lib/phosphor-software-manager/hostfw/nvram/PHYP-SECURITY
+BACKUP=/var/lib/pldm/PHYP-SECURITY
+SIZE=$((1024 * 128))
+
+if [ ! -f "$PHYP_SECURITY" ]; then
+    echo "PHYP-SECURITY file not found"
+    NEED_CREATE=true
+elif [ "$(stat -c%s "$PHYP_SECURITY")" -ne "$SIZE" ]; then
+    CURRENT_SIZE=$(stat -c%s "$PHYP_SECURITY")
+    echo "Invalid PHYP-SECURITY size: $CURRENT_SIZE bytes, recreating PHYP-SECURITY file"
+    rm -f "$PHYP_SECURITY"
+    NEED_CREATE=true
+else
+    CURRENT_SIZE=$(stat -c%s "$PHYP_SECURITY")
+    echo "PHYP-SECURITY file found with correct size: $CURRENT_SIZE bytes"
+    NEED_CREATE=false
+fi
+
+if $NEED_CREATE; then
+    if [ -f "$BACKUP" ]; then
+        BACKUP_SIZE=$(stat -c%s "$BACKUP")
+        if [ "$BACKUP_SIZE" -eq "$SIZE" ]; then
+            echo "Backup file size valid ($BACKUP_SIZE bytes), moving to PHYP-SECURITY path"
+            mv "$BACKUP" "$PHYP_SECURITY"
+        else
+            echo "Backup file size invalid ($BACKUP_SIZE bytes), deleting backup"
+            rm -f "$BACKUP"
+            truncate -s "$SIZE" "$PHYP_SECURITY"
+        fi
+    else
+        echo "Backup file not found, creating new PHYP-SECURITY file"
+        truncate -s "$SIZE" "$PHYP_SECURITY"
+    fi
+fi

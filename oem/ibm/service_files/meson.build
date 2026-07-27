@@ -11,6 +11,11 @@ filesystem.copyfile(
     install_dir: systemd_system_unit_dir,
 )
 filesystem.copyfile(
+    'pldm-create-phyp-security.service',
+    install: true,
+    install_dir: systemd_system_unit_dir,
+)
+filesystem.copyfile(
     'pldm-clear-dma.service',
     install: true,
     install_dir: systemd_system_unit_dir,

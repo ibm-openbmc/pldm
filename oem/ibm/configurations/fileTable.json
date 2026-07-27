@@ -8,6 +8,10 @@
         "file_traits": 4
     },
     {
+        "path": "/var/lib/phosphor-software-manager/hostfw/nvram/PHYP-SECURITY",
+        "file_traits": 4
+    },
+    {
         "path": "/usr/local/share/hostfw/running/80d00048.lid,/var/lib/phosphor-software-manager/hostfw/running/80d00048.lid",
         "file_traits": 1
     },
