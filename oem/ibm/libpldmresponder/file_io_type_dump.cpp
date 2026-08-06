@@ -48,7 +48,7 @@ std::unique_ptr<SysDumpTransferData> DumpHandler::sysDumpTransfer;
 sdeventplus::Event* DumpHandler::eventLoop = nullptr;
 
 // System dump file configuration
-constexpr auto sysDumpPath = "/tmp";
+constexpr auto sysDumpPath = "/var/lib/phosphor-debug-collector/tmp";
 constexpr auto sysDumpFilePrefix = "sysdump_";
 
 namespace fs = std::filesystem;
