@@ -8,6 +8,7 @@
 #include "file_io_type_pcie.hpp"
 #include "file_io_type_pel.hpp"
 #include "file_io_type_progress_src.hpp"
+#include "file_io_type_reconfig_loop.hpp"
 #include "file_io_type_smsmenu.hpp"
 #include "file_io_type_vpd.hpp"
 #include "xyz/openbmc_project/Common/error.hpp"
@@ -485,6 +486,10 @@ std::unique_ptr<FileHandler> getHandlerByType(
             return std::make_unique<SmsMenuHandler>(fileHandle, fileType,
                                                     instanceIdDb, handler);
         }
+        case PLDM_FILE_TYPE_RECONFIG_LOOP:
+        {
+            return std::make_unique<ReconfigLoopHandler>(fileHandle);
+        }
         default:
         {
             throw InternalFailure();
@@ -561,6 +566,10 @@ std::shared_ptr<FileHandler> getSharedHandlerByType(
         {
             return std::make_unique<SmsMenuHandler>(fileHandle, fileType,
                                                     instanceIdDb, handler);
+        }
+        case PLDM_FILE_TYPE_RECONFIG_LOOP:
+        {
+            return std::make_unique<ReconfigLoopHandler>(fileHandle);
         }
         default:
         {
