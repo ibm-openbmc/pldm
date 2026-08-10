@@ -1474,16 +1474,16 @@
         },
         {
             "attribute_type": "integer",
-            "attribute_name": "hb_power_PS0_input_voltage",
+            "attribute_name": "hb_power_PS0_input_voltage_n1",
             "lower_bound": 0,
             "upper_bound": 65535,
             "scalar_increment": 1,
             "default_value": 0,
             "read_only": true,
-            "help_text": "Specifies power supply 0 input voltage(volts)",
-            "display_name": "Power Supply 0 input Voltage",
+            "help_text": "Specifies the Node 1 Power Supply 0 input voltage(volts)",
+            "display_name": "Node 1 Power Supply 0 Input Voltage",
             "dbus": {
-                "object_path": "/xyz/openbmc_project/sensors/voltage/ps0_input_voltage_rating",
+                "object_path": "/xyz/openbmc_project/sensors/voltage/chassis1_ps0_input_voltage_rating",
                 "interface": "xyz.openbmc_project.Sensor.Value",
                 "property_type": "double",
                 "property_name": "Value"
@@ -1491,16 +1491,16 @@
         },
         {
             "attribute_type": "integer",
-            "attribute_name": "hb_power_PS1_input_voltage",
+            "attribute_name": "hb_power_PS1_input_voltage_n1",
             "lower_bound": 0,
             "upper_bound": 65535,
             "scalar_increment": 1,
             "default_value": 0,
             "read_only": true,
-            "help_text": "Specifies power supply 1 input voltage(volts)",
-            "display_name": "Power Supply 1 input Voltage",
+            "help_text": "Specifies the Node 1 Power Supply 1 input voltage(volts)",
+            "display_name": "Node 1 Power Supply 1 Input Voltage",
             "dbus": {
-                "object_path": "/xyz/openbmc_project/sensors/voltage/ps1_input_voltage_rating",
+                "object_path": "/xyz/openbmc_project/sensors/voltage/chassis1_ps1_input_voltage_rating",
                 "interface": "xyz.openbmc_project.Sensor.Value",
                 "property_type": "double",
                 "property_name": "Value"
@@ -1508,16 +1508,16 @@
         },
         {
             "attribute_type": "integer",
-            "attribute_name": "hb_power_PS2_input_voltage",
+            "attribute_name": "hb_power_PS0_input_voltage_n2",
             "lower_bound": 0,
             "upper_bound": 65535,
             "scalar_increment": 1,
             "default_value": 0,
             "read_only": true,
-            "help_text": "Specifies power supply 2 input voltage(volts)",
-            "display_name": "Power Supply 2 input Voltage",
+            "help_text": "Specifies the Node 2 Power Supply 0 input voltage(volts)",
+            "display_name": "Node 2 Power Supply 0 Input Voltage",
             "dbus": {
-                "object_path": "/xyz/openbmc_project/sensors/voltage/ps2_input_voltage_rating",
+                "object_path": "/xyz/openbmc_project/sensors/voltage/chassis2_ps0_input_voltage_rating",
                 "interface": "xyz.openbmc_project.Sensor.Value",
                 "property_type": "double",
                 "property_name": "Value"
@@ -1525,16 +1525,220 @@
         },
         {
             "attribute_type": "integer",
-            "attribute_name": "hb_power_PS3_input_voltage",
+            "attribute_name": "hb_power_PS1_input_voltage_n2",
             "lower_bound": 0,
             "upper_bound": 65535,
             "scalar_increment": 1,
             "default_value": 0,
             "read_only": true,
-            "help_text": "Specifies power supply 3 input voltage(volts)",
-            "display_name": "Power Supply 3 input Voltage",
+            "help_text": "Specifies the Node 2 Power Supply 1 input voltage(volts)",
+            "display_name": "Node 2 Power Supply 1 Input Voltage",
             "dbus": {
-                "object_path": "/xyz/openbmc_project/sensors/voltage/ps3_input_voltage_rating",
+                "object_path": "/xyz/openbmc_project/sensors/voltage/chassis2_ps1_input_voltage_rating",
+                "interface": "xyz.openbmc_project.Sensor.Value",
+                "property_type": "double",
+                "property_name": "Value"
+            }
+        },
+        {
+            "attribute_type": "integer",
+            "attribute_name": "hb_power_PS0_input_voltage_n3",
+            "lower_bound": 0,
+            "upper_bound": 65535,
+            "scalar_increment": 1,
+            "default_value": 0,
+            "read_only": true,
+            "help_text": "Specifies the Node 3 Power Supply 0 input voltage(volts)",
+            "display_name": "Node 3 Power Supply 0 Input Voltage",
+            "dbus": {
+                "object_path": "/xyz/openbmc_project/sensors/voltage/chassis3_ps0_input_voltage_rating",
+                "interface": "xyz.openbmc_project.Sensor.Value",
+                "property_type": "double",
+                "property_name": "Value"
+            }
+        },
+        {
+            "attribute_type": "integer",
+            "attribute_name": "hb_power_PS1_input_voltage_n3",
+            "lower_bound": 0,
+            "upper_bound": 65535,
+            "scalar_increment": 1,
+            "default_value": 0,
+            "read_only": true,
+            "help_text": "Specifies the Node 3 Power Supply 1 input voltage(volts)",
+            "display_name": "Node 3 Power Supply 1 Input Voltage",
+            "dbus": {
+                "object_path": "/xyz/openbmc_project/sensors/voltage/chassis3_ps1_input_voltage_rating",
+                "interface": "xyz.openbmc_project.Sensor.Value",
+                "property_type": "double",
+                "property_name": "Value"
+            }
+        },
+        {
+            "attribute_type": "integer",
+            "attribute_name": "hb_power_PS0_input_voltage_n4",
+            "lower_bound": 0,
+            "upper_bound": 65535,
+            "scalar_increment": 1,
+            "default_value": 0,
+            "read_only": true,
+            "help_text": "Specifies the Node 4 Power Supply 0 input voltage(volts)",
+            "display_name": "Node 4 Power Supply 0 Input Voltage",
+            "dbus": {
+                "object_path": "/xyz/openbmc_project/sensors/voltage/chassis4_ps0_input_voltage_rating",
+                "interface": "xyz.openbmc_project.Sensor.Value",
+                "property_type": "double",
+                "property_name": "Value"
+            }
+        },
+        {
+            "attribute_type": "integer",
+            "attribute_name": "hb_power_PS1_input_voltage_n4",
+            "lower_bound": 0,
+            "upper_bound": 65535,
+            "scalar_increment": 1,
+            "default_value": 0,
+            "read_only": true,
+            "help_text": "Specifies the Node 4 Power Supply 1 input voltage(volts)",
+            "display_name": "Node 4 Power Supply 1 Input Voltage",
+            "dbus": {
+                "object_path": "/xyz/openbmc_project/sensors/voltage/chassis4_ps1_input_voltage_rating",
+                "interface": "xyz.openbmc_project.Sensor.Value",
+                "property_type": "double",
+                "property_name": "Value"
+            }
+        },
+        {
+            "attribute_type": "integer",
+            "attribute_name": "hb_power_PS0_input_voltage_n5",
+            "lower_bound": 0,
+            "upper_bound": 65535,
+            "scalar_increment": 1,
+            "default_value": 0,
+            "read_only": true,
+            "help_text": "Specifies the Node 5 Power Supply 0 input voltage(volts)",
+            "display_name": "Node 5 Power Supply 0 Input Voltage",
+            "dbus": {
+                "object_path": "/xyz/openbmc_project/sensors/voltage/chassis5_ps0_input_voltage_rating",
+                "interface": "xyz.openbmc_project.Sensor.Value",
+                "property_type": "double",
+                "property_name": "Value"
+            }
+        },
+        {
+            "attribute_type": "integer",
+            "attribute_name": "hb_power_PS1_input_voltage_n5",
+            "lower_bound": 0,
+            "upper_bound": 65535,
+            "scalar_increment": 1,
+            "default_value": 0,
+            "read_only": true,
+            "help_text": "Specifies the Node 5 Power Supply 1 input voltage(volts)",
+            "display_name": "Node 5 Power Supply 1 Input Voltage",
+            "dbus": {
+                "object_path": "/xyz/openbmc_project/sensors/voltage/chassis5_ps1_input_voltage_rating",
+                "interface": "xyz.openbmc_project.Sensor.Value",
+                "property_type": "double",
+                "property_name": "Value"
+            }
+        },
+        {
+            "attribute_type": "integer",
+            "attribute_name": "hb_power_PS0_input_voltage_n6",
+            "lower_bound": 0,
+            "upper_bound": 65535,
+            "scalar_increment": 1,
+            "default_value": 0,
+            "read_only": true,
+            "help_text": "Specifies the Node 6 Power Supply 0 input voltage(volts)",
+            "display_name": "Node 6 Power Supply 0 Input Voltage",
+            "dbus": {
+                "object_path": "/xyz/openbmc_project/sensors/voltage/chassis6_ps0_input_voltage_rating",
+                "interface": "xyz.openbmc_project.Sensor.Value",
+                "property_type": "double",
+                "property_name": "Value"
+            }
+        },
+        {
+            "attribute_type": "integer",
+            "attribute_name": "hb_power_PS1_input_voltage_n6",
+            "lower_bound": 0,
+            "upper_bound": 65535,
+            "scalar_increment": 1,
+            "default_value": 0,
+            "read_only": true,
+            "help_text": "Specifies the Node 6 Power Supply 1 input voltage(volts)",
+            "display_name": "Node 6 Power Supply 1 Input Voltage",
+            "dbus": {
+                "object_path": "/xyz/openbmc_project/sensors/voltage/chassis6_ps1_input_voltage_rating",
+                "interface": "xyz.openbmc_project.Sensor.Value",
+                "property_type": "double",
+                "property_name": "Value"
+            }
+        },
+        {
+            "attribute_type": "integer",
+            "attribute_name": "hb_power_PS0_input_voltage_n7",
+            "lower_bound": 0,
+            "upper_bound": 65535,
+            "scalar_increment": 1,
+            "default_value": 0,
+            "read_only": true,
+            "help_text": "Specifies the Node 7 Power Supply 0 input voltage(volts)",
+            "display_name": "Node 7 Power Supply 0 Input Voltage",
+            "dbus": {
+                "object_path": "/xyz/openbmc_project/sensors/voltage/chassis7_ps0_input_voltage_rating",
+                "interface": "xyz.openbmc_project.Sensor.Value",
+                "property_type": "double",
+                "property_name": "Value"
+            }
+        },
+        {
+            "attribute_type": "integer",
+            "attribute_name": "hb_power_PS1_input_voltage_n7",
+            "lower_bound": 0,
+            "upper_bound": 65535,
+            "scalar_increment": 1,
+            "default_value": 0,
+            "read_only": true,
+            "help_text": "Specifies the Node 7 Power Supply 1 input voltage(volts)",
+            "display_name": "Node 7 Power Supply 1 Input Voltage",
+            "dbus": {
+                "object_path": "/xyz/openbmc_project/sensors/voltage/chassis7_ps1_input_voltage_rating",
+                "interface": "xyz.openbmc_project.Sensor.Value",
+                "property_type": "double",
+                "property_name": "Value"
+            }
+        },
+        {
+            "attribute_type": "integer",
+            "attribute_name": "hb_power_PS0_input_voltage_n8",
+            "lower_bound": 0,
+            "upper_bound": 65535,
+            "scalar_increment": 1,
+            "default_value": 0,
+            "read_only": true,
+            "help_text": "Specifies the Node 8 Power Supply 0 input voltage(volts)",
+            "display_name": "Node 8 Power Supply 0 Input Voltage",
+            "dbus": {
+                "object_path": "/xyz/openbmc_project/sensors/voltage/chassis8_ps0_input_voltage_rating",
+                "interface": "xyz.openbmc_project.Sensor.Value",
+                "property_type": "double",
+                "property_name": "Value"
+            }
+        },
+        {
+            "attribute_type": "integer",
+            "attribute_name": "hb_power_PS1_input_voltage_n8",
+            "lower_bound": 0,
+            "upper_bound": 65535,
+            "scalar_increment": 1,
+            "default_value": 0,
+            "read_only": true,
+            "help_text": "Specifies the Node 8 Power Supply 1 input voltage(volts)",
+            "display_name": "Node 8 Power Supply 1 Input Voltage",
+            "dbus": {
+                "object_path": "/xyz/openbmc_project/sensors/voltage/chassis8_ps1_input_voltage_rating",
                 "interface": "xyz.openbmc_project.Sensor.Value",
                 "property_type": "double",
                 "property_name": "Value"
