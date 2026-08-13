@@ -324,6 +324,11 @@ int HostPDRHandler::handleStateSensorEvent(
 
             break;
         }
+        else if (stateSetId[0] == PLDM_STATE_SET_AVAILABILITY)
+        {
+            CustomDBus::getCustomDBus().implementObjectEnableIface(
+                entity.first, state == true);
+        }
         else if (stateSetId[0] == PLDM_STATE_SET_VERSION)
         {
             // There is a version changed on any of the dbus objects
@@ -1461,6 +1466,11 @@ void HostPDRHandler::getPresentStateBySensorReadigs(
                 path, state == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS_NORMAL,
                 getParentChassis(path));
         }
+        else if (stateSetId == PLDM_STATE_SET_AVAILABILITY)
+        {
+            CustomDBus::getCustomDBus().implementObjectEnableIface(
+                path, state == true);
+        }
         else if (stateSetId == PLDM_STATE_SET_IDENTIFY_STATE)
         {
             auto ledGroupPath = updateLedGroupPath(path);
@@ -1831,11 +1841,14 @@ void HostPDRHandler::setOperationStatus()
                 node.entity_container_id == containerId)
             {
                 if ((stateSetIds[0] == PLDM_STATE_SET_HEALTH_STATE ||
-                     stateSetIds[0] == PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS))
+                     stateSetIds[0] ==
+                         PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS ||
+                     stateSetIds[0] == PLDM_STATE_SET_AVAILABILITY))
                 {
                     // set the dbus property only when its not a
-                    // composite sensor and the state set it
-                    // PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS Get
+                    // composite sensor and the state set is
+                    // PLDM_STATE_SET_OPERATIONAL_FAULT_STATUS OR
+                    // PLDM_STATE_SET_AVAILABILITY Get
                     // sensorOpState property by the
                     // getStateSensorReadings command.
 
