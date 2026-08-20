@@ -893,6 +893,57 @@ TEST(readFileByTypeIntoMemory, testBadPath)
     ASSERT_EQ(PLDM_INVALID_FILE_TYPE, resp->completion_code);
 }
 
+TEST(writeFileByType, testOverclaimedLengthRejected)
+{
+    // Regression test for CWE-125: writeFileByType must reject a request whose
+    // declared length field exceeds the inline data bytes actually present in
+    // the packet. Without this check an attacker-controlled length is forwarded
+    // to FileHandler::write(), causing an OOB heap read.
+    uint8_t host_eid = 0;
+    int hostSocketFd = 0;
+    auto event = sdeventplus::Event::get_default();
+
+    const auto hdr_size = sizeof(pldm_msg_hdr);
+    // Allocate header + fixed fields + 4 bytes of inline data
+    constexpr size_t inlineDataBytes = 4;
+    std::array<uint8_t,
+               hdr_size + PLDM_RW_FILE_BY_TYPE_REQ_BYTES + inlineDataBytes>
+        requestMsg{};
+    auto req = reinterpret_cast<pldm_msg*>(requestMsg.data());
+    size_t payloadLength = requestMsg.size() - hdr_size;
+
+    struct pldm_read_write_file_by_type_req* request =
+        reinterpret_cast<struct pldm_read_write_file_by_type_req*>(
+            req->payload);
+    request->file_type = 0xFFFF;
+    request->file_handle = 0;
+    request->offset = 0;
+    // Declare 0x40 bytes but only 4 bytes of inline data are present.
+    request->length = 0x40;
+
+    std::unique_ptr<oem_platform::Handler> oemPlatformHandler{};
+    oem_ibm::Handler handler(oemPlatformHandler.get(), hostSocketFd, host_eid,
+                             nullptr, nullptr, nullptr, event);
+    auto response = handler.writeFileByType(req, payloadLength);
+    auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    struct pldm_read_write_file_by_type_resp* resp =
+        reinterpret_cast<struct pldm_read_write_file_by_type_resp*>(
+            responsePtr->payload);
+    ASSERT_EQ(PLDM_ERROR_INVALID_LENGTH, resp->completion_code);
+
+    // A matching declared length (length == inlineDataBytes) should not be
+    // rejected for the length check (it will fail later on the handler itself,
+    // but not with INVALID_LENGTH from our new guard).
+    // Use an unknown file type so getHandlerByType throws before write() is
+    // called -- avoids OOB in ProgressCodeHandler::write() with 4-byte buffer.
+    request->length = inlineDataBytes;
+    response = handler.writeFileByType(req, payloadLength);
+    responsePtr = reinterpret_cast<pldm_msg*>(response.data());
+    resp = reinterpret_cast<struct pldm_read_write_file_by_type_resp*>(
+        responsePtr->payload);
+    ASSERT_EQ(PLDM_INVALID_FILE_TYPE, resp->completion_code);
+}
+
 TEST(readFileByType, testBadPath)
 {
     uint8_t host_eid = 0;
