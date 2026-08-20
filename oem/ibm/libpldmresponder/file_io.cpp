@@ -1021,6 +1021,20 @@ Response Handler::writeFileByType(const pldm_msg* request, size_t payloadLength)
         return response;
     }
 
+    const size_t inlineLength = payloadLength - PLDM_RW_FILE_BY_TYPE_REQ_BYTES;
+
+    if (static_cast<size_t>(length) > inlineLength)
+    {
+        error("Write file by type: declared length {LENGTH} exceeds inline "
+              "data available {AVAILABLE}",
+              "LENGTH", length, "AVAILABLE", inlineLength);
+
+        encodeRWTypeResponseHandler(request->hdr.instance_id,
+                                    PLDM_WRITE_FILE_BY_TYPE,
+                                    PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
+        return response;
+    }
+
     std::unique_ptr<FileHandler> handler{};
     try
     {
