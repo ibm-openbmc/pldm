@@ -973,7 +973,7 @@ TEST(writeFileByType, testOverclaimedLengthRejected)
 
     std::unique_ptr<oem_platform::Handler> oemPlatformHandler{};
     oem_ibm::Handler handler(oemPlatformHandler.get(), hostSocketFd, host_eid,
-                             nullptr, nullptr, nullptr, event);
+                             nullptr, nullptr, event);
     auto response = handler.writeFileByType(req, payloadLength);
     auto responsePtr = reinterpret_cast<pldm_msg*>(response.data());
     struct pldm_read_write_file_by_type_resp* resp =
