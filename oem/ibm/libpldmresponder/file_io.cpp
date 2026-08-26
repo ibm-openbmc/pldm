@@ -766,7 +766,7 @@ Response Handler::writeFileByType(const pldm_msg* request, size_t payloadLength)
               "data available {AVAILABLE}",
               "LENGTH", length, "AVAILABLE", inlineLength);
 
-        encodeRWTypeResponseHandler(request->hdr.instance_id,
+        encode_rw_file_by_type_resp(request->hdr.instance_id,
                                     PLDM_WRITE_FILE_BY_TYPE,
                                     PLDM_ERROR_INVALID_LENGTH, 0, responsePtr);
         return response;
