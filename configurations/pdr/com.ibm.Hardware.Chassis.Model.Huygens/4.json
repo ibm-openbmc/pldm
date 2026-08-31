@@ -8,16 +8,16 @@
                     "sensors": [
                         {
                             "set": {
-                                "id": 257,
-                                "size": 1,
-                                "states": [1, 4]
+                                "id": 260,
+                                "size": 2,
+                                "states": [1, 10]
                             },
                             "dbus": {
                                 "path": "/org/openbmc/control/power0",
                                 "interface": "org.openbmc.control.Power",
                                 "property_name": "pgood",
-                                "property_type": "bool",
-                                "property_values": [true, false]
+                                "property_type": "int32_t",
+                                "property_values": [1, 0]
                             }
                         }
                     ]
@@ -27,16 +27,16 @@
                     "sensors": [
                         {
                             "set": {
-                                "id": 257,
-                                "size": 1,
-                                "states": [1, 4]
+                                "id": 260,
+                                "size": 2,
+                                "states": [1, 10]
                             },
                             "dbus": {
                                 "path": "/org/openbmc/control/power1",
                                 "interface": "org.openbmc.control.Power",
                                 "property_name": "pgood",
-                                "property_type": "bool",
-                                "property_values": [true, false]
+                                "property_type": "int32_t",
+                                "property_values": [1, 0]
                             }
                         }
                     ]
@@ -46,16 +46,16 @@
                     "sensors": [
                         {
                             "set": {
-                                "id": 257,
-                                "size": 1,
-                                "states": [1, 4]
+                                "id": 260,
+                                "size": 2,
+                                "states": [1, 10]
                             },
                             "dbus": {
                                 "path": "/org/openbmc/control/power2",
                                 "interface": "org.openbmc.control.Power",
                                 "property_name": "pgood",
-                                "property_type": "bool",
-                                "property_values": [true, false]
+                                "property_type": "int32_t",
+                                "property_values": [1, 0]
                             }
                         }
                     ]
@@ -65,16 +65,16 @@
                     "sensors": [
                         {
                             "set": {
-                                "id": 257,
-                                "size": 1,
-                                "states": [1, 4]
+                                "id": 260,
+                                "size": 2,
+                                "states": [1, 10]
                             },
                             "dbus": {
                                 "path": "/org/openbmc/control/power3",
                                 "interface": "org.openbmc.control.Power",
                                 "property_name": "pgood",
-                                "property_type": "bool",
-                                "property_values": [true, false]
+                                "property_type": "int32_t",
+                                "property_values": [1, 0]
                             }
                         }
                     ]
@@ -84,16 +84,16 @@
                     "sensors": [
                         {
                             "set": {
-                                "id": 257,
-                                "size": 1,
-                                "states": [1, 4]
+                                "id": 260,
+                                "size": 2,
+                                "states": [1, 10]
                             },
                             "dbus": {
                                 "path": "/org/openbmc/control/power4",
                                 "interface": "org.openbmc.control.Power",
                                 "property_name": "pgood",
-                                "property_type": "bool",
-                                "property_values": [true, false]
+                                "property_type": "int32_t",
+                                "property_values": [1, 0]
                             }
                         }
                     ]
@@ -103,16 +103,16 @@
                     "sensors": [
                         {
                             "set": {
-                                "id": 257,
-                                "size": 1,
-                                "states": [1, 4]
+                                "id": 260,
+                                "size": 2,
+                                "states": [1, 10]
                             },
                             "dbus": {
                                 "path": "/org/openbmc/control/power5",
                                 "interface": "org.openbmc.control.Power",
                                 "property_name": "pgood",
-                                "property_type": "bool",
-                                "property_values": [true, false]
+                                "property_type": "int32_t",
+                                "property_values": [1, 0]
                             }
                         }
                     ]
@@ -122,16 +122,16 @@
                     "sensors": [
                         {
                             "set": {
-                                "id": 257,
-                                "size": 1,
-                                "states": [1, 4]
+                                "id": 260,
+                                "size": 2,
+                                "states": [1, 10]
                             },
                             "dbus": {
                                 "path": "/org/openbmc/control/power6",
                                 "interface": "org.openbmc.control.Power",
                                 "property_name": "pgood",
-                                "property_type": "bool",
-                                "property_values": [true, false]
+                                "property_type": "int32_t",
+                                "property_values": [1, 0]
                             }
                         }
                     ]
@@ -141,16 +141,16 @@
                     "sensors": [
                         {
                             "set": {
-                                "id": 257,
-                                "size": 1,
-                                "states": [1, 4]
+                                "id": 260,
+                                "size": 2,
+                                "states": [1, 10]
                             },
                             "dbus": {
                                 "path": "/org/openbmc/control/power7",
                                 "interface": "org.openbmc.control.Power",
                                 "property_name": "pgood",
-                                "property_type": "bool",
-                                "property_values": [true, false]
+                                "property_type": "int32_t",
+                                "property_values": [1, 0]
                             }
                         }
                     ]
@@ -160,16 +160,16 @@
                     "sensors": [
                         {
                             "set": {
-                                "id": 257,
-                                "size": 1,
-                                "states": [1, 4]
+                                "id": 260,
+                                "size": 2,
+                                "states": [1, 10]
                             },
                             "dbus": {
                                 "path": "/org/openbmc/control/power8",
                                 "interface": "org.openbmc.control.Power",
                                 "property_name": "pgood",
-                                "property_type": "bool",
-                                "property_values": [true, false]
+                                "property_type": "int32_t",
+                                "property_values": [1, 0]
                             }
                         }
                     ]
