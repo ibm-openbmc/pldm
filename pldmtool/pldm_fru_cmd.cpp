@@ -240,32 +240,57 @@ class FRUTablePrint
         {PLDM_OEM_FRU_FIELD_TYPE_RT, "RT"},
         {PLDM_OEM_FRU_FIELD_TYPE_LOCATION_CODE, "Location Code"}};
 
-    static inline const std::map<uint8_t, std::string> VINIFieldTypes{
-        {2, "RT"},  {3, "B3"},  {4, "B4"},  {5, "B7"},  {6, "CC"},  {7, "CE"},
-        {8, "CT"},  {9, "DR"},  {10, "FG"}, {11, "FN"}, {12, "HE"}, {13, "HW"},
-        {14, "HX"}, {15, "PN"}, {16, "SN"}, {17, "TS"}, {18, "VZ"}};
-
-    static inline const std::map<uint8_t, std::string> VSYSFieldTypes{
-        {2, "RT"},  {3, "BR"},  {4, "DR"},  {5, "FV"},  {6, "ID"},
-        {7, "MN"},  {8, "NN"},  {9, "RB"},  {10, "RG"}, {11, "SE"},
-        {12, "SG"}, {13, "SU"}, {14, "TM"}, {15, "TN"}, {16, "WN"}};
+    static inline const std::map<uint8_t, std::string> DINFFieldTypes{
+        {2, "RT"}, {3, "RI"}, {4, "FL"}};
 
     static inline const std::map<uint8_t, std::string> LXR0FieldTypes{
         {2, "RT"}, {3, "LX"}, {4, "VZ"}};
 
-    static inline const std::map<uint8_t, std::string> VW10FieldTypes{
-        {2, "RT"}, {3, "DR"}, {4, "GD"}};
+    static inline const std::map<uint8_t, std::string> UTILFieldTypes{
+        {2, "RT"},  {3, "D0"},  {4, "D1"},  {5, "D2"},  {6, "D3"},  {7, "D4"},
+        {8, "D5"},  {9, "D6"},  {10, "D7"}, {11, "D8"}, {12, "D9"}, {13, "F0"},
+        {14, "F1"}, {15, "F2"}, {16, "F3"}, {17, "F4"}, {18, "F5"}, {19, "F6"},
+        {20, "F7"}, {21, "F8"}, {22, "F9"}};
+
+    static inline const std::map<uint8_t, std::string> VCENFieldTypes{
+        {2, "RT"}, {3, "DR"}, {4, "SE"}, {5, "TM"},
+        {6, "FC"}, {7, "RG"}, {8, "RB"}};
+
+    static inline const std::map<uint8_t, std::string> VCFGFieldTypes{
+        {2, "RT"}, {3, "VZ"}, {4, "Z0"}, {5, "Z1"}, {6, "Z2"}};
+
+    static inline const std::map<uint8_t, std::string> VINIFieldTypes{
+        {2, "RT"},  {3, "B3"},  {4, "B4"},  {5, "B7"},  {6, "CC"},
+        {7, "CE"},  {8, "CT"},  {9, "DI"},  {10, "DR"}, {11, "FG"},
+        {12, "FN"}, {13, "HE"}, {14, "HW"}, {15, "HX"}, {16, "PN"},
+        {17, "PR"}, {18, "SN"}, {19, "TS"}, {20, "VN"}, {21, "VZ"}};
+
+    static inline const std::map<uint8_t, std::string> VMPUFieldTypes{
+        {2, "RT"}, {3, "DI"}, {4, "IN"}, {5, "SO"}, {6, "VZ"}};
 
     static inline const std::map<uint8_t, std::string> VR10FieldTypes{
         {2, "RT"}, {3, "DC"}, {4, "DR"}, {5, "FL"}, {6, "WA"}};
 
+    static inline const std::map<uint8_t, std::string> VSBPFieldTypes{
+        {2, "RT"}, {3, "DR"}, {4, "IM"}, {5, "PA"}};
+
+    static inline const std::map<uint8_t, std::string> VSYSFieldTypes{
+        {2, "RT"},  {3, "AA"},  {4, "AB"},  {5, "AK"},  {6, "AT"},  {7, "BA"},
+        {8, "BN"},  {9, "BR"},  {10, "DR"}, {11, "FV"}, {12, "ID"}, {13, "MM"},
+        {14, "MN"}, {15, "NN"}, {16, "RB"}, {17, "RG"}, {18, "SE"}, {19, "SG"},
+        {20, "SU"}, {21, "TM"}, {22, "TN"}, {23, "WN"}};
+
+    static inline const std::map<uint8_t, std::string> VW10FieldTypes{
+        {2, "RT"}, {3, "DR"}, {4, "GD"}};
+
     static inline const std::map<std::string,
                                  const std::map<uint8_t, std::string>>
-        populateMaps{{"VINI", VINIFieldTypes},
-                     {"VSYS", VSYSFieldTypes},
-                     {"LXR0", LXR0FieldTypes},
-                     {"VWX10", VW10FieldTypes},
-                     {"VR10", VR10FieldTypes}};
+        populateMaps{{"DINF", DINFFieldTypes}, {"LXR0", LXR0FieldTypes},
+                     {"UTIL", UTILFieldTypes}, {"VCEN", VCENFieldTypes},
+                     {"VCFG", VCFGFieldTypes}, {"VINI", VINIFieldTypes},
+                     {"VMPU", VMPUFieldTypes}, {"VR10", VR10FieldTypes},
+                     {"VSBP", VSBPFieldTypes}, {"VSYS", VSYSFieldTypes},
+                     {"VW10", VW10FieldTypes}};
 #endif
 
     std::string typeToString(std::map<uint8_t, std::string> typeMap,
