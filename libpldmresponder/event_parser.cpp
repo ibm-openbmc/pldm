@@ -162,8 +162,11 @@ int StateSensorHandler::eventAction(StateSensorEntry entry,
             return PLDM_ERROR;
         }
     }
-    catch (const std::out_of_range&)
+    catch (const std::out_of_range& e)
     {
+        error(
+            "Sensor out of range with error as {ERR}, event state as {EVE_STATE} and type as {ENT_TYPE}",
+            "ERR", e, "EVE_STATE", state, "ENT_TYPE", entry.entityType);
         // There is no BMC action for this PLDM event
         return PLDM_SUCCESS;
     }
