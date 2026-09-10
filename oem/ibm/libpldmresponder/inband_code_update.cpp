@@ -479,8 +479,25 @@ void CodeUpdate::setVersions()
                         }
                         else
                         {
-                            // Out of band update
-                            processRenameEvent();
+                            // Out of band BMC update: PHYP has not been
+                            // informed that a code update is in progress,
+                            // so send a START event so it knows to
+                            // expect a side change. newImageId is used to
+                            // track the new image and prevent duplicate
+                            // notifications if InterfacesAdded fires more
+                            // than once for the same object.
+                            if (newImageId == path.str)
+                            {
+                                break;
+                            }
+                            newImageId = path.str;
+                            auto sensorId = getBootSideRenameStateSensor();
+                            info("Sending SideRename event for sensor {ID}",
+                                 "ID", sensorId);
+                            sendStateSensorEvent(
+                                sensorId, PLDM_STATE_SENSOR_STATE, 0,
+                                PLDM_BOOT_SIDE_HAS_BEEN_RENAMED,
+                                PLDM_BOOT_SIDE_NOT_RENAMED);
                         }
                     }
                     catch (const sdbusplus::exception_t& e)
@@ -558,12 +575,21 @@ pldm_boot_side_data CodeUpdate::readBootSideFile()
 void CodeUpdate::processPriorityChangeNotification(
     const DbusChangedProps& chProperties)
 {
+    // Priority changes on the running BMC version object occur during out
+    // of band BMC code updates (phosphor-software-manager handles side
+    // switch itself in that case).
+    if (!isCodeUpdateInProgress())
+    {
+        return;
+    }
+
     static constexpr auto propName = "Priority";
     const auto it = chProperties.find(propName);
     if (it == chProperties.end())
     {
         return;
     }
+
     uint8_t newVal = std::get<uint8_t>(it->second);
 
     pldm_boot_side_data pldmBootSideData = readBootSideFile();
