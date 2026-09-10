@@ -36,6 +36,14 @@
                 "property_name": "Z1",
                 "property_type": "bytearray"
             }
+        },
+        {
+            "fru_field_type": 6,
+            "dbus": {
+                "interface": "com.ibm.ipzvpd.VCFG",
+                "property_name": "Z2",
+                "property_type": "bytearray"
+            }
         }
     ]
 }
