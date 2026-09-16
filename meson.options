@@ -89,9 +89,9 @@ option(
 option(
     'number-of-request-retries',
     type: 'integer',
-    min: 2,
+    min: 1,
     max: 30,
-    value: 2,
+    value: 1,
     description: '''The number of times a requester is obligated to retry a
                     request''',
 )
@@ -100,8 +100,8 @@ option(
     'instance-id-expiration-interval',
     type: 'integer',
     min: 5,
-    max: 6,
-    value: 5,
+    max: 25,
+    value: 24,
     description: 'Instance ID expiration interval in seconds',
 )
 
@@ -111,8 +111,8 @@ option(
     'response-time-out',
     type: 'integer',
     min: 300,
-    max: 4800,
-    value: 2000,
+    max: 12000,
+    value: 11000,
     description: '''The amount of time a requester has to wait for a response
                     message in milliseconds''',
 )
