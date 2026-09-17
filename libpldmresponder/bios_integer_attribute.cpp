@@ -118,24 +118,13 @@ void BIOSIntegerAttribute::constructEntry(
     auto [attrHandle, attrType,
           _] = table::attribute::decodeHeader(attrTableEntry);
 
-    int64_t currentValue{};
-    if (optAttributeValue.has_value())
+    std::optional<int64_t> persisted;
+    if (optAttributeValue.has_value() && optAttributeValue->index() == 0)
     {
-        auto attributeValue = optAttributeValue.value();
-        if (attributeValue.index() == 0)
-        {
-            currentValue = std::get<int64_t>(attributeValue);
-        }
-        else
-        {
-            currentValue = getAttrValue();
-        }
-    }
-    else
-    {
-        currentValue = getAttrValue();
+        persisted = std::get<int64_t>(*optAttributeValue);
     }
 
+    auto currentValue = static_cast<int64_t>(getAttrValue(persisted));
     if (currentValue < (int64_t)integerInfo.lowerBound ||
         currentValue > (int64_t)integerInfo.upperBound)
     {
@@ -194,11 +183,12 @@ uint64_t BIOSIntegerAttribute::getAttrValue(const PropertyValue& propertyValue)
     return value;
 }
 
-uint64_t BIOSIntegerAttribute::getAttrValue()
+uint64_t BIOSIntegerAttribute::getAttrValue(std::optional<int64_t> persisted)
 {
     if (!dBusMap.has_value())
     {
-        return integerInfo.defaultValue;
+        return static_cast<uint64_t>(
+            persisted.value_or(static_cast<int64_t>(integerInfo.defaultValue)));
     }
 
     try
@@ -214,7 +204,8 @@ uint64_t BIOSIntegerAttribute::getAttrValue()
         error(
             "Get Integer Attribute Value Error: AttributeName = {ATTR_NAME} ERROR={ERR_EXCEP}",
             "ATTR_NAME", name, "ERR_EXCEP", e.what());
-        return integerInfo.defaultValue;
+        return static_cast<uint64_t>(
+            persisted.value_or(static_cast<int64_t>(integerInfo.defaultValue)));
     }
 }
 
