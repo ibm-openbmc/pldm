@@ -186,9 +186,9 @@ void CodeUpdate::setVersions()
     BiosAttributeList biosAttrList;
     static constexpr auto mapperService = "xyz.openbmc_project.ObjectMapper";
     static constexpr auto functionalObjPath =
-        "/xyz/openbmc_project/software/functional";
+        "/xyz/openbmc_project/software/bmc/functional";
     static constexpr auto activeObjPath =
-        "/xyz/openbmc_project/software/active";
+        "/xyz/openbmc_project/software/bmc/active";
     static constexpr auto propIntf = "org.freedesktop.DBus.Properties";
     static constexpr auto pathIntf = "xyz.openbmc_project.Common.FilePath";
 
@@ -328,7 +328,7 @@ void CodeUpdate::setVersions()
             }));
     fwUpdateMatcher.push_back(std::make_unique<sdbusplus::bus::match_t>(
         pldm::utils::DBusHandler::getBus(),
-        "sender='xyz.openbmc_project.Software.BMC.Updater',interface='org."
+        "sender='xyz.openbmc_project.Software.Manager',interface='org."
         "freedesktop.DBus.ObjectManager',type='signal',"
         "member='InterfacesAdded',path='/xyz/openbmc_project/software'",
         [this](sdbusplus::message_t& msg) {
@@ -479,8 +479,23 @@ void CodeUpdate::setVersions()
                         }
                         else
                         {
-                            // Out of band update
-                            processRenameEvent();
+                            // Out of band BMC update: PHYP has not been
+                            // informed that a code update is in progress,
+                            // so send a START event so it knows to
+                            // expect a side change. newImageId is used to
+                            // track the new image and prevent duplicate
+                            // notifications if InterfacesAdded fires more
+                            // than once for the same object.
+                            if (newImageId == path.str)
+                            {
+                                break;
+                            }
+                            newImageId = path.str;
+                            auto sensorId = getBootSideRenameStateSensor();
+                            info("Sending SideRename event for sensor {ID}", "ID", sensorId);
+                            sendStateSensorEvent(sensorId, PLDM_STATE_SENSOR_STATE, 0,
+                                                PLDM_BOOT_SIDE_HAS_BEEN_RENAMED,
+                                                PLDM_BOOT_SIDE_NOT_RENAMED);
                         }
                     }
                     catch (const sdbusplus::exception_t& e)
@@ -558,12 +573,21 @@ pldm_boot_side_data CodeUpdate::readBootSideFile()
 void CodeUpdate::processPriorityChangeNotification(
     const DbusChangedProps& chProperties)
 {
+    // Priority changes on the running BMC version object occur during out
+    // of band BMC code updates (phosphor-software-manager handles side
+    // switch itself in that case).
+    if (!isCodeUpdateInProgress())
+    {
+        return;
+    }
+
     static constexpr auto propName = "Priority";
     const auto it = chProperties.find(propName);
     if (it == chProperties.end())
     {
         return;
     }
+
     uint8_t newVal = std::get<uint8_t>(it->second);
 
     pldm_boot_side_data pldmBootSideData = readBootSideFile();
@@ -618,7 +642,7 @@ void CodeUpdate::sendStateSensorEvent(
 void CodeUpdate::deleteImage()
 {
     static constexpr auto UPDATER_SERVICE =
-        "xyz.openbmc_project.Software.BMC.Updater";
+        "xyz.openbmc_project.Software.Manager";
     static constexpr auto SW_OBJ_PATH = "/xyz/openbmc_project/software";
     static constexpr auto DELETE_INTF =
         "xyz.openbmc_project.Collection.DeleteAll";
@@ -809,8 +833,8 @@ int processCodeUpdateLid(const std::string& filePath)
 int CodeUpdate::assembleCodeUpdateImage()
 {
     static constexpr auto UPDATER_SERVICE =
-        "xyz.openbmc_project.Software.BMC.Updater";
-    static constexpr auto SOFTWARE_PATH = "/xyz/openbmc_project/software";
+        "xyz.openbmc_project.Software.Manager";
+    static constexpr auto SOFTWARE_PATH = "/xyz/openbmc_project/software/bmc";
     static constexpr auto LID_INTERFACE = "xyz.openbmc_project.Software.LID";
 
     auto& bus = dBusIntf->getBus();
