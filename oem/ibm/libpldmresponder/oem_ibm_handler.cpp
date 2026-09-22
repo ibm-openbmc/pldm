@@ -1428,6 +1428,9 @@ void pldm::responder::oem_ibm_platform::Handler::_processEndUpdate(
     assembleImageEvent.reset();
     info("Starting assembleCodeUpdateImage");
     int retc = codeUpdate->assembleCodeUpdateImage();
+    // Staging directory is being cleared as part of End Update because ibm-i
+    // may not reboot the BMC
+    codeUpdate->clearDirPath(LID_STAGING_DIR);
     if (retc != PLDM_SUCCESS)
     {
         codeUpdate->setCodeUpdateProgress(false);
