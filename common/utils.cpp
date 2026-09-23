@@ -1,5 +1,8 @@
 #include "utils.hpp"
 
+#include "common/flight_recorder.hpp"
+
+#include <fcntl.h>
 #include <libpldm/pdr.h>
 #include <libpldm/pldm_types.h>
 #include <linux/mctp.h>
@@ -312,7 +315,9 @@ void reportError(const char* errorMsg)
                                           LoggingCreate::instance_path,
                                           LoggingCreate::interface, "Create");
 
-        std::map<std::string, std::string> addlData{};
+        auto addlData = pldm::flightrecorder::FlightRecorder::GetInstance()
+                            .additionalData();
+
         method.append(errorMsg, severity, addlData);
         bus.call_noreply(method, dbusTimeout);
     }
