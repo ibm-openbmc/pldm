@@ -1,6 +1,9 @@
 #pragma once
 
 #include "file_io_by_type.hpp"
+#include "requester/handler.hpp"
+
+#include <libpldm/instance-id.h>
 
 #include <sdeventplus/event.hpp>
 #include <sdeventplus/utility/timer.hpp>
@@ -15,23 +18,23 @@ namespace responder
 {
 using DumpEntryInterface = std::string;
 using FileHandle = uint32_t;
-using SysDumpTimer =
-    sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic>;
+using DumpTimer = sdeventplus::utility::Timer<sdeventplus::ClockId::Monotonic>;
 
-/** @struct SysDumpTransferData
+/** @struct DumpTransferData
  *
- *  @brief Wrapper for systemdump that owns timer and fd
+ *  @brief Owns the watchdog timer and destination fd for an active dump
+ *  transfer (system or resource dump).
  */
-struct SysDumpTransferData
+struct DumpTransferData
 {
-    std::unique_ptr<SysDumpTimer> timer;
+    std::unique_ptr<DumpTimer> timer;
     int fd;
 
-    SysDumpTransferData(std::unique_ptr<SysDumpTimer>&& t, int f) :
+    DumpTransferData(std::unique_ptr<DumpTimer>&& t, int f) :
         timer(std::move(t)), fd(f)
     {}
 
-    ~SysDumpTransferData()
+    ~DumpTransferData()
     {
         if (fd >= 0)
         {
@@ -40,14 +43,14 @@ struct SysDumpTransferData
     }
 
     // Prevent copying
-    SysDumpTransferData(const SysDumpTransferData&) = delete;
-    SysDumpTransferData& operator=(const SysDumpTransferData&) = delete;
-    SysDumpTransferData(SysDumpTransferData&& other) noexcept :
+    DumpTransferData(const DumpTransferData&) = delete;
+    DumpTransferData& operator=(const DumpTransferData&) = delete;
+    DumpTransferData(DumpTransferData&& other) noexcept :
         timer(std::move(other.timer)), fd(other.fd)
     {
         other.fd = -1;
     }
-    SysDumpTransferData& operator=(SysDumpTransferData&& other) noexcept
+    DumpTransferData& operator=(DumpTransferData&& other) noexcept
     {
         if (this != &other)
         {
@@ -71,15 +74,19 @@ struct SysDumpTransferData
 class DumpHandler : public FileHandler
 {
   public:
-    // System dump transfer timeout in minutes
-    // timout 60 minutes to accomadate large user initiated dumps(~15GB)
-    // timeout value can be reduced at a later time
-    static constexpr auto sysDumpTimeoutMinutes = 60;
+    // Dump transfer timeout in minutes (system and resource dump).
+    // 60 minutes to accommodate large user-initiated dumps (~15 GB);
+    // value can be reduced at a later time.
+    static constexpr auto dumpTimeoutMinutes = 60;
 
     /** @brief DumpHandler constructor
      */
-    DumpHandler(uint32_t fileHandle, uint16_t fileType) :
-        FileHandler(fileHandle), dumpType(fileType)
+    DumpHandler(
+        uint32_t fileHandle, uint16_t fileType,
+        pldm::InstanceIdDb* instanceIdDb = nullptr,
+        pldm::requester::Handler<pldm::requester::Request>* handler = nullptr) :
+        FileHandler(fileHandle), dumpType(fileType), instanceIdDb(instanceIdDb),
+        handler(handler)
     {}
 
     virtual void writeFromMemory(
@@ -119,6 +126,14 @@ class DumpHandler : public FileHandler
     virtual int postDataTransferCallBack(bool IsWriteToMemOp,
                                          uint32_t /*length*/);
 
+    /** @brief Send a FileAck(PLDM_SUCCESS) to the host to free a dump slot
+     *  after the dump file has been received by the BMC.
+     *  @param[in] dumpFileHandle - source dump file handle assigned by the host
+     *  @param[in] fileType - PLDM file type (PLDM_FILE_TYPE_DUMP or
+     *                        PLDM_FILE_TYPE_RESOURCE_DUMP)
+     */
+    void sendDumpDeletionFileAck(uint32_t dumpFileHandle, uint16_t fileType);
+
     virtual void postWriteAction(
         const uint16_t /*fileType*/, const uint32_t /*fileHandle*/,
         const struct fileack_status_metadata& /*metaDataObj*/) {};
@@ -131,34 +146,43 @@ class DumpHandler : public FileHandler
         eventLoop = &event;
     }
 
-    /** @brief Callback when dump transfer timeout expires
+    /** @brief Callback when a dump transfer timeout expires
      *  @param[in] fileHandle - File handle that timed out
      */
     static void onDumpTransferTimeout(FileHandle fileHandle);
 
-    /** @brief Initialize system dump transfer
+    /** @brief Initialize a dump file transfer (system or resource dump).
+     *
+     *  Opens the destination file under @p filePrefix, starts the watchdog
+     *  timer, and registers the transfer as the single active dump transfer.
+     *
      *  @param[in] fileHandle - File handle for the dump transfer
+     *  @param[in] filePrefix - Filename prefix (e.g. "sysdump_" or "resdump_")
      *  @return PLDM completion code
      */
-    static int initializeSystemDumpTransfer(FileHandle fileHandle);
+    static int initializeDumpTransfer(FileHandle fileHandle,
+                                      std::string_view filePrefix);
 
     /** @brief DumpHandler destructor
      */
     ~DumpHandler() {}
 
   private:
-    static int fd;             //!< fd to manage the dump offload to bmc
-    uint16_t dumpType;         //!< type of the dump
+    static int fd;                    //!< fd to manage the dump offload to bmc
+    uint16_t dumpType;                //!< type of the dump
+    pldm::InstanceIdDb* instanceIdDb; //!< pldm instance ID database
+    /** @brief PLDM request handler */
+    pldm::requester::Handler<pldm::requester::Request>* handler;
     std::string
         resDumpRequestDirPath; //!< directory where the resource
                                //!< dump request parameter file is stored
     int unixFd;                //!< fd to temporarily hold the fd created.
 
-    //!< Active system dump transfer — at most one at a time.
+    //!< Active dump transfer (system or resource) at most one at a time.
     //!< Empty optional means no transfer is in progress.
-    static std::optional<FileHandle> sysDumpHandle;
-    static std::unique_ptr<SysDumpTransferData>
-        sysDumpTransfer; //!< Owned transfer data for the active system dump
+    static std::optional<FileHandle> activeDumpHandle;
+    static std::unique_ptr<DumpTransferData>
+        activeDumpTransfer; //!< Owned transfer data for the active dump
     static sdeventplus::Event* eventLoop; //!< Event loop for timer management
 
     enum DumpRequestStatus

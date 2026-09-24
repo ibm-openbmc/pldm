@@ -445,7 +445,8 @@ std::unique_ptr<FileHandler> getHandlerByType(
         case PLDM_FILE_TYPE_HOSTBOOT_DUMP:
         case PLDM_FILE_TYPE_HARDWARE_DUMP:
         {
-            return std::make_unique<DumpHandler>(fileHandle, fileType);
+            return std::make_unique<DumpHandler>(fileHandle, fileType,
+                                                 instanceIdDb, handler);
         }
         case PLDM_FILE_TYPE_CERT_SIGNING_REQUEST:
         case PLDM_FILE_TYPE_SIGNED_CERT:
@@ -535,7 +536,8 @@ std::shared_ptr<FileHandler> getSharedHandlerByType(
         case PLDM_FILE_TYPE_HOSTBOOT_DUMP:
         case PLDM_FILE_TYPE_HARDWARE_DUMP:
         {
-            return std::make_shared<DumpHandler>(fileHandle, fileType);
+            return std::make_shared<DumpHandler>(fileHandle, fileType,
+                                                 instanceIdDb, handler);
         }
         case PLDM_FILE_TYPE_CERT_SIGNING_REQUEST:
         case PLDM_FILE_TYPE_SIGNED_CERT:
