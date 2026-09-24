@@ -35,7 +35,7 @@ namespace dma
 constexpr uint32_t minSize = 16;
 
 constexpr size_t maxSize = DMA_MAXSIZE;
-constexpr auto xdmaDev = "/dev/aspeed-xdma";
+constexpr auto xdmaDev = "/dev/aspeed-xdma0";
 
 struct FileMetaData
 {
