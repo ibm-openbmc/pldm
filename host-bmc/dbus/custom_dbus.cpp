@@ -1,5 +1,7 @@
 #include "custom_dbus.hpp"
 
+#include <filesystem>
+
 namespace pldm
 {
 namespace dbus
@@ -366,6 +368,17 @@ void CustomDBus::implementCpuCoreInterface(const std::string& path)
     {
         cpuCore.emplace(path, std::make_unique<CPUCore>(
                                   pldm::utils::DBusHandler::getBus(), path));
+
+        // Create contained_by association to parent CPU
+        std::filesystem::path corePath(path);
+        std::string parentCpuPath = corePath.parent_path().string();
+
+        if (!parentCpuPath.empty())
+        {
+            std::vector<std::tuple<std::string, std::string, std::string>>
+                associations{{"contained_by", "containing", parentCpuPath}};
+            setAssociations(path, associations);
+        }
     }
 }
 
