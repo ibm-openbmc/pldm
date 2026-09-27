@@ -17,7 +17,7 @@
             "fru_field_type": 3,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VSYS",
-                "property_name": "BR",
+                "property_name": "AA",
                 "property_type": "bytearray"
             }
         },
@@ -25,7 +25,7 @@
             "fru_field_type": 4,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VSYS",
-                "property_name": "DR",
+                "property_name": "AB",
                 "property_type": "bytearray"
             }
         },
@@ -33,7 +33,7 @@
             "fru_field_type": 5,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VSYS",
-                "property_name": "FV",
+                "property_name": "AK",
                 "property_type": "bytearray"
             }
         },
@@ -41,7 +41,7 @@
             "fru_field_type": 6,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VSYS",
-                "property_name": "ID",
+                "property_name": "AT",
                 "property_type": "bytearray"
             }
         },
@@ -49,7 +49,7 @@
             "fru_field_type": 7,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VSYS",
-                "property_name": "MN",
+                "property_name": "BA",
                 "property_type": "bytearray"
             }
         },
@@ -57,7 +57,7 @@
             "fru_field_type": 8,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VSYS",
-                "property_name": "NN",
+                "property_name": "BN",
                 "property_type": "bytearray"
             }
         },
@@ -65,7 +65,7 @@
             "fru_field_type": 9,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VSYS",
-                "property_name": "RB",
+                "property_name": "BR",
                 "property_type": "bytearray"
             }
         },
@@ -73,7 +73,7 @@
             "fru_field_type": 10,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VSYS",
-                "property_name": "RG",
+                "property_name": "DR",
                 "property_type": "bytearray"
             }
         },
@@ -81,7 +81,7 @@
             "fru_field_type": 11,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VSYS",
-                "property_name": "SE",
+                "property_name": "FV",
                 "property_type": "bytearray"
             }
         },
@@ -89,7 +89,7 @@
             "fru_field_type": 12,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VSYS",
-                "property_name": "SG",
+                "property_name": "ID",
                 "property_type": "bytearray"
             }
         },
@@ -97,7 +97,7 @@
             "fru_field_type": 13,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VSYS",
-                "property_name": "SU",
+                "property_name": "MM",
                 "property_type": "bytearray"
             }
         },
@@ -105,7 +105,7 @@
             "fru_field_type": 14,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VSYS",
-                "property_name": "TM",
+                "property_name": "MN",
                 "property_type": "bytearray"
             }
         },
@@ -113,12 +113,68 @@
             "fru_field_type": 15,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VSYS",
-                "property_name": "TN",
+                "property_name": "NN",
                 "property_type": "bytearray"
             }
         },
         {
             "fru_field_type": 16,
+            "dbus": {
+                "interface": "com.ibm.ipzvpd.VSYS",
+                "property_name": "RB",
+                "property_type": "bytearray"
+            }
+        },
+        {
+            "fru_field_type": 17,
+            "dbus": {
+                "interface": "com.ibm.ipzvpd.VSYS",
+                "property_name": "RG",
+                "property_type": "bytearray"
+            }
+        },
+        {
+            "fru_field_type": 18,
+            "dbus": {
+                "interface": "com.ibm.ipzvpd.VSYS",
+                "property_name": "SE",
+                "property_type": "bytearray"
+            }
+        },
+        {
+            "fru_field_type": 19,
+            "dbus": {
+                "interface": "com.ibm.ipzvpd.VSYS",
+                "property_name": "SG",
+                "property_type": "bytearray"
+            }
+        },
+        {
+            "fru_field_type": 20,
+            "dbus": {
+                "interface": "com.ibm.ipzvpd.VSYS",
+                "property_name": "SU",
+                "property_type": "bytearray"
+            }
+        },
+        {
+            "fru_field_type": 21,
+            "dbus": {
+                "interface": "com.ibm.ipzvpd.VSYS",
+                "property_name": "TM",
+                "property_type": "bytearray"
+            }
+        },
+        {
+            "fru_field_type": 22,
+            "dbus": {
+                "interface": "com.ibm.ipzvpd.VSYS",
+                "property_name": "TN",
+                "property_type": "bytearray"
+            }
+        },
+        {
+            "fru_field_type": 23,
             "dbus": {
                 "interface": "com.ibm.ipzvpd.VSYS",
                 "property_name": "WN",
