@@ -67,6 +67,12 @@ FileTable::FileTable(const std::string& fileTableConfigPath)
             continue;
         }
 
+        if (fsPath.parent_path() == fs::path(LID_RUNNING_PATCH_DIR) ||
+            fsPath.parent_path() == fs::path(LID_ALTERNATE_PATCH_DIR))
+        {
+            info("Using patched LID file '{PATH}'", "PATH", fsPath);
+        }
+
         fileNameLength =
             static_cast<uint16_t>(fsPath.filename().string().size());
         fileSize = static_cast<uint32_t>(fs::file_size(fsPath));
