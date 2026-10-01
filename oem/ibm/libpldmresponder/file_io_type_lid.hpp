@@ -145,8 +145,8 @@ class LidHandler : public FileHandler
             {
                 auto& bus = pldm::utils::DBusHandler::getBus();
                 auto method = bus.new_method_call(
-                    "xyz.openbmc_project.Software.BMC.Updater",
-                    "/xyz/openbmc_project/software",
+                    "xyz.openbmc_project.Software.Manager",
+                    "/xyz/openbmc_project/software/bmc",
                     "xyz.openbmc_project.Software.LID", "Validate");
                 method.append(markerLidDirPath.c_str());
                 bus.call(method, dbusTimeout);
