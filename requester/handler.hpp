@@ -108,6 +108,12 @@ class Handler
         numRetries(numRetries), responseTimeOut(responseTimeOut)
     {}
 
+    /** @brief Enable or disable verbose PLDM message tracing at runtime. */
+    void setVerbose(bool value)
+    {
+        verbose = value;
+    }
+
     /** @brief Register a PLDM request message
      *
      *  @param[in] eid - endpoint ID of the remote MCTP endpoint

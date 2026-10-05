@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 #include <vector>
 
 PHOSPHOR_LOG2_USING;
@@ -80,6 +81,45 @@ class FlightRecorder
             index =
                 (currentIndex == FLIGHT_RECORDER_MAX_ENTRIES - 1) ? 0 : index;
         }
+    }
+
+    /** @brief Flatten populated flight recorder entries into a string map
+     *  suitable for phosphor-logging additional data.
+     *
+     *  Each record becomes a single entry keyed as PLDM_FR_RECORD_<N> with
+     *  the value formatted as "[<timestamp>] <Tx|Rx> <hex-data>".
+     */
+    std::map<std::string, std::string> additionalData() const
+    {
+        std::map<std::string, std::string> result;
+        size_t recordIndex = 0;
+
+        for (const auto& record : tapeRecorder)
+        {
+            const auto& timestamp = std::get<FlightRecorderTimeStamp>(record);
+            const auto isRequest = std::get<ReqOrResponse>(record);
+            const auto& data = std::get<FlightRecorderData>(record);
+
+            if (timestamp.empty() || data.empty())
+            {
+                continue;
+            }
+
+            std::ostringstream encodedData;
+            encodedData << std::hex << std::setfill('0');
+            for (const auto byte : data)
+            {
+                encodedData << std::setw(2) << static_cast<unsigned>(byte);
+            }
+
+            const std::string key =
+                "PLDM_FR_RECORD_" + std::to_string(recordIndex++);
+            result.emplace(key,
+                           "[" + timestamp + "] " + (isRequest ? "Tx" : "Rx") +
+                               " " + encodedData.str());
+        }
+
+        return result;
     }
 
     /** @brief play flight recorder
