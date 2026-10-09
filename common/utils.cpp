@@ -10,6 +10,7 @@
 #include <phosphor-logging/lg2.hpp>
 #include <xyz/openbmc_project/Common/error.hpp>
 #include <xyz/openbmc_project/Logging/Create/client.hpp>
+#include <xyz/openbmc_project/Logging/Entry/server.hpp>
 #include <xyz/openbmc_project/ObjectMapper/client.hpp>
 
 #include <algorithm>
@@ -299,7 +300,7 @@ GetAncestorsResponse DBusHandler::getAncestors(
     return response;
 }
 
-void reportError(const char* errorMsg)
+sdbusplus::message::object_path reportError(const char* errorMsg)
 {
     auto& bus = pldm::utils::DBusHandler::getBus();
     using LoggingCreate =
@@ -307,10 +308,6 @@ void reportError(const char* errorMsg)
     try
     {
         using namespace sdbusplus::xyz::openbmc_project::Logging::server;
-        auto severity =
-            sdbusplus::xyz::openbmc_project::Logging::server::convertForMessage(
-                sdbusplus::xyz::openbmc_project::Logging::server::Entry::Level::
-                    Error);
         auto method = bus.new_method_call(LoggingCreate::default_service,
                                           LoggingCreate::instance_path,
                                           LoggingCreate::interface, "Create");
@@ -318,8 +315,11 @@ void reportError(const char* errorMsg)
         auto addlData = pldm::flightrecorder::FlightRecorder::GetInstance()
                             .additionalData();
 
-        method.append(errorMsg, severity, addlData);
-        bus.call_noreply(method, dbusTimeout);
+        method.append(errorMsg, Entry::Level::Error, addlData);
+        auto resp = bus.call(method, dbusTimeout);
+        sdbusplus::message::object_path logEntryPath;
+        resp.read(logEntryPath);
+        return logEntryPath;
     }
     catch (const std::exception& e)
     {
@@ -328,6 +328,7 @@ void reportError(const char* errorMsg)
             "ERRMSG", errorMsg, "PATH", LoggingCreate::instance_path,
             "INTERFACE", LoggingCreate::interface, "ERROR", e);
     }
+    return sdbusplus::message::object_path{};
 }
 
 void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
