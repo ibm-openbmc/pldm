@@ -5,6 +5,7 @@
 #include <getopt.h>
 
 #include <phosphor-logging/lg2.hpp>
+#include <xyz/openbmc_project/Dump/Create/client.hpp>
 PHOSPHOR_LOG2_USING;
 
 int main(int argc, char* argv[])
@@ -65,22 +66,35 @@ int main(int argc, char* argv[])
 
     if (softPower.isTimerExpired() && softPower.isReceiveResponse())
     {
-        pldm::utils::reportError(
-            "xyz.openbmc_project.PLDM.Error.SoftPowerOff.HostSoftOffTimeOut");
+        static constexpr auto errMsg =
+            "xyz.openbmc_project.PLDM.Error.SoftPowerOff.HostSoftOffTimeOut";
 
-        auto method = bus.new_method_call(
-            "xyz.openbmc_project.Dump.Manager", "/xyz/openbmc_project/dump/bmc",
-            "xyz.openbmc_project.Dump.Create", "CreateDump");
-        method.append(
-            std::vector<
-                std::pair<std::string, std::variant<std::string, uint64_t>>>());
+        auto logEntryPath = pldm::utils::reportError(errMsg);
+
+        using DumpCreate =
+            sdbusplus::client::xyz::openbmc_project::dump::Create<>;
+        auto dumpPath =
+            sdbusplus::object_path(DumpCreate::namespace_path::value) /
+            DumpCreate::namespace_path::bmc;
         try
         {
+            static constexpr auto filePathParam =
+                "xyz.openbmc_project.Dump.Create.CreateParameters.FilePath";
+            auto method = bus.new_method_call(
+                DumpCreate::default_service, dumpPath.str.c_str(),
+                DumpCreate::interface, "CreateDump");
+            std::map<std::string, std::variant<std::string, uint64_t>>
+                dumpParams;
+            if (!logEntryPath.str.empty())
+            {
+                dumpParams[filePathParam] = logEntryPath.str;
+            }
+            method.append(dumpParams);
             bus.call_noreply(method);
         }
-        catch (const sdbusplus::exception::exception& e)
+        catch (const sdbusplus::exception_t& e)
         {
-            error("SoftPowerOff:Failed to create BMC dump, ERROR={ERR_EXCEP}",
+            error("SoftPowerOff: Failed to create BMC dump, ERROR={ERR_EXCEP}",
                   "ERR_EXCEP", e.what());
         }
         error(
