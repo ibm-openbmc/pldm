@@ -984,10 +984,26 @@ class GetPDR : public CommandInterface
                 std::transform(u16NameString.cbegin(), u16NameString.cend(),
                                u16NameString.begin(),
                                [](uint16_t utf16) { return be16toh(utf16); });
-                std::string nameString =
-                    std::wstring_convert<std::codecvt_utf8_utf16<char16_t>,
-                                         char16_t>{}
-                        .to_bytes(u16NameString);
+                std::string nameString;
+                for (char16_t cp : u16NameString)
+                {
+                    if (cp < 0x80)
+                    {
+                        nameString += static_cast<char>(cp);
+                    }
+                    else if (cp < 0x800)
+                    {
+                        nameString += static_cast<char>(0xC0 | (cp >> 6));
+                        nameString += static_cast<char>(0x80 | (cp & 0x3F));
+                    }
+                    else
+                    {
+                        nameString += static_cast<char>(0xE0 | (cp >> 12));
+                        nameString +=
+                            static_cast<char>(0x80 | ((cp >> 6) & 0x3F));
+                        nameString += static_cast<char>(0x80 | (cp & 0x3F));
+                    }
+                }
                 output[nameLanguageTagKey] = nameLanguageTag;
                 output[entityAuxNameKey] = nameString;
             }
