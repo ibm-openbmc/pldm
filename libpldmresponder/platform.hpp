@@ -143,7 +143,7 @@ class Handler : public CmdHandler
                 }
             }
         }
-        hostOffMatch = std::make_unique<sdbusplus::bus::match::match>(
+        hostOffMatch = std::make_unique<sdbusplus::bus::match_t>(
             dBusIntf->getBus(),
             propertiesChanged("/xyz/openbmc_project/state/host0",
                               "xyz.openbmc_project.State.Host"),
@@ -561,7 +561,7 @@ class Handler : public CmdHandler
     std::unique_ptr<sdeventplus::source::Defer> deferredGetPDREvent;
     bool isFirstGetPDR = true;
     /** @brief D-Bus property changed signal match */
-    std::unique_ptr<sdbusplus::bus::match::match> hostOffMatch;
+    std::unique_ptr<sdbusplus::bus::match_t> hostOffMatch;
     /** @brief Flag used to delete the cached Mex details and Mex Dbus Objects
      */
     bool clearMexObj = true;

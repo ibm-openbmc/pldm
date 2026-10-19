@@ -918,7 +918,7 @@ void FruImpl::subscribeFruPresence(
         {
             using namespace sdbusplus::bus::match::rules;
             fruHotPlugMatch.push_back(
-                std::make_unique<sdbusplus::bus::match::match>(
+                std::make_unique<sdbusplus::bus::match_t>(
                     bus, propertiesChanged(fruObjPath, itemInterface),
                     [this, fruObjPath,
                      fruInterface](sdbusplus::message::message& msg) {
