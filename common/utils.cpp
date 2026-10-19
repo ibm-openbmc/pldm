@@ -300,7 +300,7 @@ GetAncestorsResponse DBusHandler::getAncestors(
     return response;
 }
 
-sdbusplus::message::object_path reportError(const char* errorMsg)
+sdbusplus::object_path reportError(const char* errorMsg)
 {
     auto& bus = pldm::utils::DBusHandler::getBus();
     using LoggingCreate =
@@ -317,7 +317,7 @@ sdbusplus::message::object_path reportError(const char* errorMsg)
 
         method.append(errorMsg, Entry::Level::Error, addlData);
         auto resp = bus.call(method, dbusTimeout);
-        sdbusplus::message::object_path logEntryPath;
+        sdbusplus::object_path logEntryPath;
         resp.read(logEntryPath);
         return logEntryPath;
     }
@@ -328,7 +328,7 @@ sdbusplus::message::object_path reportError(const char* errorMsg)
             "ERRMSG", errorMsg, "PATH", LoggingCreate::instance_path,
             "INTERFACE", LoggingCreate::interface, "ERROR", e);
     }
-    return sdbusplus::message::object_path{};
+    return sdbusplus::object_path{};
 }
 
 void DBusHandler::setDbusProperty(const DBusMapping& dBusMap,
@@ -467,8 +467,8 @@ PropertyValue DBusHandler::getDbusPropertyVariant(
 }
 
 GetAssociatedSubTreeResponse DBusHandler::getAssociatedSubTree(
-    const sdbusplus::message::object_path& objectPath,
-    const sdbusplus::message::object_path& subtree, int depth,
+    const sdbusplus::object_path& objectPath,
+    const sdbusplus::object_path& subtree, int depth,
     const std::vector<std::string>& ifaceList) const
 {
     auto& bus = DBusHandler::getBus();

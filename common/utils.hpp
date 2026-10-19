@@ -115,7 +115,7 @@ std::optional<std::vector<set_effecter_state_field>> parseEffecterData(
  *  @param[in] errorMsg - the error message
  *  @return object path of the created log entry, empty on failure
  */
-sdbusplus::message::object_path reportError(const char* errorMsg);
+sdbusplus::object_path reportError(const char* errorMsg);
 
 /** @brief Convert any Decimal number to BCD
  *
@@ -176,7 +176,7 @@ using GetAncestorsResponse =
     std::vector<std::pair<ObjectPath, MapperServiceMap>>;
 using PropertyMap = std::map<std::string, PropertyValue>;
 using InterfaceMap = std::map<std::string, PropertyMap>;
-using ObjectValueTree = std::map<sdbusplus::message::object_path, InterfaceMap>;
+using ObjectValueTree = std::map<sdbusplus::object_path, InterfaceMap>;
 using BiosAttributeList = std::vector<std::pair<std::string, std::string>>;
 
 /**
@@ -213,8 +213,8 @@ class DBusHandlerInterface
         const char* dbusInterface) const = 0;
 
     virtual GetAssociatedSubTreeResponse getAssociatedSubTree(
-        const sdbusplus::message::object_path& objectPath,
-        const sdbusplus::message::object_path& subtree, int depth,
+        const sdbusplus::object_path& objectPath,
+        const sdbusplus::object_path& subtree, int depth,
         const std::vector<std::string>& ifaceList) const = 0;
 };
 
@@ -355,8 +355,8 @@ class DBusHandler : public DBusHandlerInterface
      * @return GetAssociatedSubtreeResponse - The associated subtree
      */
     GetAssociatedSubTreeResponse getAssociatedSubTree(
-        const sdbusplus::message::object_path& objectPath,
-        const sdbusplus::message::object_path& subtree, int depth,
+        const sdbusplus::object_path& objectPath,
+        const sdbusplus::object_path& subtree, int depth,
         const std::vector<std::string>& ifaceList) const override;
 
     /** @brief Set Dbus property

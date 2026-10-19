@@ -66,7 +66,7 @@ void SmsMenuHandler::postWriteAction(
     const uint16_t fileType, const uint32_t fileHandle,
     const struct fileack_status_metadata& metaDataObj)
 {
-    sdbusplus::message::object_path path;
+    sdbusplus::object_path path;
     auto hostEid = pldm::utils::readHostEID();
     auto hostSockFd = socket(AF_UNIX, SOCK_SEQPACKET, 0);
     dbusToFileHandlers

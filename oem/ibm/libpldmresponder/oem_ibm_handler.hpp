@@ -49,7 +49,7 @@ class Handler : public oem_fileio::Handler
 {
   public:
     Handler(int mctp_fd, uint8_t mctp_eid, pldm::InstanceIdDb* instanceIdDb,
-            sdbusplus::message::object_path path,
+            sdbusplus::object_path path,
             pldm::requester::Handler<pldm::requester::Request>* handler)
     {
         dbusToFileHandler =
@@ -139,7 +139,7 @@ class Handler : public oem_platform::Handler
         pldm::responder::utils::hostPCIETopologyIntf(mctp_eid,
                                                      hostEffecterParser);
 
-        sdbusplus::message::object_path path;
+        sdbusplus::object_path path;
         dbusToFileioIntf =
             std::make_unique<pldm::responder::oem_ibm_fileio::Handler>(
                 mctp_fd, mctp_eid, &instanceIdDb, path, handler);
@@ -187,7 +187,7 @@ class Handler : public oem_platform::Handler
                 }
             });
 
-        powerStateOffMatch = std::make_unique<sdbusplus::bus::match::match>(
+        powerStateOffMatch = std::make_unique<sdbusplus::bus::match_t>(
             pldm::utils::DBusHandler::getBus(),
             propertiesChanged("/xyz/openbmc_project/state/chassis0",
                               "xyz.openbmc_project.State.Chassis"),
@@ -279,7 +279,7 @@ class Handler : public oem_platform::Handler
                 }
             });
 
-        updateBIOSMatch = std::make_unique<sdbusplus::bus::match::match>(
+        updateBIOSMatch = std::make_unique<sdbusplus::bus::match_t>(
             pldm::utils::DBusHandler::getBus(),
             propertiesChanged("/xyz/openbmc_project/bios_config/manager",
                               "xyz.openbmc_project.BIOSConfig.Manager"),
@@ -312,13 +312,13 @@ class Handler : public oem_platform::Handler
                     }
                 }
             });
-        stateManagerMatch = std::make_unique<sdbusplus::bus::match::match>(
+        stateManagerMatch = std::make_unique<sdbusplus::bus::match_t>(
             pldm::utils::DBusHandler::getBus(),
             sdbusplus::bus::match::rules::interfacesAdded() +
                 sdbusplus::bus::match::rules::argNpath(
                     0, "/xyz/openbmc_project/state/host0"),
             [this](sdbusplus::message::message& msg) {
-                sdbusplus::message::object_path path;
+                sdbusplus::object_path path;
                 std::map<std::string, std::map<std::string, dbus::Value>>
                     interfaces;
                 msg.read(path, interfaces);
