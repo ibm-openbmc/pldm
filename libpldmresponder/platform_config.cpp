@@ -18,7 +18,7 @@ namespace platform_config
  */
 void Handler::systemCompatibleCallback(sdbusplus::message_t& msg)
 {
-    sdbusplus::message::object_path path;
+    sdbusplus::object_path path;
 
     pldm::utils::InterfaceMap interfaceMap;
 

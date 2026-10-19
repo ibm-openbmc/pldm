@@ -1331,7 +1331,7 @@ int pldm::responder::oem_ibm_platform::Handler::setNumericEffecter(
 
         auto response = bus.call(method, dbusTimeout);
 
-        sdbusplus::message::object_path reply;
+        sdbusplus::object_path reply;
         response.read(reply);
         info(
             "Setting numeric effecter of type {TYPE} with entity instance {INST}",
@@ -1648,7 +1648,7 @@ void pldm::responder::oem_ibm_platform::Handler::disableWatchDogTimer()
 int pldm::responder::oem_ibm_platform::Handler::checkBMCState()
 {
     using BMC = sdbusplus::client::xyz::openbmc_project::state::BMC<>;
-    auto bmcPath = sdbusplus::message::object_path(BMC::namespace_path::value) /
+    auto bmcPath = sdbusplus::object_path(BMC::namespace_path::value) /
                    BMC::namespace_path::bmc;
     try
     {
@@ -2040,7 +2040,7 @@ void pldm::responder::oem_ibm_platform::Handler::createMatches()
 
     for (const std::string& slot : slotObjects)
     {
-        matches.push_back(std::make_unique<sdbusplus::bus::match::match>(
+        matches.push_back(std::make_unique<sdbusplus::bus::match_t>(
             pldm::utils::DBusHandler::getBus(),
             propertiesChanged(slot, "com.ibm.Control.Host.PCIeLink"),
             [this, slot](sdbusplus::message::message& msg) {

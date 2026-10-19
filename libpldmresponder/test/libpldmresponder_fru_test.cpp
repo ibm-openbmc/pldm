@@ -96,13 +96,13 @@ TEST(FruImpl, updateAssociationTreeTest)
                       pldm_entity_association_tree_destroy);
 
     ObjectValueTree objects{
-        {sdbusplus::message::object_path(
+        {sdbusplus::object_path(
              "/xyz/openbmc_project/inventory/system"),
          {{"xyz.openbmc_project.Inventory.Item.System", {}}}},
-        {sdbusplus::message::object_path(
+        {sdbusplus::object_path(
              "/xyz/openbmc_project/inventory/system/chassis"),
          {{"xyz.openbmc_project.Inventory.Item.Chassis", {}}}},
-        {sdbusplus::message::object_path(
+        {sdbusplus::object_path(
              "/xyz/openbmc_project/inventory/system/chassis/motherboard"),
          {{"xyz.openbmc_project.Inventory.Item.Board.Motherboard", {}}}}};
 
@@ -176,13 +176,13 @@ TEST(FruImpl, entityByObjectPath)
     auto event = sdeventplus::Event::get_default();
 
     ObjectValueTree objects{
-        {sdbusplus::message::object_path(
+        {sdbusplus::object_path(
              "/xyz/openbmc_project/inventory/system"),
          {{"xyz.openbmc_project.Inventory.Item.System", {}}}},
-        {sdbusplus::message::object_path(
+        {sdbusplus::object_path(
              "/xyz/openbmc_project/inventory/system/chassis"),
          {{"xyz.openbmc_project.Inventory.Item.Chassis", {}}}},
-        {sdbusplus::message::object_path(
+        {sdbusplus::object_path(
              "/xyz/openbmc_project/inventory/system/chassis/motherboard"),
          {{"xyz.openbmc_project.Inventory.Item.Board.Motherboard", {}}}}};
 

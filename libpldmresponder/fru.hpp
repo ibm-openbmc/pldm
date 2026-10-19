@@ -34,7 +34,7 @@ using Value =
                  std::vector<uint64_t>, std::vector<std::string>>;
 using PropertyMap = std::map<Property, Value>;
 using InterfaceMap = std::map<Interface, PropertyMap>;
-using ObjectValueTree = std::map<sdbusplus::message::object_path, InterfaceMap>;
+using ObjectValueTree = std::map<sdbusplus::object_path, InterfaceMap>;
 using ObjectPath = std::string;
 using AssociatedEntityMap = std::map<ObjectPath, pldm_entity>;
 using ObjectPathToRSIMap = std::map<ObjectPath, uint16_t>;
@@ -350,7 +350,7 @@ class FruImpl
     void subscribeFruPresence(
         const std::string& inventoryObjPath, const std::string& fruInterface,
         const std::string& itemInterface,
-        std::vector<std::unique_ptr<sdbusplus::bus::match::match>>&
+        std::vector<std::unique_ptr<sdbusplus::bus::match_t>>&
             fruHotPlugMatch);
 
     /** @brief processFruPresenceChange processes the "Present" property change
@@ -410,10 +410,10 @@ class FruImpl
 
     /** @brief vectors to catch the D-Bus property change signals for the frus
      */
-    std::vector<std::unique_ptr<sdbusplus::bus::match::match>> fanHotplugMatch;
-    std::vector<std::unique_ptr<sdbusplus::bus::match::match>> psuHotplugMatch;
-    std::vector<std::unique_ptr<sdbusplus::bus::match::match>> pcieHotplugMatch;
-    std::vector<std::unique_ptr<sdbusplus::bus::match::match>>
+    std::vector<std::unique_ptr<sdbusplus::bus::match_t>> fanHotplugMatch;
+    std::vector<std::unique_ptr<sdbusplus::bus::match_t>> psuHotplugMatch;
+    std::vector<std::unique_ptr<sdbusplus::bus::match_t>> pcieHotplugMatch;
+    std::vector<std::unique_ptr<sdbusplus::bus::match_t>>
         panelHotplugMatch;
     dbus::ObjectValueTree objects;
     std::vector<fs::path> statePDRJsonsDir;

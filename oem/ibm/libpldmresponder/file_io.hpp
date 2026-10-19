@@ -746,7 +746,7 @@ class Handler : public CmdHandler
                     std::string,
                     std::map<std::string, std::variant<std::string, uint32_t>>>
                     interfaces;
-                sdbusplus::message::object_path path;
+                sdbusplus::object_path path;
                 msg.read(path, interfaces);
                 std::string vspstring;
                 std::string userchallenge;
@@ -830,7 +830,7 @@ class Handler : public CmdHandler
                     std::string,
                     std::map<std::string, std::variant<std::string, uint32_t>>>
                     interfaces;
-                sdbusplus::message::object_path path;
+                sdbusplus::object_path path;
                 msg.read(path, interfaces);
                 std::string csr;
 
@@ -844,7 +844,7 @@ class Handler : public CmdHandler
                             {
                                 csr = std::get<std::string>(property.second);
                                 auto fileHandle =
-                                    sdbusplus::message::object_path(path)
+                                    sdbusplus::object_path(path)
                                         .filename();
 
                                 dbusToFileHandlers
@@ -867,7 +867,7 @@ class Handler : public CmdHandler
                                                             codLicInterface),
             [this, hostSockFd, hostEid, instanceIdDb,
              handler](sdbusplus::message_t& msg) {
-                sdbusplus::message::object_path path;
+                sdbusplus::object_path path;
                 std::map<dbus::Property, pldm::utils::PropertyValue> props;
                 std::string iface;
                 msg.read(iface, props);

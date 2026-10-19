@@ -333,7 +333,7 @@ void CodeUpdate::setVersions()
         "member='InterfacesAdded',path='/xyz/openbmc_project/software'",
         [this](sdbusplus::message_t& msg) {
             DBusInterfaceAdded interfaces;
-            sdbusplus::message::object_path path;
+            sdbusplus::object_path path;
             msg.read(path, interfaces);
             for (auto& interface : interfaces)
             {
