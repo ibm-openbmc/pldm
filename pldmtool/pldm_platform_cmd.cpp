@@ -294,8 +294,8 @@ class GetPDR : public CommandInterface
             {
                 nextPartRequired = true;
                 dataTransferHandle = nextDataTransferHndl;
-                struct pldm_pdr_hdr* pdr_hdr = new (respRecordData)
-                    pldm_pdr_hdr;
+                struct pldm_pdr_hdr* pdr_hdr =
+                    reinterpret_cast<pldm_pdr_hdr*>(respRecordData);
                 recordChangeNumber = pdr_hdr->record_change_num;
                 operationFlag = PLDM_GET_NEXTPART;
             }
@@ -863,7 +863,8 @@ class GetPDR : public CommandInterface
         }
 
         data += sizeof(pldm_pdr_hdr);
-        pldm_pdr_fru_record_set* pdr = new (data) pldm_pdr_fru_record_set;
+        pldm_pdr_fru_record_set* pdr =
+            reinterpret_cast<pldm_pdr_fru_record_set*>(data);
         if (!pdr)
         {
             std::cerr << "Failed to get the FRU record set PDR" << std::endl;
@@ -890,8 +891,8 @@ class GetPDR : public CommandInterface
         }
 
         data += sizeof(pldm_pdr_hdr);
-        pldm_pdr_entity_association* pdr = new (data)
-            pldm_pdr_entity_association;
+        pldm_pdr_entity_association* pdr =
+            reinterpret_cast<pldm_pdr_entity_association*>(data);
         if (!pdr)
         {
             std::cerr << "Failed to get the PDR eneity association"
