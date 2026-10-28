@@ -69,7 +69,7 @@ TEST_F(PlatformManagerTest, initTerminusTest)
             0x0, 0x1,  0x0,  0x0,                    // repositorySize
             59,  0x0,  0x0,  0x0,                    // largestRecordSize
             0x0 // dataTransferHandleTimeout
-        };
+    };
     auto rc = mockTerminusManager.enqueueResponse(
         new (getPDRRepositoryInfoResp.data()) pldm_msg,
         sizeof(getPDRRepositoryInfoResp));
@@ -179,7 +179,7 @@ TEST_F(PlatformManagerTest, initTerminusTest)
             0x00, // Language Tag "en"
             0x53, 0x00, 0x30, 0x00,
             0x00  // Entity Name "S0"
-        };
+    };
     rc = mockTerminusManager.enqueueResponse(
         new (getPdrAuxNameResp.data()) pldm_msg, sizeof(getPdrAuxNameResp));
     EXPECT_EQ(rc, PLDM_SUCCESS);
@@ -235,7 +235,7 @@ TEST_F(PlatformManagerTest, parseTerminusNameTest)
             0x0, 0x1,  0x0,  0x0,                    // repositorySize
             59,  0x0,  0x0,  0x0,                    // largestRecordSize
             0x0 // dataTransferHandleTimeout
-        };
+    };
     auto rc = mockTerminusManager.enqueueResponse(
         new (getPDRRepositoryInfoResp.data()) pldm_msg,
         sizeof(getPDRRepositoryInfoResp));
@@ -345,7 +345,7 @@ TEST_F(PlatformManagerTest, parseTerminusNameTest)
             0x00, // Language Tag "en"
             0x53, 0x00, 0x30, 0x00,
             0x00  // Entity Name "S0"
-        };
+    };
     rc = mockTerminusManager.enqueueResponse(
         new (getPdrAuxNameResp.data()) pldm_msg, sizeof(getPdrAuxNameResp));
     EXPECT_EQ(rc, PLDM_SUCCESS);
@@ -393,7 +393,7 @@ TEST_F(PlatformManagerTest, initTerminusDontSupportGetPDRTest)
             0x0, 0x1,  0x0,  0x0,                    // repositorySize
             59,  0x0,  0x0,  0x0,                    // largestRecordSize
             0x0 // dataTransferHandleTimeout
-        };
+    };
     auto rc = mockTerminusManager.enqueueResponse(
         new (getPDRRepositoryInfoResp.data()) pldm_msg,
         sizeof(getPDRRepositoryInfoResp));

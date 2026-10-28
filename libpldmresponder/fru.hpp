@@ -350,8 +350,7 @@ class FruImpl
     void subscribeFruPresence(
         const std::string& inventoryObjPath, const std::string& fruInterface,
         const std::string& itemInterface,
-        std::vector<std::unique_ptr<sdbusplus::bus::match_t>>&
-            fruHotPlugMatch);
+        std::vector<std::unique_ptr<sdbusplus::bus::match_t>>& fruHotPlugMatch);
 
     /** @brief processFruPresenceChange processes the "Present" property change
      *         signal for a fru.
@@ -413,8 +412,7 @@ class FruImpl
     std::vector<std::unique_ptr<sdbusplus::bus::match_t>> fanHotplugMatch;
     std::vector<std::unique_ptr<sdbusplus::bus::match_t>> psuHotplugMatch;
     std::vector<std::unique_ptr<sdbusplus::bus::match_t>> pcieHotplugMatch;
-    std::vector<std::unique_ptr<sdbusplus::bus::match_t>>
-        panelHotplugMatch;
+    std::vector<std::unique_ptr<sdbusplus::bus::match_t>> panelHotplugMatch;
     dbus::ObjectValueTree objects;
     std::vector<fs::path> statePDRJsonsDir;
     uint16_t startStateSensorId;

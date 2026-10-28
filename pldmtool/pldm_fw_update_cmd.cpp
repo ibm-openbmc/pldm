@@ -91,7 +91,7 @@ uint8_t convertStringTypeToUInt8(std::string compImgVerStrType)
             {"UTF_16", PLDM_STR_TYPE_UTF_16},
             {"UTF_16LE", PLDM_STR_TYPE_UTF_16LE},
             {"UTF_16BE", PLDM_STR_TYPE_UTF_16BE},
-        };
+    };
 
     if (pldmFirmwareUpdateStringType.contains(compImgVerStrType))
     {
