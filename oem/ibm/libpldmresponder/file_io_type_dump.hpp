@@ -152,7 +152,7 @@ class DumpHandler : public FileHandler
     std::string
         resDumpRequestDirPath; //!< directory where the resource
                                //!< dump request parameter file is stored
-    int unixFd;                //!< fd to temporarily hold the fd created.
+    int unixFd = -1;           //!< fd to temporarily hold the fd created.
 
     //!< Active system dump transfer — at most one at a time.
     //!< Empty optional means no transfer is in progress.

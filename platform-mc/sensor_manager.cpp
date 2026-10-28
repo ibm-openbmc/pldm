@@ -127,35 +127,34 @@ void SensorManager::doSensorPolling(pldm_tid_t tid)
                      std::forward_as_tuple())
             .first->second;
     scope.spawn(
-        stdexec::just() | stdexec::let_value([this, &rcOpt,
-                                              tid] -> exec::task<void> {
-            auto res =
-                co_await stdexec::stopped_as_optional(doSensorPollingTask(tid));
-            if (res.has_value())
-            {
-                rcOpt = *res;
-            }
-            else
-            {
-                lg2::info("Stopped polling for Terminus ID {TID}", "TID", tid);
-                try
+        stdexec::stopped_as_optional(doSensorPollingTask(tid)) |
+            stdexec::then([this, &rcOpt, tid](std::optional<int> res) {
+                if (res.has_value())
                 {
-                    if (sensorPollTimers.contains(tid) &&
-                        sensorPollTimers[tid] &&
-                        sensorPollTimers[tid]->isRunning())
+                    rcOpt = *res;
+                }
+                else
+                {
+                    lg2::info("Stopped polling for Terminus ID {TID}", "TID",
+                              tid);
+                    try
                     {
-                        sensorPollTimers[tid]->stop();
+                        if (sensorPollTimers.contains(tid) &&
+                            sensorPollTimers[tid] &&
+                            sensorPollTimers[tid]->isRunning())
+                        {
+                            sensorPollTimers[tid]->stop();
+                        }
                     }
+                    catch (const std::exception& e)
+                    {
+                        lg2::error(
+                            "Terminus ID {TID}: Failed to stop polling timer. Exception: {EXCEPTION}",
+                            "TID", tid, "EXCEPTION", e);
+                    }
+                    rcOpt = PLDM_SUCCESS;
                 }
-                catch (const std::exception& e)
-                {
-                    lg2::error(
-                        "Terminus ID {TID}: Failed to stop polling timer. Exception: {EXCEPTION}",
-                        "TID", tid, "EXCEPTION", e);
-                }
-                rcOpt = PLDM_SUCCESS;
-            }
-        }),
+            }),
         exec::default_task_context<void>(exec::inline_scheduler{}));
 }
 

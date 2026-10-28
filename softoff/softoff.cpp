@@ -39,7 +39,7 @@ namespace sdbusRule = sdbusplus::bus::match::rules;
 
 SoftPowerOff::SoftPowerOff(sdbusplus::bus_t& bus, sd_event* event,
                            pldm::InstanceIdDb& instanceIdDb, bool noTimeOut) :
-    bus(bus), timer(event), instanceIdDb(instanceIdDb), noTimeOut(noTimeOut)
+    timer(event), instanceIdDb(instanceIdDb), noTimeOut(noTimeOut)
 {
     auto jsonData = parseConfig();
 
@@ -200,7 +200,8 @@ bool SoftPowerOff::getEffecterID(pldm::pdr::EntityType& entityType,
         {
             for (auto& rep : response)
             {
-                auto softoffPdr = new (rep.data()) pldm_state_effecter_pdr;
+                auto softoffPdr =
+                    reinterpret_cast<pldm_state_effecter_pdr*>(rep.data());
                 effecterID = softoffPdr->effecter_id;
             }
         }
@@ -248,7 +249,7 @@ int SoftPowerOff::getSensorInfo(pldm::pdr::EntityType& entityType,
         pldm_state_sensor_pdr* pdr = nullptr;
         for (auto& rep : Response)
         {
-            pdr = new (rep.data()) pldm_state_sensor_pdr;
+            pdr = reinterpret_cast<pldm_state_sensor_pdr*>(rep.data());
             if (!pdr)
             {
                 error(
@@ -266,8 +267,9 @@ int SoftPowerOff::getSensorInfo(pldm::pdr::EntityType& entityType,
 
         for (auto offset = 0; offset < compositeSensorCount; offset++)
         {
-            auto possibleStates = new (possibleStatesStart)
-                state_sensor_possible_states;
+            auto possibleStates =
+                reinterpret_cast<state_sensor_possible_states*>(
+                    possibleStatesStart);
             auto setId = possibleStates->state_set_id;
             auto possibleStateSize = possibleStates->possible_states_size;
 
