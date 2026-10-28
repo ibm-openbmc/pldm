@@ -116,4 +116,4 @@ extern const std::map<uint16_t, const std::map<uint8_t, std::string>>
         {PLDM_OEM_IBM_FIRMWARE_UPDATE_STATE, SetOemIBMFWUpdateStateValues},
         {PLDM_OEM_IBM_NEXT_BOOT_SIDE, SetOemIBMBootSideStateValues},
         {PLDM_OEM_IBM_CURRENT_BOOT_SIDE, SetOemIBMBootSideStateValues},
-    };
+};

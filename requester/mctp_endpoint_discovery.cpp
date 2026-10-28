@@ -434,8 +434,7 @@ void MctpDiscovery::searchConfigurationFor(
         std::string associatedObjPath;
         std::string associatedService;
         std::string associatedInterface;
-        sdbusplus::object_path inventorySubtreePath(
-            inventorySubtreePathStr);
+        sdbusplus::object_path inventorySubtreePath(inventorySubtreePathStr);
 
         //"/{board or chassis type}/{board or chassis}/{device}"
         auto constexpr subTreeDepth = 3;

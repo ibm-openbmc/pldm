@@ -656,7 +656,7 @@ class GetPDR : public CommandInterface
              setOperationalRunningState},
             {PLDM_STATE_SET_DEVICE_POWER_STATE, setPowerDeviceState},
             {PLDM_STATE_SET_PRESENCE, setPresenceState},
-        };
+    };
 
     const std::map<std::string, uint8_t> strToPdrType = {
         {"terminuslocator", PLDM_TERMINUS_LOCATOR_PDR},

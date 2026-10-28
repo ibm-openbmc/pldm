@@ -917,17 +917,15 @@ void FruImpl::subscribeFruPresence(
         for (const auto& fruObjPath : fruObjPaths)
         {
             using namespace sdbusplus::bus::match::rules;
-            fruHotPlugMatch.push_back(
-                std::make_unique<sdbusplus::bus::match_t>(
-                    bus, propertiesChanged(fruObjPath, itemInterface),
-                    [this, fruObjPath,
-                     fruInterface](sdbusplus::message::message& msg) {
-                        DbusChangedProps props;
-                        std::string iface;
-                        msg.read(iface, props);
-                        processFruPresenceChange(props, fruObjPath,
-                                                 fruInterface);
-                    }));
+            fruHotPlugMatch.push_back(std::make_unique<sdbusplus::bus::match_t>(
+                bus, propertiesChanged(fruObjPath, itemInterface),
+                [this, fruObjPath,
+                 fruInterface](sdbusplus::message::message& msg) {
+                    DbusChangedProps props;
+                    std::string iface;
+                    msg.read(iface, props);
+                    processFruPresenceChange(props, fruObjPath, fruInterface);
+                }));
         }
     }
     catch (const std::exception& e)

@@ -74,9 +74,8 @@ class MockdBusHandler : public pldm::utils::DBusHandler
                 (const override));
 
     MOCK_METHOD(pldm::utils::GetAssociatedSubTreeResponse, getAssociatedSubTree,
-                (const sdbusplus::object_path&,
-                 const sdbusplus::object_path&, int,
-                 const std::vector<std::string>&),
+                (const sdbusplus::object_path&, const sdbusplus::object_path&,
+                 int, const std::vector<std::string>&),
                 (const override));
 
     MOCK_METHOD(pldm::utils::PropertyMap, getDbusPropertiesVariant,

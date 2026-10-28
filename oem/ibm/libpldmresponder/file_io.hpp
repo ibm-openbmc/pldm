@@ -844,8 +844,7 @@ class Handler : public CmdHandler
                             {
                                 csr = std::get<std::string>(property.second);
                                 auto fileHandle =
-                                    sdbusplus::object_path(path)
-                                        .filename();
+                                    sdbusplus::object_path(path).filename();
 
                                 dbusToFileHandlers
                                     .emplace_back(std::make_unique<

@@ -225,7 +225,7 @@ TEST_F(EventManagerTest, SetEventReceiverTest)
             0x0, 0x1,  0x0,  0x0,                    // repositorySize
             59,  0x0,  0x0,  0x0,                    // largestRecordSize
             0x0 // dataTransferHandleTimeout
-        };
+    };
     auto rc = terminusManager.enqueueResponse(
         new (getPDRRepositoryInfoResp.data()) pldm_msg,
         sizeof(getPDRRepositoryInfoResp));
@@ -335,7 +335,7 @@ TEST_F(EventManagerTest, SetEventReceiverTest)
             0x00, // Language Tag "en"
             0x53, 0x00, 0x30, 0x00,
             0x00  // Entity Name "S0"
-        };
+    };
     rc = terminusManager.enqueueResponse(
         new (getPdrAuxNameResp.data()) pldm_msg, sizeof(getPdrAuxNameResp));
     EXPECT_EQ(rc, PLDM_SUCCESS);
@@ -438,7 +438,7 @@ TEST_F(EventManagerTest, pollForPlatformEventTaskMultipartTransferTest)
             2,
             3,
             4 // eventData first part
-        };
+    };
     auto rc = terminusManager.enqueueResponse(
         new (pollForPlatformEventMessage1Resp.data()) pldm_msg,
         sizeof(pollForPlatformEventMessage1Resp));
@@ -475,7 +475,7 @@ TEST_F(EventManagerTest, pollForPlatformEventTaskMultipartTransferTest)
             0x7f,
             0x6a,
             0x5d // crc32
-        };
+    };
     rc = terminusManager.enqueueResponse(
         new (pollForPlatformEventMessage2Resp.data()) pldm_msg,
         sizeof(pollForPlatformEventMessage2Resp));
@@ -488,7 +488,7 @@ TEST_F(EventManagerTest, pollForPlatformEventTaskMultipartTransferTest)
             0x0, 0x02, 0x0d, PLDM_SUCCESS,
             tid,     // TID
             0x0, 0x0 // eventID
-        };
+    };
     rc = terminusManager.enqueueResponse(
         new (pollForPlatformEventMessage3Resp.data()) pldm_msg,
         sizeof(pollForPlatformEventMessage3Resp));
