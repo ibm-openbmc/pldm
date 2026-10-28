@@ -154,9 +154,6 @@ class SoftPowerOff
      */
     bool responseReceived = false;
 
-    /* @brief sdbusplus handle */
-    sdbusplus::bus_t& bus;
-
     /** @brief Reference to Timer object */
     sdbusplus::Timer timer;
 
