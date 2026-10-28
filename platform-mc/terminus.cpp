@@ -122,7 +122,7 @@ void Terminus::parseTerminusPDRs()
 {
     for (auto& pdr : pdrs)
     {
-        auto pdrHdr = new (pdr.data()) pldm_pdr_hdr;
+        auto pdrHdr = reinterpret_cast<pldm_pdr_hdr*>(pdr.data());
         switch (pdrHdr->type)
         {
             case PLDM_SENSOR_AUXILIARY_NAMES_PDR:
