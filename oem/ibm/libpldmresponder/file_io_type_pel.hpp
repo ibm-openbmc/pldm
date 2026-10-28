@@ -78,7 +78,7 @@ class PelHandler : public FileHandler
 
   private:
     fs::path Pelpath;
-    int fd;
+    int fd = -1;
 };
 
 } // namespace responder

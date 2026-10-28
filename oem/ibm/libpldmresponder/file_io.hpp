@@ -352,7 +352,7 @@ class DMA
     uint32_t m_length;
 
     /* Contain file related info like length, address, offset. */
-    FileMetaData fileMetaData;
+    FileMetaData fileMetaData{};
 };
 
 /** @brief Transfer the data between BMC and host by DMA using async manner.

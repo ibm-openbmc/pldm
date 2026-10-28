@@ -77,8 +77,8 @@ class LicenseHandler : public FileHandler
     ~LicenseHandler() {}
 
   private:
-    uint16_t licType;   //!< type of the license
-    uint64_t licLength; //!< length of the full license data
+    uint16_t licType;       //!< type of the license
+    uint64_t licLength = 0; //!< length of the full license data
 
     /** @brief PLDM CoD License install status
      */
