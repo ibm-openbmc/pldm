@@ -1247,8 +1247,8 @@ Response Handler::newFileAvailable(const pldm_msg* request,
         return CmdHandler::ccOnlyResponse(request, PLDM_INVALID_FILE_TYPE);
     }
 
-    // Initialize event loop for DumpHandler before calling newFileAvailable
-    if (fileType == PLDM_FILE_TYPE_DUMP)
+    if (fileType == PLDM_FILE_TYPE_DUMP ||
+        fileType == PLDM_FILE_TYPE_RESOURCE_DUMP)
     {
         DumpHandler::setEventLoop(event);
     }
@@ -1305,6 +1305,13 @@ Response Handler::newFileAvailableWithMetaData(const pldm_msg* request,
             "Unknown file type, '{TYPE}' in NewFileAvailableMetaData response, error - {ERROR}",
             "TYPE", fileType, "ERROR", e);
         return CmdHandler::ccOnlyResponse(request, PLDM_INVALID_FILE_TYPE);
+    }
+
+    // Initialize event loop for DumpHandler before creating the transfer timer
+    if (fileType == PLDM_FILE_TYPE_DUMP ||
+        fileType == PLDM_FILE_TYPE_RESOURCE_DUMP)
+    {
+        DumpHandler::setEventLoop(event);
     }
 
     rc = handler->newFileAvailableWithMetaData(
