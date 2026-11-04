@@ -579,6 +579,16 @@ void setFruPresence(const std::string& fruObjPath, bool present);
  */
 std::string_view trimNameForDbus(std::string& name);
 
+/** @brief Convert a UTF-16 string to UTF-8
+ *
+ *  Unpaired surrogates are replaced with U+FFFD.
+ *
+ *  @param[in] u16 - the UTF-16 input string (host endianness)
+ *
+ *  @return the UTF-8 encoded string
+ */
+std::string utf16ToUtf8(const std::u16string& u16);
+
 /** @brief Convert the number type D-Bus Value to the double
  *
  *  @param[in] type - string type should in dbusValueNumericTypeNames list

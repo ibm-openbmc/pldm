@@ -383,9 +383,7 @@ std::shared_ptr<EntityAuxiliaryNames> parseEntityAuxNamesPDR(
         std::transform(u16NameString.cbegin(), u16NameString.cend(),
                        u16NameString.begin(),
                        [](uint16_t utf16) { return be16toh(utf16); });
-        std::string nameString =
-            std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t>{}
-                .to_bytes(u16NameString);
+        std::string nameString = utf16ToUtf8(u16NameString);
         nameStrings.emplace_back(std::make_pair(nameLanguageTag, nameString));
     }
 
