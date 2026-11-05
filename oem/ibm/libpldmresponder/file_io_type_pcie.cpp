@@ -622,6 +622,13 @@ void PCIeInfoHandler::parseSecondaryLink(
         // between a pcie switch in side the cable card to a mex drawer use the
         // remote port location code to figure out the mex slot
 
+        if (remotePortLocation.first.empty())
+        {
+            error(
+                "Remote port location code received is empty, skipping the link id {LINK_ID}",
+                "LINK_ID", linkId);
+        }
+
         std::string mexConnecterPath = getMexObjectFromLocationCode(
             remotePortLocation.first, PLDM_ENTITY_CONNECTOR);
 
@@ -683,48 +690,73 @@ void PCIeInfoHandler::setTopologyAttrsOnDbus()
     // Iterate through each link and set the link attributes
     for (const auto& [link, info] : topologyInformation)
     {
-        // Link type can be either Primary/Secondary/Unkown
-        switch (std::get<1>(info))
+        try
         {
-            // If the link is primary
-            case Primary:
-                parsePrimaryLink(std::get<1>(info), std::get<7>(info),
-                                 std::get<5>(info), static_cast<uint32_t>(link),
-                                 std::get<0>(info), std::get<2>(info),
-                                 std::get<3>(info), std::get<8>(info));
-                break;
-            case Secondary:
-                parseSecondaryLink(
-                    std::get<1>(info), std::get<7>(info), std::get<5>(info),
-                    std::get<6>(info), static_cast<uint32_t>(link),
-                    std::get<0>(info), std::get<2>(info), std::get<3>(info));
-                break;
-            case Unknown:
-                error("link type is unkown : {LINK}", "LINK", (unsigned)link);
-                switch (linkTypeInfo[link])
-                {
-                    case Primary:
-                        parsePrimaryLink(linkTypeInfo[link], std::get<7>(info),
-                                         std::get<5>(info),
-                                         static_cast<uint32_t>(link),
-                                         std::get<0>(info), std::get<2>(info),
-                                         std::get<3>(info), std::get<8>(info));
-                        break;
-                    case Secondary:
-                        parseSecondaryLink(
-                            linkTypeInfo[link], std::get<7>(info),
-                            std::get<5>(info), std::get<6>(info),
-                            static_cast<uint32_t>(link), std::get<0>(info),
-                            std::get<2>(info), std::get<3>(info));
-                        break;
-                }
+            // Link type can be either Primary/Secondary/Unkown
+            switch (std::get<1>(info))
+            {
+                    // If the link is primary
+                case linkTypeData::Primary:
+                    parsePrimaryLink(static_cast<uint8_t>(std::get<1>(info)),
+                                     std::get<7>(info), std::get<5>(info),
+                                     static_cast<uint32_t>(link),
+                                     std::get<0>(info), std::get<2>(info),
+                                     std::get<3>(info), std::get<8>(info));
+                    break;
+                case linkTypeData::Secondary:
+                    parseSecondaryLink(
+                        static_cast<uint8_t>(std::get<1>(info)),
+                        std::get<7>(info), std::get<5>(info), std::get<6>(info),
+                        static_cast<uint32_t>(link), std::get<0>(info),
+                        std::get<2>(info), std::get<3>(info));
+                    break;
+                case linkTypeData::Unknown:
+                    error("link type is unkown : {LINK}", "LINK",
+                          (unsigned)link);
+                    switch (linkTypeInfo[link])
+                    {
+                        case linkTypeData::Primary:
+                            parsePrimaryLink(
+                                static_cast<uint8_t>(linkTypeInfo[link]),
+                                std::get<7>(info), std::get<5>(info),
+                                static_cast<uint32_t>(link), std::get<0>(info),
+                                std::get<2>(info), std::get<3>(info),
+                                std::get<8>(info));
+                            break;
+                        case linkTypeData::Secondary:
+                            parseSecondaryLink(
+                                static_cast<uint8_t>(linkTypeInfo[link]),
+                                std::get<7>(info), std::get<5>(info),
+                                std::get<6>(info), static_cast<uint32_t>(link),
+                                std::get<0>(info), std::get<2>(info),
+                                std::get<3>(info));
+                            break;
+                        default:
+                            break;
+                    }
+                default:
+                    break;
+            }
+        }
+        catch (const std::exception& e)
+        {
+            error("Failed to parse/set topology for link [{LINK}]: {ERROR}",
+                  "LINK", (unsigned)link, "ERROR", e);
         }
     }
 
     // There are few special links that needs post processing
     for (const auto& link : needPostProcessing)
     {
-        parseSpeciallink(link.first, link.second);
+        try
+        {
+            parseSpeciallink(link.first, link.second);
+        }
+        catch (const std::exception& e)
+        {
+            error("Failed special processing for link [{LINK}]: {ERROR}",
+                  "LINK", (unsigned)link.first, "ERROR", e);
+        }
     }
 
     std::filesystem::path cableBasePath =
@@ -1168,6 +1200,9 @@ void PCIeInfoHandler::deleteTopologyFiles()
 
 void PCIeInfoHandler::refreshAllPcieSlotBusIds()
 {
+    // Reset PLDM-hosted MEX PCIe slots directly
+    pldm::dbus::CustomDBus::getCustomDBus().resetPCIeSlotBusIds();
+
     // Only setting BusIDs/LinkIDs to 0 for objects
     // hosted by Inventory Manager
     constexpr auto basePath =
