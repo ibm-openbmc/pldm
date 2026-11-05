@@ -381,6 +381,9 @@ class CustomDBus
     void setSlotProperties(const std::string& path, const uint32_t& value,
                            const std::string& linkState);
 
+    /** @brief Reset BusId to 0 for all PLDM-hosted PCIeSlot objects */
+    void resetPCIeSlotBusIds();
+
     /** @brief set pcie device properties */
     void setPCIeDeviceProps(const std::string& path, size_t lanesInuse,
                             const std::string& value);
