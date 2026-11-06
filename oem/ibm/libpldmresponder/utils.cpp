@@ -544,12 +544,60 @@ std::string getObjectPathByLocationCode(const std::string& locationCode,
     std::string inventoryIface("xyz.openbmc_project.Inventory.Item");
 
     std::string path;
-    ObjectValueTree objects;
     try
     {
-        objects = pldm::utils::DBusHandler::getManagedObj(
-            "xyz.openbmc_project.Inventory.Manager",
-            "/xyz/openbmc_project/inventory");
+        const bool useCachedInventory =
+            inventoryItemType ==
+                "xyz.openbmc_project.Inventory.Item.PCIeSlot" ||
+            inventoryItemType ==
+                "xyz.openbmc_project.Inventory.Item.PCIeDevice";
+        ObjectValueTree liveObjects;
+        if (!useCachedInventory)
+        {
+            // Connector objects and their Present properties can change when
+            // cards are replaced. Keep these lookups fresh
+            liveObjects = pldm::utils::DBusHandler::getManagedObj(
+                "xyz.openbmc_project.Inventory.Manager",
+                "/xyz/openbmc_project/inventory");
+        }
+        const auto& objects =
+            useCachedInventory ? pldm::utils::DBusHandler::getInventoryObjects()
+                               : liveObjects;
+
+        for (const auto& objPath : objects)
+        {
+            const auto& interfaces = objPath.second;
+            if (interfaces.contains(inventoryItemType) &&
+                interfaces.contains(locationIface))
+            {
+                const auto& properties = interfaces.at(locationIface);
+                if (properties.contains("LocationCode"))
+                {
+                    if (get<std::string>(properties.at("LocationCode")) ==
+                        locationCode)
+                    {
+                        // Return the object path for slots/adapters without
+                        // checking its presence.
+                        // Return the object path only if either
+                        // The "xyz.openbmc_project.Inventory.Item" interface is
+                        // not present or The "Present" property is not
+                        // populated or it is present and its value is true
+                        if ((inventoryItemType !=
+                             "xyz.openbmc_project.Inventory.Item.Connector") ||
+                            !interfaces.contains(
+                                "xyz.openbmc_project.Inventory.Item") ||
+                            !interfaces.at(inventoryIface)
+                                 .contains("Present") ||
+                            get<bool>(
+                                interfaces.at(inventoryIface).at("Present")))
+                        {
+                            path = objPath.first.str;
+                            return path;
+                        }
+                    }
+                }
+            }
+        }
     }
     catch (const std::exception& e)
     {
@@ -559,40 +607,6 @@ std::string getObjectPathByLocationCode(const std::string& locationCode,
         return path;
     }
 
-    for (const auto& objPath : objects)
-    {
-        InterfaceMap interfaces = objPath.second;
-        if (interfaces.contains(inventoryItemType) &&
-            interfaces.contains(locationIface))
-        {
-            PropertyMap properties = interfaces[locationIface];
-            PropertyMap presentInfo = interfaces[inventoryIface];
-            if (properties.contains("LocationCode"))
-            {
-                if (get<std::string>(properties["LocationCode"]) ==
-                    locationCode)
-                {
-                    // Return the object path for Slots/adapters withoot
-                    // checking its presence.
-                    // Return the object path only if either
-                    // The "xyz.openbmc_project.Inventory.Item" interface is not
-                    // present or
-                    // The "Present" property is not populated or it is present
-                    // and its value is true
-                    if ((inventoryItemType !=
-                         "xyz.openbmc_project.Inventory.Item.Connector") ||
-                        !interfaces.contains(
-                            "xyz.openbmc_project.Inventory.Item") ||
-                        !presentInfo.contains("Present") ||
-                        get<bool>(presentInfo["Present"]))
-                    {
-                        path = objPath.first.str;
-                        return path;
-                    }
-                }
-            }
-        }
-    }
     error("Location not found {LOC_CODE} for Item type {INVEN_ITEM_TYP}",
           "LOC_CODE", locationCode, "INVEN_ITEM_TYP", inventoryItemType);
     return path;
