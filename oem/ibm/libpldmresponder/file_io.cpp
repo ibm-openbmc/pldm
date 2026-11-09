@@ -237,6 +237,7 @@ int DMA::transferDataHost(int fd, uint32_t offset, uint32_t length,
             "Timeout occured!! Failed to complete the DMA operation on data between BMC and remote terminus for upstream '{UPSTREAM}' of length '{LENGTH}' at address '{ADDRESS}', response code '{RC}'",
             "RC", rc, "UPSTREAM", upstream, "ADDRESS", address, "LENGTH",
             length);
+        return rc <= 0 ? (rc == 0 ? -ETIMEDOUT : -errno) : -EIO;
     }
 
     if (!upstream)
