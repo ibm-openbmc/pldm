@@ -31,7 +31,6 @@ namespace pldm
 namespace responder
 {
 static constexpr auto dumpEntry = "xyz.openbmc_project.Dump.Entry";
-static constexpr auto dumpObjPath = "/xyz/openbmc_project/dump/system";
 static constexpr auto systemDumpEntry = "xyz.openbmc_project.Dump.Entry.System";
 static constexpr auto resDumpEntry = "com.ibm.Dump.Entry.Resource";
 static constexpr auto dumpEntryObjPath =
@@ -43,13 +42,15 @@ static constexpr auto bmcDumpObjPath = "/xyz/openbmc_project/dump/bmc/entry";
 // resource dumps.
 
 int DumpHandler::fd = -1;
-std::optional<FileHandle> DumpHandler::sysDumpHandle;
-std::unique_ptr<SysDumpTransferData> DumpHandler::sysDumpTransfer;
+std::optional<FileHandle> DumpHandler::activeDumpHandle;
+std::unique_ptr<DumpTransferData> DumpHandler::activeDumpTransfer;
 sdeventplus::Event* DumpHandler::eventLoop = nullptr;
+std::unique_ptr<sdeventplus::source::Defer> DumpHandler::deletionAckEvent;
 
-// System dump file configuration
-constexpr auto sysDumpPath = "/var/lib/phosphor-debug-collector/tmp";
+// Dump file configuration (system and resource dump)
+constexpr auto dumpFilePath = "/var/lib/phosphor-debug-collector/tmp";
 constexpr auto sysDumpFilePrefix = "sysdump_";
+constexpr auto resDumpFilePrefix = "resdump_";
 
 namespace fs = std::filesystem;
 
@@ -63,6 +64,8 @@ uint32_t DumpHandler::getDumpIdPrefix(uint16_t dumpType)
             return 0x20000000;
         case PLDM_FILE_TYPE_SBE_DUMP:
             return 0x30000000;
+        case PLDM_FILE_TYPE_DUMP:
+            return 0xA0000000;
         case PLDM_FILE_TYPE_RESOURCE_DUMP_PARMS:
             return 0xB0000000;
         default:
@@ -200,42 +203,14 @@ std::string DumpHandler::findDumpObjPath(uint32_t fileHandle)
 
 int DumpHandler::newFileAvailable(uint64_t length)
 {
-    static constexpr auto dumpInterface = "com.ibm.Dump.Notify";
-    auto& bus = pldm::utils::DBusHandler::getBus();
-
-    auto notifyObjPath = dumpObjPath;
-    auto notifyDumpType =
-        sdbusplus::common::com::ibm::dump::Notify::DumpType::System;
-
-    if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
+    if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP ||
+        dumpType == PLDM_FILE_TYPE_DUMP)
     {
-        // Setting the Notify path for resource dump
-        notifyDumpType =
-            sdbusplus::common::com::ibm::dump::Notify::DumpType::Resource;
+        info(
+            "newFileAvailable dumpType={DUMP_TYPE} fileHandle={FILE_HANDLE} length={LENGTH}",
+            "DUMP_TYPE", dumpType, "FILE_HANDLE", fileHandle, "LENGTH", length);
+        return initializeDumpTransfer();
     }
-    else if (dumpType == PLDM_FILE_TYPE_DUMP) // for system dump start timer and
-                                              // open the file
-    {
-        return DumpHandler::initializeSystemDumpTransfer(fileHandle);
-    }
-
-    try
-    {
-        auto service =
-            pldm::utils::DBusHandler().getService(notifyObjPath, dumpInterface);
-        auto method = bus.new_method_call(service.c_str(), notifyObjPath,
-                                          dumpInterface, "NotifyDump");
-        method.append(fileHandle, length, notifyDumpType, 0);
-        bus.call_noreply(method, dbusTimeout);
-    }
-    catch (const std::exception& e)
-    {
-        error(
-            "Error '{ERROR}' found for new file available while notifying new dump to dump manager with object path {PATH} and interface {INTERFACE}",
-            "ERROR", e, "PATH", notifyObjPath, "INTERFACE", dumpInterface);
-        return PLDM_ERROR;
-    }
-
     return PLDM_SUCCESS;
 }
 
@@ -302,6 +277,15 @@ std::string DumpHandler::getOffloadUri(uint32_t fileHandle)
 int DumpHandler::postDataTransferCallBack(bool IsWriteToMemOp,
                                           uint32_t /*length*/)
 {
+    // System and resource dumps are written to a file,
+    // not offloaded to socket, we simply set a success
+    // because IsWriteToMemOp is true for host->BMC transfer
+    if (dumpType == PLDM_FILE_TYPE_DUMP ||
+        dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
+    {
+        return PLDM_SUCCESS;
+    }
+
     int rc = PLDM_SUCCESS;
     /// execute when DMA transfer failed.
     if (IsWriteToMemOp)
@@ -320,56 +304,51 @@ int DumpHandler::postDataTransferCallBack(bool IsWriteToMemOp,
     return rc;
 }
 
-void DumpHandler::writeFromMemory(uint32_t, uint32_t length, uint64_t address,
-                                  oem_platform::Handler* /*oemPlatformHandler*/,
-                                  SharedAIORespData& sharedAIORespDataobj,
-                                  sdeventplus::Event& event)
+void DumpHandler::writeFromMemory(
+    uint32_t offset, uint32_t length, uint64_t address,
+    oem_platform::Handler* /*oemPlatformHandler*/,
+    SharedAIORespData& sharedAIORespDataobj, sdeventplus::Event& event)
 {
-    if (DumpHandler::fd == -1)
+    if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP ||
+        dumpType == PLDM_FILE_TYPE_DUMP)
     {
-        auto socketInterface = getOffloadUri(fileHandle);
-        int sock = setupUnixSocket(socketInterface);
-        if (sock < 0)
+        bool isActiveTransfer = activeDumpHandle.has_value() &&
+                                activeDumpHandle.value() == fileHandle;
+        if (!isActiveTransfer)
         {
-            close(DumpHandler::fd);
             error(
-                "Failed to setup Unix socket while write from memory for interface '{INTERFACE}', response code '{SOCKET_RC}'",
-                "INTERFACE", socketInterface, "SOCKET_RC", sock);
-            std::remove(socketInterface.c_str());
-            resetOffloadUri();
-
+                "writeFromMemory rejected: no active transfer for fileHandle {HANDLE} dumpType {TYPE}",
+                "HANDLE", fileHandle, "TYPE", dumpType);
             FileHandler::dmaResponseToRemoteTerminus(sharedAIORespDataobj,
                                                      PLDM_ERROR, 0);
             FileHandler::deleteAIOobjects(nullptr, sharedAIORespDataobj);
-
             return;
         }
 
-        DumpHandler::fd = sock;
+        transferFileData(activeDumpTransfer->fd, false, offset, length, address,
+                         sharedAIORespDataobj, event);
+        return;
     }
-
-    transferFileDataToSocket(DumpHandler::fd, length, address,
-                             sharedAIORespDataobj, event);
 }
 
 int DumpHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
                        oem_platform::Handler* /*oemPlatformHandler*/,
                        struct fileack_status_metadata& /*metaDataObj*/)
 {
-    // Write to file for PLDM_FILE_TYPE_DUMP
-    if (dumpType == PLDM_FILE_TYPE_DUMP)
+    // Write to file for system dump and resource dump
+    if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP ||
+        dumpType == PLDM_FILE_TYPE_DUMP)
     {
-        bool isActiveTransfer = sysDumpHandle.has_value() &&
-                                sysDumpHandle.value() == fileHandle;
+        bool isActiveTransfer = activeDumpHandle.has_value() &&
+                                activeDumpHandle.value() == fileHandle;
         if (!isActiveTransfer)
         {
             error(
-                "Write rejected for system dump: no active transfer for fileHandle {HANDLE}",
+                "Write rejected for dump: no active transfer for fileHandle {HANDLE}",
                 "HANDLE", fileHandle);
             return PLDM_ERROR;
         }
-        int dumpFd = sysDumpTransfer->fd;
-        int rc = ::pwrite(dumpFd, buffer, length, offset);
+        int rc = ::pwrite(activeDumpTransfer->fd, buffer, length, offset);
         if (rc < 0)
         {
             error("Failed to write to dump file, with error:{ERRNO}", "ERRNO",
@@ -379,38 +358,111 @@ int DumpHandler::write(const char* buffer, uint32_t offset, uint32_t& length,
         length = rc; // Update length with actual bytes written
         return PLDM_SUCCESS;
     }
+    return PLDM_SUCCESS;
+}
 
-    int rc = writeToUnixSocket(DumpHandler::fd, buffer, length);
-    if (rc < 0)
+void DumpHandler::sendDumpDeletionFileAck(
+    uint32_t dumpFileHandle, uint16_t fileType,
+    pldm::InstanceIdDb* instanceIdDb,
+    pldm::requester::Handler<pldm::requester::Request>* handler)
+{
+    if (!instanceIdDb || !handler)
     {
-        rc = -errno;
-        close(DumpHandler::fd);
-        auto socketInterface = getOffloadUri(fileHandle);
-        std::remove(socketInterface.c_str());
         error(
-            "Failed to do dump write to Unix socket for interface '{INTERFACE}', response code '{RC}'",
-            "INTERFACE", socketInterface, "RC", rc);
-        return PLDM_ERROR;
+            "sendDumpDeletionFileAck: instanceIdDb or handler not set, cannot send FileAck for fileHandle={FILE_HANDLE}",
+            "FILE_HANDLE", dumpFileHandle);
+        return;
     }
 
-    return PLDM_SUCCESS;
+    auto eid = pldm::utils::readHostEID();
+    auto instanceId = instanceIdDb->next(eid);
+    std::vector<uint8_t> requestMsg(
+        sizeof(pldm_msg_hdr) + PLDM_FILE_ACK_REQ_BYTES);
+    auto request = reinterpret_cast<pldm_msg*>(requestMsg.data());
+
+    auto rc = encode_file_ack_req(instanceId, fileType, dumpFileHandle,
+                                  PLDM_SUCCESS, request);
+    if (rc != PLDM_SUCCESS)
+    {
+        instanceIdDb->free(eid, instanceId);
+        error(
+            "Failed to encode FileAck for dump deletion, fileHandle={FILE_HANDLE} rc={RC}",
+            "FILE_HANDLE", dumpFileHandle, "RC", rc);
+        return;
+    }
+
+    rc = handler->registerRequest(eid, instanceId, PLDM_OEM, PLDM_FILE_ACK,
+                                  std::move(requestMsg),
+                                  [](mctp_eid_t, const pldm_msg*, size_t) {});
+    if (rc)
+    {
+        instanceIdDb->free(eid, instanceId);
+        error(
+            "Failed to send FileAck for dump deletion, fileHandle={FILE_HANDLE} rc={RC}",
+            "FILE_HANDLE", dumpFileHandle, "RC", rc);
+        return;
+    }
+
+    info("FileAck sent to host to delete dump, fileHandle={FILE_HANDLE}",
+         "FILE_HANDLE", dumpFileHandle);
 }
 
 int DumpHandler::fileAck(uint8_t fileStatus)
 {
-    if (dumpType == PLDM_FILE_TYPE_DUMP) // for system dump
+    if (dumpType == PLDM_FILE_TYPE_DUMP ||
+        dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
     {
-        bool isActiveTransfer = sysDumpHandle.has_value() &&
-                                sysDumpHandle.value() == fileHandle;
+        if (fileStatus == PLDM_ERROR_FILE_DISCARDED)
+        {
+            info(
+                "fileAck: host has discarded dump fileHandle={FILE_HANDLE} dumpType={DUMP_TYPE}",
+                "FILE_HANDLE", fileHandle, "DUMP_TYPE", dumpType);
+            return PLDM_SUCCESS;
+        }
+
+        bool isActiveTransfer = activeDumpHandle.has_value() &&
+                                activeDumpHandle.value() == fileHandle;
         if (!isActiveTransfer)
         {
             error(
-                "System dump transfer session does not exist for fileHandle {FILE_HANDLE}",
+                "Dump transfer session does not exist for fileHandle {FILE_HANDLE}",
                 "FILE_HANDLE", fileHandle);
             return PLDM_INVALID_FILE_HANDLE;
         }
-        sysDumpTransfer.reset();
-        sysDumpHandle.reset();
+
+        auto filePrefix = (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
+                              ? resDumpFilePrefix
+                              : sysDumpFilePrefix;
+        auto writtenPath =
+            std::format("{}/{}{}", dumpFilePath, filePrefix, fileHandle);
+        info("fileAck: dump transfer complete for fileHandle={FILE_HANDLE} "
+             "fileStatus={FILE_STATUS} file written to {PATH}",
+             "FILE_HANDLE", fileHandle, "FILE_STATUS", fileStatus, "PATH",
+             writtenPath);
+
+        activeDumpTransfer.reset();
+        activeDumpHandle.reset();
+
+        if (!eventLoop)
+        {
+            error("fileAck: eventLoop is null, cannot defer deletion FileAck "
+                  "for fileHandle={FILE_HANDLE}",
+                  "FILE_HANDLE", fileHandle);
+            return PLDM_ERROR;
+        }
+
+        // Defer sending the deletion FileAck to the next event loop iteration
+        // so the response to the host's FileAck request is sent first.
+        deletionAckEvent = std::make_unique<sdeventplus::source::Defer>(
+            *eventLoop,
+            [fileHandle = this->fileHandle, fileType = this->dumpType,
+             instanceIdDb = this->instanceIdDb,
+             handler = this->handler](sdeventplus::source::EventBase& source) {
+                sendDumpDeletionFileAck(fileHandle, fileType, instanceIdDb,
+                                        handler);
+                source.set_enabled(sdeventplus::source::Enabled::Off);
+            });
+
         return PLDM_SUCCESS;
     }
 
@@ -445,89 +497,6 @@ int DumpHandler::fileAck(uint8_t fileStatus)
         }
         return PLDM_SUCCESS;
     }
-
-    if (!path.empty())
-    {
-        if (fileStatus == PLDM_ERROR_FILE_DISCARDED)
-        {
-            if (dumpType == PLDM_FILE_TYPE_DUMP ||
-                dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
-            {
-                uint32_t val = 0xFFFFFFFF;
-                PropertyValue value = static_cast<uint32_t>(val);
-                auto dumpIntf = resDumpEntry;
-
-                if (dumpType == PLDM_FILE_TYPE_DUMP)
-                {
-                    dumpIntf = systemDumpEntry;
-                }
-
-                DBusMapping dbusMapping{path.c_str(), dumpIntf, "SourceDumpId",
-                                        "uint32_t"};
-                try
-                {
-                    pldm::utils::DBusHandler().setDbusProperty(dbusMapping,
-                                                               value);
-                }
-                catch (const std::exception& e)
-                {
-                    error(
-                        "Failed to make a D-bus call to DUMP manager for reseting source dump file '{PATH}' on interface '{INTERFACE}', error - {ERROR}",
-                        "PATH", path, "INTERFACE", dumpIntf, "ERROR", e);
-                    pldm::utils::reportError(
-                        "xyz.openbmc_project.PLDM.Error.fileAck.SourceDumpIdResetFail");
-                    return PLDM_ERROR;
-                }
-            }
-            auto& bus = pldm::utils::DBusHandler::getBus();
-            try
-            {
-                auto method = bus.new_method_call(
-                    "xyz.openbmc_project.Dump.Manager", path.c_str(),
-                    "xyz.openbmc_project.Object.Delete", "Delete");
-                bus.call(method, dbusTimeout);
-            }
-            catch (const std::exception& e)
-            {
-                error(
-                    "Failed to make a D-bus call to DUMP manager for delete dump file '{PATH}', error - {ERROR}",
-                    "PATH", path, "ERROR", e);
-                pldm::utils::reportError(
-                    "xyz.openbmc_project.PLDM.Error.fileAck.DumpEntryDeleteFail");
-                return PLDM_ERROR;
-            }
-            return PLDM_SUCCESS;
-        }
-
-        if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
-        {
-            PropertyValue value{true};
-            DBusMapping dbusMapping{path, dumpEntry, "Offloaded", "bool"};
-            try
-            {
-                pldm::utils::DBusHandler().setDbusProperty(dbusMapping, value);
-            }
-            catch (const std::exception& e)
-            {
-                error(
-                    "Failed to make a D-bus call to DUMP manager to set the dump offloaded property 'true' for dump file '{PATH}', error - {ERROR}",
-                    "PATH", path, "ERROR", e);
-                resetOffloadUri();
-                return PLDM_ERROR;
-            }
-
-            auto socketInterface = getOffloadUri(fileHandle);
-            if (DumpHandler::fd >= 0)
-            {
-                close(DumpHandler::fd);
-                DumpHandler::fd = -1;
-            }
-            std::remove(socketInterface.c_str());
-            resetOffloadUri();
-        }
-        return PLDM_SUCCESS;
-    }
-
     return PLDM_ERROR;
 }
 
@@ -622,37 +591,16 @@ int DumpHandler::newFileAvailableWithMetaData(
 {
     info("File handle in newFileAvailableWithMetaData is {FILEHANDLE}",
          "FILEHANDLE", fileHandle);
-    static constexpr auto dumpInterface = "com.ibm.Dump.Notify";
-    auto& bus = pldm::utils::DBusHandler::getBus();
 
-    auto notifyObjPath = dumpObjPath;
-    auto notifyDumpType =
-        sdbusplus::common::com::ibm::dump::Notify::DumpType::System;
-    if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
+    if (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP ||
+        dumpType == PLDM_FILE_TYPE_DUMP)
     {
-        notifyDumpType =
-            sdbusplus::common::com::ibm::dump::Notify::DumpType::Resource;
+        info(
+            "newFileAvailableWithMetaData dumpType={DUMP_TYPE} fileHandle={FILE_HANDLE} length={LENGTH} metaDataValue1={META1}",
+            "DUMP_TYPE", dumpType, "FILE_HANDLE", fileHandle, "LENGTH", length,
+            "META1", metaDataValue1);
+        return initializeDumpTransfer();
     }
-
-    try
-    {
-        auto service =
-            pldm::utils::DBusHandler().getService(notifyObjPath, dumpInterface);
-        auto method = bus.new_method_call(service.c_str(), notifyObjPath,
-                                          dumpInterface, "NotifyDump");
-        method.append(fileHandle, length, notifyDumpType, metaDataValue1);
-        bus.call(method, dbusTimeout);
-    }
-    catch (const sdbusplus::exception_t& e)
-    {
-        error(
-            "failed to make a d-bus call to notify a new dump request using newFileAvailableWithMetaData, error - {ERROR}",
-            "ERROR", e);
-        pldm::utils::reportError(
-            "xyz.openbmc_project.PLDM.Error.newFileAvailableWithMetaData.NewDumpNotifyFail");
-        return PLDM_ERROR;
-    }
-
     return PLDM_SUCCESS;
 }
 
@@ -839,40 +787,43 @@ int DumpHandler::fileAckWithMetaData(
     return PLDM_ERROR;
 }
 
-int DumpHandler::initializeSystemDumpTransfer(FileHandle fileHandle)
+int DumpHandler::initializeDumpTransfer()
 {
     // Enforce one-at-a-time: reject a new request while any transfer is active.
-    if (sysDumpHandle)
+    if (activeDumpHandle)
     {
-        error(
-            "System dump transfer already active for fileHandle {ACTIVE_HANDLE},"
-            " rejecting new request for {FILE_HANDLE}",
-            "ACTIVE_HANDLE", *sysDumpHandle, "FILE_HANDLE", fileHandle);
+        error("Dump transfer already active for fileHandle {ACTIVE_HANDLE},"
+              " rejecting new request for file handle {FILE_HANDLE}",
+              "ACTIVE_HANDLE", *activeDumpHandle, "FILE_HANDLE", fileHandle);
         return PLDM_ERROR;
     }
 
-    // Open file for writing system dump
-    std::string dumpFilePath =
-        std::format("{}/{}{}", sysDumpPath, sysDumpFilePrefix, fileHandle);
-    int dumpFd = open(dumpFilePath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    auto filePrefix = (dumpType == PLDM_FILE_TYPE_RESOURCE_DUMP)
+                          ? resDumpFilePrefix
+                          : sysDumpFilePrefix;
+
+    // Open destination file
+    std::string path =
+        std::format("{}/{}{}", dumpFilePath, filePrefix, fileHandle);
+    int dumpFd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (dumpFd < 0)
     {
         error("Failed to open dump file {PATH}, with error: {ERRNO}", "PATH",
-              dumpFilePath, "ERRNO", errno);
+              path, "ERRNO", errno);
         return PLDM_ERROR;
     }
-    // Create timer, start it, and store as the single active transfer
+
+    // Create watchdog timer, start it, and register as the active transfer
     try
     {
-        auto timer = std::make_unique<SysDumpTimer>(
-            *DumpHandler::eventLoop, [fileHandle](SysDumpTimer&) {
-                DumpHandler::onDumpTransferTimeout(fileHandle);
-            });
-        timer->restart(
-            std::chrono::minutes(DumpHandler::sysDumpTimeoutMinutes));
-        sysDumpTransfer =
-            std::make_unique<SysDumpTransferData>(std::move(timer), dumpFd);
-        sysDumpHandle = fileHandle;
+        FileHandle fh = fileHandle;
+        auto timer = std::make_unique<DumpTimer>(
+            *DumpHandler::eventLoop,
+            [fh](DumpTimer&) { DumpHandler::onDumpTransferTimeout(fh); });
+        timer->restart(std::chrono::minutes(DumpHandler::dumpTimeoutMinutes));
+        activeDumpTransfer =
+            std::make_unique<DumpTransferData>(std::move(timer), dumpFd);
+        activeDumpHandle = fileHandle;
     }
     catch (const std::exception& e)
     {
@@ -888,10 +839,10 @@ int DumpHandler::initializeSystemDumpTransfer(FileHandle fileHandle)
 void DumpHandler::onDumpTransferTimeout(FileHandle fileHandle)
 {
     error(
-        "System dump transfer aborted due to timeout for fileHandle {FILEHANDLE}. File may be incomplete.",
+        "Dump transfer aborted due to timeout for fileHandle {FILEHANDLE}. File may be incomplete.",
         "FILEHANDLE", fileHandle);
-    sysDumpTransfer.reset();
-    sysDumpHandle.reset();
+    activeDumpTransfer.reset();
+    activeDumpHandle.reset();
 }
 
 } // namespace responder
