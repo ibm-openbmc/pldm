@@ -170,6 +170,17 @@ void CustomDBus::setLinkReset(
     link.at(path)->linkReset(value);
 }
 
+void CustomDBus::resetPCIeSlotBusIds()
+{
+    for (auto& [path, slot] : pcieSlot)
+    {
+        if (slot)
+        {
+            slot->busId(0);
+        }
+    }
+}
+
 void CustomDBus::setSlotType(const std::string& path,
                              const std::string& slotType)
 {
