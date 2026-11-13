@@ -60,6 +60,7 @@ std::map<std::string,
 
 std::vector<std::string> PCIeInfoHandler::cables;
 std::vector<std::pair<linkId_t, linkId_t>> PCIeInfoHandler::needPostProcessing;
+std::optional<pldm::utils::ObjectValueTree> PCIeInfoHandler::inventorySnapshot;
 std::unordered_map<linkId_t, linkType_t> PCIeInfoHandler::linkTypeInfo;
 
 PCIeInfoHandler::PCIeInfoHandler(uint32_t fileHandle, uint16_t fileType) :
@@ -145,6 +146,9 @@ int PCIeInfoHandler::fileAck(uint8_t /*fileStatus*/)
             receivedFiles[PLDM_FILE_TYPE_PCIE_TOPOLOGY])
         {
             receivedFiles.clear();
+
+            // start every parse with an empty inventory snapshot
+            inventorySnapshot.reset();
 
             // parse the topology blob and cache the information
             // for further processing
@@ -470,7 +474,7 @@ void PCIeInfoHandler::parsePrimaryLink(
             {
                 // the top local port is populated with the connector
                 auto slotAndAdapter = pldm::responder::utils::getSlotAndAdapter(
-                    localPortLocation.first);
+                    localPortLocation.first, &inventorySnapshot);
                 setTopologyOnSlotAndAdapter(linkType, slotAndAdapter, linkId,
                                             linkStatus, linkSpeed, linkWidth,
                                             false);
@@ -528,7 +532,7 @@ void PCIeInfoHandler::parsePrimaryLink(
             if (localPortLocation.first.find("-T") != std::string::npos)
             {
                 auto slotAndAdapter = pldm::responder::utils::getSlotAndAdapter(
-                    localPortLocation.first);
+                    localPortLocation.first, &inventorySnapshot);
 
                 setTopologyOnSlotAndAdapter(linkType, slotAndAdapter, linkId,
                                             linkStatus, linkSpeed, linkWidth,
@@ -665,7 +669,7 @@ void PCIeInfoHandler::parseSpeciallink(linkId_t linkId,
                 // local port location code is present, using the port to find
                 // out the slot
                 auto slotAndAdapter = pldm::responder::utils::getSlotAndAdapter(
-                    localPortLocCode.first);
+                    localPortLocCode.first, &inventorySnapshot);
                 error("Special processing for link - [{LINK_ID}]", "LINK_ID",
                       linkId);
                 setTopologyOnSlotAndAdapter(
@@ -762,7 +766,7 @@ void PCIeInfoHandler::setTopologyAttrsOnDbus()
         // downstream chassis - the mex chassis this cable is plugged into
         auto upstreamInformation =
             pldm::responder::utils::getObjectPathByLocationCode(
-                std::get<1>(info), itemConnector);
+                std::get<1>(info), itemConnector, &inventorySnapshot);
         auto downstreamInformation = getMexObjectFromLocationCode(
             std::get<2>(info), PLDM_ENTITY_CONNECTOR);
         auto downstreamChassis = getDownStreamChassis(downstreamInformation);
@@ -797,6 +801,8 @@ void PCIeInfoHandler::clearTopologyInfo()
     mexObjectMap.clear();
 
     needPostProcessing.clear();
+
+    inventorySnapshot.reset();
 }
 
 void PCIeInfoHandler::parseTopologyData()

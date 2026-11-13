@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include <cstring>
+#include <optional>
 #include <unordered_map>
 
 namespace pldm
@@ -288,6 +289,9 @@ class PCIeInfoHandler : public FileHandler
         mexObjectMap;
     static std::vector<std::string> cables;
     static std::vector<std::pair<linkId_t, linkId_t>> needPostProcessing;
+    // Inventory tree fetched at most once per topology parse for connector
+    // lookups. Reset at the start and at the end of every parse.
+    static std::optional<pldm::utils::ObjectValueTree> inventorySnapshot;
     static std::unordered_map<linkId_t, linkType_t> linkTypeInfo;
 
     /** @brief Deletes the topology and cable data

@@ -1,12 +1,14 @@
 #pragma once
 
 #include "../../../libpldmresponder/oem_handler.hpp"
+#include "common/utils.hpp"
 #include "host-bmc/dbus_to_host_effecters.hpp"
 #include "oem/ibm/requester/dbus_to_file_handler.hpp"
 
 #include <nlohmann/json.hpp>
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -167,14 +169,19 @@ void hostChapDataIntf(
  *
  *  @param[in] locationCode - property value of LocationCode
  *  @param[in] inventoryItemType - inventory item type
+ *  @param[in,out] snapshot - optional caller owned inventory snapshot. When
+ *                 provided, lookups that need a fresh inventory tree fetch it
+ *                 once (if the snapshot is empty) and reuse it afterwards
  *
  *  @return std::string - the D-Bus object path
  */
-std::string getObjectPathByLocationCode(const std::string& locationCode,
-                                        const std::string& inventoryItemType);
+std::string getObjectPathByLocationCode(
+    const std::string& locationCode, const std::string& inventoryItemType,
+    std::optional<pldm::utils::ObjectValueTree>* snapshot = nullptr);
 
-std::pair<std::string, std::string>
-    getSlotAndAdapter(const std::string& portLocationCode);
+std::pair<std::string, std::string> getSlotAndAdapter(
+    const std::string& portLocationCode,
+    std::optional<pldm::utils::ObjectValueTree>* snapshot = nullptr);
 
 /** @brief method to get the BusId based on the path */
 uint32_t getLinkResetInstanceNumber(std::string& path);
