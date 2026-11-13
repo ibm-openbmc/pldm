@@ -18,6 +18,7 @@
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <optional>
 
 PHOSPHOR_LOG2_USING;
 
@@ -512,11 +513,13 @@ bool checkFruPresence(const char* objPath)
 }
 
 std::pair<std::string, std::string>
-    getSlotAndAdapter(const std::string& portLocationCode)
+    getSlotAndAdapter(const std::string& portLocationCode,
+                      std::optional<pldm::utils::ObjectValueTree>* snapshot)
 {
     std::filesystem::path portPath =
         pldm::responder::utils::getObjectPathByLocationCode(
-            portLocationCode, "xyz.openbmc_project.Inventory.Item.Connector");
+            portLocationCode, "xyz.openbmc_project.Inventory.Item.Connector",
+            snapshot);
     return std::make_pair(portPath.parent_path().parent_path(),
                           portPath.parent_path());
 }
@@ -536,8 +539,9 @@ void hostChapDataIntf(
         "/xyz/openbmc_project/pldm", dbusToFilehandlerObj);
 }
 
-std::string getObjectPathByLocationCode(const std::string& locationCode,
-                                        const std::string& inventoryItemType)
+std::string getObjectPathByLocationCode(
+    const std::string& locationCode, const std::string& inventoryItemType,
+    std::optional<pldm::utils::ObjectValueTree>* snapshot)
 {
     std::string locationIface(
         "xyz.openbmc_project.Inventory.Decorator.LocationCode");
@@ -552,17 +556,44 @@ std::string getObjectPathByLocationCode(const std::string& locationCode,
             inventoryItemType ==
                 "xyz.openbmc_project.Inventory.Item.PCIeDevice";
         ObjectValueTree liveObjects;
+        const ObjectValueTree* objectsPtr = nullptr;
         if (!useCachedInventory)
         {
             // Connector objects and their Present properties can change when
-            // cards are replaced. Keep these lookups fresh
-            liveObjects = pldm::utils::DBusHandler::getManagedObj(
-                "xyz.openbmc_project.Inventory.Manager",
-                "/xyz/openbmc_project/inventory");
+            // cards are replaced. Keep these lookups fresh. If the caller
+            // owns a snapshot, fetch the tree only when the snapshot is
+            // empty and reuse it until the caller resets it.
+            if (snapshot != nullptr && snapshot->has_value())
+            {
+                info(
+                    "Inventory snapshot reused for location {LOC_CODE} type {INVEN_ITEM_TYP}",
+                    "LOC_CODE", locationCode, "INVEN_ITEM_TYP",
+                    inventoryItemType);
+                objectsPtr = &snapshot->value();
+            }
+            else
+            {
+                liveObjects = pldm::utils::DBusHandler::getManagedObj(
+                    "xyz.openbmc_project.Inventory.Manager",
+                    "/xyz/openbmc_project/inventory");
+                if (snapshot != nullptr)
+                {
+                    // Keep the fetched tree for the rest of this parse
+                    snapshot->emplace(std::move(liveObjects));
+                    objectsPtr = &snapshot->value();
+                }
+                else
+                {
+                    objectsPtr = &liveObjects;
+                }
+            }
         }
-        const auto& objects =
-            useCachedInventory ? pldm::utils::DBusHandler::getInventoryObjects()
-                               : liveObjects;
+        else
+        {
+            // cached object tree for pcie slots and devices
+            objectsPtr = &pldm::utils::DBusHandler::getInventoryObjects();
+        }
+        const auto& objects = *objectsPtr;
 
         for (const auto& objPath : objects)
         {
